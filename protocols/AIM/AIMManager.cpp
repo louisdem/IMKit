@@ -89,12 +89,11 @@ AIMManager::AIMManager(AIMHandler *handler) {
 	
 	fHandler = handler;
 	fOurNick = NULL;
-	fProfile = NULL;
+	fProfile.SetTo("Mikey?");
 };
 
 AIMManager::~AIMManager(void) {
 	free(fOurNick);
-	free(fProfile);
 
 	LogOff();
 }
@@ -177,7 +176,7 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 		flap->AddTLV(0x000f, "en", 2);
 		flap->AddTLV(0x0009, (char []){0x00, 0x15}, 2);
 	
-		AIMConnection *c = new AIMConnection(server, port, BMessenger(this));
+		AIMConnection *c = new AIMConnection(server, port, this);
 		c->Run();
 		fConnections.push_back(c);
 		c->Send(flap);
@@ -239,7 +238,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			Flap *srvCookie = new Flap(OPEN_CONNECTION);
 			srvCookie->AddTLV(new TLV(0x0006, cookie, bytes));
 			
-			AIMConnection *con = new AIMConnection(host, port, BMessenger(this));
+			AIMConnection *con = new AIMConnection(host, port, this);
 			con->Run();
 			fConnections.push_back(con);
 			
@@ -727,7 +726,7 @@ status_t AIMManager::RequestBuddyIcon(const char *buddy) {
 	icon->AddRawData((uchar []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00,	0x00, 0x00, 0x00, 0x00}, 16);
 
-	Send(icon);
+//	Send(icon);
 
 	return B_OK;
 };
@@ -755,35 +754,43 @@ status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
 status_t AIMManager::SetAway(const char *message) {
 	Flap *away = new Flap(SNAC_DATA);
 	away->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00, 0x00000000));
-	away->AddTLV(new TLV(0x0003,  "text/aolrtf; charset=\"us-ascii\"",
-		strlen("text/aolrtf; charset=\"us-ascii\"")));
+	away->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
 	away->AddTLV(new TLV(0x0004, message, strlen(message)));
 	
 	Send(away);
 
+	fAwayMsg = message;
+
 	fHandler->StatusChanged(fOurNick, AMAN_AWAY);
+	fConnectionState = AMAN_AWAY;
 
 };
 
+
 status_t AIMManager::SetProfile(const char *profile) {
-	free(fProfile);
-	fProfile = NULL;
-	if (profile != NULL) fProfile = strdup(profile);
+	if (profile == NULL) {
+		fProfile = "";
+	} else {
+		fProfile.SetTo(profile);
+	};
 
 	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
-		Flap *profile = new Flap(SNAC_DATA);
-		profile->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00,
+		Flap *p = new Flap(SNAC_DATA);
+		p->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00,
 			0x00000000));
 		
-		if (fProfile != NULL) {
-			profile->AddTLV(new TLV(0x0001, "text/aolrtf; charset=\"us-ascii\"",
-				strlen("text/aolrtf; charset=\"us-ascii\"")));
-			profile->AddTLV(new TLV(0x0002, fProfile, strlen(fProfile)));
+		if (fProfile.Length() > 0) {
+			p->AddTLV(new TLV(0x0001, kEncoding, strlen(kEncoding)));
+			p->AddTLV(new TLV(0x0002, fProfile.String(), fProfile.Length()));
 		};
 		
-		Send(profile); 
+		if ((fConnectionState == AMAN_AWAY) && (fAwayMsg.Length() > 0)) {
+			p->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
+			p->AddTLV(new TLV(0x0004, fAwayMsg.String(), fAwayMsg.Length()));
+		};
+				
+		Send(p); 
 	};
-//			if (fConnectionState == AMAN_AWAY) {
 				
 	return B_OK;
 };

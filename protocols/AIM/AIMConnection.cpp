@@ -6,9 +6,10 @@ void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
 const char kProtocolName[] = "AIM";
 
-AIMConnection::AIMConnection(const char *server, uint16 port, BMessenger manager) {
+AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man) {
 	
-	fManager = manager;
+	fManager = man;
+	fManMsgr = BMessenger(fManager);
 	
 	uint8 serverLen = strlen(server);
 	fServer = (char *)calloc(serverLen + 1, sizeof(char));
@@ -221,7 +222,7 @@ int32 AIMConnection::Receiver(void *con) {
 						BMessage msg(AMAN_CLOSED_CONNECTION);
 						msg.AddPointer("connection", con);
 		
-						connection->fManager.SendMessage(&msg);
+						connection->fManMsgr.SendMessage(&msg);
 						connection->fState = AMAN_OFFLINE;
 						
 						return B_ERROR;
@@ -322,211 +323,209 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 
 			LOG("AIM", LOW, "AIMConn: Got SNAC (0x%04x, 0x%04x)", family, subtype);
 			
-			switch(family) {
-				case SERVICE_CONTROL: {
-					switch (subtype) {
-						case VERIFICATION_REQUEST: {
-							LOG("AIM", LOW, "AIMConn: AOL sent us a client verification");
-							PrintHex((uchar *)data, bytes);
-						} break;
-							
-						case SERVER_SUPPORTED_SNACS: {
-							LOG(kProtocolName, LOW, "Got server supported SNACs");
-
-							while (offset < bytes) {
-								uint16 s = (data[++offset] << 8) + data[++offset];
-								LOG(kProtocolName, LOW, "Server supports 0x%04x", s);
-								fSupportedSNACs.push_back(s);
-							};
-
-							fManager.SendMessage(AMAN_NEW_CAPABILITIES);
-							
-							if (fState == AMAN_CONNECTING) {
-								Flap *f = new Flap(SNAC_DATA);
-								f->AddSNAC(new SNAC(SERVICE_CONTROL,
-									REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
-								Send(f);
-							};
-						} break;
+			if (family != SERVICE_CONTROL) {
+				fManMsgr.SendMessage(msg);
+			} else {
+				switch (subtype) {
+					case VERIFICATION_REQUEST: {
+						LOG("AIM", LOW, "AIMConn: AOL sent us a client verification");
+						PrintHex((uchar *)data, bytes);
+					} break;
 						
-						case SERVICE_REDIRECT: {
-							LOG("AIM", LOW, "Got service redirect SNAC");
-							uint16 tlvType = 0;
-							uint16 tlvLen = 0;
-							char *tlvValue = NULL;
-							
-							if (data[10] & 0x80) {
-								uint16 skip = (data[16] << 8) + data[17];
-								LOG("AIM", LOW, "Skipping %i bytes", skip);
-								offset += skip + 2;
-							};
-							
-							
-							BMessage service(AMAN_NEW_CONNECTION);
-							PrintHex((uchar *)data, bytes);
-							
-							while (offset < bytes) {
-								tlvType = (data[++offset] << 8) + data[++offset];
-								tlvLen = (data[++offset] << 8) + data[++offset];
-								tlvValue = (char *)calloc(tlvLen + 1, sizeof(char));
-								memcpy(tlvValue, (void *)(data + offset + 1), tlvLen);
-								tlvValue[tlvLen] = '\0';
-								
-								offset += tlvLen;
-
-								switch(tlvType) {
-									case 0x000d: {	// Service Family
-									} break;
-									
-									case 0x0005: {	// Server Details
-										LOG("AIM", LOW, "Server details: %s\n", tlvValue);
-
-										if (strchr(tlvValue, ':')) {
-											pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
-											service.AddString("host", sd.first);
-											service.AddInt16("port", sd.second);
-											free(sd.first);
-										} else {
-											service.AddString("host", tlvValue);
-											service.AddInt16("port", 5190);
-										};
-										
-									};
-									
-									case 0x0006: {	// Cookie, nyom nyom nyom!
-										for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[i]);
-										printf("\n");
-										for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[(tlvLen - 10)+ i]);
-										printf("\n");
-									
-									
-										LOG("AIM", LOW, "Cookie");
-										service.AddData("cookie", B_RAW_TYPE,
-											tlvValue, tlvLen);
-									};
-									
-									default: {
-									};
-								};
-								
-								free(tlvValue);
-							};
-							
-							fManager.SendMessage(&service);
-							
+					case SERVER_SUPPORTED_SNACS: {
+						LOG(kProtocolName, LOW, "Got server supported SNACs");
+	
+						while (offset < bytes) {
+							uint16 s = (data[++offset] << 8) + data[++offset];
+							LOG(kProtocolName, LOW, "Server supports 0x%04x", s);
+							fSupportedSNACs.push_back(s);
+						};
+	
+						fManMsgr.SendMessage(AMAN_NEW_CAPABILITIES);
+						
+						if (fState == AMAN_CONNECTING) {
+							Flap *f = new Flap(SNAC_DATA);
+							f->AddSNAC(new SNAC(SERVICE_CONTROL,
+								REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
+							Send(f);
+						};
+					} break;
+					
+					case SERVICE_REDIRECT: {
+						LOG("AIM", LOW, "Got service redirect SNAC");
+						uint16 tlvType = 0;
+						uint16 tlvLen = 0;
+						char *tlvValue = NULL;
+						
+						if (data[10] & 0x80) {
+							uint16 skip = (data[16] << 8) + data[17];
+							LOG("AIM", LOW, "Skipping %i bytes", skip);
+							offset += skip + 2;
 						};
 						
-						case RATE_LIMIT_RESPONSE: {
-							Flap *f = new Flap(SNAC_DATA);
-							f->AddSNAC(new SNAC(SERVICE_CONTROL, RATE_LIMIT_ACK,
-								0x00, 0x00, ++fRequestID));
-							f->AddRawData((uchar []){0x00, 0x01}, 2);
-							f->AddRawData((uchar []){0x00, 0x02}, 2);
-							f->AddRawData((uchar []){0x00, 0x03}, 2);
-							f->AddRawData((uchar []){0x00, 0x04}, 2);						
-							Send(f);
-							
-							if (fState != AMAN_CONNECTING) return;
-							
-//							Server won't respond to the Rate ACK above
-//							Carry on with login (Send Privacy bits)
-							Flap *SPF = new Flap(SNAC_DATA);
-							SPF->AddSNAC(new SNAC(SERVICE_CONTROL,
-								SET_PRIVACY_FLAGS, 0x00, 0x00, ++fRequestID));
-							SPF->AddRawData((uchar []){0x00, 0x00, 0x00, 0x03}, 4); // View everything
-							Send(SPF);
-							
-//							And again... all these messages will be
-//							replied to as the server sees fit
-							Flap *OIR = new Flap(SNAC_DATA);
-							OIR->AddSNAC(new SNAC(SERVICE_CONTROL, UPDATE_STATUS,
-								0x00, 0x00, ++fRequestID));
-							Send(OIR);
-
-							Flap *buddy = new Flap(SNAC_DATA);
-							buddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT,
-								ADD_BUDDY_TO_LIST, 0x00, 0x00, ++fRequestID));
-							buddy->AddRawData((uchar []){0x00}, 1);
-
-							Flap *cap = new Flap(SNAC_DATA);
-							cap->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION,
-								0x00, 0x00, ++fRequestID));
-//							cap->AddTLV(0x0005, "", 0);
-							cap->AddTLV(0x0005, (char []) { 0x09, 0x46, 0x13, 0x46,
-								0x4c, 0x7f, 0x11, 0xd1, 0x82, 0x22, 0x44, 0x45, 0x53,
-								0x54, 0x00, 0x00}, 16);							
-							Send(cap);
-							
-							
-							Flap *icbm = new Flap(SNAC_DATA);
-							icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS, 0x00,
-								0x00, ++fRequestID));
-							icbm->AddRawData((uchar []){0x00, 0x01}, 2); // Plain text?
-//							Capabilities - (LSB) Typing Notifications, Missed Calls,
-//								Unknown, Messages allowed
-							icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
-							icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
-							icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
-							icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
-							icbm->AddRawData((uchar []){0x00, 0x00}, 2);// Min Message interval (sec);
-							icbm->AddRawData((uchar []){0x00, 0x64}, 2); //??
-
-							Send(icbm);
-							
-							Flap *cready = new Flap(SNAC_DATA);
-							cready->AddSNAC(new SNAC(SERVICE_CONTROL, CLIENT_READY,
-								0x00, 0x00, ++fRequestID));
-							cready->AddRawData((uchar []){0x00, 0x01, 0x00, 0x03,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x02, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x03, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x04, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x06, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x08, 0x00, 0x01,
-								0x01, 0x04, 0x00, 0x01}, 8);
-							cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-//							Possibly remove.
-							cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
-								0x01, 0x10, 0x07, 0x39}, 8);
-
-							Send(cready);
-							
-							BMessage status(AMAN_STATUS_CHANGED);
-							status.AddInt8("status", AMAN_ONLINE);
-
-							fManager.SendMessage(&status);
-							fState = AMAN_ONLINE;
+						BMessage service(AMAN_NEW_CONNECTION);
+						PrintHex((uchar *)data, bytes);
 						
-						} break;
-						case SERVER_FAMILY_VERSIONS: {
-							LOG(kProtocolName, LOW, "Supported SNAC families for "
-								"this server");
-							while (offset < bytes) {
-								LOG(kProtocolName, LOW, "\tSupported family: 0x%x "
-									" 0x%x, Version: 0x%x 0x%x", data[++offset],
-									data[++offset], data[++offset], data[++offset]);
+						while (offset < bytes) {
+							tlvType = (data[++offset] << 8) + data[++offset];
+							tlvLen = (data[++offset] << 8) + data[++offset];
+							tlvValue = (char *)calloc(tlvLen + 1, sizeof(char));
+							memcpy(tlvValue, (void *)(data + offset + 1), tlvLen);
+							tlvValue[tlvLen] = '\0';
+							
+							offset += tlvLen;
+	
+							switch(tlvType) {
+								case 0x000d: {	// Service Family
+								} break;
+								
+								case 0x0005: {	// Server Details
+									LOG("AIM", LOW, "Server details: %s\n", tlvValue);
+	
+									if (strchr(tlvValue, ':')) {
+										pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
+										service.AddString("host", sd.first);
+										service.AddInt16("port", sd.second);
+										free(sd.first);
+									} else {
+										service.AddString("host", tlvValue);
+										service.AddInt16("port", 5190);
+									};
+									
+								};
+								
+								case 0x0006: {	// Cookie, nyom nyom nyom!
+									for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[i]);
+									printf("\n");
+									for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[(tlvLen - 10)+ i]);
+									printf("\n");
+								
+								
+									LOG("AIM", LOW, "Cookie");
+									service.AddData("cookie", B_RAW_TYPE, tlvValue,
+										tlvLen);
+								};
+								
+								default: {
+								};
 							};
-						} break;
-
-						default: {
-							fManager.SendMessage(msg);
-						}
+							
+							free(tlvValue);
+						};					
+						fManMsgr.SendMessage(&service);
+						
 					};
-				} break;
-				
-				default: {
-					fManager.SendMessage(msg);
+					
+					case RATE_LIMIT_RESPONSE: {
+						Flap *f = new Flap(SNAC_DATA);
+						f->AddSNAC(new SNAC(SERVICE_CONTROL, RATE_LIMIT_ACK,
+							0x00, 0x00, ++fRequestID));
+						f->AddRawData((uchar []){0x00, 0x01}, 2);
+						f->AddRawData((uchar []){0x00, 0x02}, 2);
+						f->AddRawData((uchar []){0x00, 0x03}, 2);
+						f->AddRawData((uchar []){0x00, 0x04}, 2);						
+						Send(f);
+						
+						if (fState != AMAN_CONNECTING) return;
+						
+//						Server won't respond to the Rate ACK above
+//						Carry on with login (Send Privacy bits)
+						Flap *SPF = new Flap(SNAC_DATA);
+						SPF->AddSNAC(new SNAC(SERVICE_CONTROL,
+							SET_PRIVACY_FLAGS, 0x00, 0x00, ++fRequestID));
+						SPF->AddRawData((uchar []){0x00, 0x00, 0x00, 0x03}, 4); // View everything
+						Send(SPF);
+						
+//						And again... all these messages will be
+//						replied to as the server sees fit
+						Flap *OIR = new Flap(SNAC_DATA);
+						OIR->AddSNAC(new SNAC(SERVICE_CONTROL, UPDATE_STATUS,
+							0x00, 0x00, ++fRequestID));
+						Send(OIR);
+	
+						Flap *buddy = new Flap(SNAC_DATA);
+						buddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT,
+							ADD_BUDDY_TO_LIST, 0x00, 0x00, ++fRequestID));
+						buddy->AddRawData((uchar []){0x00}, 1);
+	
+						Flap *cap = new Flap(SNAC_DATA);
+						cap->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION,
+							0x00, 0x00, ++fRequestID));
+	
+						const char *profile = fManager->Profile();
+						if (profile != NULL) {
+							cap->AddTLV(new TLV(0x0001, kEncoding, strlen(kEncoding)));
+							cap->AddTLV(new TLV(0x0002, profile, strlen(profile)));
+						};
+//						cap->AddTLV(0x0005, "", 0);
+						cap->AddTLV(0x0005, kBuddyIconCap, kBuddyIconCapLen);
+						Send(cap);
+						
+						
+						Flap *icbm = new Flap(SNAC_DATA);
+						icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS, 0x00,
+							0x00, ++fRequestID));
+						icbm->AddRawData((uchar []){0x00, 0x01}, 2); // Plain text?
+//						Capabilities - (LSB) Typing Notifications, Missed Calls,
+//							Unknown, Messages allowed
+						icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
+						icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
+						icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
+						icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
+						icbm->AddRawData((uchar []){0x00, 0x00}, 2);// Min Message interval (sec);
+						icbm->AddRawData((uchar []){0x00, 0x64}, 2); //??
+	
+						Send(icbm);
+						
+						Flap *cready = new Flap(SNAC_DATA);
+						cready->AddSNAC(new SNAC(SERVICE_CONTROL, CLIENT_READY,
+							0x00, 0x00, ++fRequestID));
+						cready->AddRawData((uchar []){0x00, 0x01, 0x00, 0x03,
+							0x01, 0x10, 0x07, 0x39}, 8);
+						cready->AddRawData((uchar []){0x00, 0x02, 0x00, 0x01,
+							0x01, 0x10, 0x07, 0x39}, 8);
+						cready->AddRawData((uchar []){0x00, 0x03, 0x00, 0x01,
+							0x01, 0x10, 0x07, 0x39}, 8);
+						cready->AddRawData((uchar []){0x00, 0x04, 0x00, 0x01,
+							0x01, 0x10, 0x07, 0x39}, 8);
+						cready->AddRawData((uchar []){0x00, 0x06, 0x00, 0x01,
+							0x01, 0x10, 0x07, 0x39}, 8);
+						cready->AddRawData((uchar []){0x00, 0x08, 0x00, 0x01,
+							0x01, 0x04, 0x00, 0x01}, 8);
+						cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
+							0x01, 0x10, 0x07, 0x39}, 8);
+//						Possibly remove.
+						cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
+							0x01, 0x10, 0x07, 0x39}, 8);
+						cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
+							0x01, 0x10, 0x07, 0x39}, 8);
+	
+						Send(cready);
+						
+						BMessage status(AMAN_STATUS_CHANGED);
+						status.AddInt8("status", AMAN_ONLINE);
+	
+						fManMsgr.SendMessage(&status);
+						fState = AMAN_ONLINE;
+					
+					} break;
+					case SERVER_FAMILY_VERSIONS: {
+						LOG(kProtocolName, LOW, "Supported SNAC families for "
+							"this server");
+						while (offset < bytes) {
+							LOG(kProtocolName, LOW, "\tSupported family: 0x%x "
+								" 0x%x, Version: 0x%x 0x%x", data[++offset],
+								data[++offset], data[++offset], data[++offset]);
+						};
+					} break;
+	
+					default: {
+						fManMsgr.SendMessage(msg);
+					};
 				};
 			};
 		} break;
-				
+			
 		case AMAN_FLAP_ERROR: {
 //			We ignore this for now
 		} break;
@@ -604,7 +603,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 				BMessage msg(AMAN_CLOSED_CONNECTION);
 				msg.AddPointer("connection", this);
 
-				fManager.SendMessage(&msg);
+				fManMsgr.SendMessage(&msg);
 				fState = AMAN_OFFLINE;
 
 				StopReceiver();

@@ -21,11 +21,12 @@
 #include <libim/Constants.h>
 
 typedef pair <char *, uint16> ServerAddress;
+class AIMManager;
 
 class AIMConnection : public BLooper {
 	public:
 						AIMConnection(const char *server, uint16 port,
-							BMessenger manager);
+							AIMManager *man);
 						~AIMConnection();
 						
 		void			MessageReceived(BMessage *msg);
@@ -55,7 +56,7 @@ class AIMConnection : public BLooper {
 		
 		vector<uint16>	fSupportedSNACs;
 
-		BMessenger		fManager;
+		BMessenger		fManMsgr;
 		BMessenger		*fSockMsgr;
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
@@ -66,6 +67,8 @@ class AIMConnection : public BLooper {
 		thread_id		fThread;
 		
 		uint32			fRequestID;
+		
+		AIMManager		*fManager;
 };
 
 #endif

@@ -23,6 +23,7 @@ AIMProtocol::AIMProtocol()
 	
 	fPassword = NULL;
 	fScreenName = NULL;
+	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 };
 
 AIMProtocol::~AIMProtocol() {
@@ -34,7 +35,6 @@ status_t AIMProtocol::Init(BMessenger msgr) {
 	fMsgr = msgr;
 	LOG("AIM", MEDIUM, "AIMProtocol::Init() start");
 	
-	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 	fManager->Run();
 	
 	return B_OK;
@@ -287,6 +287,8 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	
 	if (fPassword) free(fPassword);
 	fPassword = strdup(password);
+	
+	fManager->SetProfile(profile);
 	
 	return B_OK;
 }

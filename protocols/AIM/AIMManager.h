@@ -43,6 +43,15 @@ enum {
 class AIMConnection;
 class AIMHandler;
 
+const char kEncoding[] = "text/aolrtf; charset=\"us-ascii\"";
+const char kBuddyIconCap [] = {
+	0x09, 0x46, 0x13, 0x46,
+	0x4c, 0x7f, 0x11, 0xd1,
+	0x82, 0x22, 0x44, 0x45,
+	0x53, 0x54, 0x00, 0x00
+};
+const uint16 kBuddyIconCapLen = 16;
+
 class AIMManager : public BLooper {
 	public:
 						AIMManager(AIMHandler *handler);
@@ -67,6 +76,9 @@ class AIMManager : public BLooper {
 			status_t	SetAway(const char *message);
 			status_t	TypingNotification(const char *buddy, uint16 typing);
 		inline uchar	ConnectionState(void) const { return fConnectionState; };
+		
+		inline const char *Profile(void) const { return fProfile.String(); };
+		
 			
 	private:	
 			char		*EncodePassword(const char *pass);
@@ -80,7 +92,8 @@ class AIMManager : public BLooper {
 			uchar		fConnectionState;
 
 			char		*fOurNick;
-			char 		*fProfile;
+			BString		fProfile;
+			BString		fAwayMsg;
 			
 		AIMHandler		*fHandler;
 };
