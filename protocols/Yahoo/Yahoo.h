@@ -58,6 +58,8 @@ class Yahoo : public IM::Protocol, public YahooManager
 		BString		fPassword;
 		
 		YahooConnection *	fYahoo;
+		
+		void Progress( const char * id, const char * message, float progress );
 };
 
 #endif

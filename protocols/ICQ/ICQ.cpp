@@ -209,6 +209,8 @@ void SimpleClient::connected_cb(ConnectedEvent *c) {
   msg.AddString("protocol", "ICQ");
   msg.AddString("status", ONLINE_TEXT);
   fMsgr.SendMessage(&msg);
+
+  Progress( fMsgr, "ICQ: Online!", 1.00 );
 }
 
 /*
@@ -603,6 +605,7 @@ ICQProtocol::Process( BMessage * msg )
 						} else
 						if ( strcmp(status,ONLINE_TEXT) == 0 )
 						{
+							Progress( fMsgr, "ICQ: Going online..", 0.25 );
 							fClient.icqclient.setStatus(STATUS_ONLINE);
 						} else
 						{ // invalid status code
@@ -819,4 +822,17 @@ uint32
 ICQProtocol::GetEncoding()
 {
 	return fClient.fEncoding;
+}
+
+void
+Progress( BMessenger & msgr, const char * message, float progress )
+{
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", IM::PROGRESS);
+	msg.AddInt32("state", IM::impsConnecting);
+	msg.AddString("progressID", "ICQ Login");
+	msg.AddString("message", message);
+	msg.AddFloat("progress", progress);
+	
+	msgr.SendMessage( &msg );
 }

@@ -482,3 +482,26 @@ status_t MSNProtocol::AuthRequest(list_types list,const char *passport, const ch
 	return B_OK;
 };
 
+status_t MSNProtocol::Error( const char * error_message ) {
+	BMessage msg(IM::ERROR);
+	msg.AddString("protocol", kProtocolName);
+	msg.AddString("error", error_message);
+	
+	fMsgr.SendMessage(&msg);
+	
+	return B_OK;
+}
+
+status_t MSNProtocol::Progress( const char * id, const char * message, float progress ) {
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", IM::PROGRESS );
+	msg.AddString("protocol", kProtocolName);
+	msg.AddString("progressID", id);
+	msg.AddString("message", message);
+	msg.AddFloat("progress", progress);
+	msg.AddInt32("state", IM::impsConnecting );
+	
+	fMsgr.SendMessage(&msg);
+	
+	return B_OK;
+}

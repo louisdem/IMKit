@@ -134,6 +134,13 @@ status_t MSNManager::Login(const char *server, uint16 port, const char *passport
 		fConnectionPool.push_back( new MSNConnection() );
 
 	if (fConnectionState == otOffline) {
+		BMessage msg(msnmsgProgress);
+		msg.AddString("id", "MSN Login");
+		msg.AddString("message", "MSN: Connecting..");
+		msg.AddFloat("progress", 0.10 );
+		
+		BMessenger(this).SendMessage(&msg);
+		
 		if (fNoticeCon == NULL) {
 			fNoticeCon = *fConnectionPool.begin();
 			fConnectionPool.pop_front();
@@ -368,6 +375,21 @@ void MSNManager::MessageReceived(BMessage *msg) {
 		
 		case msnContactInfo: {
 			UpdateContactInfo( msg );
+		} break;
+		
+		case msnmsgError: {
+			fHandler->Error( msg->FindString("error") );
+		} break;
+		
+		case msnmsgProgress: {
+			float progress=0.0;
+			if ( msg->FindFloat("progress", &progress) != B_OK )
+			{
+				LOG(kProtocolName, liHigh, "Malformed msnmsgProgress message received by MSNManager");
+				break;
+			}
+			
+			fHandler->Progress( msg->FindString("id"), msg->FindString("message"), progress );
 		} break;
 		
 		default: {

@@ -20,10 +20,11 @@ class InfoView : public BView
 		enum info_type {
 			Information,
 			Important,
-			Error
+			Error,
+			Progress
 		};
 		
-		InfoView( info_type, const char * );
+		InfoView( info_type, const char * text, const char * progID = NULL, float prog = 0.0 );
 		~InfoView();
 		
 		void AttachedToWindow();
@@ -35,11 +36,16 @@ class InfoView : public BView
 		
 		void SetText( const char * );
 		
+		bool HasProgressID( const char * );
+		
 	private:
+		info_type		fType;
 		BMessageRunner	* fRunner;
 		InputFilter		* fFilter;
 //		BTextView 		* fView;
 		list<BString>	fLines;
+		float			fProgress;
+		BString			fProgressID;
 };
 
 

@@ -566,6 +566,7 @@ Server::Process( BMessage * msg )
 		case CONTACT_AUTHORIZED:
 		case CONTACT_STARTED_TYPING:
 		case CONTACT_STOPPED_TYPING:
+		case PROGRESS:
 		{
 			MessageFromProtocols(msg);
 		}	break;
@@ -810,7 +811,10 @@ Server::CreateContact( const char * proto_id, const char *namebase )
 	
 	// make sure that the target directory exists before we try to create
 	// new files
-	create_directory( path.Path(), 0777);
+	
+	//if ( access( path.Path(), W_OK ) )
+		// only create if needed (if we're not allowed to write, it doesn't exist since we're a single user OS
+		create_directory( path.Path(), 0777);
 	
 	BDirectory dir( path.Path() );
 	BFile file;
@@ -1472,6 +1476,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		};
 		
 		// SVG icon is a bit special atm
+		// Copy the BEOS_SVG_ICON_EXTRA thing is not needed in Zeta > RC3
 		BPath prefsPath;
 	
 		// Get and set SVG icon
@@ -1616,6 +1621,7 @@ Server::SetAllOffline()
 		};
 		
 		// SVG icon is a bit special atm
+		// Copy the BEOS_SVG_ICON_EXTRA thing is not needed in Zeta > RC3
 		BPath prefsPath;
 	
 		// Get and set SVG icon

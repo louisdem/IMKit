@@ -89,6 +89,8 @@ Yahoo::Process( BMessage * msg )
 						{
 							if ( fYahooID != "" )
 							{
+								Progress("Yahoo Login", "Yahoo: Connecting..", 0.50);
+								
 								fYahoo = new YahooConnection(
 									this,
 									fYahooID.String(), 
@@ -254,6 +256,8 @@ Yahoo::LoggedIn()
 {
 	LOG("Yahoo", liDebug, "Yahoo::LoggedIn()");
 	
+	Progress("Yahoo Login", "Yahoo: Logged in!", 1.00);
+	
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::STATUS_SET);
 	msg.AddString("protocol", kProtocolName);
@@ -318,3 +322,16 @@ Yahoo::BuddyStatusChanged( const char * who, const char * status )
 	fServerMsgr.SendMessage( &msg );
 }
 
+void
+Yahoo::Progress( const char * id, const char * message, float progress )
+{
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", IM::PROGRESS );
+	msg.AddString("protocol", kProtocolName);
+	msg.AddString("progressID", id);
+	msg.AddString("message", message);
+	msg.AddFloat("progress", progress);
+	msg.AddInt32("state", IM::impsConnecting );
+	
+	fServerMsgr.SendMessage(&msg);
+}

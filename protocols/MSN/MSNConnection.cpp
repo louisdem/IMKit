@@ -689,6 +689,22 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	}
 };
 
+void MSNConnection::Error( const char * message ) {
+	BMessage msg( msnmsgError );
+	msg.AddString( "error", message );
+	
+	fManMsgr.SendMessage( &msg );
+}
+
+void MSNConnection::Progress( const char * id, const char * message, float progress ) {
+	BMessage msg( msnmsgProgress );
+	msg.AddString( "id", id );
+	msg.AddString( "message", message );
+	msg.AddFloat( "progress", progress );
+	
+	fManMsgr.SendMessage( &msg );
+}
+
 status_t MSNConnection::handleVER( Command * command ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing VER", this);
 	Command *reply = new Command("CVR");
@@ -750,9 +766,9 @@ status_t MSNConnection::handleCVR( Command * command ) {
 	reply->AddParam("TWN");	// Authentication type
 	reply->AddParam("I");	// Initiate
 	reply->AddParam(fManager->Passport());
-						
+	
 	Send(reply);
-		
+	
 	return B_OK;
 }
 
@@ -840,20 +856,14 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	if (strcmp(command->Param(0), "OK") == 0) {
 		LOG(kProtocolName, liHigh, "Online!");
 		
+		Progress("MSN Login", "MSN: Logged in!", 1.0);
+		
 		GoOnline();
 		
 		BMessage statusChange(msnmsgOurStatusChanged);
 		statusChange.AddInt8("status", fState);
 		fManMsgr.SendMessage(&statusChange);
 
-/*		Command *reply = new Command("CHG");
-		reply->AddParam("NLN");
-		BString caps = "";
-		caps << kOurCaps;
-
-		reply->AddParam(caps.String());
-		Send(reply);
-*/			
 		Command *rea = new Command("PRP");
 		rea->AddParam("MFN");
 		rea->AddParam(fManager->DisplayName(), true);
@@ -868,7 +878,9 @@ status_t MSNConnection::handleUSR( Command * command ) {
 						
 		return B_OK;
 	};
-
+	
+	Progress("MSN Login", "MSN: Requesting ticket..", 0.25);
+	
 	HTTPFormatter *send = new HTTPFormatter("nexus.passport.com",
 		"/rdr/pprdr.asp");
 	HTTPFormatter *recv = NULL;
@@ -879,11 +891,13 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		this, recvdBytes, "nexus.passport.com");
 
 	if (recvdBytes < 0) {
+		Error( "MSN Connect fail: Error making secure handshake" );
+		
 		BMessage closeCon(msnmsgCloseConnection);
 		closeCon.AddPointer("connection", this);
 
 		fManMsgr.SendMessage(&closeCon);
-
+		
 		return B_ERROR;
 	};
 	
@@ -921,6 +935,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	send->AddHeader("Authorization", authStr.String());
 	delete recv;
 		
+	Progress("MSN Login", "MSN: Authenticating..", 0.50);
+	
 	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
 		this, SSLSend(loginHost.String(), send, &recv),
 		loginHost.String());
@@ -949,20 +965,37 @@ status_t MSNConnection::handleUSR( Command * command ) {
 			
 			send->AddHeader("Authorization", authStr.String());
 			delete recv;
+
+			Progress("MSN Login", "MSN: Redirected, authenticating..", 0.50);
+			
 			LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
 				this, SSLSend(loginHost.String(), send, &recv),
 				loginHost.String());
+			
+			if ( recv <= 0 )
+			{
+				LOG(kProtocolName, liHigh, "C %lX: Error getting data over SSL", this );
+
+				Error( "MSN Connect fail: SSL connection failed" );
+		
+				return B_ERROR;
+			}
 		}
 		
 		if ( repeatCount == 0 ) {
 			// error, too many redirects
 			LOG( kProtocolName, liHigh, "C %lX: got too many redirects when loggin in", this );
+			
+			Error( "MSN Connect fail: Too many redirects" );
+		
 			return B_ERROR;
 		}
 	}
 	
 //	We get the ticket!
 	if (recv->Status() == 200) {
+		Progress("MSN Login", "MSN: Got ticket", 0.75);
+		
 		BString authInfo = recv->HeaderContents("Authentication-Info");
 		begin = authInfo.FindFirst("from-PP='");
 		BString ticket = "";
@@ -971,15 +1004,19 @@ status_t MSNConnection::handleUSR( Command * command ) {
 			authInfo.CopyInto(ticket, begin + strlen("from-PP='"),
 				end - (begin + strlen("from-PP='")));
 		} else {
+			Error( "MSN Connect fail: Malformed ticket" );
+			
 			return B_ERROR;
 		};
-				
+		
 		Command *reply = new Command("USR");
 		reply->AddParam("TWN");
 		reply->AddParam("S");
 		reply->AddParam(ticket.String());
 		Send(reply);
 	} else {
+		Error( "MSN Connect fail: Error getting ticket" );
+		
 		return B_ERROR;
 	}
 		

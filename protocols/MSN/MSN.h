@@ -50,7 +50,8 @@ class MSNProtocol : public IM::Protocol, public MSNHandler
 			status_t 	SSIBuddies(list<BString> buddies);
 			status_t	AuthRequest(list_types list, const char *passport,
 								const char *displayname);
-			
+			status_t	Error( const char * error_message );
+			status_t	Progress( const char * id, const char * message, float progress );
 
 	private:
 			BString 	NormalizeNick(const char *nick);

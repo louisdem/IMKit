@@ -62,6 +62,16 @@ BorderView::Draw( BRect rect )
 void
 BorderView::GetPreferredSize( float * w, float * h )
 {
-	*w = 2 * BORDER_W;
+	SetFont( be_bold_font );
+	SetFontSize( 18 );
+	
+	*w = 2 * BORDER_W + StringWidth( fTitle.String() );
+	
 	*h = 2 * BORDER_W + 20;
+}
+
+float
+BorderView::BorderSize()
+{
+	return BORDER_W;
 }

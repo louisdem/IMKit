@@ -174,6 +174,50 @@ InfoWindow::MessageReceived( BMessage * msg )
 						text.ReplaceAll("$status$", msg->FindString("status"));
 					}
 				}	break;
+				
+				case IM::PROGRESS: {
+					const char * progID = msg->FindString("progressID");
+					
+					if ( !progID )
+						break;
+					
+					InfoView * view = NULL;
+					
+					for ( list<InfoView*>::iterator i=fInfoViews.begin(); i!=fInfoViews.end(); i++ )
+					{
+						if ( (*i)->HasProgressID(progID) )
+							view = *i;
+					}
+					
+					if ( view )
+					{
+						view->MessageReceived(msg);
+						
+						ResizeAll();
+					} else 
+					{
+						if ( !msg->FindString("message") )
+							break;
+						
+						float progress = 0.0;
+						
+						if ( msg->FindFloat("progress", &progress) != B_OK )
+							break;
+						
+						view = new InfoView( 
+							InfoView::Progress, 
+							msg->FindString("message"),
+							progID,
+							progress
+						);
+						
+						fInfoViews.push_back( view );
+						
+						fBorder->AddChild( view );
+						
+						ResizeAll();
+					}
+				}	return; // Yes, return here. Progress is a special case.
 			}
 			
 			text.ReplaceAll("\\n", "\n");
@@ -228,14 +272,14 @@ InfoWindow::ResizeAll()
 	float borderw, borderh;
 	fBorder->GetPreferredSize(&borderw, &borderh);
 	
-	float curry=borderh-borderw/2, maxw=0;
-	BView * view = NULL;
+	float curry=borderh-fBorder->BorderSize(), maxw=150;
+//	BView * view = NULL;
 	
 	for ( list<InfoView*>::iterator i=fInfoViews.begin(); i != fInfoViews.end(); i++ )
 	{
 		float pw,ph;
 		
-		(*i)->MoveTo(borderw/2, curry);
+		(*i)->MoveTo(fBorder->BorderSize(), curry);
 		(*i)->GetPreferredSize(&pw,&ph);
 		
 		curry += (*i)->Bounds().Height()+1;
@@ -243,10 +287,10 @@ InfoWindow::ResizeAll()
 		if ( pw > maxw )
 			maxw = pw;
 		
-		(*i)->ResizeTo( Bounds().Width() - borderw, (*i)->Bounds().Height() );
+		(*i)->ResizeTo( Bounds().Width() - fBorder->BorderSize()*2, (*i)->Bounds().Height() );
 	}
 	
-	ResizeTo( maxw + borderw, curry-1+borderw/2);
+	ResizeTo( maxw + fBorder->BorderSize()*2, curry-1+fBorder->BorderSize());
 	
 	PopupAnimation( Bounds().Width(), Bounds().Height() );
 }

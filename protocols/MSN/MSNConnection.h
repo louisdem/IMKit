@@ -85,6 +85,8 @@ class MSNConnection : public BLooper {
 		static int32	Receiver(void *con);
 		status_t		SSLSend(const char *host, HTTPFormatter *send,
 			HTTPFormatter **recv);
+		void			Error( const char * );
+		void			Progress( const char * id, const char * msg, float );
 		
 		list<BString>	fContacts;
 		

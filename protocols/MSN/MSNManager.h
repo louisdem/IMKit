@@ -34,7 +34,9 @@ enum {
 	msnMessageRecveived = 'msn8',
 	msnAuthRequest = 'msn9',
 	msnmsgRemoveConnection = 'msna',
-	msnContactInfo = 'manb'
+	msnContactInfo = 'msnb',
+	msnmsgError = 'msnc',
+	msnmsgProgress = 'msnd'
 };
 
 enum queuestyle {

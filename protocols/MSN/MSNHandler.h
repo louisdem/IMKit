@@ -18,6 +18,8 @@ class MSNHandler {
 		virtual status_t 	SSIBuddies(list<BString> buddies) = 0;
 		virtual status_t	AuthRequest(list_types list, const char *passport,
 								const char *displayname) = 0;
+		virtual status_t	Error( const char * error_message )=0;
+		virtual status_t	Progress( const char * id, const char * message, float progress )=0;
 };
 
 #endif

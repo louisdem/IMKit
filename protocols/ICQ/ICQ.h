@@ -62,6 +62,8 @@ char *password, *shellcmd;
 unsigned int uin;
 bool respond;
 
+void Progress( BMessenger &, const char * message, float );
+
 // ------------------------------------------------------------------
 //  Simple Client declaration
 // ------------------------------------------------------------------
