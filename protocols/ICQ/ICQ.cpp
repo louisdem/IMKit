@@ -554,6 +554,19 @@ ICQProtocol::Process( BMessage * msg )
 					}
 				}	break;
 				
+				case IM::UNREGISTER_CONTACTS:
+				{
+					if ( !fClient.icqclient.isConnected() )
+						return B_ERROR;
+					
+					for ( int i=0; msg->FindString("id",i); i++ )
+					{
+						const char * id = msg->FindString("id",i);
+						
+						fClient.icqclient.removeContact( atoi(id) );
+					}
+				}	break;
+				
 				case IM::SET_STATUS:
 				{
 					const char * status = msg->FindString("status");

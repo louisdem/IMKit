@@ -7,12 +7,55 @@
 #include <Application.h>
 #include <Messenger.h>
 #include <Query.h>
+#include <Entry.h>
+#include <Node.h>
+#include <String.h>
 
 #include "../common/IMKitUtilities.h"
 
 #include <libim/Contact.h>
 #include <libim/Protocol.h>
 #include "AddOnInfo.h"
+
+/**
+	Used by Contact monitor.
+*/
+class ContactHandle
+{
+	public:
+		ino_t node;
+		entry_ref entry;
+		
+		ContactHandle()
+		{
+		}
+		
+		ContactHandle( const ContactHandle & c )
+		:	node( c.node )
+		{
+			entry.directory = c.entry.directory;
+			entry.device = c.entry.device;
+			entry.set_name( c.entry.name );
+		}
+		
+		bool operator < ( const ContactHandle & c ) const
+		{
+			if ( entry.device != c.entry.device )
+				return entry.device < c.entry.device;
+			
+			return node < c.node;
+		}
+		
+		bool operator == ( const ContactHandle & c ) const
+		{
+/*			printf("%Ld, %ld vs %Ld, %ld\n", 
+				node, entry.device, 
+				c.node, c.entry.device
+			);
+*/			
+			return node == c.node && entry.device == c.entry.device;
+		}
+};
 
 namespace IM {
 
@@ -72,18 +115,29 @@ class Server : public BApplication
 		
 		void	handle_SETTINGS_UPDATED(BMessage *);
 		
-		//BBitmap	*GetBitmap(const char *name, type_code type = 'BBMP');
-		//BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 
-		//	type_code type = 'BBMP');
-		
 		string	FindBestProtocol( Contact & contact );
+		
+		/**
+			Contact monitoring functions
+		*/
+		void ContactMonitor_Added( ContactHandle );
+		void ContactMonitor_Modified( ContactHandle );
+		void ContactMonitor_Moved( ContactHandle from, ContactHandle to );
+		void ContactMonitor_Removed( ContactHandle );
 		
 		// Variables
 		
-		BQuery						fQuery;
+		list<BQuery*>				fQueries;
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
 		map<Protocol*,AddOnInfo>	fAddOnInfo;
+		/**
+			entry_ref, list of connections.
+			Used to store connections for contacts, so we can notify the protocols
+			of any changes.
+		*/
+		//list<ContactHandle, list<string> >	fContacts;
+		list< pair<ContactHandle, list<string>* > > fContacts;
 		
 		/*	Used to store both <protocol>:<id> and <protocol> status.
 			In other words, both own status per protocol and contact

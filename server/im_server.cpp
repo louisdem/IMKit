@@ -23,6 +23,7 @@
 #include <Alert.h>
 #include <String.h>
 #include <Invoker.h>
+#include <algorithm>
 
 using namespace IM;
 
@@ -60,6 +61,8 @@ _SEND_ERROR( const char * text, BMessage * msg )
 Server::Server()
 :	BApplication(IM_SERVER_SIG)
 {
+	LOG("im_server", liHigh, "Starting im_server");
+	
 	BPath prefsPath;
 	
 	// Create our settings directories
@@ -130,7 +133,9 @@ Server::Server()
 		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
 	fIcons.AddPointer(OFFLINE_TEXT "_large", (const void *)GetBitmapFromAttribute(
 		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
-
+	
+	StartQuery();
+	
 	SetAllOffline();
 	
 	StartAutostartApps();
@@ -168,9 +173,35 @@ Server::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
-		// People messages. Both query and node monitor.
-		case B_NODE_MONITOR:
+		// Contact messages. Both query and node monitor.
 		case B_QUERY_UPDATE:
+		{
+			int32 opcode=0;
+			
+			msg->FindInt32("opcode", &opcode);
+			
+			ContactHandle handle;
+			const char	* name;
+			
+			switch ( opcode )
+			{
+				case B_ENTRY_CREATED:
+					// .. add to contact list
+					msg->FindString("name", &name );
+					handle.entry.set_name(name);
+					msg->FindInt64("directory", &handle.entry.directory);
+					msg->FindInt32("device", &handle.entry.device);
+					msg->FindInt64("node", &handle.node);
+					
+					ContactMonitor_Added( handle );
+					break;
+				
+				default:
+					break;
+			}
+		}	break;
+		
+		case B_NODE_MONITOR:
 			HandleContactUpdate(msg);
 			break;
 		
@@ -241,39 +272,53 @@ Server::MessageReceived( BMessage * msg )
 }
 
 /**
-	Initializes People-query and fetches initial list of matches
-	
-	NOT IMPLEMENTED
+	Initializes Contact-query and fetches initial list of matches
 */
 void
 Server::StartQuery()
 {
-/*	// make sure we get the whole list before any query updates
-	// show up in MessageReceived()
-	Lock();
+	BVolumeRoster 	vroster;
+	BVolume			vol;
+	char 			volName[B_FILE_NAME_LENGTH];
 	
-	entry_ref entry;
+	vroster.Rewind();
 	
-	fQuery.SetTarget( BMessenger(this) );
-	fQuery.SetPredicate("IM:connections=*");
+	BMessage msg;
 	
-	// get initial list of matches
-	while ( fQuery.GetNextRef( &entry ) == B_OK )
+	ContactHandle handle;
+	
+	// query for all contacts on all drives
+	while ( vroster.GetNextVolume(&vol) == B_OK )
 	{
-		Contact contact(entry);
+		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
+			continue;
 		
-		for ( int i=0; i<contact.CountConnections(); i++ )
+		vol.GetName(volName);
+		LOG("im_server", liLow, "StartQuery: Getting contacts on %s", volName);
+		
+		BQuery * query = new BQuery();
+		
+		query->SetTarget( BMessenger(this) );
+		query->SetPredicate( "IM:connections=*" );
+		query->SetVolume(&vol);
+		query->Fetch();
+		
+		fQueries.push_back( query );
+		
+		while ( query->GetNextRef(&handle.entry) == B_OK )
 		{
-			char connection[256];
-			if ( contact.ConnectionAt(i,connection) != B_OK )
-				continue;
+			node_ref nref;
 			
-			fContactNodes[connection] = contact;
+			BNode node(&handle.entry);
+			if ( node.GetNodeRef( &nref ) == B_OK )
+			{
+				handle.node = nref.node;
+				
+				ContactMonitor_Added( handle );
+			}
 		}
 	}
-	
-	Unlock();
-*/
+
 }
 
 /**
@@ -581,14 +626,49 @@ Server::HandleContactUpdate( BMessage * msg )
 		return;
 	}
 	
+	ContactHandle handle, from, to;
+	const char	* name;
+	
 	switch ( opcode )
 	{
 		case B_ENTRY_CREATED:
 			// .. add to contact list
+			msg->FindString("name", &name );
+			handle.entry.set_name(name);
+			msg->FindInt64("directory", &handle.entry.directory);
+			msg->FindInt32("device", &handle.entry.device);
+			msg->FindInt64("node", &handle.node);
 			
+			ContactMonitor_Added( handle );
+			break;
+		case B_ENTRY_MOVED:
+			// .. contact moved
+			msg->FindString("name", &name );
+			from.entry.set_name(name);
+			to.entry.set_name(name);
+			msg->FindInt64("from directory", &from.entry.directory);
+			msg->FindInt64("to directory", &to.entry.directory);
+			msg->FindInt32("device", &from.entry.device);
+			msg->FindInt32("device", &to.entry.device);
+			msg->FindInt64("node", &from.node);
+			msg->FindInt64("node", &to.node);
+			
+			ContactMonitor_Moved( from, to );
+			break;
+		case B_ATTR_CHANGED:
+			// .. add to contact list
+			msg->FindInt32("device", &handle.entry.device);
+			msg->FindInt64("node", &handle.node);
+			
+			ContactMonitor_Modified( handle );
 			break;
 		case B_ENTRY_REMOVED:
 			// .. remove from contact list
+			msg->FindInt64("directory", &handle.entry.directory);
+			msg->FindInt32("device", &handle.entry.device);
+			msg->FindInt64("node", &handle.node);
+			
+			ContactMonitor_Removed( handle );
 			break;
 	}
 }
@@ -1212,6 +1292,11 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		
 		if ( !is_blocked )
 		{ // only update IM:status if not blocked
+			if ( strcmp(old_status, status) == 0 )
+			{ // status not changed, done
+				return;
+			}
+			
 			contact.SetStatus( status );
 		}
 		
@@ -1639,7 +1724,7 @@ Server::handle_STATUS_SET( BMessage * msg )
 		// THIS IS NOT CORRECT! We need to do this on a "connected" message, not on
 		// status changed!
 		BMessage connections(MESSAGE);
-		connections.AddInt32("im_what",REGISTER_CONTACTS);
+		connections.AddInt32("im_what", REGISTER_CONTACTS);
 		GetContactsForProtocol( p->GetSignature(), &connections );
 		
 		p->Process( &connections );
@@ -1896,4 +1981,186 @@ Server::reply_GET_CONTACTS_FOR_PROTOCOL( BMessage * msg )
 	GetContactsForProtocol( msg->FindString("protocol"), &reply );
 	
 	msg->SendReply( &reply );
+}
+
+void
+Server::ContactMonitor_Added( ContactHandle handle )
+{
+	for ( list< pair<ContactHandle, list<string>* > >::iterator i = fContacts.begin(); i != fContacts.end(); i++ )
+	{
+		if ( (*i).first == handle )
+		{ // already in the list, skip
+			return;
+		}
+	}
+	
+	Contact contact(&handle.entry);
+	
+	list<string> * connections = new list<string>();
+	
+	char connection[512];
+	
+	for ( int i=0; contact.ConnectionAt(i,connection) == B_OK; i++ )
+	{
+		connections->push_back( connection );
+		
+		Connection conn( connection );
+		
+		if ( fProtocols.find(conn.Protocol()) != fProtocols.end() )
+		{ // protocol loaded, register connection
+			BMessage remove(MESSAGE);
+			remove.AddInt32("im_what", UNREGISTER_CONTACTS);
+			remove.AddString("id", conn.ID() );
+			
+			(fProtocols[conn.Protocol()])->Process(&remove);
+		}
+	}
+	
+	connections->sort();
+	
+	node_ref nref;
+	nref.device = handle.entry.device;
+	nref.node = handle.node;
+	
+	watch_node( &nref, B_WATCH_ALL, BMessenger(this) );
+	
+	fContacts.push_back( pair<ContactHandle,list<string>* >(handle, connections) );
+}
+
+void
+Server::ContactMonitor_Modified( ContactHandle handle )
+{
+	for ( list< pair<ContactHandle, list<string>* > >::iterator i = fContacts.begin(); i != fContacts.end(); i++ )
+	{
+		if ( (*i).first == handle )
+		{
+			// update stuff here..
+			list<string> connections;
+			
+			Contact contact( &(*i).first.entry );
+			char connection[512];
+			
+			for ( int x=0; contact.ConnectionAt(x,connection) == B_OK; x++ )
+			{
+				connections.push_back( connection );
+			}
+			
+			connections.sort();
+			
+			list<string> removed;
+			
+			// look for removed connections
+			for ( list<string>::iterator j=(*i).second->begin(); j != (*i).second->end(); j++ )
+			{ // for each connection in old contact data
+				list<string>::iterator k = find(connections.begin(), connections.end(), *j);
+				
+				if ( k == connections.end() )
+				{ // connection removed!
+					removed.push_back( j->c_str() );
+					LOG("im_server", liDebug, "Connection removed: %s\n", j->c_str() );
+					
+					Connection conn( j->c_str() );
+					
+					if ( fProtocols.find(conn.Protocol()) != fProtocols.end() )
+					{ // protocol loaded, unregister connection
+						BMessage remove(MESSAGE);
+						remove.AddInt32("im_what", UNREGISTER_CONTACTS);
+						remove.AddString("id", conn.ID() );
+						
+						(fProtocols[conn.Protocol()])->Process(&remove);
+						
+						// remove from fStatus too
+						map<string,string>::iterator iter = fStatus.find(*j);
+						if ( iter != fStatus.end() )
+							fStatus.erase( iter );
+					}
+				}
+			}
+			
+			for ( list<string>::iterator j=removed.begin(); j != removed.end(); j++ )
+			{ // actually remove the connections from the list
+				(*i).second->remove( *j );
+			}
+			
+			// look for added connections
+			for ( list<string>::iterator j=connections.begin(); j != connections.end(); j++ )
+			{ // for each connection in old contact data
+				list<string>::iterator k = find((*i).second->begin(), (*i).second->end(), *j);
+				
+				if ( k == (*i).second->end() )
+				{ // connection added!
+					(*i).second->push_back( j->c_str() );
+					LOG("im_server", liDebug, "Connection added: %s\n", j->c_str() );
+					
+					Connection conn( j->c_str() );
+					
+					if ( fProtocols.find(conn.Protocol()) != fProtocols.end() )
+					{ // protocol loaded, register connection
+						BMessage remove(MESSAGE);
+						remove.AddInt32("im_what", REGISTER_CONTACTS);
+						remove.AddString("id", conn.ID() );
+						
+						(fProtocols[conn.Protocol()])->Process(&remove);
+					}
+				}
+			}
+			
+			UpdateContactStatusAttribute( contact );
+			
+			return;
+		}
+	}
+}
+
+void
+Server::ContactMonitor_Moved( ContactHandle from, ContactHandle to )
+{
+	for ( list< pair<ContactHandle, list<string>* > >::iterator i = fContacts.begin(); i != fContacts.end(); i++ )
+	{
+		if ( (*i).first == from )
+		{
+			(*i).first = to;
+			return;
+		}
+	}
+}
+
+void
+Server::ContactMonitor_Removed( ContactHandle handle )
+{
+	node_ref nref;
+	nref.device = handle.entry.device;
+	nref.node = handle.node;
+	
+	watch_node( &nref, B_STOP_WATCHING, BMessenger(this) );
+	
+	for ( list< pair<ContactHandle, list<string>* > >::iterator i = fContacts.begin(); i != fContacts.end(); i++ )
+	{
+		if ( (*i).first == handle )
+		{
+			for ( list<string>::iterator j = i->second->begin(); j != i->second->end(); j++ )
+			{ // unregister connections
+				Connection conn( j->c_str() );
+						
+				if ( fProtocols.find(conn.Protocol()) != fProtocols.end() )
+				{ // protocol loaded, unregister connection
+					BMessage remove(MESSAGE);
+					remove.AddInt32("im_what", UNREGISTER_CONTACTS);
+					remove.AddString("id", conn.ID() );
+					
+					(fProtocols[conn.Protocol()])->Process(&remove);
+				}
+
+				// remove from fStatus too
+				map<string,string>::iterator iter = fStatus.find(*j);
+				if ( iter != fStatus.end() )
+					fStatus.erase( iter );
+			}
+			
+			delete i->second;
+			
+			fContacts.erase(i);
+			return;
+		}
+	}
 }

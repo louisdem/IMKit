@@ -3,8 +3,22 @@
 
 #include <Entry.h>
 #include <List.h>
+#include <String.h>
 
 namespace IM {
+
+class Connection
+{
+	public:
+		Connection( const char * );
+		Connection( const Connection & );
+		
+		const char * Protocol() { return fProtocol.String(); };
+		const char * ID() { return fID.String(); };
+		
+	private:
+		BString	fProtocol, fID;
+};
 
 class Contact
 {

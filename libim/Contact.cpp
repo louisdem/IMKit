@@ -9,6 +9,23 @@
 
 using namespace IM;
 
+Connection::Connection( const char * str )
+{
+	BString text(str);
+	
+	int32 colon = text.FindFirst(":");
+	
+	text.CopyInto( fProtocol, 0, colon );
+	
+	text.CopyInto( fID, colon+1, text.Length()-colon-1 );
+}
+
+Connection::Connection( const Connection & c )
+:	fProtocol( c.fProtocol ),
+	fID( c.fID )
+{
+}
+
 Contact::Contact()
 	: fEntry(-1,-1, "")
 {
@@ -159,8 +176,8 @@ Contact::SaveConnections()
 	
 	if ( node.WriteAttr(
 		"IM:connections", B_STRING_TYPE, 0,
-		attr, strlen(attr)+1
-	) != (int32)strlen(attr)+1 )
+		attr, strlen(attr)
+	) != (int32)strlen(attr) )
 	{ // error writing
 		return B_ERROR;
 	}

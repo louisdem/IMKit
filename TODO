@@ -12,10 +12,11 @@ ___ Things to fix
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Alt-C in client doesn't work
 * Extract Deskbar icon from im_server, let it live it's own life
-* Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to ICQ/BMessage bug?
+* Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to Zeta bug?
 * Fix Preflet so it reads SVG icons(?)
 * im_client: when settings are changed, make them apply to existing windows too
 * "Command sends message" settings description needs improvement
+* MSN and AIM: Add support for UNREGISTER_CONTACTS message
 
 
 ___ New features
@@ -29,8 +30,6 @@ Option to disable logging (im_logger and LOG() output)
 Setting for im_server: default log level
 
 Scrollable settings in preflet
-
-im_server: Monitor People files and remove from interest list if a connection attribute is removed
 
 Protocol icons in Info Popper status updates
 
