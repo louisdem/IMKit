@@ -49,6 +49,8 @@ class ChatWindow : public BWindow
 		
 		bool handlesRef( entry_ref & );
 		void reloadContact();
+		void startNotify();
+		void stopNotify();
 		
 	private:
 		enum { SEND_MESSAGE = 1 };

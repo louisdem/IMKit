@@ -4,7 +4,8 @@ SUBDIRS = \
 	libim \
 	server \
 	sample_clients \
-	protocols
+	protocols \
+	utils
 
 default .DEFAULT :
 	# These two lines shouldn't be here. They should be in libim/makefile somehow.

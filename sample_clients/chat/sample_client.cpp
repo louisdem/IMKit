@@ -354,6 +354,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			rgb_color contact_nick_color	= (rgb_color){255,  0,  0};
 			rgb_color own_text_color		= (rgb_color){  0,  0,  0};
 			rgb_color contact_text_color	= (rgb_color){  0,  0,  0};
+			rgb_color time_text_color		= (rgb_color){150,150,150};
 			
 			int32 old_sel_start, old_sel_end;
 			
@@ -364,9 +365,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 			{
 				case IM::MESSAGE_SENT:
 				{
-					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &own_nick_color);
+					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &time_text_color);
 					strftime(timestr,sizeof(timestr),"[%H:%M] ", localtime(&now) );
 					fText->Insert(timestr);
+					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &own_nick_color);
 					BString message;
 					msg->FindString("message", &message);
 					if (message.Compare("/me ", 4) == 0) {
@@ -384,18 +386,21 @@ ChatWindow::MessageReceived( BMessage * msg )
 				
 				case IM::MESSAGE_RECEIVED:
 				{
-					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_nick_color);
+					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &time_text_color);
 					strftime(timestr,sizeof(timestr),"[%H:%M] ",  localtime(&now) );
 					fText->Insert(timestr);
+					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_nick_color);
 					BString message;
 					msg->FindString("message", &message);
-					if (message.Compare("/me ", 4) == 0) {
+					if (message.Compare("/me ", 4) == 0) 
+					{
 						fText->Insert("* ");
 						fText->Insert(fName);
 						fText->Insert(" ");
 						message.Remove(0, 4);
 						fText->Insert(message.String());
-					} else {
+					} else 
+					{
 						fText->Insert(fName);
 						fText->Insert(": ");
 						fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_text_color);
@@ -404,18 +409,9 @@ ChatWindow::MessageReceived( BMessage * msg )
 					fText->Insert("\n");
 					fText->ScrollToSelection();
 
-
-					if (!IsActive()) {
-						fChangedNotActivated = true;
-						char str[256];
-						sprintf(str, "√ %s", fTitleCache);
-						SetTitle(str);
-						((MyApp*)be_app)->Flash( BMessenger(this) );
-						if ( (Workspaces() & (1 << current_workspace())) == 0)
-						{
-							// beep if on other workspace
-							system_beep(kImNewMessageSound);
-						}
+					if (!IsActive()) 
+					{
+						startNotify();
 					}
 				}	break;
 			}
@@ -496,11 +492,9 @@ ChatWindow::FrameResized( float w, float h )
 void
 ChatWindow::WindowActivated(bool active)
 {
-	if (active && fChangedNotActivated) {
-		fChangedNotActivated = false;
-		SetTitle(fTitleCache);
-		((MyApp*)be_app)->NoFlash( BMessenger(this) );
-	}
+	if (active) 
+		stopNotify();
+	
 	BWindow::WindowActivated(active);
 }
 
@@ -546,6 +540,38 @@ ChatWindow::reloadContact()
 	// rename window
 	sprintf(fTitleCache,"%s - %s", fName, status);
 	
-	SetTitle(fTitleCache);
+	if ( fChangedNotActivated )
+	{
+		SetTitle(fTitleCache);
+	} else
+	{
+		char str[512];
+		sprintf(str, "√ %s", fTitleCache);
+		SetTitle(str);
+	}
 }
 
+void
+ChatWindow::startNotify()
+{
+	fChangedNotActivated = true;
+	char str[512];
+	sprintf(str, "√ %s", fTitleCache);
+	SetTitle(str);
+	
+	((MyApp*)be_app)->Flash( BMessenger(this) );
+	
+	if ( (Workspaces() & (1 << current_workspace())) == 0)
+	{
+		// beep if on other workspace
+		system_beep(kImNewMessageSound);
+	}
+}
+
+void
+ChatWindow::stopNotify()
+{
+	fChangedNotActivated = false;
+	SetTitle(fTitleCache);
+	((MyApp*)be_app)->NoFlash( BMessenger(this) );
+}
