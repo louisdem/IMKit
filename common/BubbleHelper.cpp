@@ -27,6 +27,8 @@
 #include <TextView.h>
 #include <Region.h>
 #include <Screen.h>
+#include <Locker.h>
+#include <Messenger.h>
 
 #include "BubbleHelper.h"
 
