@@ -25,12 +25,13 @@ clean:
 		$(MAKE) -C $$f -f makefile clean || exit -1; \
 	done
 
+ICONDIR=/boot/home/config/settings/im_kit/icons
 COMMON_LIB:=$(shell finddir B_COMMON_LIB_DIRECTORY)
 COMMON_SERVERS:=$(shell finddir B_COMMON_SERVERS_DIRECTORY)
 COMMON_ADDONS:=$(shell finddir B_COMMON_ADDONS_DIRECTORY)
 BUILD:=$(shell pwd)/build
 
-symlinks: common
+symlinks: common $(ICONDIR)
 	ln -sf "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
 	
 	ln -sf "$(BUILD)/im_server"  "$(COMMON_SERVERS)"
@@ -41,7 +42,7 @@ symlinks: common
 	ln -sf "$(BUILD)/settings/InstantMessaging" /boot/home/config/be/Preferences
 
 
-install: common
+install: common $(ICONDIR)
 	copyattr --data --move "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
 	rmdir "$(BUILD)/lib"
 
@@ -60,10 +61,6 @@ install: common
 
 
 common:
-	# Unpack the Server icons.
-	-mkdir -p /boot/home/config/settings/im_kit	# Yes, it won't work if it does not exist.
-	-unzip -n server/Icons.zip -d /boot/home/config/settings/im_kit/icons
-	
 	# create indexes
 	-mkindex -t string IM:connections
 	-mkindex -t string IM:status	
@@ -79,6 +76,12 @@ common:
 	rm -Rf "$(COMMON_ADDONS)/im_kit"
 	mkdir -p "$(COMMON_ADDONS)/im_kit"
 
+
+$(ICONDIR): server/Icons.zip
+	# Unpack the Server icons.
+	-mkdir -p "$(ICONDIR)" 2>/dev/null
+	-unzip -o server/Icons.zip -d "$(ICONDIR)"
+	touch "$(ICONDIR)"
 
 dist: all
 	mkdir -p "$(DIST)"
