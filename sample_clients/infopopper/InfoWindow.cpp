@@ -28,6 +28,26 @@ InfoWindow::InfoWindow()
 	Hide();
 	
 	fDeskbarLocation = BDeskbar().Location();
+	
+	BMessage settings;
+	bool temp;
+	im_load_client_settings("InfoPopper", &settings);
+	if ( !settings.FindString("app_sig") )
+		settings.AddString("app_sig", "application/x-vnd.beclan.IM_InfoPopper");
+	if ( settings.FindBool("auto_start", &temp) != B_OK )
+		settings.AddBool("auto_start", true );
+	if (settings.FindString("status_text", &fStatusText) != B_OK) {
+		fStatusText = "$nickname$ is now $status$";
+		settings.AddString("status_text", fStatusText);
+	};
+	if (settings.FindString("msg_text", &fMessageText) != B_OK) {
+		fMessageText = "$nickname$ says:\n$shortmsg$";
+		settings.AddString("msg_text", fMessageText);
+	};
+	
+	printf("Message: %s\nStatus: %s\n", fMessageText.String(), fStatusText.String());
+	
+	im_save_client_settings("InfoPopper", &settings);
 }
 
 InfoWindow::~InfoWindow()
@@ -58,6 +78,18 @@ InfoWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case IM::SETTINGS_UPDATED:
+		{	
+			BMessage settings;
+			im_load_client_settings("InfoPopper", &settings);
+			if (settings.FindString("status_text", &fStatusText) != B_OK) {
+				fStatusText = "$nickname$ is now $status$";
+			};
+			if (settings.FindString("msg_text", &fMessageText) != B_OK) {
+				fMessageText = "$nickname$ says:\n$shortmsg$";
+			};			
+		} break;	
+	
 		case IM::ERROR:
 		case IM::MESSAGE:
 		{
@@ -70,16 +102,23 @@ InfoWindow::MessageReceived( BMessage * msg )
 			
 			entry_ref ref;
 			
-			msg->FindRef( "contact", &ref );
+			msg->FindRef("contact", &ref);
 			
-			char contact_name[512];
+			char contactname[512];
+			char nickname[512];
+			char email[512];
 			
 			IM::Contact contact(&ref);
 			
-			if ( contact.GetName( contact_name, sizeof(contact_name) ) != B_OK )
-			{
-				strcpy(contact_name, "<unknown contact>");
-			}
+			if (contact.GetName(contactname, sizeof(contactname) ) != B_OK ) {
+				strcpy(contactname, "<unknown contact>");
+			};
+			if (contact.GetEmail(email, sizeof(email)) != B_OK) {
+				strcpy(email, "<unknown email>");
+			};
+			if (contact.GetNickname(nickname, sizeof(nickname)) != B_OK) {
+				strcpy(nickname, "<unknown nick>");
+			};
 			
 			InfoView::info_type type = InfoView::Information;
 			
@@ -102,30 +141,38 @@ InfoWindow::MessageReceived( BMessage * msg )
 					}
 				}	break;
 				
-				case IM::MESSAGE_RECEIVED:
-				{
+				case IM::MESSAGE_RECEIVED: {
+					text = fMessageText;
 					BString message = msg->FindString("message");
+					BString shortMessage = message;
 					
-					if ( message.FindFirst("\n") >= 0 )
-						message.Truncate( message.FindFirst("\n") );
-					
-					if ( message.Length() > 30 )
-					{
-						message.Truncate(27);
-						message.Append("...");
+					if ( shortMessage.FindFirst("\n") >= 0 )
+						shortMessage.Truncate( shortMessage.FindFirst("\n") );
+									
+					if ( shortMessage.Length() > 30 ) {
+						shortMessage.Truncate(27);
+						shortMessage.Append("...");
 					}
 					
-					text << contact_name << " says:\n    " << message;
-					
+					text.ReplaceAll("$shortmsg$", shortMessage.String());
+					text.ReplaceAll("$message$", message.String());
+				
 					type = InfoView::Important;
 				}	break;
 				
-				case IM::STATUS_CHANGED:
-				{
-					text << contact_name;
-					text << " is now " << msg->FindString("status");
+				case IM::STATUS_CHANGED: {						
+					text = fStatusText;
+
+					text.ReplaceAll("$status$", msg->FindString("status"));
 				}	break;
 			}
+
+			text.ReplaceAll("\\n", "\n");
+			text.ReplaceAll("$nickname$", nickname);
+			text.ReplaceAll("$contactname$", contactname);
+			text.ReplaceAll("$email$", email);
+			text.ReplaceAll("$id$", msg->FindString("id"));
+
 			
 			if ( text != "" )
 			{ // a message to display

@@ -4,8 +4,13 @@
 #include <Deskbar.h>
 #include <Window.h>
 #include <list>
-#include "InfoView.h"
+#include <String.h>
+
 #include <libim/Manager.h>
+#include <libim/Helpers.h>
+#include <libim/Constants.h>
+
+#include "InfoView.h"
 #include "BorderView.h"
 
 // -------------- INFO WINDOW -----------------
@@ -28,6 +33,9 @@ class InfoWindow : public BWindow
 		list<InfoView*>		fInfoViews;
 		deskbar_location 	fDeskbarLocation;
 		BorderView			* fBorder;
+
+		BString				fStatusText;
+		BString				fMessageText;
 };
 
 #endif

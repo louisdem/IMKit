@@ -155,7 +155,7 @@ else
   else
     DEFINES += GET_NODE_ICON
   endif
-  LIBS += zeta icon
+  LIBS += zeta tracker
 endif
 
 INSTALL_DIR= $(TOPDIR)/build/clients

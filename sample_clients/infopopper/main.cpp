@@ -24,24 +24,26 @@ main()
 	appsig.AddInt32("type", B_STRING_TYPE);
 	appsig.AddBool("default", "application/x-vnd.beclan.IM_InfoPopper");
 	
+	BMessage status;
+	status.AddString("name", "status_text");
+	status.AddString("description", "Status change text");
+	status.AddInt32("type", B_STRING_TYPE);
+	status.AddString("default", "$nickname$ is now $status$");
+	
+	BMessage msg;
+	msg.AddString("name", "msg_text");
+	msg.AddString("description", "Message received text");
+	msg.AddInt32("type", B_STRING_TYPE);
+	msg.AddString("default", "$nickname$ says $shortmsg$");
+	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
+	tmplate.AddMessage("setting", &status);
+	tmplate.AddMessage("setting", &msg);
 	
 	im_save_client_template("InfoPopper", &tmplate);
 	
-	// Make sure default settings are there
-	BMessage settings;
-	bool temp;
-	im_load_client_settings("InfoPopper", &settings);
-	if ( !settings.FindString("app_sig") )
-		settings.AddString("app_sig", "application/x-vnd.beclan.IM_InfoPopper");
-	if ( settings.FindBool("auto_start", &temp) != B_OK )
-		settings.AddBool("auto_start", true );
-	im_save_client_settings("InfoPopper", &settings);
-	// done with template and settings.
-
 	InfoWindow * win = new InfoWindow();
-	
 	app.Run();
 }
