@@ -57,6 +57,11 @@
 #include "URLCrunch.h"
 #include "Utilities.h"
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
 
 // cursor data for hovering over URLs
 
@@ -592,40 +597,40 @@ RunView::BuildPopUp (void)
   BMessage *lookup;
   lookup = new BMessage (M_LOOKUP_WEBSTER);
   lookup->AddString ("string", querystring);
-  item = new BMenuItem("Lookup (Dictionary)", lookup);
+  item = new BMenuItem(_T("Lookup (Dictionary)"), lookup);
   item->SetEnabled (enablelookup);
   item->SetTarget(this);
   fMyPopUp->AddItem (item);
 
   lookup = new BMessage (M_LOOKUP_GOOGLE);
   lookup->AddString ("string", querystring);
-  item = new BMenuItem("Lookup (Google)", lookup);
+  item = new BMenuItem(_T("Lookup (Google)"), lookup);
   item->SetEnabled (enablelookup);
   item->SetTarget(this);
   fMyPopUp->AddItem (item);
  
   lookup = new BMessage (M_LOOKUP_ACRONYM);
   lookup->AddString ("string", querystring);
-  item = new BMenuItem("Lookup (Acronym Finder)", lookup);
+  item = new BMenuItem(_T("Lookup (Acronym Finder)"), lookup);
   item->SetEnabled (enablelookup);
   item->SetTarget(this);
   fMyPopUp->AddItem (item);
 
   fMyPopUp->AddSeparatorItem();
   
-  item = new BMenuItem("Copy", new BMessage (B_COPY), 'C');
+  item = new BMenuItem(_T("Copy"), new BMessage (B_COPY), 'C');
   item->SetEnabled (enablecopy);
   item->SetTarget (this);
   fMyPopUp->AddItem (item);
 
-  item = new BMenuItem("Select All", new BMessage (B_SELECT_ALL), 'A');
+  item = new BMenuItem(_T("Select All"), new BMessage (B_SELECT_ALL), 'A');
   item->SetEnabled (enableselectall);
   item->SetTarget (this);
   fMyPopUp->AddItem (item);
 
   fMyPopUp->AddSeparatorItem();
   
-  item = new BMenuItem("Clear", new BMessage(M_CLEAR));
+  item = new BMenuItem(_T("Clear"), new BMessage(M_CLEAR));
   item->SetTarget(this);
   fMyPopUp->AddItem(item);
 

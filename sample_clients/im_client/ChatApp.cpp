@@ -2,11 +2,35 @@
 
 #include <Alert.h>
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 ChatApp::ChatApp()
 :	BApplication("application/x-vnd.m_eiman.sample_im_client"),
 	fMan( new IM::Manager(BMessenger(this)) ),
 	fIsQuiting(false)
 {
+#ifdef ZETA
+	app_info ai;
+	GetAppInfo( &ai );
+	BPath path;
+	BEntry entry( &ai.ref, true );
+	entry.GetPath( &path );
+	path.GetParent( &path );
+	path.Append( "Language/Dictionaries/im_client" );
+	BString path_string;
+	
+	if( path.InitCheck() != B_OK )
+		path_string.SetTo( "Language/Dictionaries/im_client" );
+	else
+		path_string.SetTo( path.Path() );
+	
+	be_locale.LoadLanguageFile( path_string.String() );
+#endif
+
 	add_system_beep_event(kImNewMessageSound, 0);
 
 	fMan->StartListening();
@@ -108,10 +132,10 @@ ChatApp::QuitRequested()
 				if ( !isShuttingDown )
 				{
 					BAlert * alert = new BAlert(
-						"Really quit?", 
-						"Do you really want to quit im_client and stop getting messages?",
-						"Yes",
-						"No"
+						_T("Really quit?"), 
+						_T("Do you really want to quit im_client and stop getting messages?"),
+						_T("Yes"),
+						_T("No")
 					);
 					
 					int32 choice = alert->Go();

@@ -152,6 +152,7 @@ ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
 else
 # Zeta build
 LIBS += zeta tracker
+DEFINES += ZETA
 endif
 
 ifeq ($(wildcard /boot/beos/system/lib/libicon.so), )

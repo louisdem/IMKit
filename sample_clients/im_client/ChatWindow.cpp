@@ -14,6 +14,12 @@
 
 #include "BubbleHelper.h"
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 BubbleHelper gBubbles;
 
 const char *kImNewMessageSound = "IM Message Received";
@@ -188,7 +194,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		NULL
 	);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, "Show contact in People");
+	gBubbles.SetHelp(btn, (char*)_T("Show contact in People"));
 	
 	// email icon
 	entry_ref emailAppRef;
@@ -211,7 +217,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		NULL
 	);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, "Send email to contact");
+	gBubbles.SetHelp(btn, (char*)_T("Send email to contact"));
 	
 //	Block icon
 	iconPath = iconDir;
@@ -229,7 +235,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		NULL
 	);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, "Block messages from contact");
+	gBubbles.SetHelp(btn, (char*)_T("Block messages from contact"));
 
 	entry_ref logAppRef;
 	if (be_roster->FindApp("application/x-vnd.BeClan.im_binlog_viewer", &logAppRef ) != B_OK )
@@ -242,7 +248,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	btn = new ImageButton(buttonRect, "log button", new BMessage(VIEW_LOG),
 		B_FOLLOW_NONE, B_WILL_DRAW, icon, NULL);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, "View chat history for contact");
+	gBubbles.SetHelp(btn, (char*)_T("View chat history for contact"));
 		
 	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
@@ -292,7 +298,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		sendRect.right = Bounds().right;
 		
 		fSendButton = new BButton(
-			sendRect, "sendButton", "Send", new BMessage(SEND_MESSAGE),
+			sendRect, "sendButton", _T("Send"), new BMessage(SEND_MESSAGE),
 			B_FOLLOW_RIGHT|B_FOLLOW_BOTTOM
 		);
 	
@@ -638,11 +644,11 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BString message;
 					msg->FindString("message", &message);
 					if (message.Compare("/me ", 4) == 0) {
-						fText->Append("* You ", C_ACTION, C_ACTION, F_ACTION);
+						fText->Append(_T("* You "), C_ACTION, C_ACTION, F_ACTION);
 						message.Remove(0, 4);
 						fText->Append(message.String(), C_ACTION, C_ACTION, F_ACTION);
 					} else {
-						fText->Append("You say: ", C_OWNNICK, C_OWNNICK, F_TEXT);
+						fText->Append(_T("You say: "), C_OWNNICK, C_OWNNICK, F_TEXT);
 						fText->Append(msg->FindString("message"), C_TEXT, C_TEXT, F_TEXT);
 					}
 					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
@@ -752,7 +758,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			} else {
 				LOG("im_client", liHigh, "Error sending message to im_server");
 
-				fText->Append("Error: im_server not running, can't send message\n", C_TEXT, C_TEXT, F_TEXT);
+				fText->Append(_T("Error: im_server not running, can't send message\n"), C_TEXT, C_TEXT, F_TEXT);
 					
 				fText->ScrollToSelection();
 			};
@@ -997,10 +1003,10 @@ ChatWindow::reloadContact()
 	
 	// read name
 	if ( c.GetName(name,sizeof(name)) != B_OK )
-		strcpy(name,"Unknown name");
+		strcpy(name,_T("Unknown name"));
 	
 	if ( c.GetNickname(nick,sizeof(nick)) != B_OK )
-		strcpy(nick,"no nick");
+		strcpy(nick,_T("no nick"));
 	
 	sprintf(fName,"%s (%s)", name, nick );
 	
@@ -1013,12 +1019,12 @@ ChatWindow::reloadContact()
 	);
 	
 	if ( num_read <= 0 )
-		strcpy(status,"Unknown status");
+		strcpy(status,_T("Unknown status"));
 	else
 		status[num_read] = 0;
 	
 	// rename window
-	sprintf(fTitleCache,"%s - %s", fName, status);
+	sprintf(fTitleCache,"%s - %s", fName, _T(status));
 	
 	if ( !fChangedNotActivated )
 	{
@@ -1088,7 +1094,7 @@ void ChatWindow::BuildProtocolMenu(void) {
 	menu->AddItem(
 		new IconMenuItem(
 			NULL, 
-			"Any Protocol", 
+			_T("Any Protocol"), 
 			NULL, 
 //			NULL,
 			new BMessage(PROTOCOL_SELECTED)
@@ -1105,7 +1111,7 @@ void ChatWindow::BuildProtocolMenu(void) {
 			
 		BBitmap *icon = ReadNodeIcon(iconPath.String(), kSmallIcon, true);
 		BString label = connection.String();
-		label << " (" << status << ")";
+		label << " (" << _T(status.String()) << ")";
 			
 		menu->AddItem(
 			new IconMenuItem(
@@ -1136,7 +1142,7 @@ ChatWindow::startTypingTimer()
 	if ( fTypingTimer->InitCheck() != B_OK )
 		LOG("im_client", liHigh, "InitCheck fail on typing timer");
 	
-	fInfoView->SetText("User is typing..");
+	fInfoView->SetText(_T("User is typing.."));
 }
 
 void
