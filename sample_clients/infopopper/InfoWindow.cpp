@@ -105,6 +105,10 @@ InfoWindow::MessageReceived( BMessage * msg )
 				case IM::MESSAGE_RECEIVED:
 				{
 					BString message = msg->FindString("message");
+					
+					if ( message.FindFirst("\n") >= 0 )
+						message.Truncate( message.FindFirst("\n") );
+					
 					if ( message.Length() > 30 )
 					{
 						message.Truncate(27);
