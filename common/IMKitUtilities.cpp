@@ -159,6 +159,7 @@ status_t WriteAttribute(BNode node, const char *attribute, const char *value,
 	return ret;
 };
 
+
 BBitmap * rescale_bitmap( const BBitmap * src, int32 width, int32 height )
 {
 	width--; height--;
@@ -175,21 +176,23 @@ BBitmap * rescale_bitmap( const BBitmap * src, int32 width, int32 height )
 	
 	float dx = (srcSize.Width()+1) / (width+1);
 	float dy = (srcSize.Height()+1) / (height+1);
+		
+	uint8 bpp = (uint8)(src->BytesPerRow() / srcSize.Width());
 	
-	int32 * dstData = (int32*)res->Bits();
-	int32 * srcData = (int32*)src->Bits();
+	int srcYOff = src->BytesPerRow();
+	int dstYOff = res->BytesPerRow();
 	
-	int srcYOff = src->BytesPerRow() / 4;
-	int dstYOff = res->BytesPerRow() / 4;
+	void * dstData = res->Bits();
+	void * srcData = src->Bits();
 	
 	for ( int y=0; y<=height; y++ )
 	{
-		int32 * dstRow = &dstData[y*dstYOff];
-		int32 * srcRow = &srcData[ (int32)(y*dy)*srcYOff ];
+		void *dstRow = (void *)((uint32)dstData + (uint32)(y*dstYOff));
+		void * srcRow = (void *)((uint32)srcData + ((uint32)(y*dy)*srcYOff));
 		
 		for ( int x=0; x<=width; x++ )
 		{
-			dstRow[x] = srcRow[(int32)(x*dx)];
+			memcpy((void *)((uint32)dstRow+(x*bpp)),(void *)((uint32)srcRow+((uint32)(x*dx)*bpp)),bpp);
 		}
 	}
 	
