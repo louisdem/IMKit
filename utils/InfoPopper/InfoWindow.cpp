@@ -120,7 +120,7 @@ void InfoWindow::ResizeAll(void) {
 	
 	float curry = borderh - fBorder->BorderSize(), maxw = 250;
 
-	for (vector<InfoView*>::iterator i = fInfoViews.begin(); i != fInfoViews.end();
+	for (vector<InfoView*>::reverse_iterator i = fInfoViews.rbegin(); i != fInfoViews.rend();
 		i++) {
 		float pw,ph;
 		
