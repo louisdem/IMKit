@@ -5,6 +5,8 @@
 #include <libim/Helpers.h>
 #include <UTF8.h>
 
+#include "MSNConnection.h"
+#include "MSNSBConnection.h"
 #include "MSNHandler.h"
 
 void PrintHex(const unsigned char* buf, size_t size) {
@@ -228,18 +230,19 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					
 					con->Send(command);
 
-					tridmap::iterator it = fWaitingSB.find(msg->FindInt32("trid");
-					if (it != fWaitingSB.end()) {
-						Command *message = it->second->first;
-						BString passport = it->second->second;
+					waitingmsgmap::iterator it = fWaitingSBs.find(msg->FindInt32("trid"));
+					
+					if (it != fWaitingSBs.end()) {
+						BString passport = (*it).second.first;
+						Command *message = (*it).second.second;
 
-						Command *invite = new Command("CAL");
+						Command *cal = new Command("CAL");
 						cal->AddParam(passport.String());
 						
 						con->Send(cal, qsOnline);
 						con->Send(message, qsOnline);
 						
-						fWaitingSB.erase(msg->FindInt32("trid"));
+						fWaitingSBs.erase(msg->FindInt32("trid"));
 					};
 				};
 			};
@@ -316,7 +319,7 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 		msg->AddPayload(format.String(), format.Length());
 		
 		if (needSB) {
-			fWaitingSBs[sbReq->TransactionID()] = pair(passport, msg);
+			fWaitingSBs[sbReq->TransactionID()] = pair<BString,Command*>(passport, msg);
 		} else {
 			it->second->Send(msg);
 		};

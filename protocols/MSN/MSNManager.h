@@ -47,8 +47,6 @@ class MSNHandler;
 class Command;
 
 #include "Command.h"
-#include "MSNConnection.h"
-#include "MSNSBConnection.h"
 
 typedef map<BString, MSNConnection *> switchboardmap;
 typedef map<int32, Command *> tridmap;
