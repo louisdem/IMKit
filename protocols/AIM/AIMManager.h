@@ -54,6 +54,7 @@ class AIMManager : public BLooper {
 							const char *username, const char *password);
 			uchar		IsConnected(void) const;
 			status_t	LogOff(void);
+			status_t	RequestBuddyIcon(const char *buddy);
 			
 	private:
 			void		StartMonitor(void);

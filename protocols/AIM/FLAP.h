@@ -70,7 +70,14 @@ enum snac_subtype {
 //	 Family 4 - ICBM
 	SET_ICBM_PARAMS = 0x0002,
 	SEND_MESSAGE_VIA_SERVER = 0x0006,
-	MESSAGE_FROM_SERVER = 0x0007
+	MESSAGE_FROM_SERVER = 0x0007,
+	TYPING_NOTIFICATION = 0x0014
+};
+
+enum typing_notifcation{
+	FINISHED_TYPING = 0x0000,
+	STILL_TYPING = 0x0001,
+	STARTED_TYPING = 0x0002
 };
 
 enum tlv_type {

@@ -119,6 +119,8 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					msg->ReplaceInt32("im_what", IM::MESSAGE_SENT);
 					
 					fMsgr.SendMessage(msg);
+					
+//					fManager->RequestBuddyIcon(id);
 				}	break;
 /*				case IM::SEND_AUTH_ACK:
 				{

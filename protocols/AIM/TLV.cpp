@@ -1,5 +1,6 @@
 #include "TLV.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,6 +32,13 @@ TLV::TLV(uint16 type, const char *value, uint16 length) {
 TLV::~TLV(void) {
 	if (fValue) free(fValue);
 	if (fFlatten) free(fFlatten);
+	if (fTLVs.size() > 0) {
+		list <TLV *>::iterator i;
+		
+		for (i = fTLVs.begin(); i != fTLVs.end(); i++) {
+			delete (TLV *)(*i);
+		};
+	};
 };
 
 uint16 TLV::Type(void) {
@@ -43,6 +51,12 @@ void TLV::Type(uint16 type) {
 };
 
 uint16 TLV::Length(void) {
+	if (fDirty) {
+		if (fTLVs.size() > 0) {
+			FlattenedSize();
+		};
+	};
+	
 	return fLength;
 };
 
@@ -66,20 +80,58 @@ const char *TLV::Value(void) {
 
 const char *TLV::Flatten(void) {
 	if (fDirty) {
-		fFlatten = (char *)realloc(fFlatten,
-			(fLength + kTLVOverhead) * sizeof(char));
+		fFlatten = (char *)realloc(fFlatten, FlattenedSize() * sizeof(char));
 		fFlatten[0] = (fType & 0xff00) >> 8;
 		fFlatten[1] = (fType & 0x00ff);
 		fFlatten[2] = (fLength & 0xff00) >> 8;
 		fFlatten[3] = (fLength & 0x00ff);
-		memcpy((void *)(fFlatten + sizeof(fType) + sizeof(fLength)), fValue,
-			fLength);
+		
+		if (fTLVs.size() > 0) {
+			list <TLV *>::iterator i;
+			
+			uint16 offset = 4;
+			
+			for (i = fTLVs.begin(); i != fTLVs.end(); i++) {
+				TLV *tlv = (*i);
+				memcpy((void *)(fFlatten + offset), tlv->Flatten(),
+					tlv->FlattenedSize());
+				offset += tlv->FlattenedSize();
+			};
+		} else {
+			memcpy((void *)(fFlatten + sizeof(fType) + sizeof(fLength)), fValue,
+				fLength);
+		};
 		fDirty = false;
 	};
 	
 	return fFlatten;
 };
 
-uint16 TLV::FlattenedSize(void) const {
-	return fLength + kTLVOverhead;
+uint16 TLV::FlattenedSize(void) {
+	if (fDirty) {
+		if (fTLVs.size() > 0) {
+			list <TLV *>::iterator i;
+			fFlattenedSize = 0;
+			uint16 length = 0;
+
+			for (i = fTLVs.begin(); i != fTLVs.end(); i++) {
+				TLV *tlv = (*i);
+				length += tlv->FlattenedSize();
+			};
+			
+			fFlattenedSize = length + kTLVOverhead;
+			fLength = length;
+		} else {
+			fFlattenedSize = fLength + kTLVOverhead;
+		};
+	};
+			
+	return fFlattenedSize;
+};
+
+status_t TLV::AddTLV(TLV *data) {
+	fDirty = true;
+	fTLVs.push_back(data);
+
+	return B_OK;
 };

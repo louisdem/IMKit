@@ -3,6 +3,8 @@
 
 #include <be/support/SupportDefs.h>
 
+#include <list>
+
 class TLV {
 	public:
 						TLV(uint16 type);
@@ -17,14 +19,18 @@ class TLV {
 			void		Type(uint16 type);
 			
 			const char	*Flatten(void);
-			uint16		FlattenedSize(void) const;
+			uint16		FlattenedSize(void);
+			
+			status_t	AddTLV(TLV *data);
 		
 	private:
 		uint16			fType;
 		uint16			fLength;
 		char			*fValue;
 		char			*fFlatten;
+		uint16			fFlattenedSize;
 		bool			fDirty;
+		list<TLV *>		fTLVs;
 };
 
 #endif
