@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= IM_InfoPopper
+NAME= im_infopopper
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/clients
 
