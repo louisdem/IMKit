@@ -6,7 +6,8 @@
 
 #include <libim/Constants.h>
 #include <libim/Helpers.h>
-#include <cryptlib/cryptlib.h>
+
+#include <openssl/rand.h>
 
 #include <UTF8.h>
 
@@ -22,16 +23,22 @@ MSNProtocol::MSNProtocol()
 	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST ),
 	  fThread(0) {
 	
-	cryptInit();
+	srand(time(NULL));
 	
 	fPassword = "";
 	fPassport = "";
 	fDisplayName = "IM Kit User";
 	fManager = new MSNManager(dynamic_cast<MSNHandler *>(this));
+	
+	int random_data[32];
+	for ( int i=0; i<32; i++ )
+	{
+		random_data[i] = rand();
+	}
+	RAND_seed(random_data, sizeof(random_data));
 };
 
 MSNProtocol::~MSNProtocol() {
-	cryptEnd();
 }
 
 status_t MSNProtocol::Init(BMessenger msgr) {

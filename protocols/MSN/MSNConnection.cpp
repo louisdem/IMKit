@@ -1,5 +1,12 @@
 #include "MSNConnection.h"
 
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/md5.h>
+
 const char *kClientVer = "0x0409 win 4.10 i386 MSNMSGR 6.0.0602 MSMSGS";
 const char *kProtocolsVers = "MSNP10 MSNP9 CVR0";
 
@@ -385,53 +392,17 @@ ServerAddress MSNConnection::ExtractServerDetails(char *details) {
 	return p;
 };
 
+#define CHK_NULL(x) if ((x)==NULL) return -1
+#define CHK_ERR(err,s) if ((err)==-1) { perror(s); return -1; }
+#define CHK_SSL(err) if ((err)==-1) { ERR_print_errors_fp(stderr); return -1; }
+
 status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	HTTPFormatter **recv) {
-
-	CRYPT_SESSION session;
-	int status = 0;
-	int8 retryCount = 0;
-	const int8 maxRetries = 100;
-	const int8 timeout = 100;	// Seconds
-	*recv = NULL;
-	
-	status = cryptCreateSession(&session, CRYPT_UNUSED, CRYPT_SESSION_SSL);
-	status = cryptSetAttribute(session, CRYPT_ATTRIBUTE_BUFFERSIZE, 65536L);
-	status = cryptSetAttribute(session, CRYPT_SESSINFO_VERSION, 1);
-	status = cryptSetAttributeString(session, CRYPT_SESSINFO_SERVER_NAME,
-		host, strlen(host));
-	status = cryptSetAttribute(session, CRYPT_OPTION_NET_TIMEOUT, timeout);
-
-	bool connected = false;
-
-	while (connected == false) {
-		status = cryptSetAttribute(session, CRYPT_SESSINFO_ACTIVE, 1);
-		if (cryptStatusError(status)) {
-			retryCount++;
-			LOG(kProtocolName, liMedium, "%s:%i: Could not initiate SSL "
-				"connection to %s (%i) %i / %i", fServer, fPort, host, status,
-				retryCount, maxRetries);
-
-			if (retryCount >= maxRetries) {
-				LOG(kProtocolName, liMedium, "%s:%i: Giving up making SSL "
-					"connection to %s", fServer, fPort, host);
-				cryptDestroySession(session);
-				return B_ERROR;
-			};
-		} else {
-			connected = true;
-		};
-	};
-
-	int sentData = 0;
-	
+/*
 	cryptPushData(session, send->Flatten(), send->Length(), &sentData);
-	LOG(kProtocolName, liHigh, "%s:%i: Sent %i bytes to %s over SSL", fServer,
-		fPort, sentData, host);
 
 	status = cryptFlushData(session);
 	
-	char buffer[1024*1024];
 	int received = 0;
 
 	status = cryptPopData(session, buffer, sizeof(buffer), &received);
@@ -445,6 +416,78 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	cryptDestroySession(session);
 	
 	*recv = new HTTPFormatter(buffer, received);
+	return received;
+*/
+	int err;
+	int sd;
+	struct sockaddr_in sa;
+	struct hostent *hp;
+	SSL_CTX* ctx;
+	SSL*     ssl;
+	X509*    server_cert;
+	char*    str;
+	char     buffer [1024*1024];
+	SSL_METHOD *meth;
+
+	SSLeay_add_ssl_algorithms();
+	meth = SSLv2_client_method();
+	SSL_load_error_strings();
+	ctx = SSL_CTX_new (meth);                        CHK_NULL(ctx);
+
+	CHK_SSL(err);
+  
+	/* ----------------------------------------------- */
+	/* Create a socket and connect to server using normal socket calls. */
+	
+	sd = socket (AF_INET, SOCK_STREAM, 0);       CHK_ERR(sd, "socket");
+	
+	// clear sa
+	memset (&sa, '\0', sizeof(sa));
+	
+	// get address
+	if ((hp= gethostbyname(host)) == NULL) { 
+		sa.sin_addr.s_addr = inet_addr (host);   /* Server IP */
+	} else {
+		memcpy((char *)&sa.sin_addr,hp->h_addr,hp->h_length); /* set address */
+	}
+	
+	sa.sin_family      = AF_INET;
+	sa.sin_port        = htons     (443);    /* Server Port number */
+	
+	err = connect(sd, (struct sockaddr*) &sa,
+		sizeof(sa));                   CHK_ERR(err, "connect");
+	
+	/* ----------------------------------------------- */
+	/* Now we have TCP conncetion. Start SSL negotiation. */
+  
+	ssl = SSL_new (ctx);                         CHK_NULL(ssl);    
+	SSL_set_fd (ssl, sd);
+	err = SSL_connect (ssl);                     CHK_SSL(err);
+    
+	/* --------------------------------------------------- */
+	/* DATA EXCHANGE - Send a message and receive a reply. */
+
+	err = SSL_write (ssl, send->Flatten(), send->Length());  CHK_SSL(err);
+
+	int received = 0;
+	while ( err > 0 )
+	{
+		err = SSL_read (ssl, &buffer[received], sizeof(buffer) - 1 - received);
+		CHK_SSL(err);
+		if ( err > 0 )
+			received += err;
+	}
+	buffer[received] = '\0';
+	*recv = new HTTPFormatter(buffer, received);
+	printf ("Got %d chars:'%s'\n", err, buffer);
+	SSL_shutdown (ssl);  /* send SSL/TLS close_notify */
+	
+	/* Clean up. */
+	
+	close (sd);
+	SSL_free (ssl);
+	SSL_CTX_free (ctx);
+	
 	return received;
 };
 
@@ -655,16 +698,26 @@ status_t MSNConnection::handleCHL( Command * command ) {
 	Command *reply = new Command("QRY");
 	reply->AddParam(kClientIDString);
 
-	MD5 *md5 = new MD5();
+/*	MD5 *md5 = new MD5();
 	md5->update((uchar *)chal.String(), (uint16)chal.Length());
 	md5->update((uchar *)kClientIDCode, (uint16)strlen(kClientIDCode));
 	md5->finalize();
 
 	reply->AddPayload(md5->hex_digest(), 32);
-
+*/
+	MD5state_st state;
+	char digest[128];
+	
+	MD5_Init(&state);
+//	MD5((uchar *)chal.String(), (uint16)chal.Length(), (unsigned char*)digest);
+	MD5_Update(&state, (uchar *)chal.String(), (uint16)chal.Length());
+	MD5_Final((unsigned char*)digest, &state);
+	
+	reply->AddPayload(digest, 32);
+	
 	Send(reply);
 	
-	delete md5;	
+//	delete md5;	
 
 	return B_OK;
 }
