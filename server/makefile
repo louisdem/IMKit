@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= im_server
+SVG_ICON=im_server.svg
 TOPDIR=..
 TARGET_DIR = $(TOPDIR)/build
 BUILD_REVISION = $(shell svn info makefile | grep "Revision" | sed -e s/evision:\ //g)
