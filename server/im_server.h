@@ -40,11 +40,13 @@ class Server : public BApplication
 		void	AddEndpoint( BMessenger );
 		void	RemoveEndpoint( BMessenger );
 		
-		void	GetSettingsTemplate(BMessage*);
-		void	GetLoadedProtocols(BMessage*);
-		void	ServerBasedContactList(BMessage*);
-		void	GetSettings(BMessage*);
-		void	SetSettings(BMessage*);
+		void	reply_GET_SETTINGS_TEMPLATE(BMessage*);
+		void	reply_GET_LOADED_PROTOCOLS(BMessage*);
+		void	reply_SERVER_BASED_CONTACT_LIST(BMessage*);
+		status_t	GetSettings(const char * protocol, BMessage*);
+		status_t	SetSettings(const char * protocol, BMessage*);
+		void	reply_GET_SETTINGS( BMessage * );
+		void	reply_SET_SETTINGS( BMessage * );
 		
 		BMessage	GenerateSettingsTemplate();
 		status_t	UpdateOwnSettings( BMessage );
@@ -57,6 +59,11 @@ class Server : public BApplication
 		
 		void	GetContactsForProtocol( const char * protocol, BMessage * msg );
 		
+		void	StartAutostartApps();
+		void	StopAutostartApps();
+		void	reply_ADD_AUTOSTART_APPSIG( BMessage * );
+		void	reply_REMOVE_AUTOSTART_APPSIG( BMessage * );
+		
 		BQuery						fQuery;
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
@@ -67,5 +74,7 @@ class Server : public BApplication
 };
 
 };
+
+#define LOG_PREFIX "im_server"
 
 #endif

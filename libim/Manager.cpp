@@ -1,6 +1,7 @@
 #include "Manager.h"
 
 #include "Constants.h"
+#include "Helpers.h"
 
 #include <stdio.h>
 #include <Roster.h>
@@ -117,19 +118,19 @@ Manager::AddEndpoint( BMessenger msgr )
 		case B_OK:
 			break;
 		case B_TIMED_OUT:
-			printf("Manager::AddEndpoint: B_TIMED_OUT\n");
+			LOG("Manager", LOW, "Manager::AddEndpoint: B_TIMED_OUT\n");
 			break;
 		case B_WOULD_BLOCK:
-			printf("Manager::AddEndpoint: B_WOULD_BLOCK\n");
+			LOG("Manager", LOW, "Manager::AddEndpoint: B_WOULD_BLOCK\n");
 			break;
 		case B_BAD_PORT_ID:
-			printf("Manager::AddEndpoint: B_BAD_PORT_ID\n");
+			LOG("Manager", LOW, "Manager::AddEndpoint: B_BAD_PORT_ID\n");
 			break;
 		case B_NO_MORE_PORTS:
-			printf("Manager::AddEndpoint: B_NO_MORE_PORTS\n");
+			LOG("Manager", LOW, "Manager::AddEndpoint: B_NO_MORE_PORTS\n");
 			break;
 		default:
-			printf("Manager::AddEndpoint: Other error\n");
+			LOG("Manager", LOW, "Manager::AddEndpoint: Other error\n");
 	}
 }
 
@@ -157,7 +158,7 @@ Manager::OneShotMessage( BMessage * msg )
 	
 	if ( !msgr.IsValid() )
 	{
-		printf("Manager::SendMessage: fMsgr invalid\n");
+		LOG("Manager", LOW, "Manager::SendMessage: fMsgr invalid\n");
 		return B_ERROR;
 	}
 	
@@ -172,7 +173,7 @@ Manager::SendMessage( BMessage * msg, BMessage * reply = NULL )
 {
 	if ( !fMsgr.IsValid() )
 	{
-		printf("Manager::SendMessage: fMsgr invalid\n");
+		LOG("Manager", LOW, "Manager::SendMessage: fMsgr invalid\n");
 		return B_ERROR;
 	}
 	

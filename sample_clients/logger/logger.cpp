@@ -24,6 +24,11 @@ LoggerApp::LoggerApp()
 	fMan = new IM::Manager(this);
 	
 	fMan->StartListening();
+
+	BMessage msg(IM::ADD_AUTOSTART_APPSIG);
+	msg.AddString("app_sig", "application/x-vnd.m_eiman.im_logger");
+	
+	fMan->SendMessage( &msg );
 }
 
 LoggerApp::~LoggerApp()

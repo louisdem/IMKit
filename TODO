@@ -6,24 +6,41 @@ Fixes
 * Add status changes to im_logger?
 * Smart protocol selection, if contact is online on any service, use that etc
 * Deskbar icon: show current status in Set status menu
-* convert_to_utf8() on names etc, ICQ add-on
 * ChatWindow - resize problems with textview?
 * Change URLTextView so it highlights URL:s
 * URLTextView doesn't show selected text as selected
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
+* im_server: Monitor People files and remove from interest list if a connection attribute is removed
+* add support for setting the verbosity level on startup, now defaults to DEBUG which is a bit chatty
 
 New features
 
-More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
+More attributes for info like timezone, location, etc?
 
-"Autostart clients" in im_server (shut them down, too)
-	IM::Manager::RegisterAutostart(), IM::Manager::RemoveAutostart(), IM::Manager::GetAutostartList()
+Option for im_server - Don't fetch serverside contact lists
+
+Block contact - status set to "Blocked" => ignore incoming messages?
+
+Message filters - For implementing things like transparent encryption etc (key as attribute?)
+
+More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
 
 Log in invisible for ICQ
 
 File transfers - need new icqlib?
 
-Search for contacts
+Serverside contact list manager:
+	Search for contacts
+		IM:SEARCH_FOR_CONTACTS ( string:name, string:nick, string:email, string:id )
+		IM:SEARCH_RESULTS ( protocol, name, email, id, whatever info we can get )
+		IM:SEARCH_COMPLETED (protocol)
+		IM:STOP_SEARCH (stops the currently active search(?))
+	Remove contacts
+		IM:REMOVE_SERVERSIDE_CONTACT (protocol, id)
+	Sort contacts in groups
+		IM:GET_SERVERSIDE_GROUPS (protocol)
+		IM:GET_CONTACTS_IN_SERVERSIDE_GROUP (protocol, group)
+		IM:MOVE_CONTACT_TO_SERVERSIDE_GROUP (protocol, id, group)
 
 New client: Relay station
 * Forward all messages received from !relay_target to relay_target

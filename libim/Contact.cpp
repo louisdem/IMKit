@@ -4,6 +4,8 @@
 #include <TypeConstants.h>
 #include <stdio.h>
 
+#include "Helpers.h"
+
 using namespace IM;
 
 Contact::Contact()
@@ -167,7 +169,7 @@ Contact::SaveConnections()
 status_t
 Contact::AddConnection( const char * proto_id )
 {
-	printf("Adding connection %s\n", proto_id);
+	LOG("Contact", HIGH, "Adding connection %s\n", proto_id);
 	
 	if ( fConnections.CountItems() == 0 )
 		LoadConnections();
@@ -184,7 +186,7 @@ Contact::AddConnection( const char * proto_id )
 status_t
 Contact::RemoveConnection( const char * proto_id )
 {
-	printf("Removing connection %s\n", proto_id);
+	LOG("Contact", HIGH, "Removing connection %s\n", proto_id);
 	
 	if ( fConnections.CountItems() == 0 )
 		LoadConnections();

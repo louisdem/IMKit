@@ -111,7 +111,7 @@ SettingsWindow::MessageReceived( BMessage * msg )
 							settings.AddInt32(name, atoi(ctrl->Text()) );
 							break;
 						default:
-							LOG("Unhandled settings type!");
+							LOG("settings window", LOW, "Unhandled settings type!");
 							return;
 					}
 				} else
@@ -123,7 +123,7 @@ SettingsWindow::MessageReceived( BMessage * msg )
 					
 					if ( !item )
 					{
-						LOG("Error: No selection in setting");
+						LOG("settings window", MEDIUM, "Error: No selection in setting");
 						return;
 					}
 					
@@ -136,7 +136,7 @@ SettingsWindow::MessageReceived( BMessage * msg )
 							settings.AddInt32(name, atoi(item->Label()) );
 							break;
 						default:
-							LOG("Unhandled settings type!");
+							LOG("settings window", LOW, "Unhandled settings type!");
 							return;
 					}
 				} else
@@ -151,13 +151,13 @@ SettingsWindow::MessageReceived( BMessage * msg )
 				}
 			}
 			
-			//LOG("SETTINGS message", &settings);
+			LOG("settings window", DEBUG, "SETTINGS message", &settings);
 			
 			BMessage to_send(IM::SET_SETTINGS), reply;
 			to_send.AddString("protocol", fProtocol);
 			to_send.AddMessage("settings", &settings);
 			
-			//LOG("SET_SETTINGS message:",&to_send);
+			LOG("settings window", DEBUG, "SET_SETTINGS message:",&to_send);
 			
 			fMan->SendMessage( &to_send, &reply );
 			
@@ -165,7 +165,7 @@ SettingsWindow::MessageReceived( BMessage * msg )
 			{ // settings ok, notify deskbar icon
 				fDeskbarIcon.SendMessage( 'upse' );
 			}
-			//LOG("apply settings, reply",&reply);
+			LOG("settings window", DEBUG, "apply settings, reply",&reply);
 		}	break;
 		
 		default:
@@ -176,12 +176,10 @@ SettingsWindow::MessageReceived( BMessage * msg )
 void
 SettingsWindow::rebuildUI()
 {
-	char some_text[512];
-	sprintf(some_text,"Rebuilding GUI with protocol [%s]", fProtocol);
-	LOG(some_text);
+	LOG("settings window", MEDIUM, "Rebuilding GUI with protocol [%s]", fProtocol);
 	
 	// delete old UI
-	LOG("  deleting old views");
+	LOG("settings window", DEBUG, "  deleting old views");
 	fBox->SetLabel( (BView*)NULL );
 	while ( fBox->CountChildren() > 0 )
 	{
@@ -202,7 +200,7 @@ SettingsWindow::rebuildUI()
 	
 	if ( protocols.what == IM::ACTION_PERFORMED )
 	{ // got list of protocols. yay!
-		LOG("  Creating protocol menu");
+		LOG("settings window", DEBUG, "  Creating protocol menu");
 		
 		protocolMenu = new BMenu("Select module");
 		
@@ -226,7 +224,7 @@ SettingsWindow::rebuildUI()
 		protocolMenu->AddItem( new BMenuItem("IM Server", msg) );
 	} else
 	{
-		LOG("Error: Failed to get list of protocols");
+		LOG("settings window", LOW, "Error: Failed to get list of protocols");
 		return;
 	}
 	
@@ -247,13 +245,13 @@ SettingsWindow::rebuildUI()
 	
 	BMessage templ, settings;
 	
-	LOG("  Getting template and settings from im_server");
+	LOG("settings window", DEBUG, "  Getting template and settings from im_server");
 	fMan->SendMessage( &req_template, &fTemplate );
 	fMan->SendMessage( &req_settings, &settings );
 	
 	if ( fTemplate.what == IM::ERROR )
 	{ // got template, construct GUI
-		LOG("SettingsWindow construction failed: Couldn't get template");
+		LOG("settings window", LOW, "SettingsWindow construction failed: Couldn't get template");
 		return;
 	}
 	
@@ -263,7 +261,7 @@ SettingsWindow::rebuildUI()
 */		
 	BMessage curr;
 	
-	LOG("  Creating views");
+	LOG("settings window", DEBUG, "  Creating views");
 	for ( int i=0; fTemplate.FindMessage("setting",i,&curr) == B_OK; i++ )
 	{
 		char temp[512];
@@ -275,8 +273,7 @@ SettingsWindow::rebuildUI()
 		int32 type=-1;
 		curr.FindInt32("type",&type);
 		
-		sprintf(some_text,"Setting %s [%s]", desc, name );
-		LOG(some_text);
+		LOG("settings window", DEBUG, "Setting %s [%s]", desc, name);
 		
 		bool is_free_text = true;
 		bool is_secret = false;
@@ -287,10 +284,10 @@ SettingsWindow::rebuildUI()
 		{ // get value from settings if available
 			case B_STRING_TYPE:
 			{
-				LOG("  string setting");
+				LOG("settings window", DEBUG, "  string setting");
 				if ( curr.FindString("valid_value") )
 				{ // one-of-provided
-					LOG("  one-of-provided");
+					LOG("settings window", DEBUG, "  one-of-provided");
 					is_free_text = false;
 					
 					menu = new BPopUpMenu(name);
@@ -306,7 +303,7 @@ SettingsWindow::rebuildUI()
 						menu->FindItem(value)->SetMarked(true);
 				} else
 				{ // free-text
-					LOG("  free-text");
+					LOG("settings window", DEBUG, "  free-text");
 					value = settings.FindString(name);
 					if ( !value )
 						value = curr.FindString("default");
@@ -316,10 +313,10 @@ SettingsWindow::rebuildUI()
 			}	break;
 			case B_INT32_TYPE:
 			{
-				LOG("  int32 setting");
+				LOG("settings window", DEBUG, "  int32 setting");
 				if ( curr.FindInt32("valid_value") )
 				{ // one-of-provided
-					LOG("  one-of-provided");
+					LOG("settings window", DEBUG, "  one-of-provided");
 					is_free_text = false;
 					
 					menu = new BPopUpMenu(name);
@@ -332,7 +329,7 @@ SettingsWindow::rebuildUI()
 					}
 				} else
 				{ // free-text
-					LOG("  free-text");
+					LOG("settings window", DEBUG, "  free-text");
 					int32 v=0;
 					if ( settings.FindInt32(name,&v) == B_OK )
 					{
@@ -350,7 +347,7 @@ SettingsWindow::rebuildUI()
 			}	break;
 			case B_BOOL_TYPE:
 			{
-				LOG("  bool setting");
+				LOG("settings window", DEBUG, "  bool setting");
 				
 				bool active;
 				
@@ -367,7 +364,7 @@ SettingsWindow::rebuildUI()
 		if ( !value )
 			value = "";
 		
-		LOG("  creating control");
+		LOG("settings window", DEBUG, "  creating control");
 		// create control if needed
 		if ( !control )
 		{
@@ -389,7 +386,7 @@ SettingsWindow::rebuildUI()
 		control->MoveTo(10, 25+i*21);
 		ResizeTo( 220, 45+(i+1)*21 );
 		
-		LOG("  done.");
+		LOG("settings window", DEBUG, "  done.");
 	}
 	
 	// add space for buttons

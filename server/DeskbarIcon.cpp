@@ -18,7 +18,7 @@
 BView *
 instantiate_deskbar_item()
 {
-	LOG("IM: Instantiating Deskbar item");
+	LOG("deskbar", MEDIUM, "IM: Instantiating Deskbar item");
 	return new IM_DeskbarIcon();
 }
 
@@ -27,7 +27,7 @@ IM_DeskbarIcon::Instantiate( BMessage * archive )
 {
 	if ( !validate_instantiation(archive,"IM_DeskbarIcon") )
 	{
-		LOG("IM_DeskbarIcon::Instantiate(): Invalid archive");
+		LOG("deskbar", LOW, "IM_DeskbarIcon::Instantiate(): Invalid archive");
 		return NULL;
 	}
 	
@@ -167,7 +167,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				BMessage msg('blnk');
 				fMsgRunner = new BMessageRunner( BMessenger(this), &msg, 200*1000 );
 			}
-			LOG("IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("deskbar", HIGH, "IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
 		case 'stop':
 		{	
@@ -178,7 +178,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 			
 			fFlashCount--;
-			LOG("IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("deskbar", HIGH, "IM: fFlashCount: %ld\n", fFlashCount);
 			
 			if ( fFlashCount == 0 )
 			{
@@ -191,7 +191,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			if ( fFlashCount < 0 )
 			{
 				fFlashCount = 0;
-				LOG("IM: fFlashCount below zero, fixing\n");
+				LOG("deskbar", MEDIUM, "IM: fFlashCount below zero, fixing\n");
 			}
 		}	break;
 		
@@ -230,7 +230,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		{
 			msg->FindBool("blink_db", &fShouldBlink );
 			
-			LOG("IM: Settings applied");
+			LOG("deskbar", MEDIUM, "IM: Settings applied");
 		}	break;
 		
 		default:
@@ -341,7 +341,7 @@ IM_DeskbarIcon::GetBitmap( const char * name )
 void
 IM_DeskbarIcon::reloadSettings()
 {
-	LOG("IM: Requesting settings");
+	LOG("deskbar", HIGH, "IM: Requesting settings");
 	
 	BMessage request( IM::GET_SETTINGS ), settings;
 	request.AddString("protocol","");
@@ -350,5 +350,5 @@ IM_DeskbarIcon::reloadSettings()
 	
 	msgr.SendMessage(&request, this );
 	
-	LOG("IM: Settings requested");
+	LOG("deskbar", HIGH, "IM: Settings requested");
 }

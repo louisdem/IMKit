@@ -63,7 +63,13 @@ enum message_what_codes {
 	/*
 		Deskbar icon related messages
 	*/
-	DESKBAR_ICON_CLICKED	= 'DBcl'
+	DESKBAR_ICON_CLICKED	= 'DBcl',
+	
+	/*
+		Client autostart management
+	*/
+	ADD_AUTOSTART_APPSIG	= 'Aaas',
+	REMOVE_AUTOSTART_APPSIG	= 'Raas'
 };
 
 #define IM_SERVER_SIG "application/x-vnd.beclan.im_kit"

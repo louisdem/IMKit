@@ -3,13 +3,15 @@
 #include <signal.h>
 #include <stdio.h>
 
+#include <libim/Helpers.h>
+
 void handle_ctrl_c( int sig )
 {
 	printf("Fatal signal received.\n");
 	be_app->PostMessage( B_QUIT_REQUESTED );
 }
 
-int main(void)
+int main( int numarg, const char ** argv )
 {
 	struct sigaction my_sig_action;
 	my_sig_action.sa_handler = handle_ctrl_c;

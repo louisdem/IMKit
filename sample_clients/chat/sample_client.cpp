@@ -41,7 +41,7 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 	
 	if ( node.InitCheck() != B_OK )
 	{
-		LOG("Invalid entry_ref");
+		LOG("sample_client", LOW, "Invalid entry_ref in setAttributeIfNotSet");
 		return;
 	}
 	
@@ -58,7 +58,7 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 	
 	if ( num_written != (int32)strlen(value) + 1 )
 	{
-		printf("Error writing attribute %s (%s)\n",attr,value);
+		LOG("sample_client", MEDIUM, "Error writing attribute %s (%s)\n",attr,value);
 	} else
 	{
 		//LOG("Attribute set");
@@ -73,6 +73,11 @@ MyApp::MyApp()
 	add_system_beep_event(kImNewMessageSound, 0);
 
 	fMan->StartListening();
+	
+	BMessage msg(IM::ADD_AUTOSTART_APPSIG);
+	msg.AddString("app_sig", "application/x-vnd.m_eiman.sample_im_client");
+	
+	fMan->SendMessage( &msg );
 }
 
 MyApp::~MyApp()
@@ -133,7 +138,7 @@ MyApp::MessageReceived( BMessage * msg )
 			{
 				case IM::CONTACT_INFO:
 				{ // handle contact info updates
-//					LOG("Got contact info:",msg);
+					//LOG("sample_client", DEBUG, "Got contact info:",msg);
 					
 					const char * first_name = msg->FindString("first name");
 					const char * last_name = msg->FindString("last name");
@@ -185,7 +190,7 @@ MyApp::MessageReceived( BMessage * msg )
 			
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
-				LOG("Creating new window to handle message");
+				LOG("sample_client", MEDIUM, "Creating new window to handle message");
 				win = new ChatWindow(ref);
 				if ( win->Lock() )
 				{
@@ -202,7 +207,7 @@ MyApp::MessageReceived( BMessage * msg )
 					}
 				} else
 				{
-					LOG("This is a fatal error that should never occur. Lock fail on new win.");
+					LOG("sample_client", LOW, "This is a fatal error that should never occur. Lock fail on new win.");
 				}
 				
 			} else
@@ -220,7 +225,7 @@ MyApp::MessageReceived( BMessage * msg )
 					win->Unlock();
 				} else
 				{
-					LOG("This is a fatal error that should never occur. Lock fail on old win.");
+					LOG("sample_client", LOW, "This is a fatal error that should never occur. Lock fail on old win.");
 				}
 			}
 		}	break;
@@ -461,7 +466,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( fMan->SendMessage(&im_msg) == B_OK )
 				fInput->SetText("");
 			else
-				LOG("Error sending message to im_server");
+				LOG("sample_client", LOW, "Error sending message to im_server");
 		}	break;
 		
 		case B_NODE_MONITOR:
@@ -491,7 +496,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BEntry entry(&fEntry);
 					if ( !entry.Exists() )
 					{
-						LOG("Error: New entry invalid");
+						LOG("sample_client", LOW, "Error: New entry invalid");
 					}
 				}	break;
 				case B_STAT_CHANGED:
