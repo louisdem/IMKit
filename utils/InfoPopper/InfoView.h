@@ -5,7 +5,7 @@
 #include <MessageRunner.h>
 #include <TextView.h>
 #include <String.h>
-#include <slist>
+#include <list>
 
 #include <Bitmap.h>
 #include <storage/Entry.h>
@@ -33,7 +33,7 @@ typedef struct line_struct {
 	BPoint location;
 } lineinfo;
 
-typedef slist<lineinfo *> vline;
+typedef list<lineinfo *> vline;
 
 // -------------- INFO VIEW -----------------
 

@@ -23,14 +23,15 @@ namespace InfoPopper {
 // AddMessage
 ///// Message data - required!
 //  int8 type: One of the info_type constants - changes appearance
-//  String appTitle: The main title of the message (Eg. "The IM Kit")
-//  String title: The name of the origin of the message, for example
+//  String app: The main title of the message (Eg. "The IM Kit")
+//  String title: The name of the origin of the message, for example "ICQ"
 //  String content: The message to be displayed
 //// Optional message specifiers
 //  String messageID: optional. When you add a new message with the
 //					  same messageID as an existing message, that
 //					  message is replaced with the new one
-//	Float progress: optional. value between 0.0 and 1.0 describing progress
+//	Float progress: optional. value between 0.0 and 1.0 describing progress.
+// 					Requires that type is Progress to be displayed.
 //	Int32 timeout: optional. Number of seconds the message should be displayed,
 //					If 0, the message will stay until clicked. Default 5.
 ////// Icon

@@ -193,7 +193,7 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 		font_height fh;
 		be_plain_font->GetHeight(&fh);
 		float fontHeight = fh.ascent + fh.descent + fh.leading;
-		*h += 10 + (kEdgePadding * 3) + fontHeight;
+		*h += 10 + (kEdgePadding * 1) + fontHeight;
 	};
 };
 
@@ -213,7 +213,7 @@ void InfoView::Draw(BRect drawBounds) {
 		progRect = Bounds();
 		progRect.InsetBy(kEdgePadding, kEdgePadding);
 		progRect.top = progRect.bottom - (kEdgePadding * 2) - fontHeight;
-				
+		
 		StrokeRect(progRect);
 
 		BRect barRect = progRect;		
@@ -241,23 +241,23 @@ void InfoView::Draw(BRect drawBounds) {
 	
 	// draw icon
 	if (fBitmap) {
+		lineinfo * appLine = fLines.back();
 		font_height fh;
-		be_plain_font->GetHeight( &fh );
+		appLine->font.GetHeight( &fh );
 		
-		float title_bottom = fh.ascent + fh.leading + fh.descent;
-		float icon_right = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
+		float title_bottom = fLines.back()->location.y + fh.descent;
 		
 		float ix = kEdgePadding;
 		float iy = 0;
 		if (fParent->Layout() == TitleAboveIcon) {
-			iy = kEdgePadding + title_bottom + (Bounds().Height() - title_bottom - fBitmap->Bounds().Height()) / 2;
+			iy = title_bottom + kEdgePadding + (Bounds().Height() - title_bottom - kEdgePadding*2 - fBitmap->Bounds().Height()) / 2;
 		} else {
 			iy = (Bounds().Height() - fBitmap->Bounds().Height()) / 2.0;
 		};
 		
 		if (fType == InfoPopper::Progress) {
 			// move icon up by half progress bar height if it's present
-			iy -= progRect.Height() / 2.0;
+			iy -= (progRect.Height() + kEdgePadding) / 2.0;
 		}
 		
 		DrawBitmap(fBitmap,	BPoint(ix,iy));
@@ -276,13 +276,15 @@ void InfoView::Draw(BRect drawBounds) {
 	BRect closeRect = Bounds().InsetByCopy(2,2);
 	closeRect.left = closeRect.right - kCloseWidth;
 	closeRect.bottom = closeRect.top + kCloseWidth;
+	closeRect.left--;
+
+	// TODO: change this to something ui_color() dependant
 	SetHighColor(218, 218, 218);
 	FillRect(closeRect);
 	
-	closeRect.right++;
 	SetHighColor(0, 0, 0);
 	StrokeRect(closeRect);
-
+	
 	BRect crossRect;
 	float midY = (closeRect.bottom - closeRect.top) / 2;
 	float midX = (closeRect.right - closeRect.left) / 2;
@@ -509,6 +511,26 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	fLines.push_front(tempLine);
 	
 	fHeight = y + (kEdgePadding * 2);
+	
+	// make sure icon fits
+	if ( fBitmap )
+	{
+		lineinfo * appLine = fLines.back();
+		font_height fh;
+		appLine->font.GetHeight( &fh );
+		
+		float title_bottom = fLines.back()->location.y + fh.descent;
+		
+		if ( fParent->Layout() == TitleAboveIcon )
+		{
+			if ( fHeight < title_bottom + fBitmap->Bounds().Height() + 2*kEdgePadding )
+				fHeight = title_bottom + fBitmap->Bounds().Height() + 2*kEdgePadding;
+		} else
+		{
+			if ( fHeight < fBitmap->Bounds().Height() + kEdgePadding*2 )
+				fHeight = fBitmap->Bounds().Height() + kEdgePadding*2;
+		}
+	}
 	
 	BMessenger msgr(Parent());
 	msgr.SendMessage(InfoWindow::ResizeToFit);

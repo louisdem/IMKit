@@ -49,6 +49,7 @@ class InfoWindow : public BWindow
 		void	WriteDefaultSettings(BNode *node, bool writeWidth = true,
 					bool writeIcon = true, bool writeTimeout = true,
 					bool writeLayout = true);
+		void	LoadSettings( bool start_monitor = false );
 		
 		vector<InfoView*>	fInfoViews;
 		deskbar_location	fDeskbarLocation;
