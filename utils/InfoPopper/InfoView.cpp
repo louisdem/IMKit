@@ -1,4 +1,5 @@
 #include "InfoView.h"
+#include "InfoWindow.h"
 #include "../../common/IMKitUtilities.h"
 
 #include <TranslationUtils.h>
@@ -26,7 +27,7 @@ property_info message_prop_list[] = {
 
 InfoView::InfoView( info_type type, const char *app, const char *title,
 	const char * text, BMessage *details)
-:	BView( BRect(0,0,1,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW ),
+:	BView( BRect(0,0,kWidth,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE|B_FRAME_EVENTS ),
 	fType(type),
 	fRunner(NULL),
 	fDetails(details) {
@@ -190,6 +191,8 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 void InfoView::Draw(BRect drawBounds) {
 	BRect bound = Bounds();
 	
+//	printf("Drawing. Width is %.0f pixels\n", Bounds().Width());
+
 	// draw progress background
 	if (fProgress > 0.0) {
 		bound.right *= fProgress;
@@ -205,7 +208,7 @@ void InfoView::Draw(BRect drawBounds) {
 	if (fBitmap) {
 		font_height fh;
 		be_plain_font->GetHeight( &fh );
-
+		
 		float title_bottom = fh.ascent + fh.leading + fh.descent;
 		float icon_right = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
 		
@@ -230,7 +233,7 @@ void InfoView::Draw(BRect drawBounds) {
 	};
 	
 	// draw 'close rect'
-	BRect closeRect = Parent()->Bounds();
+	BRect closeRect = Bounds().InsetByCopy(2,2);
 	closeRect.left = closeRect.right - kCloseWidth;
 	closeRect.bottom = closeRect.top + kCloseWidth;
 	SetHighColor(218, 218, 218);
@@ -329,14 +332,25 @@ void InfoView::MouseDown(BPoint point) {
 	};
 };
 
-void InfoView::SetText(const char *app, const char *title, const char *text) {
+void InfoView::SetText(const char *app, const char *title, const char *text, float newMaxWidth) {
+	if ( newMaxWidth < 0 )
+		newMaxWidth = Bounds().Width();
+	
+//	printf("Setting new text, wrapping to %.0f pixels\n", newMaxWidth);
+	
+	// delete old lines
+	vline::iterator lIt;
+	for (lIt = fLines.begin(); lIt != fLines.end(); lIt++) delete (*lIt);
+	fLines.clear();
+	
+	// do the text thing
 	fApp = app;
 	fTitle = title;
 	fText = text;
 
 	font_height fh;
 	float fontHeight = 0;
-	float iconRight = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
+	float iconRight = kEdgePadding + (fBitmap != NULL ? fBitmap->Bounds().right : 0) + kEdgePadding;
 	float y = kEdgePadding;
 
 	lineinfo *appLine = new lineinfo;
@@ -352,22 +366,22 @@ void InfoView::SetText(const char *app, const char *title, const char *text) {
 	appLine->font = be_bold_font;
 	fLines.push_front(appLine);
 	y += fontHeight;
-
+	
 	be_plain_font->GetHeight(&fh);
 	fontHeight = fh.leading + fh.descent + fh.ascent;
-
+	
 	lineinfo *titleLine = new lineinfo;
 	titleLine->location = BPoint(iconRight + kEdgePadding, y);
 	titleLine->font = be_plain_font;
 	titleLine->text = title;
 	fLines.push_front(titleLine);
 	y += fontHeight;
-
+	
 	const char spacers[] = " \t\n-\\/";
 	BString textBuffer = text;
 	textBuffer.ReplaceAll("\t", "    ");
 	text = textBuffer.String();
-
+	
 	size_t offset = 0;
 	size_t n = 0;
 	int16 count = 0;
@@ -389,9 +403,9 @@ void InfoView::SetText(const char *app, const char *title, const char *text) {
 	};
 	
 	offset = 0;
-	float maxWidth = kWidth;
+	float maxWidth = newMaxWidth - kEdgePadding; //kWidth;
 	bool wasNewline = false;
-		
+	
 	for (int32 i = 0; i < count; i++) {
 		if (text[spaces[i]] == '\n') {
 			lineinfo *tempLine = new lineinfo;
@@ -404,8 +418,14 @@ void InfoView::SetText(const char *app, const char *title, const char *text) {
 			
 			offset = spaces[i] + 1;
 			
+/*			// debug
+			printf("Line (newline) '%s' is %.0f pixels\n", 
+				tempLine->text.String(), 
+				tempLine->font.StringWidth(tempLine->text.String())
+			);
+*/			
 			fLines.push_front(tempLine);
-		} else if (StringWidth(text + offset, spaces[i] - offset) > maxWidth) {
+		} else if (i+1 < count && StringWidth(text + offset, spaces[i+1] - offset) > maxWidth) {
 			lineinfo *tempLine = new lineinfo;
 			tempLine->font = be_plain_font;
 			if (wasNewline == false) {
@@ -418,9 +438,19 @@ void InfoView::SetText(const char *app, const char *title, const char *text) {
 			y += fontHeight;
 			tempLine->text = "";
 			tempLine->text.Append(text + offset, spaces[i] - offset);
-
+			
+			// strip first space
+			if ( (tempLine->text.String())[0] == ' ' )
+				tempLine->text.RemoveFirst(" ");
+			
+/*			// debug
+			printf("Line (too long) '%s' is %.0f pixels\n", 
+				tempLine->text.String(), 
+				tempLine->font.StringWidth(tempLine->text.String())
+			);
+*/			
 			fLines.push_front(tempLine);
-
+			
 			offset = spaces[i];
 		};
 	};
@@ -434,11 +464,25 @@ void InfoView::SetText(const char *app, const char *title, const char *text) {
 	} else {
 		tempLine->location = BPoint(iconRight + (kEdgePadding * 2), y);
 	};
+	
+	// strip first space
+	if ( (tempLine->text.String())[0] == ' ' )
+		tempLine->text.RemoveFirst(" ");
+			
+/*	// debug
+	printf("Line (no more text) '%s' is %.0f pixels\n", 
+		tempLine->text.String(), 
+		tempLine->font.StringWidth(tempLine->text.String())
+	);
+*/
 	fLines.push_front(tempLine);
 	
 	free(spaces);
 	
 	fHeight = y + kEdgePadding;
+	
+	BMessenger msgr(Parent());
+	msgr.SendMessage( InfoWindow::ResizeToFit );
 };
 
 bool
@@ -463,3 +507,14 @@ status_t InfoView::GetSupportedSuites(BMessage *msg) {
 	return BView::GetSupportedSuites(msg); 		
 };
 
+void InfoView::FrameResized( float w, float h ) {
+	// SetText again to re-wrap lines to new view width
+	BString app(fApp), title(fTitle), text(fText);
+	
+	SetText( 
+		app.Length() > 0 ? app.String() : NULL, 
+		title.Length() > 0 ? title.String() : NULL, 
+		text.Length() > 0 ? text.String() : NULL,
+		w
+	);
+}

@@ -56,11 +56,13 @@ class InfoView : public BView
 			The first line of the text is set to use be_bold_font, and the
 			rest of the lines are set to use be_plain_font.
 		*/
-		void SetText(const char *app, const char *title, const char *text);
+		void SetText(const char *app, const char *title, const char *text, float newMaxWidth=-1);
 		
 		bool HasMessageID( const char * );
 
 		void MouseDown(BPoint point);
+		
+		void FrameResized(float,float);
 		
 		BHandler * ResolveSpecifier(BMessage *, int32 , BMessage *, int32, const char *);
 		status_t GetSupportedSuites(BMessage*);

@@ -126,7 +126,7 @@ void InfoWindow::ResizeAll(void) {
 	fBorder->GetPreferredSize(&borderw, &borderh);
 	
 	float curry = borderh - fBorder->BorderSize(), maxw = 250;
-
+	
 	for (vector<InfoView*>::reverse_iterator i = fInfoViews.rbegin(); i != fInfoViews.rend();
 		i++) {
 		float pw,ph;
@@ -138,8 +138,7 @@ void InfoWindow::ResizeAll(void) {
 		
 		if (pw > maxw) maxw = pw;
 		
-		(*i)->ResizeTo(Bounds().Width() - fBorder->BorderSize() * 2,
-			(*i)->Bounds().Height());
+		(*i)->ResizeTo(fBorder->Bounds().Width() - fBorder->BorderSize() * 2, ph);
 	};
 	
 	//ResizeTo(maxw + fBorder->BorderSize() * 2, curry - 1 + fBorder->BorderSize());
