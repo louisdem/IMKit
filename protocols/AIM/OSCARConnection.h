@@ -1,9 +1,9 @@
-#ifndef AIMCONNECTION_H
-#define AIMCONNECTION_H
+#ifndef OSCARCONNECTION_H
+#define OSCARCONNECTION_H
 
 #include "AIMManager.h"
 
-#include "AIMConstants.h"
+#include "OSCARConstants.h"
 #include "FLAP.h"
 #include "TLV.h"
 #include "SNAC.h"
@@ -35,12 +35,12 @@ enum conn_type {
 	connReq,
 };
 
-class AIMConnection : public BLooper {
+class OSCARConnection : public BLooper {
 	public:
-						AIMConnection(const char *server, uint16 port,
-							AIMManager *man, const char *name = "AIM Connection",
+						OSCARConnection(const char *server, uint16 port,
+							AIMManager *man, const char *name = "OSCAR Connection",
 							conn_type type = connBOS);
-						~AIMConnection();
+						~OSCARConnection();
 						
 		void			MessageReceived(BMessage *msg);
 				
@@ -54,13 +54,14 @@ class AIMConnection : public BLooper {
 		inline const char
 						*Server(void) const { return fServer.String(); };
 		inline uint16	Port(void) const { return fPort; };
-		virtual inline
-			const char	*ConnName(void) const { return "AIMConnection"; };
+		virtual 
+			const char	*ConnName(void) const { return "OSCARConnection"; };
 		conn_type		ConnectionType(void) const { return fConnType; };
 		
 		uint8			State(void) const { return fState; };
 		status_t		SetState(uint8 state);
 
+		ServerAddress	ExtractServerDetails(char *details);
 	private:
 		status_t		LowLevelSend(Flap *flap);
 		void			ClearQueue(void);		
@@ -68,7 +69,6 @@ class AIMConnection : public BLooper {
 		static int32	Receiver(void *con);
 		void			StartReceiver(void);
 		void			StopReceiver(void);
-		ServerAddress	ExtractServerDetails(char *details);
 		
 		virtual status_t	HandleServiceControl(BMessage *msg);
 		virtual status_t	HandleLocation(BMessage *msg);

@@ -13,13 +13,13 @@
 #include <File.h>
 
 #include "AIMManager.h"
-#include "AIMHandler.h"
+#include "OSCARHandler.h"
 
 using namespace IM;
 
 class AIMHandler;
 
-class AIMProtocol : public IM::Protocol, public AIMHandler
+class AIMProtocol : public IM::Protocol, public OSCARHandler
 {
 	public:
 				AIMProtocol();

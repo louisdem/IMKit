@@ -9,9 +9,10 @@
 
 #include <openssl/md5.h>
 
-#include "AIMConnection.h"
+#include "OSCARConnection.h"
+#include "AIMBOSConnection.h"
 #include "AIMReqConn.h"
-#include "AIMHandler.h"
+#include "OSCARHandler.h"
 #include "htmlparse.h"
 
 #if B_BEOS_VERSION==B_BEOS_VERSION_5
@@ -117,8 +118,8 @@ void MD5(const char *data, int length, char *result) {
 
 //#pragma mark -
 
-AIMManager::AIMManager(AIMHandler *handler) {	
-	fConnectionState = AMAN_OFFLINE;
+AIMManager::AIMManager(OSCARHandler *handler) {	
+	fConnectionState = OSCAR_OFFLINE;
 	
 	fHandler = handler;
 	fOurNick = NULL;
@@ -138,10 +139,10 @@ AIMManager::~AIMManager(void) {
 //#pragma mark -
 
 status_t AIMManager::ClearConnections(void) {
-	list<AIMConnection *>::iterator it;
+	list<OSCARConnection *>::iterator it;
 	
 	for (it = fConnections.begin(); it != fConnections.end(); it++) {
-		AIMConnection *con = (*it);
+		OSCARConnection *con = (*it);
 		if (con->Lock()) con->Quit();
 	};
 	
@@ -264,9 +265,12 @@ status_t AIMManager::HandleServiceControl(BMessage *msg) {
 			
 		} break;
 		
+		case MOTD: {
+			PrintHex(data, bytes, true);
+			ret = B_OK;
+		} break;
+		
 		default: {
-			LOG(kProtocolName, liMedium, "Got an unhandled SERVICE CONTROL message "
-				" - 0x%04x", subtype);
 			ret = kUnhandled;
 		};
 	};
@@ -496,9 +500,9 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 						uint16 userclass = (data[++offset] << 8) + data[++offset];
 
 						if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
-							fHandler->StatusChanged(nick, AMAN_AWAY);
+							fHandler->StatusChanged(nick, OSCAR_AWAY);
 						} else {
-							fHandler->StatusChanged(nick, AMAN_ONLINE);
+							fHandler->StatusChanged(nick, OSCAR_ONLINE);
 						};
 					} break;
 					
@@ -562,7 +566,7 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 								
 			LOG(kProtocolName, liLow, "AIMManager: \"%s\" went offline", nick);
 			
-			fHandler->StatusChanged(nick, AMAN_OFFLINE);
+			fHandler->StatusChanged(nick, OSCAR_OFFLINE);
 			free(nick);
 		} break;
 		default: {
@@ -829,10 +833,10 @@ status_t AIMManager::Send(Flap *f) {
 		if (s != NULL) {
 			uint16 family = s->Family();
 
-			list <AIMConnection *>::iterator i;
+			list <OSCARConnection *>::iterator i;
 			
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
-				AIMConnection *con = (*i);
+				OSCARConnection *con = (*i);
 				if (con == NULL) continue;
 				if (con->Supports(family) == true) {
 					LOG(kProtocolName, liLow, "Sending SNAC (0x%04x) via %s:%i", family,
@@ -844,7 +848,7 @@ status_t AIMManager::Send(Flap *f) {
 					
 			LOG(kProtocolName, liMedium, "No connections handle SNAC (0x%04x) requesting service",
 				family);
-			AIMConnection *con = fConnections.front();
+			OSCARConnection *con = fConnections.front();
 			if (con == NULL) {
 				LOG(kProtocolName, liHigh, "No available connections to send SNAC");
 				return B_ERROR;
@@ -869,7 +873,7 @@ status_t AIMManager::Send(Flap *f) {
 			};
 		};
 	} else {
-		AIMConnection *con = fConnections.front();
+		OSCARConnection *con = fConnections.front();
 		if (con != NULL) {
 			con->Send(f);
 		} else {
@@ -888,18 +892,18 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 		return B_ERROR;
 	}
 	
-	if (fConnectionState == AMAN_OFFLINE) {
+	if (fConnectionState == OSCAR_OFFLINE) {
 		uint8 nickLen = strlen(username);
 	
 		fOurNick = (char *)realloc(fOurNick, (nickLen + 1) * sizeof(char));
 		strncpy(fOurNick, username, nickLen);
 		fOurNick[nickLen] = '\0';
 
-		fConnectionState = AMAN_CONNECTING;
+		fConnectionState = OSCAR_CONNECTING;
 
 		Flap *flap = new Flap(OPEN_CONNECTION);
 
-		flap->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4);
+		flap->AddInt32(0x00000001);
 		flap->AddTLV(0x0001, username, nickLen);
 
 		char *encPass = EncodePassword(password);
@@ -914,8 +918,8 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 		flap->AddTLV(0x000e, "us", 2);
 		flap->AddTLV(0x000f, "en", 2);
 		flap->AddTLV(0x0009, (char []){0x00, 0x15}, 2);
-	
-		AIMConnection *c = new AIMConnection(server, port, this);
+		
+		OSCARConnection *c = new AIMBOSConnection(server, port, this);
 		c->Run();
 		fConnections.push_back(c);
 		c->Send(flap);
@@ -963,6 +967,8 @@ void AIMManager::MessageReceived(BMessage *msg) {
 		} break;
 	
 		case AMAN_STATUS_CHANGED: {
+			msg->PrintToStream();
+		
 			uint8 status = msg->FindInt8("status");
 			fHandler->StatusChanged(fOurNick, (online_types)status);
 			fConnectionState = status;
@@ -974,7 +980,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			int16 port = 0;
 			char *host = NULL;
 			int16 family = -1;
-			AIMConnection *con = NULL;
+			OSCARConnection *con = NULL;
 			
 			if (msg->FindData("cookie", B_RAW_TYPE, (const void **)&cookie, &bytes) != B_OK) return;
 			if (msg->FindString("host", (const char **)&host) != B_OK) return;
@@ -985,7 +991,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				fPendingConnections[family] = con;
 				con = new AIMReqConn(host, port, this);
 			} else {
-				con = new AIMConnection(host, port, this);
+				con = new OSCARConnection(host, port, this);
 			};
 			
 			Flap *srvCookie = new Flap(OPEN_CONNECTION);
@@ -999,7 +1005,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 		} break;
 		
 		case AMAN_CLOSED_CONNECTION: {
-			AIMConnection *con = NULL;
+			OSCARConnection *con = NULL;
 			msg->FindPointer("connection", (void **)&con);
 			if (con != NULL) {
 				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(),
@@ -1012,20 +1018,23 @@ void AIMManager::MessageReceived(BMessage *msg) {
 					fConnections.size());
 				
 				bool hasBOS = false;
-				list<AIMConnection *>::iterator cIt = fConnections.begin();
+				list<OSCARConnection *>::iterator cIt = fConnections.begin();
 				for (; cIt != fConnections.end(); cIt++) {
-					AIMConnection *con = (*cIt);
+					OSCARConnection *con = (*cIt);
 					if ((con) && (con->ConnectionType() == connBOS)) {
 						hasBOS = true;
 						break;
+					} else {
+						printf("%s:%i is %s\n", con->Server(), con->Port(),
+							con->ConnName());
 					};
 				};
 				
 				if (hasBOS == false) {
 					ClearWaitingSupport();
 					ClearConnections();
-					fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
-					fConnectionState = AMAN_OFFLINE;
+					fHandler->StatusChanged(fOurNick, OSCAR_OFFLINE);
+					fConnectionState = OSCAR_OFFLINE;
 				};
 			};
 		} break;
@@ -1135,7 +1144,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
 
-			if (fConnectionState == AMAN_CONNECTING) {
+			if (fConnectionState == OSCAR_CONNECTING) {
 	
 				int32 i = 6;
 				char *server = NULL;
@@ -1189,7 +1198,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				
 				Send(f);
 			} else {
-				fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
+				fHandler->StatusChanged(fOurNick, OSCAR_OFFLINE);
 			};
 		} break;
 		
@@ -1388,15 +1397,15 @@ uchar AIMManager::IsConnected(void) const {
 
 status_t AIMManager::LogOff(void) {
 	status_t ret = B_ERROR;
-	if (fConnectionState != AMAN_OFFLINE) {
-		fConnectionState = AMAN_OFFLINE;
+	if (fConnectionState != OSCAR_OFFLINE) {
+		fConnectionState = OSCAR_OFFLINE;
 		
 		LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
 		
 		ClearConnections();
 		ClearWaitingSupport();
 
-		fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
+		fHandler->StatusChanged(fOurNick, OSCAR_OFFLINE);
 		ret = B_OK;
 	};
 
@@ -1431,16 +1440,16 @@ status_t AIMManager::SetAway(const char *message) {
 		away->AddTLV(new TLV(0x0004, message, strlen(message)));
 		fAwayMsg = message;
 
-		fHandler->StatusChanged(fOurNick, AMAN_AWAY);
-		fConnectionState = AMAN_AWAY;
+		fHandler->StatusChanged(fOurNick, OSCAR_AWAY);
+		fConnectionState = OSCAR_AWAY;
 	} else {
 		away->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
 		away->AddTLV(new TLV(0x0004, "", 0));
 	
 		fAwayMsg = "";
 		
-		fHandler->StatusChanged(fOurNick, AMAN_ONLINE);
-		fConnectionState = AMAN_ONLINE;
+		fHandler->StatusChanged(fOurNick, OSCAR_ONLINE);
+		fConnectionState = OSCAR_ONLINE;
 	};
 		
 	Send(away);
@@ -1455,7 +1464,7 @@ status_t AIMManager::SetProfile(const char *profile) {
 		fProfile.SetTo(profile);
 	};
 
-	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
+	if ((fConnectionState == OSCAR_ONLINE) || (fConnectionState == OSCAR_AWAY)) {
 		Flap *p = new Flap(SNAC_DATA);
 		p->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00,
 			0x00000000));
@@ -1465,7 +1474,7 @@ status_t AIMManager::SetProfile(const char *profile) {
 			p->AddTLV(new TLV(0x0002, fProfile.String(), fProfile.Length()));
 		};
 		
-		if ((fConnectionState == AMAN_AWAY) && (fAwayMsg.Length() > 0)) {
+		if ((fConnectionState == OSCAR_AWAY) && (fAwayMsg.Length() > 0)) {
 			p->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
 			p->AddTLV(new TLV(0x0004, fAwayMsg.String(), fAwayMsg.Length()));
 		};
@@ -1484,7 +1493,7 @@ status_t AIMManager::SetIcon(const char *icon, int16 size) {
 	fIconSize = size;
 	memcpy(fIcon, icon, size);
 
-	if (fConnectionState == AMAN_OFFLINE) return B_ERROR;
+	if (fConnectionState == OSCAR_OFFLINE) return B_ERROR;
 	
 	Flap *add = new Flap(SNAC_DATA);
 	add->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, ADD_SSI_ITEM));

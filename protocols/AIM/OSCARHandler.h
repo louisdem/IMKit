@@ -1,12 +1,12 @@
-#ifndef AIMHANDLER_H
-#define AIMHANDLER_H
+#ifndef OSCARHANDLER_H
+#define OSCARHANDLER_H
 
-#include "AIMConstants.h"
+#include "OSCARConstants.h"
 
-class AIMHandler {
+class OSCARHandler {
 	public:
 
-		virtual inline		~AIMHandler() {};
+		virtual inline		~OSCARHandler() {};
 
 		virtual status_t	Error(const char *msg) = 0;
 		virtual status_t	Progress(const char * id, const char * message,

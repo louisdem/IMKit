@@ -1,9 +1,9 @@
 #ifndef AIMREQCONN_H
 #define AIMREQCONN_H
 
-#include "AIMConnection.h"
+#include "OSCARConnection.h"
 
-class AIMReqConn : public AIMConnection {
+class AIMReqConn : public OSCARConnection {
 	public:
 						AIMReqConn(const char *server, uint16 port,
 							AIMManager *man);

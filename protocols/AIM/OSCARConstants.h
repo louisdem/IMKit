@@ -1,5 +1,5 @@
-#ifndef AIMCONSTANTS_H
-#define AIMCONSTANTS_H
+#ifndef OSCARCONSTANTS_H
+#define OSCARCONSTANTS_H
 
 extern const char *kProtocolName;
 extern const char *kThreadName;
@@ -53,6 +53,7 @@ enum snac_subtype {
 	RATE_LIMIT_RESPONSE = 0x0007,
 	RATE_LIMIT_ACK = 0x0008,
 	OWN_ONLINE_INFO = 0x000f,
+	MOTD = 0x0013,
 	SET_PRIVACY_FLAGS = 0x0014,
 	FAMILY_VERSIONS = 0x0017,
 	SERVER_FAMILY_VERSIONS = 0x0018,
@@ -95,7 +96,14 @@ enum snac_subtype {
 	DELETE_SSI_ITEM = 0x000a,
 	SSI_MODIFY_ACK = 0x000e,
 	SSI_EDIT_BEGIN = 0x0011,
-	SSI_EDIT_END = 0x0012
+	SSI_EDIT_END = 0x0012,
+	
+//	Family 17 - Authorisation
+	LOGIN_REQUEST = 0x0002,
+	LOGIN_REPLY = 0x0003,
+	MD5_KEY_REQUEST = 0x0006,
+	MD5_KEY_REPLY = 0x0007
+	
 };
 
 enum typing_notification {
@@ -141,10 +149,10 @@ enum ssi_item_types {
 
 //	Internal status types
 enum online_types {
-	AMAN_OFFLINE = 0,
-	AMAN_CONNECTING = 1,
-	AMAN_AWAY = 2,
-	AMAN_ONLINE = 3
+	OSCAR_OFFLINE = 0,
+	OSCAR_CONNECTING = 1,
+	OSCAR_AWAY = 2,
+	OSCAR_ONLINE = 3
 };
 
 enum icbm_params {

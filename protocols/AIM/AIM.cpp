@@ -27,7 +27,7 @@ AIMProtocol::AIMProtocol()
 	fPassword = NULL;
 	fScreenName = NULL;
 	fEncoding = 0xffff; // No conversion == UTF-8
-	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
+	fManager = new AIMManager(dynamic_cast<OSCARHandler *>(this));
 };
 
 AIMProtocol::~AIMProtocol() {
@@ -99,7 +99,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						fManager->LogOff();
 					} else
 					if (strcmp(status, AWAY_TEXT) == 0) {
-						if (fManager->ConnectionState() == (uchar)AMAN_ONLINE) {
+						if (fManager->ConnectionState() == (uchar)OSCAR_ONLINE) {
 							const char *away_msg;
 							if (msg->FindString("away_msg", &away_msg) == B_OK) {
 								LOG(kProtocolName, liMedium, "Setting away message: %s", away_msg);
@@ -108,7 +108,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						};
 					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {
-						if (fManager->IsConnected() == AMAN_AWAY) {
+						if (fManager->IsConnected() == OSCAR_AWAY) {
 							fManager->SetAway(NULL);
 						} else {
 							LOG(kProtocolName, liDebug, "Calling fManager.Login()");
@@ -365,13 +365,13 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	};
 
 	switch (status) {
-		case AMAN_ONLINE: {
+		case OSCAR_ONLINE: {
 			msg.AddString("status", ONLINE_TEXT);
 		} break;
-		case AMAN_AWAY: {
+		case OSCAR_AWAY: {
 			msg.AddString("status", AWAY_TEXT);
 		} break;
-		case AMAN_OFFLINE: {
+		case OSCAR_OFFLINE: {
 			msg.AddString("status", OFFLINE_TEXT);
 		} break;
 		

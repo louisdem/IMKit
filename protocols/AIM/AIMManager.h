@@ -26,12 +26,12 @@
 #include "TLV.h"
 #include "Buddy.h"
 
-class AIMConnection;
+class OSCARConnection;
 class AIMReqConn;
-class AIMHandler;
+class OSCARHandler;
 
 typedef map<BString, Buddy *> buddymap;
-typedef map<uint16, AIMConnection *> pfc_map; // Pending family / connection map
+typedef map<uint16, OSCARConnection *> pfc_map; // Pending family / connection map
 typedef list<Flap *> flap_stack;
 
 enum {
@@ -61,7 +61,7 @@ const uint16 kBuddyIconCapLen = 16;
 
 class AIMManager : public BLooper {
 	public:
-						AIMManager(AIMHandler *handler);
+						AIMManager(OSCARHandler *handler);
 						~AIMManager(void);
 						
 			status_t	Send(Flap *f);
@@ -116,7 +116,7 @@ class AIMManager : public BLooper {
 	virtual status_t	HandleAuthorisation(BMessage *msg);
 			
 			buddymap	fBuddy;
-		list<AIMConnection *>
+		list<OSCARConnection *>
 						fConnections;
 		flap_stack		fWaitingSupport;
 			pfc_map		fPendingConnections;
@@ -130,7 +130,7 @@ class AIMManager : public BLooper {
 			char		*fOurNick;
 			BString		fProfile;
 			BString		fAwayMsg;
-		AIMHandler		*fHandler;
+		OSCARHandler	*fHandler;
 			char		*fIcon;
 			int16		fIconSize;
 			int16		fSSIItems;

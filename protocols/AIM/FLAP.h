@@ -4,7 +4,7 @@
 #include <be/support/SupportDefs.h>
 #include <list>
 
-#include "AIMConstants.h"
+#include "OSCARConstants.h"
 #include "TLV.h"
 #include "SNAC.h"
 

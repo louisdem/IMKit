@@ -3,7 +3,7 @@
 extern void PrintHex(const uchar *buff, size_t size, bool override = false);
 
 AIMReqConn::AIMReqConn(const char *server, uint16 port,	AIMManager *man)
-	: AIMConnection(server, port, man, "AIMReqConn", connReq) {
+	: OSCARConnection(server, port, man, "AIMReqConn", connReq) {
 	
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
@@ -51,7 +51,7 @@ status_t AIMReqConn::HandleServiceControl(BMessage *msg) {
 			
 			fManMsgr.SendMessage(&newCaps);
 			
-			if (State() == AMAN_CONNECTING) {
+			if (State() == OSCAR_CONNECTING) {
 				Flap *f = new Flap(SNAC_DATA);
 				f->AddSNAC(new SNAC(SERVICE_CONTROL,
 					FAMILY_VERSIONS, 0x00, 0x00, 0x00000000));
@@ -157,7 +157,7 @@ status_t AIMReqConn::HandleServiceControl(BMessage *msg) {
 
 			Send(cready);
 			
-			SetState(AMAN_ONLINE);
+			SetState(OSCAR_ONLINE);
 		} break;
 		
 		case EXTENDED_STATUS: {
