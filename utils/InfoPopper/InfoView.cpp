@@ -30,44 +30,46 @@ InfoView::InfoView( info_type type, const char *app, const char *title,
 :	BView( BRect(0,0,kWidth,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE|B_FRAME_EVENTS ),
 	fType(type),
 	fRunner(NULL),
-	fDetails(details) {
+	fDetails(details),
+	fBitmap(NULL) {
 	
 	BMessage iconMsg;
+	BBitmap *icon = NULL;
+	
 	if (fDetails->FindMessage("icon", &iconMsg) == B_OK) {
-		fBitmap = new BBitmap(&iconMsg);
-	} else {
-		fBitmap = NULL;
-		
+		icon = new BBitmap(&iconMsg);
+	} else {		
 		int32 iconType;
-		if ( fDetails->FindInt32("iconType", &iconType) != B_OK )
+		if (fDetails->FindInt32("iconType", &iconType) != B_OK) {
 			iconType = Attribute;
+		};
 		
 		entry_ref ref;
 		
-		if ( fDetails->FindRef("iconRef",&ref) == B_OK )
-		{ // It's a ref.
+		if ( fDetails->FindRef("iconRef",&ref) == B_OK ) {
+			// It's a ref.
 			BPath path(&ref);
 			
 			switch ( iconType )
 			{
 				case Attribute: {
-					fBitmap = ReadNodeIcon(path.Path(),16);
+					icon = ReadNodeIcon(path.Path(),16);
 				}	break;
 				case Contents: {
 					// ye ol' "create a bitmap from contens of file"
-					fBitmap = BTranslationUtils::GetBitmapFile(path.Path());
-					if ( !fBitmap ) {
+					icon = BTranslationUtils::GetBitmapFile(path.Path());
+					if (!icon) {
 						printf("Error reading bitmap\n");
-					} else {
-						// we should re-scale the bitmap to our preferred size here, I suppose
-					}
-				}	break;
+					};
+				} break;
 				default:
 					// Eek! Invalid icon type!
 					break;
 			}
 		}
 	};
+	
+	ScaleBitmap(icon);
 	
 	const char * messageID = NULL;
 	if (fDetails->FindString("messageID", &messageID) != B_OK) {
@@ -116,6 +118,7 @@ InfoView::AttachedToWindow()
 	
 	if ( delay > 0 )
 		fRunner = new BMessageRunner( BMessenger(Window()), &msg, delay, 1 );
+		
 }
 
 void InfoView::MessageReceived(BMessage * msg) {
@@ -186,20 +189,49 @@ void InfoView::MessageReceived(BMessage * msg) {
 void InfoView::GetPreferredSize(float *w, float *h) {
 	*w = kWidth;
 	*h = fHeight;
+	
+	if (fType == InfoPopper::Progress) {
+		font_height fh;
+		be_plain_font->GetHeight(&fh);
+		float fontHeight = fh.ascent + fh.descent + fh.leading;
+		*h += 10 + (kEdgePadding * 3) + fontHeight;
+	};
 };
 
 void InfoView::Draw(BRect drawBounds) {
 	BRect bound = Bounds();
 	
 	// draw progress background
-	if (fProgress > 0.0) {
-		bound.right *= fProgress;
-		
-		SetHighColor(0x88, 0xff, 0x88);
-		FillRect(bound);
-		SetHighColor(0, 0, 0);
-	}
 	
+	if (fType == InfoPopper::Progress) {
+		font_height fh;
+		be_plain_font->GetHeight(&fh);
+		float fontHeight = fh.ascent + fh.descent + fh.leading;
+
+		BRect progRect = Bounds();
+		progRect.InsetBy(kEdgePadding, kEdgePadding);
+		progRect.top = progRect.bottom - (kEdgePadding * 2) - fontHeight;
+				
+		StrokeRect(progRect);
+
+		BRect barRect = progRect;		
+		barRect.InsetBy(1.0, 1.0);
+		barRect.right *= fProgress;
+		SetHighColor(0x88, 0xff, 0x88);
+		FillRect(barRect);
+
+		SetHighColor(0, 0, 0);
+		
+		BString label = "";
+		label << (int)(fProgress * 100) << " %";
+		
+		float labelWidth = be_plain_font->StringWidth(label.String());
+		float labelX = progRect.left + (progRect.IntegerWidth() / 2) - (labelWidth / 2);
+
+//		SetLowColor(0x88, 0xff, 0x88);
+		DrawString(label.String(), label.Length(), BPoint(labelX, progRect.top + fontHeight));
+	};
+		
 	SetDrawingMode( B_OP_ALPHA );
 	
 	// draw icon
@@ -497,3 +529,154 @@ void InfoView::FrameResized( float w, float h ) {
 		w
 	);
 }
+
+//#pragma mark -
+
+typedef struct {
+	int32 srcColumn;
+	int32 alpha0;
+	int32 alpha1;
+} ColumnData;
+
+typedef int32 fixed_point;
+typedef int64 long_fixed_point;
+
+#define to_fixed_point(number) static_cast<fixed_point>((number) * kFPPrecisionFactor)
+#define from_fixed_point(number) ((number) / kFPPrecisionFactor)
+#define to_float(number) from_fixed_point(static_cast<float>(number))
+
+#define int_value(number) ((number) & kFPInverseMask)
+#define tail_value(number) ((number) & kFPPrecisionMask)
+
+// Has to be called after muliplication of two fixed point values
+#define mult_correction(number) ((number) / kFPPrecisionFactor)
+
+const int32 kFPPrecision = 8; // (32-kFPPrecision).kFPPrecision
+const int32 kFPPrecisionFactor = (1 << kFPPrecision);
+const int32 kFPPrecisionMask = ((kFPPrecisionFactor)-1);
+const int32 kFPInverseMask = (~kFPPrecisionMask);
+const int32 kFPOne = to_fixed_point(1);
+
+void InfoView::ScaleBitmap(BBitmap *source) {
+	if (fBitmap) delete fBitmap;
+	fBitmap = source;
+/*
+//	int32 iconSize = (dynamic_cast<InfoWindow *>(Window()))->IconSize();
+	int32 iconSize = 16;
+	BRect bounds(0, 0, iconSize - 1, iconSize - 1);
+	fBitmap = new BBitmap(bounds, B_RGBA32);
+
+	if (source == NULL) {
+		memset(fBitmap->Bits(), B_TRANSPARENT_MAGIC_RGBA32, fBitmap->BitsLength());
+	} else {
+		int32 fromRow = 0;
+		int32 toRow = iconSize - 1;
+	
+		const int32 kBPP = sizeof(int32);
+	
+		int32 srcW = source->Bounds().IntegerWidth();
+		int32 srcH = source->Bounds().IntegerHeight();
+		int32 destW = fBitmap->Bounds().IntegerWidth();
+		int32 destH = fBitmap->Bounds().IntegerHeight();
+
+//		Fixed point representations
+		fixed_point fpSrcW = to_fixed_point(srcW);
+		fixed_point fpSrcH = to_fixed_point(srcH);
+		fixed_point fpDestW = to_fixed_point(destW);
+		fixed_point fpDestH = to_fixed_point(destH);
+		
+		uchar *srcBits = (uchar *)source->Bits();
+		uchar *destBits = (uchar *)fBitmap->Bits();
+		
+		int32 srcBPR = source->BytesPerRow();
+		int32 destBPR = fBitmap->BytesPerRow();
+		
+		ColumnData *cols = new ColumnData[destW];
+		for (int32 i = 0; i < destW; i++) {
+			fixed_point column = to_fixed_point(i) * (long_fixed_point)fpSrcW / fpDestW;
+			cols->srcColumn = from_fixed_point(column);
+			cols->alpha1 = tail_value(column); // weight for left pixel value;
+			cols->alpha0 = kFPOne - cols->alpha1; // weight for right pixel
+		};
+		
+		uchar *destDataRow = destBits + fromRow * destBPR;
+		
+		for (int32 y =	0; y <= toRow; y++, destDataRow += destBPR) {
+			fixed_point row = 0;
+			int32 srcRow;
+			fixed_point alpha0;
+			fixed_point alpha1;
+			
+			if (fpDestH != 0) {
+				row = to_fixed_point(y) * (long_fixed_point)fpSrcH / fpDestH;
+			};
+			
+			srcRow = from_fixed_point(row);
+			alpha1 = tail_value(row);	// weight for y + 1
+			alpha0 = kFPOne - alpha1;	// weight for y
+		
+			const uchar *srcData = srcBits + srcRow * srcBPR;
+			uchar *destData = destDataRow;
+			
+			// Need mult_correction for "outer" multiplication only
+			#define I4(i) from_fixed_point(mult_correction(\
+				(a[i] * a0 + b[i] * a1) * alpha0 + \
+				(c[i] * a0 + d[i] * a1) * alpha1))
+			#define V2(i) from_fixed_point(a[i] * alpha0 + c[i] * alpha1);
+			#define H2(i) from_fixed_point(a[i] * a0 + b[i] * a1);
+
+			if (y < destH) {
+				fixed_point a0, a1;
+				const uchar *a, *b, *c, *d;
+	
+				for (int32 x = 0; x < destW; x ++, destData += kBPP) {
+					a = srcData + cols[x].srcColumn * kBPP;
+					b = a + kBPP;
+					c = a + srcBPR;
+					d = c + kBPP;
+					
+					a0 = cols[x].alpha0;
+					a1 = cols[x].alpha1;
+					
+					printf("%i / %i\n", x, destW);
+					
+					destData[0] = I4(0);
+					destData[1] = I4(1);
+					destData[2] = I4(2);
+				}
+				
+				// right column
+				a = srcData + srcW * kBPP;
+				c = a + srcBPR;
+				
+				destData[0] = V2(0);
+				destData[1] = V2(1);
+				destData[2] = V2(2);
+			} else {
+				fixed_point a0, a1;
+				const uchar *a, *b;
+				for (int32 x = 0; x < destW; x ++, destData += kBPP) {
+					a = srcData + cols[x].srcColumn * kBPP;
+					b = a + kBPP;
+					
+					a0 = cols[x].alpha0;
+					a1 = cols[x].alpha1;
+					
+					destData[0] = H2(0);
+					destData[1] = H2(1);
+					destData[2] = H2(2);
+				}
+				
+				// bottom, right pixel
+				a = srcData + srcW * kBPP;
+	
+				destData[0] = a[0];
+				destData[1] = a[1];
+				destData[2] = a[2];
+			};
+		};
+		
+		delete[] cols;
+	};
+*/
+};

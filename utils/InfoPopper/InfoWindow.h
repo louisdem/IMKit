@@ -35,18 +35,22 @@ class InfoWindow : public BWindow
 		
 		BHandler * ResolveSpecifier(BMessage *, int32 , BMessage *, int32, const char *);
 		
+		int16	IconSize(void);
+		
 	private:
 		void	ResizeAll();
 		void	PopupAnimation(float, float);
 		
-		vector<InfoView*>		fInfoViews;
-		deskbar_location 	fDeskbarLocation;
+		vector<InfoView*>	fInfoViews;
+		deskbar_location	fDeskbarLocation;
 		BorderView			* fBorder;
 
 		BString				fStatusText;
 		BString				fMessageText;
 		
 		float				fWidth;
+		
+		int16				fIconSize;
 };
 
 extern property_info main_prop_list[];

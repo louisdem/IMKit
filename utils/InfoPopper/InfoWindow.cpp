@@ -25,6 +25,7 @@ InfoWindow::InfoWindow()
 	fDeskbarLocation = BDeskbar().Location();
 	
 	fWidth = 300.0f;
+	fIconSize = 16;
 };
 
 InfoWindow::~InfoWindow(void) {
@@ -74,7 +75,7 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 //			message ID present, remove current message if present
 				vector<InfoView*>::iterator i;
 				
-				for (i=fInfoViews.begin(); i!=fInfoViews.end(); i++) {
+				for (i = fInfoViews.begin(); i!=fInfoViews.end(); i++) {
 					if ((*i)->HasMessageID(messageID)) {
 						(*i)->RemoveSelf();
 						delete *i;
@@ -236,4 +237,8 @@ BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *sp
 		}
 	}
 	return BWindow::ResolveSpecifier(msg, index, spec, form, prop);
+};
+
+int16 InfoWindow::IconSize(void) {
+	return fIconSize;
 };

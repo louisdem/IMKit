@@ -68,8 +68,10 @@ class InfoView : public BView
 		status_t GetSupportedSuites(BMessage*);
 		
 	private:
+		void			ScaleBitmap(BBitmap *source);
+	
 		info_type		 fType;
-		BMessageRunner	* fRunner;
+		BMessageRunner	*fRunner;
 		float			fProgress;
 		BString			fMessageID;
 		int32			fTimeout;
