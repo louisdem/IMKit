@@ -20,7 +20,7 @@ InfoWindow::InfoWindow()
 	
 	SetWorkspaces( 0xffffffff );
 	
-	fBorder = new BorderView( Bounds(), "IM info" );
+	fBorder = new BorderView(Bounds(), "InfoPopper");
 	
 	AddChild( fBorder );
 	
@@ -44,8 +44,6 @@ InfoWindow::InfoWindow()
 		fMessageText = "$nickname$ says:\n$shortmsg$";
 		settings.AddString("msg_text", fMessageText);
 	};
-	
-	printf("Message: %s\nStatus: %s\n", fMessageText.String(), fStatusText.String());
 	
 	im_save_client_settings("InfoPopper", &settings);
 }
@@ -78,6 +76,27 @@ InfoWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case InfoPopper::AddMessage: {
+			int8 type;
+			const char *message;
+			const char *title;
+			
+			if (msg->FindInt8("type", &type) != B_OK) type = InfoPopper::Information;
+			if (msg->FindString("content", &message) != B_OK) return;
+			if (msg->FindString("title", &title) != B_OK) return;
+			
+			BString msgText = title;
+			msgText << ":\n" << message;
+			msgText.ReplaceAll("\n", "\n  ");
+		
+			InfoView *view = new InfoView((InfoPopper::info_type)type, msgText.String(), new BMessage(*msg));
+			
+			fInfoViews.push_back(view);
+			
+			fBorder->AddChild( view );
+			
+			ResizeAll();
+		} break;
 		case IM::SETTINGS_UPDATED:
 		{	
 			BMessage settings;
@@ -129,7 +148,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 				break;
 			}
 			
-			InfoView::info_type type = InfoView::Information;
+			InfoPopper::info_type type = InfoPopper::Information;
 			
 			switch ( im_what )
 			{
@@ -146,7 +165,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 						error_what != IM::USER_STOPPED_TYPING )
 					{ // we ignore errors due to typing notifications.
 						text << "Error: " << msg->FindString("error");
-						type = InfoView::Error;
+						type = InfoPopper::Error;
 					}
 				}	break;
 				
@@ -169,7 +188,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 					text.ReplaceAll("$shortmsg$", shortMessage.String());
 					text.ReplaceAll("$message$", message.String());
 				
-					type = InfoView::Important;
+					type = InfoPopper::Important;
 				}	break;
 				
 				case IM::STATUS_CHANGED: {
@@ -213,18 +232,18 @@ InfoWindow::MessageReceived( BMessage * msg )
 						if ( msg->FindFloat("progress", &progress) != B_OK )
 							break;
 						
-						view = new InfoView( 
-							InfoView::Progress, 
-							msg->FindString("message"),
-							progID,
-							progress
-						);
-						
-						fInfoViews.push_back( view );
-						
-						fBorder->AddChild( view );
-						
-						ResizeAll();
+//						view = new InfoView( 
+//							InfoPopper::Progress, 
+//							msg->FindString("message"),
+//							progID,
+//							progress
+//						);
+//						
+//						fInfoViews.push_back( view );
+//						
+//						fBorder->AddChild( view );
+//						
+//						ResizeAll();
 					}
 				}	return; // Yes, return here. Progress is a special case.
 			}
@@ -239,13 +258,13 @@ InfoWindow::MessageReceived( BMessage * msg )
 			if ( text != "" )
 			{ // a message to display
 				//printf("Displaying message <%s>\n", text.String() );
-				InfoView * view = new InfoView( type, text.String() );
-				
-				fInfoViews.push_back(view);
-				
-				fBorder->AddChild( view );
-				
-				ResizeAll();
+//				InfoView * view = new InfoView( type, text.String() );
+//				
+//				fInfoViews.push_back(view);
+//				
+//				fBorder->AddChild( view );
+//				
+//				ResizeAll();
 			}
 		}	break;
 		

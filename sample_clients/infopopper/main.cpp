@@ -4,13 +4,36 @@
 #include <libim/Helpers.h>
 #include <libim/Constants.h>
 
+#include "InfoPopper.h"
+
 // -------------- MAIN -----------------
+
+class InfoApp : public BApplication {
+	public:
+			InfoApp() : BApplication(InfoPopperAppSig) {
+				fWin = new InfoWindow();
+			};
+			
+			~InfoApp() {};
+		
+		void MessageReceived(BMessage *msg) {
+			switch (msg->what) {
+				case InfoPopper::AddMessage: {
+					BMessenger(fWin).SendMessage(msg);
+				} break;
+				
+				default:
+					BApplication::MessageReceived(msg);
+			};
+		};
+	
+	private:
+		InfoWindow *fWin;
+};
 
 int
 main()
 {
-	BApplication app("application/x-vnd.beclan.IM_InfoPopper");
-	
 	// Save settings template
 	BMessage autostart;
 	autostart.AddString("name", "auto_start");
@@ -43,7 +66,7 @@ main()
 	tmplate.AddMessage("setting", &msg);
 	
 	im_save_client_template("InfoPopper", &tmplate);
-	
-	InfoWindow * win = new InfoWindow();
-	app.Run();
+
+	InfoApp app;
+	app.Run();	
 }

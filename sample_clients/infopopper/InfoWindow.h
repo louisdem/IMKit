@@ -13,6 +13,8 @@
 #include "InfoView.h"
 #include "BorderView.h"
 
+#include "InfoPopper.h"
+
 // -------------- INFO WINDOW -----------------
 
 class InfoWindow : public BWindow

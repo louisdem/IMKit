@@ -6,15 +6,32 @@
 
 #include <libim/Constants.h>
 
-InfoView::InfoView( info_type type, const char * text, const char * progID, float prog )
+#include <stdio.h>
+
+const float kEdgePadding = 2.0;
+
+InfoView::InfoView( info_type type, const char * text, BMessage *details,
+	const char * progID, float prog )
 :	BView( BRect(0,0,1,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW ),
 	fType(type),
 	fRunner(NULL),
 	fFilter(NULL),
-	fProgress(prog)
-{
-	if ( progID )
-		fProgressID = progID;
+	fProgress(prog),
+	fDetails(details) {
+
+	if ( progID ) fProgressID = progID;
+	
+	BMessage iconMsg;
+	if (fDetails->FindMessage("icon", &iconMsg) == B_OK) {
+		fBitmap = new BBitmap(&iconMsg);
+	} else {
+		fBitmap = new BBitmap(BRect(0, 0, 15, 15), B_RGBA32);
+		int32 *bits = (int32 *)fBitmap->Bits();
+		
+		for (int32 i = 0; i < fBitmap->BitsLength(); i++) {
+			bits[i] = B_TRANSPARENT_MAGIC_RGBA32;
+		};
+	};
 	
 	float w,h;
 	
@@ -26,27 +43,25 @@ InfoView::InfoView( info_type type, const char * text, const char * progID, floa
 	
 	switch ( type )
 	{
-		case Information:
+		case InfoPopper::Information: {
 			SetViewColor(218,218,218);
-			break;
-		case Important:
+		} break;
+		case InfoPopper::Important: {
 			SetViewColor(255,255,255);
-			break;
-		case Error:
+		} break;
+		case InfoPopper::Error: {
 			SetViewColor(255,0,0);
-			break;
-		case Progress:
+		} break;
+		case InfoPopper::Progress: {
 			SetViewColor(218,218,218);
-			break;
+		} break;
 	}
 }
 
-InfoView::~InfoView()
-{
-	if ( fRunner )
-		delete fRunner;
-	if ( fFilter )
-		delete fFilter;
+InfoView::~InfoView(void) {
+	if (fRunner) delete fRunner;
+	if (fFilter) delete fFilter;
+	if (fDetails) delete fDetails;
 }
 
 void
@@ -111,68 +126,126 @@ InfoView::MessageReceived( BMessage * msg )
 	}
 }
 
-void
-InfoView::GetPreferredSize( float * w, float * h )
-{
+void InfoView::GetPreferredSize(float *w, float *h) {
 	BFont font;
-	GetFont( &font );
+	GetFont(&font);
 	
 	font_height fh;
-	
 	font.GetHeight( &fh );
 	
 	float line_height = fh.ascent + fh.descent + fh.leading;
 	
-	*h = line_height * fLines.size() + 2;
-	
+	*h = line_height * fLines.size() + kEdgePadding;
 	*w = 0;
-	for ( list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++ )
-	{
+	
+	for (list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++) {
 		float width = StringWidth( (*i).String() );
 		
-		if ( width > *w )
-			*w = width + 2;
-	}
-}
+		if ( width > *w ) *w = width + kEdgePadding;
+	};
+	
+	*w += fBitmap->Bounds().Width() + (kEdgePadding * 2);
+};
 
-void
-InfoView::Draw( BRect )
-{
-	if ( fProgress > 0.0 )
-	{
-		BRect pRect = Bounds();
+void InfoView::Draw(BRect drawBounds) {
+	BRect bound = Bounds();
+
+	if (fProgress > 0.0) {
+		bound.right *= fProgress;
 		
-		pRect.right *= fProgress;
-		
-		SetHighColor( 0x88, 0xff, 0x88 );
-		
-		FillRect( pRect );
-		
-		SetHighColor( 0,0,0 );
+		SetHighColor(0x88, 0xff, 0x88);
+		FillRect(bound);
+		SetHighColor(0, 0, 0);
 	}
 	
+	DrawBitmap(fBitmap,
+		BPoint(
+			kEdgePadding,
+			(bound.Height() / 2) - (fBitmap->Bounds().Height() / 2)
+		)
+	);
 	
 	BFont font;
-	GetFont( &font );
+	GetFont(&font);
 	
 	font_height fh;
-	
 	font.GetHeight( &fh );
-	
 	float line_height = fh.ascent + fh.descent + fh.leading;
 	
 	SetDrawingMode( B_OP_ALPHA );
 	
 	int y = 1;
-	for ( list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++ )
-	{
-		DrawString(
-			(*i).String(), 
-			BPoint(1,1+y*line_height-fh.leading-fh.descent)
+	for (list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++) {
+		DrawString(i->String(),
+			BPoint(
+				(kEdgePadding * 2) + fBitmap->Bounds().Width(),
+				kEdgePadding + y * line_height - fh.leading - fh.descent
+			)
 		);
 		y++;
 	}
 }
+
+void InfoView::MouseDown(BPoint point) {
+	int32 buttons;
+	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
+
+	switch (buttons) {
+		case B_PRIMARY_MOUSE_BUTTON: {
+			entry_ref launchRef;
+			BString launchString;
+			BMessage argMsg(B_ARGV_RECEIVED);
+			BMessage refMsg(B_REFS_RECEIVED);
+			entry_ref appRef;
+			bool useArgv = false;
+			BList messages;
+			entry_ref ref;
+
+			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
+				if (be_roster->FindApp(launchString.String(), &appRef) == B_OK) useArgv = true;
+			};
+			if (fDetails->FindRef("onClickFile", &launchRef) == B_OK) {
+				if (be_roster->FindApp(&launchRef, &appRef) == B_OK) useArgv = true;
+			};
+
+			if (fDetails->FindRef("onClickRef", &ref) == B_OK) {			
+				for (int32 i = 0; fDetails->FindRef("onClickRef", i, &ref) == B_OK; i++) {
+					refMsg.AddRef("refs", &ref);
+				};
+				
+				messages.AddItem((void *)&refMsg);
+			};
+
+			if (useArgv == true) {
+				type_code type;
+				int32 argc = 0;
+				BString arg;
+
+				BPath p(&appRef);
+				argMsg.AddString("argv", p.Path());
+				
+				fDetails->GetInfo("onClickArgv", &type, &argc);
+				argMsg.AddInt32("argc", argc + 1);
+	
+				for (int32 i = 0; fDetails->FindString("onClickArgv", i, &arg) == B_OK;
+					i++) {
+	
+					argMsg.AddString("argv", arg);
+				};
+				
+				messages.AddItem((void *)&argMsg);
+			};
+			
+							
+			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
+				be_roster->Launch(launchString.String(), &messages);
+			} else {
+				be_roster->Launch(&launchRef, &messages);
+			};
+					
+		} break;
+	};
+};
 
 void
 InfoView::SetText( const char * _text )

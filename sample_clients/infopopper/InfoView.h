@@ -8,23 +8,25 @@
 #include <String.h>
 #include <list>
 
+#include <Bitmap.h>
+#include <storage/Entry.h>
+#include <Roster.h>
+#include <Path.h>
+
+#include "InfoPopper.h"
+
 enum {
 	REMOVE_VIEW = 'ReVi'
 };
 
 // -------------- INFO VIEW -----------------
 
+using namespace InfoPopper;
+
 class InfoView : public BView
 {
-	public:
-		enum info_type {
-			Information,
-			Important,
-			Error,
-			Progress
-		};
-		
-		InfoView( info_type, const char * text, const char * progID = NULL, float prog = 0.0 );
+	public:		
+		InfoView( info_type, const char * text, BMessage *details, const char * progID = NULL, float prog = 0.0);
 		~InfoView();
 		
 		void AttachedToWindow();
@@ -37,15 +39,21 @@ class InfoView : public BView
 		void SetText( const char * );
 		
 		bool HasProgressID( const char * );
+
+		void MouseDown(BPoint point);
+
 		
 	private:
-		info_type		fType;
+		info_type		 fType;
 		BMessageRunner	* fRunner;
 		InputFilter		* fFilter;
 //		BTextView 		* fView;
 		list<BString>	fLines;
 		float			fProgress;
 		BString			fProgressID;
+		
+		BMessage		*fDetails;
+		BBitmap			*fBitmap;
 };
 
 
