@@ -32,6 +32,18 @@ TLV::TLV(uint16 type, const char *value, uint16 length) {
 	}
 };
 
+TLV::TLV(const uchar *buffer, int16 bufferLen) {
+	fValue = NULL;
+	fFlatten = NULL;
+	fType = (buffer[0] << 8) + buffer[1];
+	fLength = (buffer[2] << 8) + buffer[3];
+
+	if (fLength > 0) {
+		fValue = (char *)calloc(fLength, sizeof(char));
+		memcpy(fValue, buffer + 4, fLength);
+	};
+};
+
 TLV::~TLV(void) {
 	if (fValue) free(fValue);
 	if (fFlatten) free(fFlatten);

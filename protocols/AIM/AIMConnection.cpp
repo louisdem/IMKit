@@ -9,11 +9,12 @@ const char *kThreadName = "IM Kit: AIM Connection";
 const char *kProtocolName = "AIM";
 
 AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
-	const char *name = "AIM Connection")
+	const char *name = "AIM Connection", conn_type type = connBOS)
 	: BLooper(name) {
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
+	fConnType = type;
 	fServer = server;
 	fPort = port;
 	

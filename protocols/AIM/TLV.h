@@ -9,6 +9,7 @@ class TLV {
 	public:
 						TLV(uint16 type);
 						TLV(uint16 type, const char *value, uint16 length);
+						TLV(const uchar *buffer, int16 bufferLen);
 						TLV(void);
 						~TLV(void);
 						

@@ -3,7 +3,7 @@
 extern void PrintHex(const uchar *buff, size_t size, bool override = false);
 
 AIMReqConn::AIMReqConn(const char *server, uint16 port,	AIMManager *man)
-	: AIMConnection(server, port, man, "AIMReqConn") {
+	: AIMConnection(server, port, man, "AIMReqConn", connReq) {
 	
 	fManager = man;
 	fManMsgr = BMessenger(fManager);

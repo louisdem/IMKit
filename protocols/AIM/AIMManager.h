@@ -79,7 +79,6 @@ class AIMManager : public BLooper {
 							const char *username, const char *password);
 			uchar		IsConnected(void) const;
 			status_t	LogOff(void);
-			status_t	RequestBuddyIcon(const char *buddy);
 			
 			status_t	SetProfile(const char *profile);
 			status_t	SetAway(const char *message);
@@ -134,6 +133,7 @@ class AIMManager : public BLooper {
 		AIMHandler		*fHandler;
 			char		*fIcon;
 			int16		fIconSize;
+			int16		fSSIItems;
 };
 
 #endif

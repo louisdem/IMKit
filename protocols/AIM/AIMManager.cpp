@@ -215,18 +215,53 @@ status_t AIMManager::HandleServiceControl(BMessage *msg) {
 
 			if ((fIcon) && (fIconSize > 0)) {
 				Flap *icon = new Flap(SNAC_DATA);
-				icon->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, ICON_UPLOAD));
-				icon->AddInt16(0x0000);		// First icon
+				icon->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, ICON_UPLOAD_REQ));
+				icon->AddInt16(fSSIItems++);		// First icon
 				icon->AddInt16(fIconSize);
 				icon->AddRawData((uchar *)fIcon, fIconSize);
-				
+							
 				Send(icon);
 			};
-			
 		} break;
 
 		case EXTENDED_STATUS: {
-			ret = kUnhandled;
+			while (offset < bytes) {
+				uint16 notice = (data[++offset] << 8) + data[++offset];
+
+				switch (notice) {
+//					Official icon
+					case 0x0000: {
+						int16 length = (data[++offset] << 8) + data[++offset];
+						offset += length;
+					} break;
+					case 0x0001: {
+						offset++; // Flags
+						int8 hashLen = data[++offset];
+						uchar currentHash[hashLen];
+						memcpy(currentHash, data + offset, hashLen);
+						offset += hashLen;
+						
+						if ((fIcon) && (fIconSize > 0)) {
+							uchar hash[hashLen];
+							MD5((uchar *)fIcon, fIconSize, (uchar *)hash);
+							
+							if (memcmp(hash, currentHash, hashLen) != 0) {
+								LOG(kProtocolName, liLow, "Server stored buddy "
+									"icon is different to ours - uploading");
+								Flap *upload = new Flap(SNAC_DATA);
+								upload->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS,
+									 ICON_UPLOAD_REQ));
+								upload->AddInt16(fSSIItems++);	// Next SSI item
+								upload->AddInt16(fIconSize);
+								upload->AddRawData((uchar *)fIcon, fIconSize);
+								
+								Send(upload);
+							};
+						};
+					} break;
+				};
+			};
+			
 		} break;
 		
 		default: {
@@ -442,7 +477,6 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 		case USER_ONLINE: {	
 //			This message contains lots of stuff, most of which we
 //			ignore. We're good like that :)
-			PrintHex(data, bytes);
 			uint8 nickLen = data[++offset];
 			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
 			memcpy(nick, (void *)(data + offset + 1), nickLen);
@@ -559,6 +593,7 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 		uint16 skip = (data[++offset] << 8) + data[++offset];
 		offset += skip;
 	};
+	
 	switch (subtype) {
 		case SERVICE_PARAMETERS: {
 			uint16 type = (data[++offset] << 8) + data[++offset];
@@ -581,6 +616,8 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 			LOG(kProtocolName, liDebug, "SSI Version 0x%x", ssiVersion);
 			LOG(kProtocolName, liLow, "%i SSI items", itemCount);
 
+			fSSIItems = itemCount;
+
 			for (uint16 i = 0; i < itemCount; i++) {
 				
 				uint16 nameLen = (data[++offset] << 8) + data[++offset];
@@ -602,31 +639,38 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 					 i, type, len);
 				
 				switch (type) {
+					case GROUP_RECORD: {
+						TLV tlv(data + offset, bytes - offset);
+//						Bunch o' groups
+						if (tlv.Type() == 0x00c8) {
+							for (int32 i = 0; i < (tlv.Length() / 2); i++) {
+								int16 buddyID = (data[offset + 4 + (i * 2)] << 8) +
+									data[offset + 5 + (i * 2)];
+							};
+						};
+					} break;
 					case BUDDY_RECORD: {
 //						There's some custom info here.
 						fBuddy[name] = new Buddy(name, groupID, itemID);
 
 						contacts.push_back(name);
-						offset += len;
 					} break;
-					case 0x00014: {
-//						printf("Got our icon in the roster. YaY!\n");
-//						printf("It is %s: %i / %i (%i)\n", name, groupID, itemID, len);
-//						PrintHex(data + offset, len, true);
+					case BUDDY_ICON_INFO: {
+						const uchar *info = data + offset + 1;
+						int16 position = 0;
 						
-//						char *b = (char *)calloc(16, sizeof(char));
-//						memcpy(b, data + offset, 16);
-//						
-//						fIcons.push_back(data + offset);
-						
-						offset += len;
+						while (position < len) {
+							TLV tlv(info + position, len - position);
+							position += tlv.Length() + 4;
+											
+						};
 					} break;
 					default: {
-						offset += len;
 					} break;
 				};
 
-				//free(name);
+				offset += len;
+				if (name) free(name);
 			};
 						
 			uint32 checkOut = (data[++offset] << 24) + (data[++offset] << 16) +
@@ -635,9 +679,33 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 
 			fHandler->SSIBuddies(contacts);
 		} break;
-		case 0x000e: {
-//			printf("Got upload ACK!\n");
-//			PrintHex(data, bytes, true);
+		case SSI_MODIFY_ACK: {
+			int16 count = 0;
+			const char *error[] = {
+				"Success",
+				"N/A",
+				"Item not found in list",
+				"Item already exists",
+				"N/A",
+				"N/A",
+				"N/A",
+				"N/A",
+				"N/A",
+				"N/A",
+				"Error adding - invalid ID / already in list / invalid data",
+				"N/A",
+				"Can't add item, limit exceeded",
+				"ICQ cannot be added to AIM list",
+				"Requires authorisation",
+				"N/A"
+			};
+			
+			while (offset < bytes) {
+				uint16 code = (data[++offset] << 8) + data[++offset];
+				LOG(kProtocolName, liHigh, "Upload for item %i is %s (0x%04x)",
+					count, error[code], code);
+				count++;
+			};
 		} break;
 		default: {
 			LOG(kProtocolName, liLow, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
@@ -716,13 +784,22 @@ status_t AIMManager::HandleBuddyIcon(BMessage *msg) {
 		case AIM_ICON: {
 			uint8 nickLen = data[++offset];
 			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-			memcpy(nick, data + offset + 1, nickLen);
-			offset += 20 + nickLen;	// Misc data
-			uint16 iconLength = (data[++offset] << 8) + data[++offset];
+			uint16 iconType = 0;
+			uint16 iconLength = 0;
 			
-			fHandler->BuddyIconFromUser(nick, data + offset + 1, iconLength);
+			memcpy(nick, data + offset + 1, nickLen);
+			offset += nickLen;
+			iconType = (data[++offset] << 8) + data[++offset];
+			offset += 18;	// Skip the hash and flags
+			iconLength = (data[++offset] << 8) + data[++offset];
 
-			free(nick);			
+			if ((iconType == 0x0001) && (iconLength != 0)) {
+				fHandler->BuddyIconFromUser(nick, data + offset + 1, iconLength);
+			};
+			free(nick);
+		} break;
+		
+		case ICON_UPLOAD_ACK: {
 		} break;
 		
 		default: {
@@ -932,8 +1009,18 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				con->Quit();
 				LOG(kProtocolName, liLow, "After close we have %i connections",
 					fConnections.size());
-						
-				if (fConnections.size() == 0) {
+				
+				bool hasBOS = false;
+				list<AIMConnection *>::iterator cIt = fConnections.begin();
+				for (; cIt != fConnections.end(); cIt++) {
+					AIMConnection *con = (*cIt);
+					if ((con) && (con->ConnectionType() == connBOS)) {
+						hasBOS = true;
+						break;
+					};
+				};
+				
+				if (hasBOS == false) {
 					ClearWaitingSupport();
 					ClearConnections();
 					fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
@@ -944,11 +1031,9 @@ void AIMManager::MessageReceived(BMessage *msg) {
 
 		case AMAN_FLAP_OPEN_CON: {
 //			We don't do anything with this currently
-			const uchar *data;
-			int32 bytes = 0;
-			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-			LOG(kProtocolName, liLow, "Got FLAP_OPEN_CON packet\n");
-			PrintHex((uchar *)data, bytes);
+//			const uchar *data;
+//			int32 bytes = 0;
+//			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
 		} break;
 		
 		case AMAN_FLAP_SNAC_DATA: {
@@ -1032,15 +1117,11 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				case AUTHORISATION_REGISTRATION: {
 					result = HandleAuthorisation(msg);
 				} break;
-
-				default: {
-					LOG(kProtocolName, liLow, "Got unhandled family. SNAC(0x%04x, "
-						"0x%04x)", family, subtype);
-				};
 			};
 			
 			if (result == kUnhandled) {
-				LOG(kProtocolName, liHigh, "Got totally unhandled SNAC - 0x%04x", family);
+				LOG(kProtocolName, liHigh, "Got totally unhandled SNAC (0x%04x"
+					", 0x%04x)", family, subtype);
 			};
 		} break;
 				
@@ -1102,7 +1183,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				free(server);
 				
 				Flap *f = new Flap(OPEN_CONNECTION);
-				f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
+				f->AddInt32(0x00000001);
 				f->AddTLV(0x0006, cookie, cookieSize);
 				
 				Send(f);
@@ -1125,9 +1206,8 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
-	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, 0x2728)); //++fRequestID));
-	//msg->AddRawData((uchar []){0x00, 0x00, 0xff, 0x00, 0x00, 0x0f, 0x08, 0x03}, 8); // MSG-ID Cookie
-	msg->AddRawData((uchar []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8); // MSG-ID Cookie
+	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER));
+	msg->AddInt64(0x0000000000000000); // MSG-ID Cookie
 	msg->AddInt16(PLAIN_TEXT);	// Channel
 
 	uint8 screenLen = strlen(screenname);
@@ -1190,12 +1270,10 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 
 status_t AIMManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
-	if (buddy == NULL) return B_ERROR;
-//	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
+	if (buddy == NULL) {
 		LOG(kProtocolName, liLow, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
-//		fBuddy.push_back(BString(buddy));
 		fBuddy[buddy] = NULL;
-	
+		
 		Flap *addBuddy = new Flap(SNAC_DATA);
 		addBuddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, ADD_BUDDY_TO_LIST, 0x00,
 			0x00, 0x00000000));
@@ -1204,10 +1282,8 @@ status_t AIMManager::AddBuddy(const char *buddy) {
 		addBuddy->AddRawData((uchar [])&buddyLen, sizeof(buddyLen));
 		addBuddy->AddRawData((uchar *)buddy, buddyLen);
 		
-		Send(addBuddy);
-		
 		ret = B_OK;
-//	};
+	};
 
 	return ret;
 };
@@ -1259,17 +1335,15 @@ status_t AIMManager::RemoveBuddy(const char *buddy) {
 		} else {
 //			Start modification session
 			Flap *begin = new Flap(SNAC_DATA);
-			begin->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_BEGIN,
-				0x00, 0x00, 0x00005235));
+			begin->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_BEGIN));
 			Send(begin);
 
 //			Buddy is in our SSI list
 			Flap *remove = new Flap(SNAC_DATA);
-			remove->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_DELETE_ITEM,
-				0x00, 0x00, 0x00005236));
+			remove->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, DELETE_SSI_ITEM));
 			
 //			Buddy name
-			remove->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
+			remove->AddInt8(buddyLen);
 			remove->AddRawData((uchar *)buddy, buddyLen);
 
 			Buddy *ssi = bIt->second;
@@ -1277,10 +1351,10 @@ status_t AIMManager::RemoveBuddy(const char *buddy) {
 			uint16 itemID = ssi->ItemID();
 			uint16 type = BUDDY_RECORD;
 
-			remove->AddRawData((uchar *)&groupID, sizeof(groupID));
-			remove->AddRawData((uchar *)&itemID, sizeof(itemID));
-			remove->AddRawData((uchar *)&type, sizeof(type));
-			remove->AddRawData((uchar []){0x00, 0x00}, 2);
+			remove->AddInt16(groupID);
+			remove->AddInt16(itemID);
+			remove->AddInt16(BUDDY_RECORD);
+			remove->AddInt16(0x0000); // No additional data
 
 			Send(remove);
 			
@@ -1288,8 +1362,7 @@ status_t AIMManager::RemoveBuddy(const char *buddy) {
 			delete ssi;
 			
 			Flap *end = new Flap(SNAC_DATA);
-			end->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_END,
-				0x00, 0x00, 0x00005237));
+			end->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_END));
 			Send(end);
 			
 			ret = B_OK;			
@@ -1318,19 +1391,9 @@ status_t AIMManager::LogOff(void) {
 		fConnectionState = AMAN_OFFLINE;
 		
 		LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
-//		list <AIMConnection *>::iterator i;
 		
 		ClearConnections();
 		ClearWaitingSupport();
-		
-//		for (i = fConnections.begin(); i != fConnections.end(); i++) {
-//			AIMConnection *con = (*i);
-//			if (con == NULL) continue;
-//			LOG(kProtocolName, liLow, "Killing connection to %s:%i", con->Server(),
-//				con->Port());
-//			con->Lock();
-//			con->Quit();	
-//		};
 
 		fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
 		ret = B_OK;
@@ -1339,37 +1402,19 @@ status_t AIMManager::LogOff(void) {
 	return ret;
 };
 
-status_t AIMManager::RequestBuddyIcon(const char *buddy) {
-	LOG(kProtocolName, liDebug, "Requesting buddy icon for \"%s\"", buddy);
-	Flap *icon = new Flap(SNAC_DATA);
-//	icon->AddSNAC(new SNAC(0x0010, 0x0004, 0x00, 0x00, ++fRequestID));
-	uchar slen = strlen(buddy);
-	icon->AddRawData((uchar *)&slen, 1);
-	icon->AddRawData((uchar *)buddy, slen);
-	icon->AddRawData((uchar []){0x01, 0x00, 0x01, 0x10}, 4);
-	icon->AddRawData((uchar []){0x10}, 1); // Icon hash
-	icon->AddRawData((uchar []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,	0x00, 0x00, 0x00, 0x00}, 16);
-
-//	Send(icon);
-
-	return B_OK;
-};
-
 status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
 	LOG(kProtocolName, liLow, "Sending typing notification (0x%04x) to \"%s\"",
 		typing, buddy);
 	
 	Flap *notify = new Flap(SNAC_DATA);
-	notify->AddSNAC(new SNAC(ICBM, TYPING_NOTIFICATION, 0x00, 0x00, 0x00000000));
-	notify->AddRawData((uchar []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		8); // Notification Cookie
-	notify->AddInt16(PLAIN_TEXT); // Notification channel - Plain Text
+	notify->AddSNAC(new SNAC(ICBM, TYPING_NOTIFICATION));
+	notify->AddInt64(0x0000000000000000);	// Notification cookie
+	notify->AddInt16(PLAIN_TEXT);			// Notification channel
 
 	uint8 buddyLen = strlen(buddy);
 	notify->AddInt8(buddyLen);
 	notify->AddRawData((uchar *)buddy, buddyLen);
-	notify->AddRawData((uchar *)&typing, sizeof(typing));
+	notify->AddInt16(typing);
 	
 	Send(notify);
 	
@@ -1443,34 +1488,19 @@ status_t AIMManager::SetIcon(const char *icon, int16 size) {
 	Flap *add = new Flap(SNAC_DATA);
 	add->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, ADD_SSI_ITEM));
 	add->AddInt16(0x0001);		// Size of name
-	add->AddInt8('2');			// Name
+	add->AddInt8('3');			// Name
 	add->AddInt16(0x0000);		// Group ID
 	add->AddInt16(0x1813);		// Item ID
 	add->AddInt16(BUDDY_ICON_INFO);
-	add->AddInt16(0x001a);		// Length of additional data
+	add->AddInt16(0x0016);		// Length of additional data
 	
 	char buffer[18];
 	buffer[0] = 0x01; // Icon flags
 	buffer[2] = 0x10; // MD5 Length
 	MD5(icon, size, buffer + 2);
-	
 	add->AddTLV(new TLV(0x00d5, buffer, 18));
 	add->AddTLV(new TLV(0x0131, "", 0));
 	Send(add);
 	
-//	Flap *i = new Flap(SNAC_DATA);
-//	i->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, ICON_UPLOAD, 0x00, 0x00,
-//		0x00000000));
-//	
-//	i->AddRawData((uchar []){0x00, 0x01}, 2); // First icon
-//	if (icon) {
-//		i->AddRawData((uchar *)&size, sizeof(size));
-//		i->AddRawData((uchar *)icon, size);
-//	} else {
-//		i->AddRawData((uchar []){0x00, 0x00}, 2);
-//	};
-//
-//	Send(i);
-
 	return B_OK;
 };

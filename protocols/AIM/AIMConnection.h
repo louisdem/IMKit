@@ -30,10 +30,16 @@ enum send_time {
 	atOnline
 };
 
+enum conn_type {
+	connBOS,
+	connReq,
+};
+
 class AIMConnection : public BLooper {
 	public:
 						AIMConnection(const char *server, uint16 port,
-							AIMManager *man, const char *name = "AIM Connection");
+							AIMManager *man, const char *name = "AIM Connection",
+							conn_type type = connBOS);
 						~AIMConnection();
 						
 		void			MessageReceived(BMessage *msg);
@@ -50,6 +56,7 @@ class AIMConnection : public BLooper {
 		inline uint16	Port(void) const { return fPort; };
 		virtual inline
 			const char	*ConnName(void) const { return "AIMConnection"; };
+		conn_type		ConnectionType(void) const { return fConnType; };
 		
 		uint8			State(void) const { return fState; };
 		status_t		SetState(uint8 state);
@@ -106,7 +113,7 @@ class AIMConnection : public BLooper {
 		
 		AIMManager		*fManager;
 		
-		list<char *>	fIcons;
+		conn_type		fConnType;
 };
 
 #endif
