@@ -5,6 +5,10 @@
 const int32 kSmallIcon = 16;
 const int32 kLargeIcon = 32;
 
+#ifdef B_ZETA_VERSION
+#include <sys_apps/Tracker/Icons.h>
+#endif
+
 // Loads the icon. Callers responsibility to free BBitmap
 
 BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
@@ -14,6 +18,7 @@ BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	BEntry entry(name, followSymlink);
+#ifndef B_ZETA_VERSION
 	entry_ref ref;
 	BPath path;
 	
@@ -21,6 +26,9 @@ BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
 	BNode node(BPath(&ref).Path());
 
 	ret = GetTrackerIcon(node, size, NULL);
+#else
+	ret = new BBitmap(GetTrackerIcon(entry, size));
+#endif
 #else
 	if (size == kSmallIcon) {
 		ret = GetBitmapFromAttribute(name, BEOS_SMALL_ICON_ATTRIBUTE, 'MICN',
@@ -98,7 +106,7 @@ BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute,
 // Reads attribute from node. Returns contents (to be free()'d by user) or NULL on
 // fail
 
-char *ReadAttribute(BNode node, const char *attribute) {
+char *ReadAttribute(BNode node, const char *attribute, int32 *length = NULL) {
 	attr_info info;
 	char *value = NULL;
 
@@ -110,8 +118,19 @@ char *ReadAttribute(BNode node, const char *attribute) {
 			free(value);
 			value = NULL;
 		};
+		if (length) *length = info.size;
 	};
 
 	return value;
 };
 
+status_t WriteAttribute(BNode node, const char *attribute, const char *value,
+	size_t length, type_code type) {
+
+	status_t ret = B_ERROR;
+	if ((ret = node.InitCheck()) == B_OK) {
+		ret = node.WriteAttr(attribute, type, 0, value, length);
+	};
+	
+	return ret;
+};
