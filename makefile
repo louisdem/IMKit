@@ -27,15 +27,25 @@ clean:
 		$(MAKE) -C $$f -f makefile clean || exit -1; \
 	done
 
+COMMON_LIB:=$(shell finddir B_COMMON_LIB_DIRECTORY)
+COMMON_SERVERS:=$(shell finddir B_COMMON_SERVERS_DIRECTORY)
+COMMON_ADDONS:=$(shell finddir B_COMMON_ADDONS_DIRECTORY)
+BUILD:=$(shell pwd)/build
+
 symlinks:
-	ln -sf "`pwd`/build/lib/libim.so" /boot/home/config/lib
-	mkdir -p /boot/home/config/servers
-	ln -sf "`pwd`/build/im_server" /boot/home/config/servers
-	ln -sf "`pwd`/build/protocols" /boot/home/config/add-ons/im_kit
-	ln -sf "`pwd`/build/tracker-addons/IM_Merge_contacts" /boot/home/config/add-ons/Tracker
-	ln -sf "`pwd`/build/tracker-addons/IM_Start_conversation" /boot/home/config/add-ons/Tracker
-	ln -sf "`pwd`/build/settings/InstantMessaging" /boot/home/config/be/Preferences
+	ln -sf "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
+	-if [ ! -d "$(COMMON_SERVERS)" ]; then \
+		mkdir -p "$(COMMON_SERVERS)"; \
+	fi
 	
+	ln -sf "$(BUILD)/im_server"  "$(COMMON_SERVERS)"
+	rm -rf "$(COMMON_ADDONS)/im_kit"
+	mkdir "$(COMMON_ADDONS)/im_kit"
+	ln -sf "$(BUILD)/protocols" "$(COMMON_ADDONS)/im_kit"
+	ln -sf "$(BUILD)/tracker-addons/IM_Merge_contacts" "$(COMMON_ADDONS)/Tracker"
+	ln -sf "$(BUILD)/tracker-addons/IM_Start_conversation" "$(COMMON_ADDONS)/Tracker"
+	ln -sf "$(BUILD)/settings/InstantMessaging" /boot/home/config/be/Preferences
+
 dist: all
 	mkdir -p "$(DIST)"
 	copyattr --data --recursive build/* "$(DIST)"
