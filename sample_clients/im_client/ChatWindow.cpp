@@ -613,9 +613,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 			
 			BMenu *menu = fProtocolMenu->Menu();
 			if (menu) {
-				IconMenuItem *item = (IconMenuItem *)menu->FindMarked();
-				BString protocol = item->Extra();
-				if (protocol.Length() > 0) im_msg.AddString("protocol", protocol);
+				IconMenuItem *item = dynamic_cast<IconMenuItem*>(menu->FindMarked());
+				if ( item )
+				{
+					BString protocol = item->Extra();
+					if (protocol.Length() > 0) im_msg.AddString("protocol", protocol);
+				}	
 			};
 			
 			if ( fMan->SendMessage(&im_msg) == B_OK ) {
