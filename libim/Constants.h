@@ -48,7 +48,12 @@ enum im_what_code {
 	PROGRESS			= 21,
 	
 	GET_AWAY_MESSAGE =  22,
-	AWAY_MESSAGE = 23
+	AWAY_MESSAGE = 23,
+	
+	// Protocols send this when they get a new buddy icon
+	SET_BUDDY_ICON = 24,
+	// Clients get this when a buddy icon is updated
+	BUDDY_ICON_UPDATED = 25,
 };
 
 /**

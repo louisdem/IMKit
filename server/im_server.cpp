@@ -645,6 +645,7 @@ Server::Process( BMessage * msg )
 		case CONTACT_AUTHORIZED:
 		case CONTACT_STARTED_TYPING:
 		case CONTACT_STOPPED_TYPING:
+		case SET_BUDDY_ICON:
 		case PROGRESS:
 		{
 			MessageFromProtocols(msg);
@@ -1273,7 +1274,11 @@ Server::MessageToProtocols( BMessage * msg )
 void
 Server::MessageFromProtocols( BMessage * msg )
 {
-	const char * protocol = msg->FindString("protocol");
+	const char *protocol = NULL;
+	if (msg->FindString("protocol", &protocol) != B_OK) {
+		LOG("im_server", liHigh, "Got a message with no protocol!");
+		return;
+	};
 	
 	// convert strings to utf8
 	type_code _type;
@@ -1389,6 +1394,34 @@ Server::MessageFromProtocols( BMessage * msg )
 			}
 		}
 	}
+	
+	if (im_what == SET_BUDDY_ICON) {
+		LOG("im_server", liHigh, "Got a buddy icon from a protocol!");
+		const uchar *data;
+		int32 bytes = -1;
+		entry_ref ref;
+		
+		if (msg->FindRef("contact", &ref) != B_OK) return;
+		if (msg->FindData("icondata", B_RAW_TYPE, (const void **)&data, &bytes) ==  B_OK) {		
+			Contact contact(ref);
+			
+			BMallocIO buffer;
+			buffer.WriteAt(0, data, bytes);
+			BBitmap *icon = BTranslationUtils::GetBitmap(&buffer);
+			printf("Settings %s's icon to be %p\n", protocol, icon);
+			
+			status_t ret = contact.SetBuddyIcon(protocol, icon);
+			printf("Gets: %s (%i)\n", strerror(ret), ret);
+			
+			BMessage update(MESSAGE);
+			update.AddInt32("im_what", BUDDY_ICON_UPDATED);
+			update.AddRef("contact", &ref);
+			
+			Broadcast(&update);
+		};
+		
+		return;
+	};
 	
 	if ( im_what == STATUS_CHANGED && protocol != NULL && id != NULL )
 	{ // update status list on STATUS_CHANGED
@@ -1710,80 +1743,80 @@ Server::SetAllOffline()
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
 			LOG("im_server", liDebug, "  error.");
-		
-		BNode node(&entry);
-		
-		BBitmap *large = NULL;
-		BBitmap *small = NULL;
-
-#ifndef B_ZETA_VERSION
-		fIcons.FindPointer(OFFLINE_TEXT "_small", reinterpret_cast<void **>(&small));
-		fIcons.FindPointer(OFFLINE_TEXT "_large", reinterpret_cast<void **>(&large));
-		
-		if (large != NULL) {
-			node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
-				large->BitsLength());
-		} else {
-			node.RemoveAttr(BEOS_LARGE_ICON_ATTRIBUTE);
-		};	
-
-		if (small != NULL) {
-			node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
-				small->BitsLength());
-		} else {
-			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
-		};
-#endif
-		
-		// SVG icon is a bit special atm
-		// Copy the BEOS_SVG_ICON_EXTRA thing is not needed in Zeta > RC3
-		BPath prefsPath;
-	
-		// Get and set SVG icon
-		if (find_directory(B_USER_SETTINGS_DIRECTORY,&prefsPath,true,NULL) == B_OK)
-		{
-			prefsPath.Append("im_kit/icons/");
-			
-			BString path( prefsPath.Path() );
-			
-			path.Append( "/" OFFLINE_TEXT );
-			
-			BNode svgNode( path.String() );
-			
-			LOG("im_server", liDebug, "SVG icon path: %s", path.String() );
-			
-			int32 len=0;
-			
-			void * svg_icon = ReadAttribute( svgNode, BEOS_SVG_ICON_ATTRIBUTE, &len );
-			
-			if ( len > 0 )
-			{
-				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
-				WriteAttribute( node, BEOS_SVG_ICON_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_ICON_ATTRIBUTE_TYPE );
-				free( svg_icon );
-			} else
-			{
-				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_ICON_ATTRIBUTE);
-				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
-			}
-			
-/*			len = 0;
-			
-			svg_icon = ReadAttribute( svgNode, BEOS_SVG_EXTRA_ATTRIBUTE, &len );
-			
-			if ( len > 0 )
-			{
-				WriteAttribute( node, BEOS_SVG_EXTRA_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_EXTRA_ATTRIBUTE_TYPE );
-				free( svg_icon );
-			} else
-			{
-				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_EXTRA_ATTRIBUTE);
-				node.RemoveAttr(BEOS_SVG_EXTRA_ATTRIBUTE);
-			}
-*/
-		}
-		
-		node.Unset();
+//		
+//		BNode node(&entry);
+//		
+//		BBitmap *large = NULL;
+//		BBitmap *small = NULL;
+//
+//#ifndef B_ZETA_VERSION
+//		fIcons.FindPointer(OFFLINE_TEXT "_small", reinterpret_cast<void **>(&small));
+//		fIcons.FindPointer(OFFLINE_TEXT "_large", reinterpret_cast<void **>(&large));
+//		
+//		if (large != NULL) {
+//			node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
+//				large->BitsLength());
+//		} else {
+//			node.RemoveAttr(BEOS_LARGE_ICON_ATTRIBUTE);
+//		};	
+//
+//		if (small != NULL) {
+//			node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
+//				small->BitsLength());
+//		} else {
+//			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
+//		};
+//#endif
+//		
+//		// SVG icon is a bit special atm
+//		// Copy the BEOS_SVG_ICON_EXTRA thing is not needed in Zeta > RC3
+//		BPath prefsPath;
+//	
+//		// Get and set SVG icon
+//		if (find_directory(B_USER_SETTINGS_DIRECTORY,&prefsPath,true,NULL) == B_OK)
+//		{
+//			prefsPath.Append("im_kit/icons/");
+//			
+//			BString path( prefsPath.Path() );
+//			
+//			path.Append( "/" OFFLINE_TEXT );
+//			
+//			BNode svgNode( path.String() );
+//			
+//			LOG("im_server", liDebug, "SVG icon path: %s", path.String() );
+//			
+//			int32 len=0;
+//			
+//			void * svg_icon = ReadAttribute( svgNode, BEOS_SVG_ICON_ATTRIBUTE, &len );
+//			
+//			if ( len > 0 )
+//			{
+//				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
+//				WriteAttribute( node, BEOS_SVG_ICON_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_ICON_ATTRIBUTE_TYPE );
+//				free( svg_icon );
+//			} else
+//			{
+//				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_ICON_ATTRIBUTE);
+//				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
+//			}
+//			
+///*			len = 0;
+//			
+//			svg_icon = ReadAttribute( svgNode, BEOS_SVG_EXTRA_ATTRIBUTE, &len );
+//			
+//			if ( len > 0 )
+//			{
+//				WriteAttribute( node, BEOS_SVG_EXTRA_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_EXTRA_ATTRIBUTE_TYPE );
+//				free( svg_icon );
+//			} else
+//			{
+//				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_EXTRA_ATTRIBUTE);
+//				node.RemoveAttr(BEOS_SVG_EXTRA_ATTRIBUTE);
+//			}
+//*/
+//		}
+//		
+//		node.Unset();
 	}
 }
 

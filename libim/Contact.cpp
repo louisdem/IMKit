@@ -349,7 +349,7 @@ Contact::SetStatus( const char * status )
 }
 
 status_t
-Contact::ReadAttribute( const char * attr, char * buffer, int bufsize )
+Contact::ReadAttribute( const char * attr, char *buffer, int bufsize )
 {
 	BNode node(&fEntry);
 	
@@ -367,6 +367,28 @@ Contact::ReadAttribute( const char * attr, char * buffer, int bufsize )
 	
 	return B_OK;
 }
+
+status_t Contact::ReadAttribute(const char *name, char **buffer, int32 *size) {
+	status_t ret = B_OK;
+	BNode node(&fEntry);
+	ret = node.InitCheck();
+	if (ret == B_OK) {
+		attr_info info;
+		ret = node.GetAttrInfo(name, &info);
+		if (ret == B_OK) {
+			*buffer = (char *)calloc(info.size, sizeof(char));
+			ret = node.ReadAttr(name, info.type, 0, *buffer, info.size);
+			if (ret > B_OK) {
+				ret = B_OK;
+				*size = ret;
+			} else {
+				free(*buffer);
+			};
+		};
+	};
+	
+	return ret;
+};
 
 status_t
 Contact::GetName( char * buffer, int size )
@@ -391,3 +413,57 @@ Contact::GetStatus( char * buffer, int size )
 {
 	return ReadAttribute("IM:status",buffer,size);
 }
+
+status_t Contact::SetBuddyIcon(const char *protocol, BBitmap *icon) {
+	BMessage iconAttr;
+	char *buffer = NULL;
+	int32 size = -1;
+	BMessage flattenedIcon;
+	status_t ret = B_ERROR;
+	BMessage iconMsg;
+
+	if (icon->Archive(&flattenedIcon) != B_OK) return B_ERROR;
+	
+	if (ReadAttribute("IM:buddyicons", &buffer, &size) == B_OK) {
+		iconAttr.Unflatten(buffer);
+		free(buffer);
+	};
+
+	if (iconAttr.FindMessage(protocol, &iconMsg) == B_OK) {
+		iconAttr.ReplaceMessage(protocol, &flattenedIcon);
+	} else {
+		iconAttr.AddMessage(protocol, &flattenedIcon);
+	};
+
+	size = iconAttr.FlattenedSize();
+	buffer = (char *)calloc(size, sizeof(char));
+	if (iconAttr.Flatten(buffer, size) == B_OK) {
+		BNode node(&fEntry);
+		ret = node.WriteAttr("IM:buddyicons", B_MESSAGE_TYPE, 0, buffer, size);
+	};
+		
+	free(buffer);
+	return ret;
+};
+
+BBitmap *Contact::GetBuddyIcon(const char *protocol, int16 size = 48) {
+	char *buffer = NULL;
+	int32 length = -1;
+
+	if (ReadAttribute("IM:buddyicons", &buffer, &length) == B_OK) {
+		BMessage iconAttr;
+		BMessage iconMsg;
+
+		if (iconAttr.Unflatten(buffer) != B_OK) {
+			free(buffer);
+			return NULL;
+		};
+		free(buffer);
+		
+		if (iconAttr.FindMessage(protocol, &iconMsg) == B_OK) {
+			return new BBitmap(&iconMsg);
+		};
+	};
+	
+	return NULL;
+};

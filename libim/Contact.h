@@ -1,9 +1,13 @@
 #ifndef IM_CONTACT_H
 #define IM_CONTACT_H
 
+#include <Bitmap.h>
 #include <Entry.h>
 #include <List.h>
 #include <String.h>
+
+#include <kernel/fs_info.h>
+#include <kernel/fs_attr.h>
 
 namespace IM {
 
@@ -59,6 +63,9 @@ class Contact
 		status_t	GetEmail( char * buf, int size );
 		status_t	GetStatus( char * bug, int size );
 		
+		status_t	SetBuddyIcon(const char *protocol, BBitmap *icon);
+		BBitmap		*GetBuddyIcon(const char *protocol, int16 size = 48);
+		
 		// comparison, both with Contacts and entry_refs and node_refs
 		// representing Contacts
 		bool operator == ( const entry_ref & ) const;
@@ -73,7 +80,9 @@ class Contact
 	private:
 		status_t	LoadConnections();
 		status_t	SaveConnections();
-		status_t	ReadAttribute( const char * attr, char * buffer, int bufsize );
+		status_t	ReadAttribute(const char * attr, char * buffer, int bufsize);
+		status_t	ReadAttribute(const char *attr, char **buffer, int32 *size);
+		
 		void		Clear();
 		
 		entry_ref	fEntry;
