@@ -706,6 +706,7 @@ SettingsWindow::rebuildUI()
 		printf("Setting %s [%s]\n", desc, name );
 		
 		bool is_free_text = true;
+		bool is_secret_text = false;
 		BMenu * menu = NULL;
 		
 		switch ( type )
@@ -735,6 +736,8 @@ SettingsWindow::rebuildUI()
 					value = settings.FindString(name);
 					if ( !value )
 						value = curr.FindString("default");
+					if (curr.FindBool("is_secret"))
+						is_secret_text = curr.FindBool("is_secret");
 				}
 			}	break;
 			case B_INT32_TYPE:
@@ -780,6 +783,8 @@ SettingsWindow::rebuildUI()
 		if ( is_free_text )
 		{ // free-text setting
 			ctrl = new BTextControl( BRect(0,0,200,20), name, desc, value, NULL	);
+			if (is_secret_text)
+				((BTextControl *)ctrl)->TextView()->HideTyping(true);
 		} else
 		{ // select-one-of-provided setting
 			ctrl = new BMenuField( BRect(0,0,200,20), name, desc, menu );

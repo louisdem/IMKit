@@ -595,6 +595,7 @@ ICQProtocol::GetSettingsTemplate()
 	pass_msg.AddString("name","password");
 	pass_msg.AddString("description", "Password");
 	pass_msg.AddInt32("type",B_STRING_TYPE);
+	pass_msg.AddBool("is_secret", true);
 	
 	BMessage enc_msg;
 	enc_msg.AddString("name","encoding");
