@@ -4,7 +4,7 @@
 // Note: if you change something in this LOG,
 // make sure to change the LOG below as the code
 // unfortunately isn't shared. :/
-int LOG(const char *message, const BMessage *msg, ...) {
+void LOG(const char *message, const BMessage *msg, ...) {
 	va_list varg;
 	va_start(varg, msg);
 	char buffer[512];
@@ -22,7 +22,7 @@ int LOG(const char *message, const BMessage *msg, ...) {
 	}
 }
 
-int LOG(const char *message, ...) {
+void LOG(const char *message, ...) {
 	va_list varg;
 	va_start(varg, message);
 	char buffer[512];
