@@ -10,7 +10,8 @@ class BMessageFilter;
 
 class InputFilter : public BMessageFilter {
 	public:
-								InputFilter(BTextView *owner, BMessage *msg);
+								InputFilter(BTextView *owner, BMessage *msg,
+									bool commandSends);
 	    virtual filter_result	Filter (BMessage *, BHandler **);
     	filter_result			HandleKeys (BMessage *);
     
@@ -18,6 +19,7 @@ class InputFilter : public BMessageFilter {
 		BTextView	 			*fParent;
 		BMessage				*fMessage;
 		bigtime_t				fLastTyping;
+		bool					fCommandSends;
 };
 
 #endif

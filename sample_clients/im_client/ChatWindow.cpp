@@ -19,7 +19,7 @@ float kButtonWidth = 50;
 float kButtonHeight = 50;
 float  kButtonDockHeight = 50;
 
-ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon)
+ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool command = true)
 :	BWindow( 
 		BRect(100,100,400,300), 
 		"unknown contact - unknown status", 
@@ -251,7 +251,7 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon)
 		B_FOLLOW_BOTTOM | B_FOLLOW_LEFT | B_FOLLOW_RIGHT);
 	AddChild(fResize);
 
-	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE));
+	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command);
 	fInput->AddFilter((BMessageFilter *)fFilter);
 	
 	Theme::TimestampFore = C_TIMESTAMP_DUMMY;
@@ -430,8 +430,6 @@ ChatWindow::SaveSettings(void) {
 		};	
 	};
 
-//	fWindowSettings.PrintToStream();
-
 	free(buffer);
 }
 
@@ -501,21 +499,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( contact != fEntry )
 				return;
 			
-//			if ( msg->FindString("message") == NULL )
-				// AHA!
-//				return;
-			
-			// this message is related to our Contact
-			
 			int32 im_what=0;
 			
 			msg->FindInt32("im_what",&im_what);
 				
 			int32 old_sel_start, old_sel_end;
 			
-//			fText->GetSelection(&old_sel_start, &old_sel_end);
-//			fText->Select(fText->TextLength(),fText->TextLength());
-
 			char timestr[10];
 			time_t now = time(NULL);
 			strftime(timestr, sizeof(timestr),"[%H:%M]: ", localtime(&now) );

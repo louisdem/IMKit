@@ -33,11 +33,24 @@ ChatApp::ChatApp()
 	iconSize.AddInt32("valid_value", kSmallIcon);
 	iconSize.AddInt32("valid_value", kLargeIcon);
 #endif
+
+//	BMessage userColor;
+//	userColor.AddString("name", "user_colour");
+//	userColor.AddString("description", "User text colour");
+//	userColor.AddInt32("type", B_RGB_COLOR_TYPE);
+
+	BMessage useCommand;
+	useCommand.AddString("name", "command_sends");
+	useCommand.AddString("description", "Command key sends message");
+	useCommand.AddInt32("type", B_BOOL_TYPE);
+	useCommand.AddBool("default", true);
 	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
 	tmplate.AddMessage("setting", &iconSize);
+	tmplate.AddMessage("setting", &useCommand);
+//	tmplate.AddMessage("setting", &userColor);
 	
 	im_save_client_template("im_client", &tmplate);
 	
@@ -154,6 +167,10 @@ ChatApp::MessageReceived( BMessage * msg )
 			};
 			if (fIconBarSize == 0) fIconBarSize = kLargeIcon;
 			
+			if (settings.FindBool("command_sends", &fCommandSends) != B_OK) {
+				fCommandSends = true;
+			};
+			
 		}	break;
 		
 		case IM::MESSAGE:
@@ -227,7 +244,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
 				LOG("im_client", liMedium, "Creating new window to handle message");
-				win = new ChatWindow(ref, fIconBarSize);
+				win = new ChatWindow(ref, fIconBarSize, fCommandSends);
 				_msgr = BMessenger(win);
 				if ( _msgr.LockTarget() )
 				{

@@ -36,6 +36,7 @@ class ChatApp : public BApplication
 		RunMap			fRunViews;
 		
 		int32			fIconBarSize;
+		bool			fCommandSends;
 };
 
 #endif

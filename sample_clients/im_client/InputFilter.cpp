@@ -3,11 +3,12 @@
 #include <libim/Constants.h>
 #include <Messenger.h>
 
-InputFilter::InputFilter (BTextView *owner, BMessage *msg) 
+InputFilter::InputFilter (BTextView *owner, BMessage *msg, bool commandSends) 
 	: BMessageFilter (B_ANY_DELIVERY, B_ANY_SOURCE),
 	fParent(owner),
 	fMessage(new BMessage(*msg)),
-	fLastTyping(0) {
+	fLastTyping(0),
+	fCommandSends(commandSends) {
 }
 
 filter_result InputFilter::Filter (BMessage *msg, BHandler **target) {
@@ -44,14 +45,29 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 	msg->FindInt32("modifiers", &keyModifiers);
 
 	switch (keyStroke[0]) {
-		case B_RETURN: {				
-			if (keyModifiers & B_COMMAND_KEY) {
-				BMessage *typing = new BMessage(IM::USER_STOPPED_TYPING);
-				BMessenger(fParent->Window()).SendMessage(typing);			
-			
-				BMessenger(fParent->Window()).SendMessage(fMessage);
-				return B_SKIP_MESSAGE;
+		case B_RETURN: {
+			if (fCommandSends == true) {
+				if (keyModifiers & B_COMMAND_KEY) {
+// if ((keyModifiers & B_COMMAND_KEY) == ((fCommandSends) ? B_COMMAND_KEY : 0)) ?
+					BMessage *typing = new BMessage(IM::USER_STOPPED_TYPING);
+					BMessenger(fParent->Window()).SendMessage(typing);			
+				
+					BMessenger(fParent->Window()).SendMessage(fMessage);
+					return B_SKIP_MESSAGE;
+				};
+			} else {
+				if ((keyModifiers & B_COMMAND_KEY) != B_COMMAND_KEY) {
+					BMessage *typing = new BMessage(IM::USER_STOPPED_TYPING);
+					BMessenger(fParent->Window()).SendMessage(typing);			
+				
+					BMessenger(fParent->Window()).SendMessage(fMessage);
+					return B_SKIP_MESSAGE;
+				} else {
+					fParent->Insert(fParent->TextLength(), "\n", strlen("\n"));
+//					TextLength()
+				};
 			};
+				
 		} break;
 	
 		case B_ESCAPE: {

@@ -65,7 +65,7 @@ class StatusBar;
 class ChatWindow : public BWindow
 {
 	public:
-		ChatWindow(entry_ref &, int32 iconBarSize = kLargeIcon);
+		ChatWindow(entry_ref &, int32 iconBarSize = kLargeIcon, bool command = true);
 		~ChatWindow();
 
 		void MessageReceived( BMessage * );
