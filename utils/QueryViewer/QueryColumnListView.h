@@ -33,13 +33,26 @@ extern const char *kTrackerQueryPredicate;
 extern const char *kTrackerQueryType;
 extern const char *kTrackerQueryInitMime;
 
-typedef struct {
+typedef struct ci_internal {
 	BColumn *col;
 	uint32 hash;
 	BString publicName;
 	BString internalName;
 	int32 index;
 	int32 type;
+
+	ci_internal(void) {
+		this->col = NULL;
+		this->hash = 0;
+		this->publicName = "";
+		this->internalName = "";
+		this->index = 0;
+		this->type = 0;
+	};
+	virtual ~ci_internal(void) {
+		this->publicName.SetTo("");
+		this->internalName.SetTo("");
+	};
 } col_info;
 
 typedef map<BString, BString> attr_map;

@@ -19,53 +19,10 @@ const char *kFolderState = "_trk/columns_le";
 const char *kViewState = "_trk/viewstate_le";
 const int32 kSnoozePeriod = 1000 * 1000;
 const int32 kIconSize = 16;
+const int32 kPathIndex = 6;
+const int32 kNameIndex = 1;
 
 mime_map QueryColumnListView::fMimeTypes;
-
-void PrintHex(const unsigned char* buf, size_t size) {
-	uint16 i = 0;
-	uint16 j = 0;
-	int breakpoint = 0;
-
-	for(;i < size; i++) {
-		fprintf(stdout, "%02x ", (unsigned char)buf[i]);
-		breakpoint++;	
-
-		if(!((i + 1)%16) && i) {
-			fprintf(stdout, "\t\t");
-			for(j = ((i+1) - 16); j < ((i+1)/16) * 16; j++)	{
-				if(buf[j] < 30) {
-					fprintf(stdout, ".");
-				} else {
-					fprintf(stdout, "%c", (unsigned char)buf[j]);
-				};
-			}
-			fprintf(stdout, "\n");
-			breakpoint = 0;
-		}
-	}
-	
-	if(breakpoint == 16) {
-		fprintf(stdout, "\n");
-		return;
-	}
-
-	for(; breakpoint < 16; breakpoint++) {
-		fprintf(stdout, "   ");
-	}
-	
-	fprintf(stdout, "\t\t");
-
-	for(j = size - (size%16); j < size; j++) {
-		if(buf[j] < 30) {
-			fprintf(stdout, ".");
-		} else {
-			fprintf(stdout, "%c", (unsigned char)buf[j]);
-		};
-	}
-	
-	fprintf(stdout, "\n");
-}
 
 QueryColumnListView::QueryColumnListView(BRect rect, const char *name,
 	uint32 resizingMode, uint32 drawFlags, entry_ref ref, BMessage *msg = NULL,
@@ -91,6 +48,12 @@ QueryColumnListView::QueryColumnListView(BRect rect, const char *name,
 QueryColumnListView::~QueryColumnListView(void) {
 	if (fNotify) delete fNotify;
 	if (fMessage) delete fMessage;
+	
+	public_info_map::iterator pIt;
+	for (pIt = fPublicCols.begin(); pIt != fPublicCols.end(); pIt++) delete pIt->second;
+
+	querylist::iterator qIt;
+	for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) delete (*qIt);
 };
 
 //#pragma mark -
@@ -173,7 +136,7 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 			msg->PrintToStream();
 			BRow *row = FocusRow();
 			if (row) {
-				BStringField *field = reinterpret_cast<BStringField *>(row->GetField(0));
+				BStringField *field = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
 				if (field) {
 					entry_ref ref;
 					if (get_ref_for_path(field->String(), &ref) == B_OK) {
@@ -592,8 +555,8 @@ col_info *QueryColumnListView::MakeColInfo(BColumn *col, uint32 hash,
 	col_info *ret = new col_info;
 	ret->col = col;
 	ret->hash = hash;
-	ret->publicName = publicName;
-	ret->internalName = internalName;
+	ret->publicName.SetTo(publicName);
+	ret->internalName.SetTo(internalName);
 	ret->type = type;
 	
 	return ret;
@@ -651,6 +614,7 @@ status_t QueryColumnListView::AddStatColumns(void) {
 	AddColumn(perm, index++);
 	colInfo = MakeColInfo(perm, CalculateHash("Permissions", B_STRING_TYPE),
 		"Permissions", kAttrStatMode, B_STRING_TYPE);
+	AddColInfo(colInfo);
 	
 	fAttrIndexOffset = index;
 	
@@ -732,13 +696,8 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 		};
 		
 		if (doAdd) {
-				col_info *colInfo = new col_info;
-				colInfo->col = column;
-				colInfo->hash = 0;
-				colInfo->publicName = publicName;
-				colInfo->internalName = internalName;
-				colInfo->type = B_SWAP_INT32(type);
-
+				col_info *colInfo = MakeColInfo(column, 0, publicName, internalName,
+					B_SWAP_INT32(type));
 				fInternalCols[internalName] = colInfo;
 				fPublicCols[publicName] = colInfo;				
 

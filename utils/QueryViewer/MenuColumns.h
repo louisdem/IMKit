@@ -13,6 +13,9 @@
 
 #include "IMKitUtilities.h"
 
+extern const int32 kPathIndex;
+extern const int32 kNameIndex;
+
 enum {
 	mscActionTaken = 'ms01',
 };

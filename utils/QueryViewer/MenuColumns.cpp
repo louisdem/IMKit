@@ -4,15 +4,18 @@
 #include <stdio.h>
 
 BPopUpMenu *generate_menu(BRow *row, BColumnListView *parent) {
-	BStringField *field = reinterpret_cast<BStringField *>(row->GetField(0));
-	BPopUpMenu *menu = new BPopUpMenu("Wang");
+	BStringField *pathField = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
+	BStringField *nameField = reinterpret_cast<BStringField *>(row->GetField(kNameIndex));
+	BPopUpMenu *menu = NULL;
 	QueryColumnListView *qclv = reinterpret_cast<QueryColumnListView *>(parent);
 	entry_ref ref;
 	
-	menu->SetFont(be_plain_font);
+	if (pathField == NULL) return menu;
+	if (nameField == NULL) return menu;
+	BPath refPath = pathField->String();
+	refPath.Append(nameField->String());
 	
-	if (field == NULL) return menu;
-	if (get_ref_for_path(field->String(), &ref) != B_OK) return menu;
+	if (get_ref_for_path(refPath.Path(), &ref) != B_OK) return menu;
 
 	char *type = qclv->MIMETypeFor(&ref);
 	
@@ -27,6 +30,9 @@ BPopUpMenu *generate_menu(BRow *row, BColumnListView *parent) {
 	BString qpath = "/boot/home/config/settings/BeClan/QueryViewer/Actions/";
 	qpath << qclv->Name();
 	dirs[2] = qpath.String();
+	
+	menu = new BPopUpMenu("QCLVMenu");
+	menu->SetFont(be_plain_font);
 		
 	for (int32 i = 2; i > -1; i--) {
 		BDirectory dir(dirs[i]);
