@@ -406,36 +406,64 @@ Server::LoadAddons()
 {
 	BDirectory settingsDir; // base directory for protocol settings
 	BDirectory addonsDir; // directory for protocol addons
-	status_t rc;
+	status_t rc_set;
+	status_t rc_sys;
+	status_t rc_user;
 	
 	// STEP 1: Check if we can access settings for the protocols!
 	BPath path;
-	if ((rc=find_directory(B_USER_SETTINGS_DIRECTORY,&path,true)) != B_OK ||
-		(rc=path.Append("im_kit/add-ons/protocols")) != B_OK ||
-		(rc=settingsDir.SetTo(path.Path())) != B_OK)
+	if ((rc_set=find_directory(B_USER_SETTINGS_DIRECTORY,&path,true)) != B_OK ||
+		(rc_set=path.Append("im_kit/add-ons/protocols")) != B_OK ||
+		(rc_set=settingsDir.SetTo(path.Path())) != B_OK)
 	{ // we couldn't access the settings directory for the protocols!
-		LOG("im_server", liHigh, "cannot access protocol settings directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
-		return rc;
+		LOG("im_server", liHigh, "cannot access protocol settings directory: %s, error 0x%lx (%s)!", path.Path(), rc_set, strerror(rc_set));
+		return rc_set;
 	}
-	
-	// STEP 2: Check if we can access the add-on directory for the protocols!
-	if ((rc=find_directory(B_USER_ADDONS_DIRECTORY, &path, true)) != B_OK ||
-		(rc=path.Append("im_kit/protocols")) != B_OK ||
-		(rc=addonsDir.SetTo(path.Path())) != B_OK)
-	{ // we couldn't access the addons directory for the protocols!
-		LOG("im_server", liHigh, "cannot access protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
-		return rc;
-	}
-	
+
 	// Okies, we've been able to access our critical dirs, so now we should be sure we can load any addons that are there
 	UnloadAddons(); // make sure we don't load any addons twice
+	
+	// STEP 2a: Check if we can access the system add-on directory for the protocols!
+	if ((rc_sys=find_directory(B_BEOS_ADDONS_DIRECTORY, &path, true)) != B_OK ||
+		(rc_sys=path.Append("im_kit/protocols")) != B_OK ||
+		(rc_sys=addonsDir.SetTo(path.Path())) != B_OK)
+	{ // we couldn't access the addons directory for the protocols!
+		LOG("im_server", liHigh, "cannot access user protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc_sys, strerror(rc_sys));
+	}
+	else
+		LoadAddonsFromDir( &addonsDir, &settingsDir );
 
-	// try loading all files in ./add-ons
+	// STEP 2b: Check if we can access the user add-on directory for the protocols!
+	if ((rc_user=find_directory(B_USER_ADDONS_DIRECTORY, &path, true)) != B_OK ||
+		(rc_user=path.Append("im_kit/protocols")) != B_OK ||
+		(rc_user=addonsDir.SetTo(path.Path())) != B_OK)
+	{ // we couldn't access the addons directory for the protocols!
+		LOG("im_server", liHigh, "cannot access user protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc_user, strerror(rc_user));
+	}
+	else
+		LoadAddonsFromDir( &addonsDir, &settingsDir );
+	
+	if( ( rc_sys != B_OK ) && ( rc_user != B_OK ) )
+		return B_ERROR;
+	else
+	{
+		LOG("im_server", liMedium, "All add-ons loaded.");
+		return B_OK;
+	}
+}
 
+/**
+	Load protocol add-ons from a specific dir and init them
+*/
+void
+Server::LoadAddonsFromDir( BDirectory* addonsDir, BDirectory* settingsDir )
+{
 	// get path
+	status_t rc;
+	BPath path;
 	BEntry entry;
-	addonsDir.Rewind();
-	while( addonsDir.GetNextEntry( (BEntry*)&entry, TRUE ) == B_NO_ERROR )
+	addonsDir->Rewind();
+	while( addonsDir->GetNextEntry( (BEntry*)&entry, TRUE ) == B_NO_ERROR )
 	{ // continue until no more files
 		if( entry.InitCheck() != B_NO_ERROR )
 			continue;
@@ -479,7 +507,7 @@ Server::LoadAddons()
 		LOG("im_server", liHigh, "Protocol loaded: [%s]", protocol->GetSignature());
 		
 		// try to read settings from protocol attribute
-		BNode node(&settingsDir,protocol->GetSignature());
+		BNode node(settingsDir,protocol->GetSignature());
 		if (node.InitCheck() == B_OK)
 		{ // okies, ready to roll
 			attr_info info;
@@ -538,10 +566,6 @@ Server::LoadAddons()
 			im_save_protocol_template( protocol->GetSignature(), &tmplate );
 		}
 	} // while()
-	
-	LOG("im_server", liMedium, "All add-ons loaded.");
-	
-	return B_OK;
 }
 
 /**

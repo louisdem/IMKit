@@ -80,6 +80,7 @@ class Server : public BApplication
 		
 		void		RegisterSoundEvents();
 		status_t	LoadAddons();
+		void		LoadAddonsFromDir( BDirectory* addonsDir, BDirectory* settingsDir );
 		void		UnloadAddons();
 		
 		void	Process( BMessage * );
