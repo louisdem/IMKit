@@ -300,6 +300,32 @@ bool PWindow::QuitRequested(void) {
 	return true;
 };
 
+void PWindow::DispatchMessage( BMessage * msg, BHandler * target )
+{
+	switch ( msg->what )
+	{
+		case B_MOUSE_WHEEL_CHANGED:
+			if ( target != fListView )
+			{
+				float delta_y=0.0f;
+				
+				msg->FindFloat("be:wheel_delta_y", &delta_y);
+				
+				BView * protocol = fPrefView.ItemAt(fLastIndex)->ChildAt(0);
+//				printf("Scroll settings.. view name: %s\n", protocol->Name() );
+//				msg->PrintToStream();
+				protocol->ScrollBy(0, delta_y*10);
+				return;
+			}
+			break;
+			
+		default:
+			break;
+	}
+
+	BWindow::DispatchMessage(msg,target);
+}
+
 void PWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case LISTCHANGED: {

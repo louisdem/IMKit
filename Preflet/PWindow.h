@@ -47,6 +47,7 @@ class PWindow : public BWindow {
 								PWindow(void);
 
 		virtual bool			QuitRequested(void);
+		virtual void			DispatchMessage(BMessage *msg, BHandler *target);
 		virtual void			MessageReceived(BMessage *msg);
 
 				
