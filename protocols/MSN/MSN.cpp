@@ -306,15 +306,16 @@ status_t MSNProtocol::UpdateSettings( BMessage & msg ) {
 	const char *passport = NULL;
 	const char *password = NULL;
 	const char *displayname = NULL;
-	const char *encoding = NULL;
+//	const char *encoding = NULL;
 
+	/* don't check for encoding, as it doesnt belong to the template anymore. emwe */
 	
 	msg.FindString("passport", &passport);
 	msg.FindString("password", &password);
 	msg.FindString("displayname", &displayname);
-	msg.FindString("encoding", &encoding);
+//	msg.FindString("encoding", &encoding);
 	
-	if ((passport == NULL) || (password == NULL) || (encoding == NULL)) {
+	if ((passport == NULL) || (password == NULL) /* || (encoding == NULL) */ ) {
 //		invalid settings, fail
 		return B_ERROR;
 	};
