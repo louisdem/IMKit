@@ -1358,7 +1358,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		contact.ConnectionAt(i,connection);
 		
 		string curr = fStatus[connection];
-			
+		
 		if ( curr == ONLINE_TEXT )
 		{
 			new_status = ONLINE_TEXT;

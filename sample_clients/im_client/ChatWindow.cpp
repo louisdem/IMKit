@@ -73,7 +73,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	BRect dockRect = Bounds();
 
 	dockRect.bottom = kButtonDockHeight;
-	fDock = new BView(dockRect, "Dock", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW);
+	fDock = new BView(dockRect, "Dock", B_FOLLOW_LEFT_RIGHT, 0);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -93,6 +93,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		"/People", "BEOS:L:STD_ICON");
 */
 
+	// people icon
 #if  B_BEOS_VERSION > B_BEOS_VERSION_5
 	BNode peopleApp("/boot/beos/apps/People");
 	long err = 0;
@@ -118,11 +119,38 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	);
 	fDock->AddChild(btn);
 	
+	// email icon
+#if  B_BEOS_VERSION > B_BEOS_VERSION_5
+	BNode emailApp("/boot/beos/apps/BeMail");
+	long err = 0;
+
+	#ifdef GET_NODE_ICON
+		icon = GetNodeIcon(emailApp, 32, &err);
+	#else
+		icon = GetTrackerIcon(emailApp, 32, &err);
+	#endif
+#else
+	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
+		"/Email", "BEOS:L:STD_ICON");
+#endif
+	
+	btn = new ImageButton(
+		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
+		"open in people button",
+		new BMessage(EMAIL),
+		B_FOLLOW_NONE,
+		B_WILL_DRAW,
+		icon,
+		"E-mail"
+	);
+	fDock->AddChild(btn);
+	
+	// block icon
 	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
 		"/Block", "BEOS:L:STD_ICON");
 	btn = new ImageButton(
-		BRect(53,2,53+kButtonWidth,2+kButtonHeight),
-		"block button",
+		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
+		"email button",
 		new BMessage(BLOCK),
 		B_FOLLOW_NONE,
 		B_WILL_DRAW,
@@ -535,6 +563,14 @@ ChatWindow::MessageReceived( BMessage * msg )
 			open_msg.AddRef("refs", &fEntry);
 			
 			be_roster->Launch( "application/x-vnd.Be-PEPL", &open_msg );
+		}	break;
+		
+		case EMAIL:
+		{
+			BMessage open_msg(B_REFS_RECEIVED);
+			open_msg.AddRef("refs", &fEntry);
+			
+			be_roster->Launch( "application/x-vnd.Be-MAIL", &open_msg );
 		}	break;
 		
 		case BLOCK:
