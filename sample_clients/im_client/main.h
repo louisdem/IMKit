@@ -38,6 +38,7 @@ const uint32 kResizeMessage = 'irsz';
 const uint32 M_LOOKUP_WEBSTER = 'rvlw';
 const uint32 M_LOOKUP_GOOGLE = 'rvlg';
 const uint32 M_LOOKUP_ACRONYM = 'rvla';
+const uint32 M_CLEAR = 'rvcl';
 
 const uint32 M_OFFVIEW_SELECTION = 'rvos';
 const uint32 M_THEME_FOREGROUND_CHANGE = 'rvtf';

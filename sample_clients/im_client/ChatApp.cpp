@@ -67,6 +67,11 @@ ChatApp::ChatApp()
 		settings.AddInt32("icon_size", kLargeIcon);
 		fIconBarSize = kLargeIcon;
 	};
+	if (settings.FindBool("command_sends", &fCommandSends) != B_OK) {
+		settings.AddBool("command_sends", true);
+		fCommandSends = true;
+	};
+	
 	if (fIconBarSize == 0) fIconBarSize = kLargeIcon;
 	
 	im_save_client_settings("im_client", &settings);

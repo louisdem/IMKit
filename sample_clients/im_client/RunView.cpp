@@ -623,6 +623,12 @@ RunView::BuildPopUp (void)
   item->SetTarget (this);
   fMyPopUp->AddItem (item);
 
+  fMyPopUp->AddSeparatorItem();
+  
+  item = new BMenuItem("Clear", new BMessage(M_CLEAR));
+  item->SetTarget(this);
+  fMyPopUp->AddItem(item);
+
   fMyPopUp->SetFont (be_plain_font);
 }
 
@@ -1188,6 +1194,12 @@ RunView::MessageReceived (BMessage *msg)
         lookup.Prepend ("http://www.acronymfinder.com/af-query.asp?String=exact&Acronym=");
         lookup.Append ("&Find=Find");
         LoadURL (lookup.String());
+      }
+      break;
+      
+    case M_CLEAR:
+      {
+        Clear();
       }
       break;
 
