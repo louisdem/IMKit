@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= im_binlogger
+NAME= im_logger
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/clients
 
@@ -32,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= logger.cpp $(TOPDIR)/common/IMKitUtilities.cpp
+SRCS= logger.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -53,7 +53,7 @@ RSRCS= logger.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im tracker
+LIBS= be im
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths

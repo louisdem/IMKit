@@ -3,8 +3,6 @@
 
 #include <libim/Manager.h>
 
-#include "../../common/IMKitUtilities.h"
-
 #include <Application.h>
 #include <String.h>
 #include <File.h>
@@ -18,11 +16,23 @@ class LoggerApp : public BApplication
 	public:
 						LoggerApp();
 						~LoggerApp();
-			void		MessageReceived(BMessage *msg);
+
+/*		
+		status_t		SetMaxFiles(int max);
+		int				MaxFiles(void);
+*/
+		
+		void MessageReceived( BMessage * );
 		
 	private:
-		IM::Manager		*fMan;
-		BString			fLogParent;
+		IM::Manager *	fMan;
+
+//		Eventually we should implement some sort of file cache where the last
+//		fMaxFiles are kept open
+/*	
+		int				fMaxFiles;
+		BFile			**fFiles;
+*/
 };
 
 #endif
