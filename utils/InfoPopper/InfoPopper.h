@@ -6,17 +6,18 @@ namespace InfoPopper {
 	// Message types you can send
 	enum info_type {
 		Information,	// Normal message
-		Important,		// ???
+		Important,		// Important message - more visible
 		Error,			// Error message (displays in red)
 		Progress		// Progress bar - allows updating
 	};
 	
 	enum info_messages {
-		AddMessage = 'imAM',	// Adds a message to the InfoPopper
+		AddMessage = 'ipAM',	// Adds a message to the InfoPopper
 	};
 
 // AddMessage
 //  int8 type: One of the info_type constants - changes appearance
+//  String title: The name of the origin of the message, for example
 //  String content: The message to be displayed
 //  BMessage icon: An archived BBitmap to display
 //  String onClickApp: MIME string of Application to launch when clicked

@@ -7,9 +7,9 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= infopopper
+NAME= InfoPopper
 TOPDIR=../..
-TARGET_DIR=$(TOPDIR)/build/clients
+TARGET_DIR=$(TOPDIR)/build/utils
 
 # specify the type of binary
 #	APP:	Application

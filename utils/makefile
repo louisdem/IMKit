@@ -2,7 +2,8 @@
 
 SUBDIRS = \
 	gimicq-import \
-	mimetype
+	mimetype \
+	InfoPopper
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \
