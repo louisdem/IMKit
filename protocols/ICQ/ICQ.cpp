@@ -374,6 +374,7 @@ SimpleClient::server_based_contact_list_cb( ServerBasedContactEvent * ev )
 	{
 		msg.AddString("id", (*i)->getStringUIN().c_str());
 		icqclient.addContact( *i );
+		snooze(10000);
 	}
 	
 	fMsgr.SendMessage( &msg );
