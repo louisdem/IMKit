@@ -442,14 +442,21 @@ SimpleClient::server_based_contact_list_cb( ServerBasedContactEvent * ev )
 	BMessage msg( IM::SERVER_BASED_CONTACT_LIST );
 	msg.AddString("protocol","icq");
 	
+	bool addedContact = false;
+	
 	for ( ; i != list.end(); i++ )
 	{
-		msg.AddString("id", (*i)->getStringUIN().c_str());
-		icqclient.addContact( *i );
-		snooze(10000);
+		if ( (*i)->getUIN() )
+		{
+			msg.AddString("id", (*i)->getStringUIN().c_str());
+			icqclient.addContact( *i );
+			snooze(10000);
+			addedContact = true;
+		}
 	}
 	
-	fMsgr.SendMessage( &msg );
+	if ( addedContact )
+		fMsgr.SendMessage( &msg );
 }
 
 /* Disabled to see if it stops the ICQ crashes.
