@@ -91,6 +91,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 			
 		void				_init();
 		void				reloadSettings();
+		void				getProtocolStates();
 		
 		BResources			fResource;
 		

@@ -128,6 +128,36 @@ IM_DeskbarIcon::_init() {
 	
 	SetDrawingMode(B_OP_OVER);
 	
+	getProtocolStates();
+	
+	fQueryMenu = NULL;
+	
+	BPath middlePath = userDir;
+	middlePath.Append("im_kit/_MIDDLE_CLICK_ACTION_");
+	
+	BEntry middleAction(middlePath.Path(), true);
+	if ((middleAction.InitCheck() != B_OK) || (middleAction.Exists() == false)) {
+		middlePath.SetTo("/boot/home/people");
+		get_ref_for_path(middlePath.Path(), &fMiddleClickRef);
+	} else {
+		middleAction.GetRef(&fMiddleClickRef);
+	};
+
+#ifdef ZETA
+	/*
+	 * This is straightforward and unsafe as the location of the locale
+	 * files may change. We could put the files relative to the im_server
+	 * install location, but this is quite ugly.
+	 */
+	BPath path( "/boot/apps/Internet/IMKit/Language/Dictionaries/im_server" );
+	if( path.InitCheck() == B_OK )
+		be_locale.LoadLanguageFile( path.Path() );
+#endif
+}
+
+void
+IM_DeskbarIcon::getProtocolStates()
+{
 	BMessage protStatus;
 	fStatuses.clear();
 	IM::Manager man;
@@ -162,30 +192,6 @@ IM_DeskbarIcon::_init() {
 			fCurrIcon = fModeIcon =  fOfflineIcon;
 		};
 	};
-	
-	fQueryMenu = NULL;
-	
-	BPath middlePath = userDir;
-	middlePath.Append("im_kit/_MIDDLE_CLICK_ACTION_");
-	
-	BEntry middleAction(middlePath.Path(), true);
-	if ((middleAction.InitCheck() != B_OK) || (middleAction.Exists() == false)) {
-		middlePath.SetTo("/boot/home/people");
-		get_ref_for_path(middlePath.Path(), &fMiddleClickRef);
-	} else {
-		middleAction.GetRef(&fMiddleClickRef);
-	};
-
-#ifdef ZETA
-	/*
-	 * This is straightforward and unsafe as the location of the locale
-	 * files may change. We could put the files relative to the im_server
-	 * install location, but this is quite ugly.
-	 */
-	BPath path( "/boot/apps/Internet/IMKit/Language/Dictionaries/im_server" );
-	if( path.InitCheck() == B_OK )
-		be_locale.LoadLanguageFile( path.Path() );
-#endif
 }
 
 void
@@ -563,6 +569,8 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			fStatusMenu->SetFont(be_plain_font);
 			
 			map <string, string>::iterator it;
+			
+			getProtocolStates();
 			
 			LOG("deskbar", liDebug, "separate protocols");
 			
