@@ -362,6 +362,7 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 		if (fDirtyMenu) {
 			delete fMenu;
 			fMenu = new BPopUpMenu("im_db_menu", false);
+			fMenu->SetFont(be_plain_font);
 			
 			// set status
 			BMenu * status = new BMenu("Set status");
@@ -374,6 +375,9 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			total->SetTargetForItems(this);
 			status->AddItem(total);
 			status->AddSeparatorItem();
+			
+			status->SetFont(be_plain_font);
+			total->SetFont(be_plain_font);
 			
 			map <string, string>::iterator it;
 			
@@ -393,6 +397,8 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 				} else {
 					protocol->ItemAt(2)->SetMarked(true);
 				};
+				
+				protocol->SetFont(be_plain_font);
 				
 				status->AddItem(protocol);
 			};
@@ -414,11 +420,11 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			fDirtyMenu = false;
 		};
 		
-		fMenu->Go(
-			ConvertToScreen(p),
-			true // delivers message
-		);
+		BPoint pos;
+		ConvertToScreen(&pos);
+		BRect r(pos.x - 2, pos.y - 2, pos.x + 2, pos.y + 2);
 		
+		fMenu->Go(pos, true, true, r, true);	
 	}
 	
 	if ( buttons & B_PRIMARY_MOUSE_BUTTON )
