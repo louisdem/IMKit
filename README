@@ -16,12 +16,6 @@ First of all, a few notes:
     ~/config/lib and im_server to ~/config/servers. The clients and tools etc
     will be copied to /boot/apps/im_kit.
 
- !	IMPORTANT NOTE: for R5     	!
- edit makefile-engine.IMkit
- goto line 291
- remove   the following text from line 289 and 291
-	if [ -f "$(NAME).svg" ]; then IconTool "$(INSTALL_DIR)/$(NAME)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; fi
-
 
 Now, on to the making:
 
