@@ -6,6 +6,7 @@
 #include <Bitmap.h>
 #include <list>
 #include <Messenger.h>
+#include <MessageRunner.h>
 
 class _EXPORT IM_DeskbarIcon : public BView
 {
@@ -18,7 +19,6 @@ class _EXPORT IM_DeskbarIcon : public BView
 		static BArchivable * Instantiate( BMessage * archive );
 		
 		virtual void Draw( BRect );
-		virtual void Pulse();
 		
 		virtual void MessageReceived( BMessage * );
 		
@@ -43,8 +43,9 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BBitmap *		fFlashIcon;
 		
 		// for flashing
-		int		fFlashCount, fBlink;
+		int					fFlashCount, fBlink;
 		list<BMessenger>	fMsgrs;
+		BMessageRunner *	fMsgRunner;
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

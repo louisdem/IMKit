@@ -39,7 +39,7 @@ IM_DeskbarIcon::IM_DeskbarIcon()
 		BRect(0,0,15,15), 
 		DESKBAR_ICON_NAME, 
 		B_FOLLOW_NONE, 
-		B_WILL_DRAW | B_PULSE_NEEDED 
+		B_WILL_DRAW 
 	)
 {
 	_init();
@@ -79,6 +79,7 @@ IM_DeskbarIcon::_init()
 	
 	fFlashCount = 0;
 	fBlink = 0;
+	fMsgRunner = NULL;
 }
 
 void
@@ -97,23 +98,6 @@ IM_DeskbarIcon::Draw( BRect rect )
 		SetHighColor(255,0,0);
 		FillRect( Bounds() );
 	}
-}
-
-void
-IM_DeskbarIcon::Pulse()
-{
-	BBitmap * oldIcon = fCurrIcon;
-	
-	if ( (fFlashCount > 0) && (fBlink++ % 2) )
-	{
-		fCurrIcon = fFlashIcon;
-	} else
-	{
-		fCurrIcon = fStdIcon;
-	}
-	
-	if ( oldIcon != fCurrIcon )
-		Invalidate();
 }
 
 status_t
@@ -137,6 +121,22 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case 'blnk':
+		{ // blink icon
+			BBitmap * oldIcon = fCurrIcon;
+			
+			if ( (fFlashCount > 0) && (fBlink++ % 2) )
+			{
+				fCurrIcon = fFlashIcon;
+			} else
+			{
+				fCurrIcon = fStdIcon;
+			}
+			
+			if ( oldIcon != fCurrIcon )
+				Invalidate();
+		}	break;
+		
 		case 'flsh':
 		{
 			BMessenger msgr;
@@ -147,6 +147,11 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			fFlashCount++;
 			fBlink = 0;
+			if ( !fMsgRunner )
+			{
+				BMessage msg('blnk');
+				fMsgRunner = new BMessageRunner( BMessenger(this), &msg, 200*1000 );
+			}
 			printf("IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
 		case 'stop':
@@ -159,6 +164,14 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			fFlashCount--;
 			printf("IM: fFlashCount: %ld\n", fFlashCount);
+			
+			if ( fFlashCount == 0 )
+			{
+				delete fMsgRunner;
+				fMsgRunner = NULL;
+				fCurrIcon = fStdIcon;
+				Invalidate();
+			}
 			
 			if ( fFlashCount < 0 )
 			{
