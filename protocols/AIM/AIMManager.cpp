@@ -854,15 +854,17 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 		
 	Flap *msg = new Flap(SNAC_DATA);
 	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, 0x2728)); //++fRequestID));
-	msg->AddRawData((uchar []){0x00, 0x00, 0xff, 0x00, 0x00, 0x0f, 0x08, 0x03}, 8); // MSG-ID Cookie
+	//msg->AddRawData((uchar []){0x00, 0x00, 0xff, 0x00, 0x00, 0x0f, 0x08, 0x03}, 8); // MSG-ID Cookie
+	msg->AddRawData((uchar []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8); // MSG-ID Cookie
 	msg->AddRawData((uchar []){0x00, 0x01}, 2); // Channel: Plain Text
 
 	uint8 screenLen = strlen(screenname);
 	msg->AddRawData((uchar *)&screenLen, sizeof(screenLen));
 	msg->AddRawData((uchar *)screenname, screenLen);
 
-	TLV *msgData = new TLV(0x0002);
-	msgData->AddTLV(new TLV(0x0501, "", 0));
+	//TLV *msgData = new TLV(0x0002);
+	//msgData->AddTLV(new TLV(0x0501, "", 0));
+	msg->AddRawData((uchar []){0x00, 0x02}, 2);
 	
 	BString msg_encode(message);
 	encode_html(msg_encode);
@@ -892,15 +894,19 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	buffer[2] = 0xff;
 	buffer[3] = 0xff;
 	
+	int16 utf16_size_be = htons(utf16_size + 0x0d);
+	msg->AddRawData((uchar [])&utf16_size_be, 2);
+	msg->AddRawData((uchar []){0x05, 0x01, 0x00, 0x01, 0x01}, 5);
+	
 	memcpy((void *)(buffer + 4), utf16_data, utf16_size);
-	msgData->AddTLV(new TLV(0x0101, buffer, utf16_size + 4));
+	msg->AddTLV(new TLV(0x0101, buffer, utf16_size + 4));
 	
 	free(utf16_data );
 	free(buffer);
 	
-	msg->AddTLV(msgData);
-	msg->AddTLV(0x0006, "", 0);
-	msg->AddTLV(0x0009, "", 0);
+	//msg->AddTLV(msgData);
+	//msg->AddTLV(0x0006, "", 0);
+	//msg->AddTLV(0x0009, "", 0);
 	
 	Send(msg);
 
