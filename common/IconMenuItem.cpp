@@ -48,9 +48,9 @@ const float kTickSpacing = 16.0;
 IconMenuItem::IconMenuItem(BBitmap* icon, const char *label, const char *extra,
 	BMessage *msg = NULL, bool ownIcon = true) :
 	BMenuItem(label, msg),
-	fLabel(label),
 	fIcon(icon),
 	fExtra(extra),
+	fLabel(label),
 	fOwnIcon(ownIcon),
 	fCreatedIcon(false) {
 

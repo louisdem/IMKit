@@ -21,7 +21,7 @@ ImageButton::~ImageButton()
 }
 
 void
-ImageButton::MouseDown( BPoint where )
+ImageButton::MouseDown( BPoint /*where*/ )
 {
 	SetMouseEventMask( B_POINTER_EVENTS, B_LOCK_WINDOW_FOCUS );
 	
@@ -31,7 +31,7 @@ ImageButton::MouseDown( BPoint where )
 }
 
 void
-ImageButton::MouseMoved( BPoint where, uint32 transition, const BMessage * msg )
+ImageButton::MouseMoved( BPoint /*where*/, uint32 transition, const BMessage * /*msg*/ )
 {
 	switch ( transition )
 	{
@@ -60,7 +60,7 @@ ImageButton::MouseUp( BPoint where )
 }
 
 void
-ImageButton::Draw( BRect update_rect )
+ImageButton::Draw( BRect /*update_rect*/ )
 {
 	rgb_color view_color = ViewColor();
 	

@@ -166,7 +166,7 @@ Theme::SetForeground (int16 which, const rgb_color color)
   if (which >= fore_count || which < 0)
     return false;
 
-  int32 count (list.CountItems());
+//  int32 count (list.CountItems());
   fores[which] = color;
 
 /*
@@ -191,7 +191,7 @@ Theme::SetBackground (int16 which, const rgb_color color)
   if (which >= back_count || which < 0)
     return false;
 
-  int32 count (list.CountItems());
+//  int32 count (list.CountItems());
   backs[which] = color;
 
 /*
@@ -216,7 +216,7 @@ Theme::SetFont (int16 which, const BFont &font)
   if (which >= font_count || which < 0)
     return false;
 
-  int32 count (list.CountItems());
+//  int32 count (list.CountItems());
   fonts[which] = font;
 
 /*

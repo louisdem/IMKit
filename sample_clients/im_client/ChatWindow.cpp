@@ -172,7 +172,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	// add buttons
 	ImageButton * btn;
 	BBitmap * icon;
-	long err = 0;
+//	long err = 0;
 	BPath iconDir;
 	BPath iconPath;
 	BRect buttonRect(0,0,iconBarSize+8,iconBarSize+8);
@@ -533,8 +533,11 @@ ChatWindow::SaveSettings(void) {
 	ssize_t size = fWindowSettings.FlattenedSize();
 	char *buffer = (char *)calloc(size, sizeof(char));
 
+	status_t res = B_OK;
+	
 	if (fWindowSettings.Flatten(buffer, size) != B_OK) {
 		LOG("im_client", liHigh, "Could not flatten window settings");
+		res = B_ERROR;
 	} else {
 		LOG("im_client", liLow, "Window settings flattened");
 		BNode peopleNode(&fEntry);
@@ -544,10 +547,13 @@ ChatWindow::SaveSettings(void) {
 			LOG("im_client", liLow, "Window Settings saved to disk");
 		} else {
 			LOG("im_client", liHigh, "Window settings could not be written to disk");
+			res = B_ERROR;
 		};	
 	};
-
+	
 	free(buffer);
+	
+	return res;
 }
 
 status_t
@@ -623,7 +629,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( msg->FindInt32("im_what",&im_what) != B_OK )
 				im_what = IM::ERROR;
 			
-			int32 old_sel_start, old_sel_end;
+//			int32 old_sel_start, old_sel_end;
 			
 			char timestr[10];
 			time_t now = time(NULL);
@@ -905,13 +911,13 @@ ChatWindow::MessageReceived( BMessage * msg )
 			
 			fInput->GetSelection(&start, &end);
 			
-			printf("%i - > %i\n", start, end);
+			//printf("%ld - > %ld\n", start, end);
 		} break;
 		
 		case B_SIMPLE_DATA: {
 			entry_ref ref;
 			BNode node;
-			attr_info info;
+//			attr_info info;
 			
 			for (int i = 0; msg->FindRef("refs", i, &ref) == B_OK; i++) {
 				node = BNode(&ref);
@@ -967,7 +973,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 }
 
 void
-ChatWindow::FrameResized( float w, float h )
+ChatWindow::FrameResized( float /*w*/, float /*h*/ )
 {
 	fText->ScrollToSelection();
 	

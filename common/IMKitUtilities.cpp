@@ -81,7 +81,7 @@ BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute,
 
 	BBitmap 	*bitmap = NULL;
 	size_t 		len = 0;
-	status_t 	error;	
+//	status_t 	error;	
 
 	if ((name == NULL) || (attribute == NULL)) return NULL;
 
@@ -101,7 +101,7 @@ BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute,
 	char *data = (char *)calloc(info.size, sizeof(char));
 	len = (size_t)info.size;
 		
-	if (node.ReadAttr(attribute, type, 0, data, len) != len) {
+	if (node.ReadAttr(attribute, type, 0, data, len) != (int32)len) {
 		node.Unset();
 		free(data);
 	

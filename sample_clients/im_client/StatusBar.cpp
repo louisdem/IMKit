@@ -34,7 +34,7 @@ void StatusBar::Draw(BRect update) {
 	StrokeLine(BPoint(update.left, Bounds().top + 1),
 		BPoint(update.right, Bounds().top + 1));
 	
-	float width (5.0);
+//	float width (5.0);
 	font_height fh;
 	
 	GetFontHeight (&fh);

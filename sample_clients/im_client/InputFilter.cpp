@@ -13,7 +13,7 @@ InputFilter::InputFilter (BTextView *owner, BMessage *msg, bool commandSends, BV
 	fCommandSends(commandSends) {
 }
 
-filter_result InputFilter::Filter (BMessage *msg, BHandler **target) {
+filter_result InputFilter::Filter (BMessage *msg, BHandler ** /*target*/) {
 
 	filter_result result (B_DISPATCH_MESSAGE);
 
@@ -55,7 +55,7 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 	const char *keyStroke;
 	int32 keyModifiers;
 
-	static bigtime_t last_typing_message_sent=0;
+//	static bigtime_t last_typing_message_sent=0;
 	
 	msg->FindString("bytes", &keyStroke);
 	msg->FindInt32("modifiers", &keyModifiers);
