@@ -158,3 +158,40 @@ status_t WriteAttribute(BNode node, const char *attribute, const char *value,
 	
 	return ret;
 };
+
+BBitmap * rescale_bitmap( const BBitmap * src, int32 width, int32 height )
+{
+	width--; height--;
+	
+	BRect srcSize = src->Bounds();
+	
+	if ( height < 0 )
+	{
+		float srcProp = srcSize.Height() / srcSize.Width();
+		height = (int32)(width * srcProp);
+	}
+	
+	BBitmap * res = new BBitmap( BRect(0,0,width,height), src->ColorSpace() );
+	
+	float dx = (srcSize.Width()+1) / (width+1);
+	float dy = (srcSize.Height()+1) / (height+1);
+	
+	int32 * dstData = (int32*)res->Bits();
+	int32 * srcData = (int32*)src->Bits();
+	
+	int srcYOff = src->BytesPerRow() / 4;
+	int dstYOff = res->BytesPerRow() / 4;
+	
+	for ( int y=0; y<=height; y++ )
+	{
+		int32 * dstRow = &dstData[y*dstYOff];
+		int32 * srcRow = &srcData[ (int32)(y*dy)*srcYOff ];
+		
+		for ( int x=0; x<=width; x++ )
+		{
+			dstRow[x] = srcRow[(int32)(x*dx)];
+		}
+	}
+	
+	return res;
+}

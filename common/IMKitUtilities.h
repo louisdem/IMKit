@@ -34,4 +34,6 @@ status_t WriteAttribute(BNode node, const char *attribute, const char *value,
 BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
 	bool followSymlink = true);
 
+extern BBitmap * rescale_bitmap( const BBitmap * source, int32 width, int32 height = -1 );
+
 #endif
