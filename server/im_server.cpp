@@ -255,6 +255,9 @@ Server::MessageReceived( BMessage * msg )
 		case GET_CONTACT_STATUS:
 			reply_GET_CONTACT_STATUS(msg);
 			break;
+		case GET_OWN_STATUSES: {
+			reply_GET_OWN_STATUSES(msg);
+		} break;
 		
 		case FLASH_DESKBAR:
 		case STOP_FLASHING:
@@ -440,6 +443,8 @@ Server::LoadAddons()
 		BNode node(settings_path);
 		char settings[1024*1024];
 		int32 num_read=0;
+		
+		fStatus[protocol->GetSignature()] = OFFLINE_TEXT;
 		
 		num_read = node.ReadAttr(
 			"im_settings", B_RAW_TYPE, 0,
@@ -1857,3 +1862,18 @@ Server::reply_GET_CONTACT_STATUS( BMessage * msg )
 	
 	msg->SendReply(&reply);
 }
+
+void Server::reply_GET_OWN_STATUSES(BMessage *msg) {
+	LOG("im_server", LOW, "Got own status request. There are %i statuses",
+		fStatus.size());
+	BMessage reply(B_REPLY);
+
+	map <string, Protocol *>::iterator pit;
+	for (pit = fProtocols.begin(); pit != fProtocols.end(); pit++) {
+		Protocol *p = pit->second;
+		reply.AddString("protocol", p->GetSignature());
+		reply.AddString("status", fStatus[p->GetSignature()].c_str());
+	};
+
+	msg->SendReply(&reply);
+};

@@ -69,6 +69,7 @@ class Server : public BApplication
 		void	reply_GET_SETTINGS( BMessage * );
 		void	reply_SET_SETTINGS( BMessage * );
 		void	reply_GET_CONTACT_STATUS( BMessage * );
+		void	reply_GET_OWN_STATUSES(BMessage *msg);
 		
 		BBitmap	*GetBitmap(const char *name, type_code type = 'BBMP');
 		BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 

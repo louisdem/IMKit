@@ -5,10 +5,15 @@
 #include <Resources.h>
 #include <Bitmap.h>
 #include <list>
+#include <map>
 #include <Messenger.h>
 #include <MessageRunner.h>
+#include <TextView.h>
+#include <string>
+#include <PopUpMenu.h>
 
 #include "../common/IMKitUtilities.h"
+#include "../common/BubbleHelper.h"
 
 #include <libim/Manager.h>
 #include <be/kernel/fs_attr.h>
@@ -28,15 +33,18 @@ class _EXPORT IM_DeskbarIcon : public BView
 		virtual void MessageReceived( BMessage * );
 		
 		virtual void MouseDown( BPoint );
+		virtual void MouseMoved(BPoint point, uint32 transit, const BMessage *msg);
 		
 		virtual void AttachedToWindow();
 		virtual void DetachedFromWindow();
 		
 	private:
 		enum {
-			SET_ONLINE		= 'set1',
-			SET_AWAY		= 'set2',
-			SET_OFFLINE		= 'set3',
+			SET_STATUS		= 'set1',
+			SET_ONLINE		= 'set2',
+			SET_AWAY		= 'set3',
+			SET_OFFLINE		= 'set4',
+
 			
 			OPEN_SETTINGS	= 'opse',
 			RELOAD_SETTINGS = 'upse',
@@ -70,6 +78,13 @@ class _EXPORT IM_DeskbarIcon : public BView
 		
 		// settings
 		bool				fShouldBlink;
+
+		BubbleHelper		*fTip;	
+		bool				fDirtyStatus;	// Need to re-fetch the Statuses
+		bool				fDirtyMenu;		// Need to re-make the right click Menu
+		BString				fTipText;
+		map<string, string>	fStatuses;
+		BPopUpMenu			*fMenu;
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <Roster.h>
 #include <File.h>
-#include <PopUpMenu.h>
 #include <MenuItem.h>
 #include <Application.h>
 #include <Window.h>
@@ -62,6 +61,8 @@ IM_DeskbarIcon::~IM_DeskbarIcon()
 	delete fOnlineIcon;
 	delete fOfflineIcon;
 	delete fFlashIcon;
+	delete fTip;
+	delete fMenu;
 }
 
 void
@@ -103,6 +104,12 @@ IM_DeskbarIcon::_init()
 	fSettingsWindow = NULL;
 	
 	fShouldBlink = true;
+	
+	fTip = new BubbleHelper();
+	
+	fDirtyStatus = true;
+	fDirtyMenu = true;
+	fMenu = NULL;
 }
 
 void
@@ -211,21 +218,20 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 		}	break;
 		
-		case SET_ONLINE:
-		case SET_AWAY:
-		case SET_OFFLINE:
+		case SET_STATUS:
 		{
+			BMenuItem *item = NULL;
+			msg->FindPointer("source", reinterpret_cast<void **>(&item));
+			if (item == NULL) return;
+		
 			BMessage newmsg(IM::MESSAGE);
 			newmsg.AddInt32("im_what", IM::SET_STATUS);
-			
-			switch ( msg->what )
-			{
-				case SET_ONLINE: newmsg.AddString("status",ONLINE_TEXT); break;
-				case SET_AWAY: newmsg.AddString("status",AWAY_TEXT); break;
-				case SET_OFFLINE: newmsg.AddString("status",OFFLINE_TEXT); break;
-			}
-			
-			newmsg.PrintToStream();
+
+			const char *protocol = msg->FindString("protocol");
+			if (protocol) {
+				newmsg.AddString("protocol", strdup(protocol));
+			};
+			newmsg.AddString("status", item->Label());
 			
 			fCurrIcon = fModeIcon; 
 			Invalidate();
@@ -266,9 +272,12 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			LOG("deskbar", LOW, "Got IM what of %i", im_what);
 			
 			switch (im_what) {
-				case IM::STATUS_SET: {
+				case IM::STATUS_SET: {			
+					fDirtyStatus = true;
+					fDirtyMenu = true;
+				
 					const char *status = msg->FindString("total_status");
-					
+								
 					LOG("deskbar", LOW, "Status set to %s", status);
 					if (strcmp(status, ONLINE_TEXT) == 0) {
 						fStatus = 0;
@@ -294,6 +303,36 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 	}
 }
 
+void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *msg) {
+	fTip->SetHelp(Parent(), NULL);
+
+	if ((transit == B_OUTSIDE_VIEW) || (transit == B_EXITED_VIEW)) {
+		fTip->SetHelp(Parent(), NULL);
+	} else {
+		if (fDirtyStatus == true) {
+			BMessage protStatus;
+			IM::Manager man;
+			man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
+	
+			fTipText = "Online Status:";
+			for ( int i=0; protStatus.FindString("protocol",i); i++ ) {
+				const char *protocol = protStatus.FindString("protocol",i);
+				const char *status = protStatus.FindString("status", i);
+	
+				fStatuses[protocol] = status;
+	
+				fTipText << "\n  " << protocol << ": " << status << "";
+			}
+			
+			fDirtyStatus = false;
+		};
+	
+		fTip->SetHelp(Parent(), (char *)fTipText.String());
+		fTip->EnableHelp();
+	};		
+};
+
+
 void
 IM_DeskbarIcon::MouseDown( BPoint p )
 {
@@ -310,35 +349,67 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 	
 	if ( buttons & B_SECONDARY_MOUSE_BUTTON )
 	{
-		BPopUpMenu * menu = new BPopUpMenu("im_db_menu");
-		
-		// set status
-		BMenu * status = new BMenu("Set status");
-		status->AddItem( new BMenuItem("Online", new BMessage(SET_ONLINE)) );	
-		status->AddItem( new BMenuItem("Away", new BMessage(SET_AWAY)) );	
-		status->AddItem( new BMenuItem("Offline", new BMessage(SET_OFFLINE)) );	
-		status->SetTargetForItems( this );
-		
-		status->ItemAt(fStatus)->SetMarked(true);
-		
-		menu->AddItem(status);
-		menu->AddSeparatorItem();
-
-//		settings
-		menu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
+		if (fDirtyMenu) {
+			delete fMenu;
+			fMenu = new BPopUpMenu("im_db_menu");
+			
+			// set status
+			BMenu * status = new BMenu("Set status");
+			BMenu *total = new BMenu("All Protocols");
+			BMessage msg(SET_STATUS);
+			msg.AddString("protocol", "");
+			total->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(msg)) );	
+			total->AddItem(new BMenuItem(AWAY_TEXT, new BMessage(msg)) );	
+			total->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(msg)) );	
+			total->ItemAt(fStatus)->SetMarked(true);
+			total->SetTargetForItems(this);
+			status->AddItem(total);
+			status->AddSeparatorItem();
+			
+			map <string, string>::iterator it;
+			
+			for (it = fStatuses.begin(); it != fStatuses.end(); it++) {
+				string name = (*it).first;
+				BMenu *protocol = new BMenu((*it).first.c_str());
+				BMessage protMsg(SET_STATUS);
+				protMsg.AddString("protocol", name.c_str());			
+				protocol->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(protMsg)));
+				protocol->AddItem(new BMenuItem(AWAY_TEXT, new BMessage(protMsg)));
+				protocol->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(protMsg)));
+				protocol->SetTargetForItems(this);
+				if ((*it).second == ONLINE_TEXT) {
+					protocol->ItemAt(0)->SetMarked(true);
+				} else if ((*it).second == AWAY_TEXT) {
+					protocol->ItemAt(1)->SetMarked(true);
+				} else {
+					protocol->ItemAt(2)->SetMarked(true);
+				};
+				
+				status->AddItem(protocol);
+			};
+			
+			status->SetTargetForItems( this );
+				
+			fMenu->AddItem(status);
+			fMenu->AddSeparatorItem();
 	
-//		Quit
-		menu->AddSeparatorItem();
-		menu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
-
-		menu->SetTargetForItems( this );
+	//		settings
+			fMenu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
 		
-		menu->Go(
+	//		Quit
+			fMenu->AddSeparatorItem();
+			fMenu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
+	
+			fMenu->SetTargetForItems( this );
+			
+			fDirtyMenu = false;
+		};
+		
+		fMenu->Go(
 			ConvertToScreen(p),
 			true // delivers message
 		);
 		
-		delete menu;
 	}
 	
 	if ( buttons & B_PRIMARY_MOUSE_BUTTON )
@@ -388,45 +459,6 @@ IM_DeskbarIcon::DetachedFromWindow()
 		fSettingsWindow->PostMessage( B_QUIT_REQUESTED );
 	}
 }
-
-
-// Some code borrowed from CKJ <cedric-vincent@wanadoo.fr>
-// originally in USB Deskbar View <http://www.bebits.com/app/3497>
-/*
-BBitmap *
-IM_DeskbarIcon::GetBitmap( const char * name )
-{
-	BBitmap 	*bitmap = NULL;
-	size_t 		len = 0;
-	status_t 	error;	
-
-	// load resource
-	const void *data = fResource.LoadResource('BBMP', name, &len);
-	
-	BMemoryIO stream(data, len);
-	
-	// unflatten it
-	BMessage archive;
-	error = archive.Unflatten(&stream);
-	if (error != B_OK)
-		return NULL;
-
-	// make a bbitmap from it
-	bitmap = new BBitmap(&archive);
-	if(!bitmap)
-		return NULL;
-
-	// make sure it's ok
-	if(bitmap->InitCheck() != B_OK)
-	{
-		delete bitmap;
-		return NULL;
-	}
-	
-	// done!
-	return bitmap;
-}
-*/
 
 void
 IM_DeskbarIcon::reloadSettings()
