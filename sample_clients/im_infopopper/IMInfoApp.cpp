@@ -38,9 +38,9 @@ IMInfoApp::IMInfoApp(void)
 	
 	while (dir.GetNextRef(&ref) == B_OK) {
 		BPath path(&ref);
-		BBitmap *icon = ReadNodeIcon(path.Path(), fIconSize);
+//		BBitmap *icon = ReadNodeIcon(path.Path(), fIconSize);
 		
-		fProtocolIcons[path.Leaf()] = icon;
+		fProtocolIcons[path.Leaf()] = ref;
 	};	
 };
 
@@ -68,17 +68,28 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			char email[512];
 			char status[512];
 			BBitmap *icon = NULL;
-			
+			bool useProtoIcon = false;
+			entry_ref protoRef;
+			int16 iconSize = -1;
+
+			if (im_what == IM::USER_STARTED_TYPING) return;
+			if (im_what == IM::USER_STOPPED_TYPING) return;
+
+			BMessage sizeReply;
+			BMessenger(InfoPopperAppSig).SendMessage(InfoPopper::GetIconSize, &sizeReply);
+			if (sizeReply.FindInt16("iconSize", &iconSize) != B_OK) iconSize = 48;
+						
 			IM::Contact contact(&ref);
-			
 			if (msg->FindString("protocol", &protocol) == B_OK) {
-				icon = contact.GetBuddyIcon(protocol);
-				if ( !icon ) {
-					protoicons::iterator pIt = fProtocolIcons.find(protocol);
-					if (pIt != fProtocolIcons.end()) icon = pIt->second;
-				}
+				icon = contact.GetBuddyIcon(protocol, iconSize);
+				protoicons::iterator pIt = fProtocolIcons.find(protocol);
+				if (pIt != fProtocolIcons.end()) protoRef = pIt->second;
+				if (icon == NULL) {
+					icon = contact.GetBuddyIcon("general", iconSize);
+					if (icon == NULL) useProtoIcon = true;
+				};
 			};
-			
+
 			if (contact.GetName(contactname, sizeof(contactname) ) != B_OK ) {
 				strcpy(contactname, "<unknown contact>");
 			};
@@ -96,7 +107,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			if ( strcasecmp(status, "blocked") == 0 ) break;
 			
 			InfoPopper::info_type type = InfoPopper::Information;
-			
+						
 			switch (im_what) {
 				case IM::ERROR:
 				{
@@ -166,19 +177,23 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					pop_msg.AddString("title", title);
 					pop_msg.AddInt8("type", InfoPopper::Progress);
 					pop_msg.AddFloat("progress",progress);
-					if ( messageID )
-						pop_msg.AddString("messageID",messageID);
-					if ( message )
-						pop_msg.AddString("content",messageID);
+					if (messageID) pop_msg.AddString("messageID",messageID);
+					if (message) pop_msg.AddString("content",messageID);
 					
 					if (icon) {
 						BMessage image;
 						icon->Archive(&image);
 						pop_msg.AddMessage("icon", &image);
+						
+						pop_msg.AddRef("overlayIconRef", &protoRef);
+						pop_msg.AddInt32("overlayIconType", InfoPopper::Attribute);
+					} else if (useProtoIcon) {
+						pop_msg.AddRef("iconRef", &protoRef);
+						pop_msg.AddInt32("iconType", InfoPopper::Attribute);
 					};
 					
-					BMessenger(InfoPopperAppSig).SendMessage(&pop_msg);				
-				}	return; // yes, return. Progress is a special case.
+					BMessenger(InfoPopperAppSig).SendMessage(&pop_msg);
+				} return; // yes, return. Progress is a special case.
 			};
 			
 			text.ReplaceAll("\\n", "\n");
@@ -202,6 +217,13 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					BMessage image;
 					icon->Archive(&image);
 					pop_msg.AddMessage("icon", &image);
+					printf("Icon size: %.2f\n", icon->Bounds().Width());
+					
+					pop_msg.AddRef("overlayIconRef", &protoRef);
+					pop_msg.AddInt32("overlayIconType", InfoPopper::Attribute);
+				} else if (useProtoIcon) {
+					pop_msg.AddRef("iconRef", &protoRef);
+					pop_msg.AddInt32("iconType", InfoPopper::Attribute);
 				};
 				
 				pop_msg.AddString("onClickApp", "application/x-person");
