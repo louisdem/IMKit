@@ -3,6 +3,7 @@
 #include <libim/Helpers.h>
 #include <Entry.h>
 #include <Roster.h>
+#include <ScrollView.h>
 
 #ifdef ZETA
 #include <locale/Locale.h>
@@ -15,7 +16,7 @@ const float kEdgeOffset = 5.0;
 const float kDividerWidth = 100;
 
 PWindow::PWindow(void)
-	: BWindow(BRect(25, 25, 460, 285), "Instant Messaging", B_TITLED_WINDOW,
+	: BWindow(BRect(25, 25, 480, 285), "Instant Messaging", B_TITLED_WINDOW,
 	 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS) {
 #ifdef ZETA
 	app_info ai;
@@ -81,7 +82,7 @@ PWindow::PWindow(void)
 	frame = fBox->Bounds();
 	frame.InsetBy(kEdgeOffset, kEdgeOffset);
 	frame.top += fFontHeight;
-	
+	frame.right -= B_V_SCROLL_BAR_WIDTH + 2;
 	// PROTOCOLS
 	
 	BMessage protocols;
@@ -117,7 +118,7 @@ PWindow::PWindow(void)
 			pair <BMessage, BMessage> p(protocol_settings, protocol_template);
 			fAddOns[protocol] = p; //pair<BMessage, BMessage>(settings, tmplate);
 			
-			BView *view = new BView(frame, protocol, B_FOLLOW_ALL_SIDES,
+			BView *view = new BView(frame, protocol, B_FOLLOW_NONE,
 				B_WILL_DRAW);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 			view->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
@@ -128,8 +129,23 @@ PWindow::PWindow(void)
 			view->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 			view->SetHighColor(0, 0, 0, 0);
 #endif
+			
+			float settings_height = BuildGUI(protocol_template, protocol_settings, view);
+			
+			BScrollView * scroller = new BScrollView(
+				"scroller", view, B_FOLLOW_ALL,
+				0, false, true
+			);
+			view->ResizeTo( view->Bounds().Width(), settings_height );
+			
+			float scroll_height = scroller->Bounds().Height();
+			float diff = settings_height - scroll_height;
+			if ( diff < 0 ) diff = 0;
+			
+			scroller->ScrollBar(B_VERTICAL)->SetRange(0, diff);
 
-			BuildGUI(protocol_template, protocol_settings, view);
+			view = scroller;
+			
 			fPrefView.AddItem(view);
 			fBox->AddChild(view);
 			if ( fBox->CountChildren() > 1 )
@@ -189,7 +205,22 @@ PWindow::PWindow(void)
 			view->SetHighColor(0, 0, 0, 0);
 #endif
 
-			BuildGUI(client_template, client_settings, view);
+			float settings_height = BuildGUI(client_template, client_settings, view);
+			
+			BScrollView * scroller = new BScrollView(
+				"scroller", view, B_FOLLOW_ALL,
+				0, false, true
+			);
+			view->ResizeTo( view->Bounds().Width(), settings_height );
+			
+			float scroll_height = scroller->Bounds().Height();
+			float diff = settings_height - scroll_height;
+			if ( diff < 0 ) diff = 0;
+			
+			scroller->ScrollBar(B_VERTICAL)->SetRange(0, diff);
+
+			view = scroller;
+			
 			fPrefView.AddItem(view);
 			fBox->AddChild(view);
 			if ( fBox->CountChildren() > 1 )
@@ -198,7 +229,7 @@ PWindow::PWindow(void)
 				fBox->SetLabel(client);
 		};
 	}
-
+	
 	BScrollView *scroller = new BScrollView("list scroller", fListView, B_FOLLOW_LEFT |
 		B_FOLLOW_BOTTOM, 0, false, true);
 	fView->AddChild(scroller);
@@ -222,7 +253,8 @@ PWindow::PWindow(void)
 
 	fRevert = new BButton(frame, "Revert", _T("Revert"), new BMessage(REVERT));
 	fView->AddChild(fRevert);
-
+	fRevert->SetEnabled(false);
+	
 	Show();
 	fView->Show();
 	
@@ -421,7 +453,7 @@ void PWindow::MessageReceived(BMessage *msg) {
 	};
 };
 
-status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view) {
+float PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view) {
 	BMessage curr;
 	float yOffset = kEdgeOffset + kControlOffset;
 	float xOffset = 0;
@@ -574,4 +606,8 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 		xOffset = 0;
 	};
 	
+	if ( yOffset < view->Bounds().Height() )
+		yOffset = view->Bounds().Height();
+	
+	return yOffset;//view->ResizeTo( view->Bounds().Width(), yOffset );
 };

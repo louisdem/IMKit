@@ -51,7 +51,7 @@ class PWindow : public BWindow {
 
 				
 	private:
-		status_t				BuildGUI(BMessage viewTemplate, BMessage settings,
+		float					BuildGUI(BMessage viewTemplate, BMessage settings,
 									BView *view);
 	
 		BView					*fView;
