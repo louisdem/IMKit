@@ -93,6 +93,7 @@ IM_DeskbarIcon::_init()
 
 //	Initial icon is the Offline icon
 	fCurrIcon = fModeIcon = fOfflineIcon;
+	fStatus = 2;
 
 	fFlashCount = 0;
 	fBlink = 0;
@@ -223,6 +224,8 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				case SET_OFFLINE: newmsg.AddString("status",OFFLINE_TEXT); break;
 			}
 			
+			newmsg.PrintToStream();
+			
 			fCurrIcon = fModeIcon; 
 			Invalidate();
 			
@@ -259,15 +262,25 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		case IM::MESSAGE: {
 			int32 im_what;
 			msg->FindInt32("im_what", &im_what);
+			LOG("deskbar", LOW, "Got IM what of %i", im_what);
 			
 			switch (im_what) {
 				case IM::STATUS_SET: {
 					const char *status = msg->FindString("status");
 					
 					LOG("deskbar", LOW, "Status set to %s", status);
-					if (strcmp(status, ONLINE_TEXT) == 0) fModeIcon = fOnlineIcon;
-					if (strcmp(status, AWAY_TEXT) == 0) fModeIcon = fAwayIcon;
-					if (strcmp(status, OFFLINE_TEXT) == 0) fModeIcon = fOfflineIcon;
+					if (strcmp(status, ONLINE_TEXT) == 0) {
+						fStatus = 0;
+						fModeIcon = fOnlineIcon;
+					}
+					if (strcmp(status, AWAY_TEXT) == 0) {
+						fStatus = 1;
+						fModeIcon = fAwayIcon;
+					};
+					if (strcmp(status, OFFLINE_TEXT) == 0) {
+						fStatus = 2;
+						fModeIcon = fOfflineIcon;
+					};
 					
 					fCurrIcon = fModeIcon;
 					Invalidate();
@@ -296,6 +309,8 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 		status->AddItem( new BMenuItem("Away", new BMessage(SET_AWAY)) );	
 		status->AddItem( new BMenuItem("Offline", new BMessage(SET_OFFLINE)) );	
 		status->SetTargetForItems( this );
+		
+		status->ItemAt(fStatus)->SetMarked(true);
 		
 		menu->AddItem(status);
 		menu->AddSeparatorItem();

@@ -59,6 +59,8 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BBitmap				*fAwayIcon;
 		BBitmap 			*fFlashIcon;
 		
+		int					fStatus;
+		
 		// for flashing
 		int					fFlashCount, fBlink;
 		list<BMessenger>	fMsgrs;
