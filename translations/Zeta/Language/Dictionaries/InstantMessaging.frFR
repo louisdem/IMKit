@@ -22,3 +22,31 @@
 "Away Message"				"Message d'absence"
 "Person handler"			"Prise en charge des contacts"
 "Application signature"		"Signature de l'application"
+
+# preferences: im_logger
+"Auto-start"				"Démarrage automatique"
+
+# preferences: im_binlogger
+"Auto-start"				"Démarrage automatique"
+
+# preferences: im_infopopper
+"Status change text"		"Changement d'état"
+"Message received text"		"Réception de message"
+"Icon size"					"Taille d'icône"
+
+# preferences: AIM
+"Screen Name"				"Identifiant AIM"
+"Password"					"Mot de passe"
+"User Profile"				"Profil utilisateur"
+
+# preferences: ICQ
+"Password"					"Mot de passe"
+"Text encoding"				"Codage du texte"
+
+# preferences: MSN
+"Passport Email"			"Email Passport"
+"Password"					"Mot de passe"
+"Display Name"				"Identifiant MSN"
+
+# preferences: Yahoo
+"Password"					"Mot de passe"

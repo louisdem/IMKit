@@ -2,7 +2,7 @@
 
 # ChatApp.cpp
 "Really quit?"		"Vill du verkligen avsluta?"
-"Do you really want to quit im_client and stop getting messages?" "Vill du verkligen avsluta im_client och sluta ta emot meddelanden?"
+"Do you really want to quit im_client and stop getting messages?"	"Vill du verkligen avsluta im_client och sluta ta emot meddelanden?"
 "Yes"			"Ja"
 "No"				"Nej"
 
@@ -10,7 +10,7 @@
 "Show contact in People"		"Öppna användaren i People"
 "Send email to contact"		"Skicka e-post till användaren"
 "Block messages from contact"	"Blockera meddelanden från användaren"
-"View chat history for contact" "Visa tidigare meddelanden från användaren"
+"View chat history for contact"	"Visa tidigare meddelanden från användaren"
 "Send"					"Skicka"
 "* You "					"* Du"
 "You say: "				"Du säger: "

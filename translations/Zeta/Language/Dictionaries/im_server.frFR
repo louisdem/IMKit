@@ -18,3 +18,8 @@
 "Built on: "				"Compiler sur : "
 "The IM Kit is a collaborative effort released under the BeClan banner."	"L'IM Kit est un projet soutenu par BeClan."
 " Collaborators include:"	" Collaborateurs :"
+
+#AwayMessageWindow.cpp
+"IM Kit: Set Away Message"	"IM Kit: Message d'absence"
+"Set Away"				"Absence"
+"Cancel"				"Annuler"
