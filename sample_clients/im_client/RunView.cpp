@@ -2563,3 +2563,17 @@ void RunView::LoadURL(const char *url) {
   	be_roster->Launch ("text/html", 1, const_cast<char **>(args));
   }
 }
+
+void RunView::ScrollToBottom(void) {
+	if (fLine_count == 0) return;
+
+	ScrollTo(0.0, fLines[fLine_count - 1]->fBottom);
+};
+
+void RunView::ScrollToSelection(void) {
+	if (fLine_count == 0) return;
+
+	if (fSp_start != fSp_end)
+		ScrollTo(0.0, fLines[fSp_start.fLine]->fTop);
+	
+};

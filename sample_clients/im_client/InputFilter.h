@@ -15,8 +15,8 @@ class InputFilter : public BMessageFilter {
     	filter_result			HandleKeys (BMessage *);
     
 	private:
-		BTextView	 			*parent;
-		BMessage				*command;
+		BTextView	 			*fParent;
+		BMessage				*fMessage;
 };
 
 #endif

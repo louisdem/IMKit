@@ -1,7 +1,5 @@
 #include "ChatWindow.h"
 
-//#include "URLTextView.h"
-
 const char *kImNewMessageSound = "IM Message Received";
 
 ChatWindow::ChatWindow( entry_ref & ref )
@@ -184,6 +182,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	AddChild(fTextScroll);
 
 	fText->Show();
+	fText->ScrollToBottom();
 
 	fInput->MakeFocus();
 
@@ -369,7 +368,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 						fText->Append(msg->FindString("message"), C_TEXT, C_TEXT, F_TEXT);
 					}
 					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
-//					fText->ScrollToSelection();
+					fText->ScrollToSelection();
 				}	break;
 				
 				case IM::MESSAGE_RECEIVED:
@@ -392,7 +391,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 						fText->Append(msg->FindString("message"), C_TEXT, C_TEXT, F_TEXT);
 					}
 					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
-//					fText->ScrollToSelection();
+					fText->ScrollToSelection();
 
 					if (!IsActive()) 
 					{
@@ -401,6 +400,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 				}	break;
 			}
 			
+/*
 			if ( old_sel_start != old_sel_end )
 			{ // restore selection
 //				fText->Select( old_sel_start, old_sel_end );
@@ -408,8 +408,8 @@ ChatWindow::MessageReceived( BMessage * msg )
 			{
 //				fText->Select( fText->TextLength(), fText->TextLength() );
 			}
-			
-//			fText->ScrollToSelection();
+*/			
+			fText->ScrollToSelection();
 			
 		}	break;
 		
@@ -479,6 +479,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 
 			};
 		} break;
+		
+		case B_MOUSE_WHEEL_CHANGED: {
+			fText->MessageReceived(msg);
+		} break;
 		default:
 			BWindow::MessageReceived(msg);
 	}
@@ -487,11 +491,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 void
 ChatWindow::FrameResized( float w, float h )
 {
-//	fText->SetTextRect( fText->Bounds() );
-//	fText->ScrollToSelection();
+	fText->ScrollToSelection();
 	
 	fInput->SetTextRect(fInput->Bounds());
-//	fInput->ScrollToSelection();
+	fInput->ScrollToSelection();
 }
 
 void

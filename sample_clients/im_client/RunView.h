@@ -152,13 +152,13 @@ class RunView : public BView
 	void					Clear (void);
 
 	int16					LineCount (void) const;
-	const char			*LineAt (int16) const;
+	const char				*LineAt (int16) const;
 
 	void					SetTimeStampFormat (const char *);
 	void					SetTheme (Theme *);
 
-	SelectPos			PositionAt (BPoint) const;
-	BPoint				PointAt (SelectPos) const;
+	SelectPos				PositionAt (BPoint) const;
+	BPoint					PointAt (SelectPos) const;
 	
 	BRect					GetTextFrame (const SelectPos &, const SelectPos &) const;
 	bool					IntersectSelection (const SelectPos &, const SelectPos &) const;
@@ -166,7 +166,11 @@ class RunView : public BView
 	void					Select (const SelectPos &, const SelectPos &);
 	void					SelectAll (void);
 	void					SetClippingName (const char *);
-        bool                                    FindText(const char *);
+	bool               		FindText(const char *);
+
+	void					ScrollToBottom(void);
+	void					ScrollToSelection(void);
+
 };
 
 #endif
