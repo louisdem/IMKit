@@ -15,7 +15,6 @@
 
 #include <Path.h>
 #include <FindDirectory.h>
-
 //#include "SettingsWindow.h"
 
 BView *
@@ -228,17 +227,17 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			newmsg.AddInt32("im_what", IM::SET_STATUS);
 
 			const char *protocol = NULL;
-			printf("Protocol: %s\n", protocol);
 			if (msg->FindString("protocol", &protocol) == B_OK) {
 				newmsg.AddString("protocol", strdup(protocol));
 			};
+			printf("Protocol: %s\n", protocol);
 			newmsg.AddString("status", item->Label());
 			
 			if (strcmp("Away", item->Label()) == 0) {
 				AwayMessageWindow *w = new AwayMessageWindow(protocol);
 				w->Show();
 				return;
-			};
+			}
 			
 			fCurrIcon = fModeIcon; 
 			Invalidate();

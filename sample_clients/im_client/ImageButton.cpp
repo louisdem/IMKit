@@ -101,10 +101,12 @@ ImageButton::Draw( BRect update_rect )
 	
 	float center = Bounds().Width() / 2;
 	
-	float image_width = fBitmap->Bounds().Width();
+	if (fBitmap != NULL) {
+		float image_width = fBitmap->Bounds().Width();
 	
-	SetDrawingMode( B_OP_ALPHA );
-	DrawBitmap( fBitmap, BPoint( center - image_width/2, 4.0 ) );
+		SetDrawingMode( B_OP_ALPHA );
+		DrawBitmap( fBitmap, BPoint( center - image_width/2, 4.0 ) );
+	}
 	
 	float str_width = StringWidth( Label() );
 	

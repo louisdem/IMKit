@@ -86,8 +86,10 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					if (strcmp(status, AWAY_TEXT) == 0) {
 						if (fManager->ConnectionState() == (uchar)AMAN_ONLINE) {
 							const char *away_msg = msg->FindString("away_msg");
-							LOG("AIM", LOW, "Setting away message: %s", away_msg);
-							fManager->SetAway(away_msg);
+							if (away_msg != NULL) {
+								LOG("AIM", LOW, "Setting away message: %s", away_msg);
+								fManager->SetAway(away_msg);
+							}
 						};
 					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {	
