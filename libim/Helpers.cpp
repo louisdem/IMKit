@@ -3,8 +3,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <Directory.h>
+#include <Node.h>
+#include <Entry.h>
 
-log_importance g_verbosity_level = liMedium;
+log_importance g_verbosity_level = liDebug;
 
 #if 0
 // Use this to add unlimited buffer size to LOG()
@@ -107,4 +110,246 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 	printf("%s %s: %s\n", module, timestr, buffer);
 	
 	fsync(STDOUT_FILENO);
+}
+
+// READ / WRITE ATTRIBUTES
+
+status_t
+im_load_attribute( const char * path, const char * attribute, BMessage * msg )
+{
+	char data[1024*1024];
+	
+	BNode node( path );
+	
+	int32 num_read = node.ReadAttr(
+		attribute, B_RAW_TYPE, 0,
+		data, sizeof(data)
+	);
+	
+	if ( num_read <= 0 )
+	{
+		LOG("helpers", liLow, "load_attribute: Error reading (%s) from (%s)", attribute, path);
+		return B_ERROR;
+	}
+	
+	if ( msg->Unflatten(data) != B_OK )
+	{
+		LOG("helpers", liHigh, "ERROR: load_attribute: Error unflattening (%s) from (%s)", attribute, path);
+		return B_ERROR;
+	}
+	
+	LOG("helpers", liDebug, "Read (%s) from (%s)", attribute, path);
+	
+	return B_OK;
+}
+
+status_t
+im_save_attribute( const char * path, const char * attribute, const BMessage * msg )
+{
+	// save settings
+	char data[1024*1024];
+	int32 data_size=msg->FlattenedSize();
+	
+	if ( msg->Flatten(data,data_size) != B_OK )
+	{ // error flattening message
+		LOG("helpers", liHigh, "ERROR: save_attribute: Error flattening (%s) message for (%s)", attribute, path);
+		return B_ERROR;
+	}
+	
+	BDirectory dir;
+	dir.CreateFile(path,NULL,true);
+	
+	BNode node( path );
+	
+	if ( node.InitCheck() != B_OK )
+	{
+		LOG("helpers", liHigh, "ERROR: save_attribute: Error opening save file (%s):(%s)", attribute, path);
+		return B_ERROR;
+	}
+	
+	int32 num_written = node.WriteAttr(
+		attribute, B_RAW_TYPE, 0,
+		data, data_size
+	);
+	
+	if ( num_written != data_size )
+	{ // error saving settings
+		LOG("helpers", liHigh, "ERROR: save_attribute: Error saving (%s) to (%s)", attribute, path);
+		return B_ERROR;
+	}
+	
+	LOG("helpers", liDebug, "Wrote (%s) to file: %s", attribute, path);
+	
+	return B_OK;
+}
+
+// LOAD SETTINGS
+
+status_t
+im_load_settings( const char * path, BMessage * msg )
+{
+	return im_load_attribute( path, "im_settings", msg );
+}
+
+status_t
+im_load_template( const char * path, BMessage * msg )
+{
+	return im_load_attribute( path, "im_template", msg );
+}
+
+status_t
+im_load_protocol_settings( const char * protocol, BMessage * msg )
+{
+	char settings_path[512];
+	
+	// get path to settings file
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
+		protocol
+	);
+	
+	return im_load_settings( settings_path, msg );
+}
+
+status_t
+im_load_protocol_template( const char * protocol, BMessage * msg )
+{
+	char settings_path[512];
+	
+	// get path to settings file
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
+		protocol
+	);
+	
+	return im_load_template( settings_path, msg );
+}
+
+status_t
+im_load_client_settings( const char * protocol, BMessage * msg )
+{
+	char settings_path[512];
+	
+	// get path to settings file
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/clients/%s",
+		protocol
+	);
+	
+	return im_load_settings( settings_path, msg );
+}
+
+status_t
+im_load_client_template( const char * protocol, BMessage * msg )
+{
+	char settings_path[512];
+	
+	// get path to settings file
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/clients/%s",
+		protocol
+	);
+	
+	return im_load_template( settings_path, msg );
+}
+
+// SAVE SETTINGS
+
+status_t
+im_save_settings( const char * path, const BMessage * settings )
+{
+	return im_save_attribute( path, "im_settings", settings );
+}
+
+status_t
+im_save_template( const char * path, const BMessage * settings )
+{
+	return im_save_attribute( path, "im_template", settings );
+}
+
+status_t
+im_save_protocol_settings( const char * protocol, const BMessage * settings )
+{
+	char settings_path[512];
+	
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
+		protocol
+	);
+	
+	return im_save_settings( settings_path, settings );
+}
+
+status_t
+im_save_protocol_template( const char * protocol, const BMessage * settings )
+{
+	char settings_path[512];
+	
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
+		protocol
+	);
+	
+	return im_save_template( settings_path, settings );
+}
+
+status_t
+im_save_client_settings( const char * client, const BMessage * settings )
+{
+	char settings_path[512];
+	
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/clients/%s",
+		client
+	);
+	
+	return im_save_settings( settings_path, settings );
+}
+
+status_t
+im_save_client_template( const char * client, const BMessage * settings )
+{
+	char settings_path[512];
+	
+	sprintf(
+		settings_path,
+		"/boot/home/config/settings/im_kit/clients/%s",
+		client
+	);
+	
+	return im_save_template( settings_path, settings );
+}
+
+// CLIENT / PROTOCOL LIST
+
+void
+im_get_file_list( const char * path, const char * msg_field, BMessage * msg )
+{
+	BDirectory dir(path);
+	
+	entry_ref ref;
+	
+	while ( dir.GetNextRef(&ref) == B_OK )
+	{
+		msg->AddString(msg_field, ref.name );
+	}
+}
+
+void
+im_get_protocol_list( BMessage * list )
+{
+	return im_get_file_list("/boot/home/config/settings/im_kit/add-ons/protocols", "protocol", list);
+}
+
+void
+im_get_client_list( BMessage * list )
+{
+	return im_get_file_list("/boot/home/config/settings/im_kit/clients", "client", list);
 }

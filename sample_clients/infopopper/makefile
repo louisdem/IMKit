@@ -8,7 +8,8 @@
 
 # specify the name of the binary
 NAME= IM_InfoPopper
-#TARGET_DIR=../../build
+TOPDIR=../..
+TARGET_DIR=$(TOPDIR)/build/clients
 
 # specify the type of binary
 #	APP:	Application
@@ -60,12 +61,12 @@ LIBS= be im stdc++.r4
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= /boot/home/config/lib
+LIBPATHS= 
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = /boot/home/config/include
+SYSTEM_INCLUDE_PATHS =
 
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
@@ -157,6 +158,6 @@ else
   LIBS += zeta icon
 endif
 
-INSTALL_DIR= ../../build
+INSTALL_DIR= $(TOPDIR)/build/clients
 
-include $(BUILDHOME)/etc/makefile-engine.IMkit
+include $(TOPDIR)/makefile-engine.IMkit

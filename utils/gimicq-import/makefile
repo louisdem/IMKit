@@ -1,5 +1,8 @@
 default:
 
+TOPDIR=../..
 install:
-	-mkdir ../../build/gimicq-import
-	-cp -u * ../../build/gimicq-import
+	-mkdir -p $(TOPDIR)/build/gimicq-import
+	-cp -fu * $(TOPDIR)/build/gimicq-import
+
+clean:

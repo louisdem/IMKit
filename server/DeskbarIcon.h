@@ -76,8 +76,6 @@ class _EXPORT IM_DeskbarIcon : public BView
 		list<BMessenger>	fMsgrs;
 		BMessageRunner *	fMsgRunner;
 		
-		BWindow *			fSettingsWindow;
-		
 		// settings
 		bool				fShouldBlink;
 

@@ -52,11 +52,12 @@ enum message_what_codes {
 	/*
 		Settings management
 	*/
-	GET_SETTINGS		= 'IMgs',
-	SETTINGS			= 'IMse',
-	SET_SETTINGS		= 'IMss',
-	GET_SETTINGS_TEMPLATE	= 'IMgt',
+//	GET_SETTINGS		= 'IMgs',
+//	SETTINGS			= 'IMse',
+//	SET_SETTINGS		= 'IMss',
+//	GET_SETTINGS_TEMPLATE	= 'IMgt',
 	SETTINGS_TEMPLATE	= 'IMst',
+	SETTINGS_UPDATED	= 'IMs0', // settings updated, notify protocol/client/etc
 	
 	/*
 		Information about protocols

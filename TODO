@@ -19,10 +19,8 @@ Things to fix
 * Alt-C in client doesn't work
 * Option to disable logging (im_logger and LOG() output)
 * Extract Deskbar icon from im_server, let it live it's own life
-* Change Preflet so it can run when im_server isn't running, and also start im_server
-* Change im_server so it touches contact files when updating their status
 * Contact's BNode::SetTo crashes with invalid pointer sometimes?
-* Settings for clients
+* Fix Preflet so it reads SVG icons(?)
 
 New features
 
@@ -35,13 +33,9 @@ Play sound on -every- message receive?
 Add a new attribute, IM Specific Status, for network-specific status (well, d'uh.)
 For things like "out to lunch" or whatever messages you can set on e.g. MSN.
 
-Status notification client, like in MSN (and BeMSN! :)
-
 More attributes for info like timezone, location, etc?
 
 Option for im_server - Don't fetch serverside contact lists
-
-Block contact - status set to "Blocked" => ignore incoming messages?
 
 Message filters - For implementing things like transparent encryption etc (key as attribute?)
 
@@ -69,5 +63,3 @@ New client: Relay station
 
 Features in sample_client
 * Smileys
-
-Setting away messages

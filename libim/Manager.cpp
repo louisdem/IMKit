@@ -50,7 +50,7 @@ Manager::MessageReceived( BMessage * msg )
 				// results in an invalid messenger, if we wait a little while
 				// it will be ok. Seems like the Roster is a bit too eager to
 				// announce the start of an app..
-				snooze(200*1000);
+				snooze(1000*1000);
 				
 				fMsgr = BMessenger(IM_SERVER_SIG);
 				

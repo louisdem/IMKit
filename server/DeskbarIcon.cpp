@@ -1,5 +1,4 @@
 #include "DeskbarIcon.h"
-#include "SettingsWindow.h"
 
 #include <libim/Constants.h>
 #include <libim/Manager.h>
@@ -100,8 +99,6 @@ IM_DeskbarIcon::_init()
 	fBlink = 0;
 	fMsgRunner = NULL;
 	
-	fSettingsWindow = NULL;
-	
 	fShouldBlink = true;
 	
 	fTip = new BubbleHelper();
@@ -147,12 +144,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 {	
 	switch ( msg->what )
 	{
-		case SETTINGS_WINDOW_CLOSED:
-		{
-			fSettingsWindow = NULL;
-		}	break;
-		
-		case RELOAD_SETTINGS:
+		case IM::SETTINGS_UPDATED:
 		{ // settings have been updated, reload from im_server
 			reloadSettings();
 		}	break;
@@ -256,14 +248,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		
 		case OPEN_SETTINGS:
 		{
-			be_roster->Launch("application/x-vnd.beclan.preflet");
-		}	break;
-		
-		case IM::SETTINGS:
-		{
-			msg->FindBool("blink_db", &fShouldBlink );
-			
-			LOG("deskbar", liMedium, "IM: Settings applied");
+			be_roster->Launch("application/x-vnd.beclan-IMKitPrefs");
 		}	break;
 		
 		case IM::MESSAGE: {
@@ -304,6 +289,14 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 }
 
 void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *msg) {
+	// make sure that the im_server is still running
+	if ( ( transit == B_ENTERED_VIEW ) && !BMessenger(IM_SERVER_SIG).IsValid() )
+	{
+		BDeskbar db;
+		
+		db.RemoveItem( DESKBAR_ICON_NAME );
+	}
+
 	fTip->SetHelp(Parent(), NULL);
 
 	if ((transit == B_OUTSIDE_VIEW) || (transit == B_EXITED_VIEW)) {
@@ -338,14 +331,6 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 void
 IM_DeskbarIcon::MouseDown( BPoint p )
 {
-	// make sure that the im_server is still running
-	if ( !BMessenger(IM_SERVER_SIG).IsValid() )
-	{
-		BDeskbar db;
-		
-		db.RemoveItem( DESKBAR_ICON_NAME );
-	}
-
 	int32 buttons;
 	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
 	
@@ -460,10 +445,6 @@ IM_DeskbarIcon::AttachedToWindow()
 void
 IM_DeskbarIcon::DetachedFromWindow()
 {
-	if ( fSettingsWindow )
-	{
-		BMessenger(fSettingsWindow).SendMessage( B_QUIT_REQUESTED );
-	}
 }
 
 void
@@ -471,7 +452,14 @@ IM_DeskbarIcon::reloadSettings()
 {
 	LOG("deskbar", liLow, "IM: Requesting settings");
 	
-	BMessage request( IM::GET_SETTINGS ), settings;
+	BMessage settings;
+	
+	im_load_client_settings("im_server", &settings );
+
+	settings.FindBool("blink_db", &fShouldBlink );
+			
+	LOG("deskbar", liMedium, "IM: Settings applied");
+/*	BMessage request( IM::GET_SETTINGS ), settings;
 	request.AddString("protocol","");
 	
 	BMessenger msgr(IM_SERVER_SIG);
@@ -479,4 +467,5 @@ IM_DeskbarIcon::reloadSettings()
 	msgr.SendMessage(&request, this );
 	
 	LOG("deskbar", liLow, "IM: Settings requested");
+*/
 }

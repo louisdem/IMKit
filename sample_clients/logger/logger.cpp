@@ -4,6 +4,7 @@
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
+#include <libim/Helpers.h>
 
 using namespace IM;
 
@@ -23,11 +24,6 @@ LoggerApp::LoggerApp()
 	
 	fMan->StartListening();
 
-	BMessage msg(IM::ADD_AUTOSTART_APPSIG);
-	msg.AddString("app_sig", "application/x-vnd.m_eiman.im_logger");
-	
-	fMan->SendMessage( &msg );
-
 
 	// create ./Logs directory
 	create_directory("/boot/home/Logs/IM", 0777);
@@ -39,6 +35,35 @@ LoggerApp::LoggerApp()
 	fLastFile = 0;
 */
 
+	// Save settings template
+	BMessage autostart;
+	autostart.AddString("name", "auto_start");
+	autostart.AddString("description", "Auto-start");
+	autostart.AddInt32("type", B_BOOL_TYPE);
+	autostart.AddBool("default", true);
+	
+	BMessage appsig;
+	appsig.AddString("name", "app_sig");
+	appsig.AddString("description", "Application signature");
+	appsig.AddInt32("type", B_STRING_TYPE);
+	appsig.AddBool("default", "application/x-vnd.m_eiman.im_logger");
+	
+	BMessage tmplate(IM::SETTINGS_TEMPLATE);
+	tmplate.AddMessage("setting", &autostart);
+	tmplate.AddMessage("setting", &appsig);
+	
+	im_save_client_template("im_logger", &tmplate);
+	
+	// Make sure default settings are there
+	BMessage settings;
+	bool temp;
+	im_load_client_settings("im_logger", &settings);
+	if ( !settings.FindString("app_sig") )
+		settings.AddString("app_sig", "application/x-vnd.m_eiman.im_logger");
+	if ( settings.FindBool("auto_start", &temp) != B_OK )
+		settings.AddBool("auto_start", true );
+	im_save_client_settings("im_logger", &settings);
+	// done with template and settings.
 }
 
 LoggerApp::~LoggerApp()

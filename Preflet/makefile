@@ -8,7 +8,8 @@
 
 # specify the name of the binary
 NAME= InstantMessaging
-TARGET_DIR=../build
+TOPDIR=..
+TARGET_DIR=$(TOPDIR)/build/settings
 
 # specify the type of binary
 #	APP:	Application
@@ -31,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS=  main.cpp PApplication.cpp PWindow.cpp IconTextItem.cpp  ../common/IMKitUtilities.cpp
+SRCS=  main.cpp PApplication.cpp PWindow.cpp IconTextItem.cpp  $(TOPDIR)/common/IMKitUtilities.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -68,12 +69,12 @@ endif
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= /boot/home/config/lib
+LIBPATHS=
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = /boot/home/config/include
+SYSTEM_INCLUDE_PATHS =
 
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
@@ -154,4 +155,4 @@ endif
 
 INSTALL_DIR= /boot/home/config/be/Preferences
 
-include $(BUILDHOME)/etc/makefile-engine.IMkit
+include $(TOPDIR)/makefile-engine.IMkit

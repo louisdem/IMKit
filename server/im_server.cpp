@@ -1,6 +1,7 @@
 #include "im_server.h"
 
 #include <libim/Constants.h>
+#include <libim/Helpers.h>
 #include "DeskbarIcon.h"
 #include <TranslationUtils.h>
 
@@ -74,6 +75,8 @@ Server::Server()
 		}
 	}
 	
+	InitSettings();
+	
 	LoadAddons();
 	
 	// add deskbar icon
@@ -129,7 +132,7 @@ Server::Server()
 		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 
 	SetAllOffline();
-
+	
 	StartAutostartApps();
 	
 	Run();
@@ -189,28 +192,12 @@ Server::MessageReceived( BMessage * msg )
 			handleDeskbarMessage(msg);
 			break;
 		
-		case ADD_AUTOSTART_APPSIG:
-			reply_ADD_AUTOSTART_APPSIG(msg);
-			break;
-		
-		case REMOVE_AUTOSTART_APPSIG:
-			reply_REMOVE_AUTOSTART_APPSIG(msg);
-			break;
-		
 		case SERVER_BASED_CONTACT_LIST:
 			reply_SERVER_BASED_CONTACT_LIST(msg);
 			break;
 		
-		case GET_SETTINGS_TEMPLATE:
-			reply_GET_SETTINGS_TEMPLATE(msg);
-			break;
-		
-		case GET_SETTINGS:
-			reply_GET_SETTINGS(msg);
-			break;
-		
-		case SET_SETTINGS:
-			reply_SET_SETTINGS(msg);
+		case SETTINGS_UPDATED:
+			handle_SETTINGS_UPDATED(msg);
 			break;
 		
 		case ADD_ENDPOINT:
@@ -314,7 +301,7 @@ Server::LoadAddons()
 		LOG("im_server", liHigh, "cannot access protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
 		return rc;
 	}
-
+	
 	// Okies, we've been able to access our critical dirs, so now we should be sure we can load any addons that are there
 	UnloadAddons(); // make sure we don't load any addons twice
 
@@ -411,7 +398,7 @@ Server::LoadAddons()
 		{
 			// add to list
 			fProtocols[protocol->GetSignature()] = protocol;
-
+			
 			// add to fAddOnInfo
 			AddOnInfo pinfo;
 			pinfo.protocol = protocol;
@@ -419,6 +406,11 @@ Server::LoadAddons()
 			pinfo.signature = protocol->GetSignature();
 			pinfo.path = path.Path();
 			fAddOnInfo[protocol] = pinfo;
+			
+			// get protocol settings template
+			BMessage tmplate = protocol->GetSettingsTemplate();
+			
+			im_save_protocol_template( protocol->GetSignature(), &tmplate );
 		}
 	} // while()
 	
@@ -725,145 +717,6 @@ Server::CreateContact( const char * proto_id )
 	LOG("im_server", liDebug, "  done.");
 	
 	return result;
-}
-
-/**
-	Load settings for protocol into message
-*/
-status_t
-Server::GetSettings( const char * protocol_sig, BMessage * settings )
-{
-	char settings_path[512];
-	
-	// get path to settings file
-	if ( !protocol_sig )
-	{ // im_server settings
-		strcpy(settings_path,"/boot/home/config/settings/im_kit/im_server.settings");
-	} else
-	{ // protocol settings
-		if ( fProtocols.find(protocol_sig) == fProtocols.end() )
-		{
-			_ERROR("ERROR: GET_SETTINGS: Protocol not loaded");
-			return B_ERROR;
-		}
-		
-		Protocol * protocol = fProtocols[protocol_sig];
-		
-		sprintf(
-			settings_path,
-			"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-			fAddOnInfo[protocol].signature
-		);
-	}
-	
-	char data[1024*1024];
-	
-	BNode node( settings_path );
-	
-	int32 num_read = node.ReadAttr(
-		"im_settings", B_RAW_TYPE, 0,
-		data, sizeof(data)
-	);
-	
-	if ( num_read <= 0 )
-	{
-		LOG("AIM", liLow, "GET_SETTINGS: Error reading settings (reverting to default settings)");
-		return B_ERROR;
-	}
-	
-	if ( settings->Unflatten(data) != B_OK )
-	{
-		_ERROR("ERROR: GET_SETTINGS: Error unflattening settings");
-		return B_ERROR;
-	}
-	
-	LOG("im_server", liDebug, "Read settings from file: %s", settings_path);
-	
-	return B_OK;
-}
-
-/**
-	Write settings for protocol in message to disk
-*/
-status_t
-Server::SetSettings( const char * protocol_sig, BMessage * settings )
-{
-	status_t res = B_ERROR;
-	char settings_path[512];
-		
-	if ( settings->what != SETTINGS )
-	{
-		_ERROR("ERROR: SET_SETTINGS: Malformed settings message");
-		return B_ERROR;
-	}
-			
-	// check settings and get path to settings file
-	if ( !protocol_sig )
-	{ // im_server settings
-		res = UpdateOwnSettings(*settings);
-		
-		strcpy(settings_path,"/boot/home/config/settings/im_kit/im_server.settings");
-	} else
-	{ // protocol settings
-		if ( fProtocols.find(protocol_sig) == fProtocols.end() )
-		{
-			_ERROR("ERROR: GET_SETTINGS: Protocol not loaded");
-			return B_ERROR;
-		}
-			
-		Protocol * protocol = fProtocols[protocol_sig];
-			
-		res = protocol->UpdateSettings(*settings);
-			
-		sprintf(
-			settings_path,
-			"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-			fAddOnInfo[protocol].signature
-		);
-	}
-	
-	// check if settings are ok
-	if ( res != B_OK )
-	{
-		_ERROR("ERROR: SET_SETTINGS: Protocol says settings not valid");
-		return B_ERROR;
-	}
-	
-	// save settings
-	char data[1024*1024];
-	int32 data_size=settings->FlattenedSize();
-	
-	if ( settings->Flatten(data,data_size) != B_OK )
-	{ // error flattening message
-		_ERROR("ERROR: SET_SETTINGS: Error flattening settings message");
-		return B_ERROR;
-	}
-	
-	BDirectory dir;
-	dir.CreateFile(settings_path,NULL,true);
-
-	BNode node( settings_path );
-			
-	if ( node.InitCheck() != B_OK )
-	{
-		_ERROR("ERROR: SET_SETTINGS: Error opening save file");
-		return B_ERROR;
-	}
-			
-	int32 num_written = node.WriteAttr(
-		"im_settings", B_RAW_TYPE, 0,
-		data, data_size
-	);
-			
-	if ( num_written != data_size )
-	{ // error saving settings
-		_ERROR("ERROR: SET_SETTINGS: Error saving settings");
-		return B_ERROR;
-	}
-
-	LOG("im_server", liDebug, "Wrote settings to file: %s", settings_path);
-	
-	return B_OK;			
 }
 
 /**
@@ -1300,13 +1153,14 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		
 		if ( !is_blocked )
 		{ // only update IM:status if not blocked
-			if ( node.WriteAttr(
+/*			if ( node.WriteAttr(
 				"IM:status", B_STRING_TYPE, 0,
 				status, strlen(status)+1
 			) != (int32)strlen(status)+1 )
 			{
 				_ERROR("Error writing status attribute");
-			}
+			}*/
+			contact.SetStatus( status );
 		}
 		
 		BBitmap *large = NULL;
@@ -1540,11 +1394,18 @@ Server::GenerateSettingsTemplate()
 	default_away.AddString("name", "default_away");
 	default_away.AddString("description", "Away Message");
 	default_away.AddInt32("type", B_STRING_TYPE);
-	default_away.AddString("default", "I'm currently looking at pr0n - "
-		"back in a bit");
+	default_away.AddString("default", "I'm not here right now");
 	default_away.AddBool("multi_line", true);
 
 	main_msg.AddMessage("setting", &default_away);
+	
+	BMessage appsig;
+	appsig.AddString("name", "app_sig");
+	appsig.AddString("description", "Application signature");
+	appsig.AddInt32("type", B_STRING_TYPE);
+	appsig.AddBool("default", IM_SERVER_SIG );
+	
+	main_msg.AddMessage("setting", &appsig );
 	
 	return main_msg;
 }
@@ -1586,15 +1447,41 @@ Server::UpdateOwnSettings( BMessage settings )
 void
 Server::StartAutostartApps()
 {
-	BMessage settings;
+	BMessage clients;
 	
-	GetSettings( NULL, &settings );
+	im_get_client_list( &clients );
 	
-	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
+	for ( int i=0; clients.FindString("client", i); i++ )
+	{
+		const char * client = clients.FindString("client", i);
+		
+		if ( strcmp("im_server", client) == 0 )
+			continue;
+		
+		BMessage settings;
+		
+		if ( im_load_client_settings(client, &settings) == B_OK )
+		{
+			bool auto_start = false;
+			const char * app_sig = NULL;
+			
+			settings.FindBool("auto_start", &auto_start);
+			app_sig = settings.FindString("app_sig");
+			
+			if ( auto_start && app_sig)
+			{
+				LOG("im_server", liLow, "Starting app [%s]", app_sig );
+				be_roster->Launch( app_sig );
+			}
+		}
+	}
+	
+/*	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
 	{
 		LOG("im_server", liLow, "Starting app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 		be_roster->Launch( settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 	}
+*/
 }
 
 /**
@@ -1603,7 +1490,37 @@ Server::StartAutostartApps()
 void
 Server::StopAutostartApps()
 {
-	BMessage settings;
+	BMessage clients;
+	
+	im_get_client_list( &clients );
+	
+	for ( int i=0; clients.FindString("client", i); i++ )
+	{
+		const char * client = clients.FindString("client", i);
+		
+		if ( strcmp("im_server", client) == 0 )
+			continue;
+		
+		BMessage settings;
+		
+		if ( im_load_client_settings(client, &settings) == B_OK )
+		{
+			bool auto_start = false;
+			const char * app_sig = NULL;
+			
+			settings.FindBool("auto_start", &auto_start);
+			app_sig = settings.FindString("app_sig");
+			
+			if ( auto_start && app_sig)
+			{
+				LOG("im_server", liLow, "Stopping app [%s]", app_sig );
+				BMessenger msgr( app_sig );
+				msgr.SendMessage( B_QUIT_REQUESTED );
+			}
+		}
+	}
+	
+/*	BMessage settings;
 	
 	GetSettings( NULL, &settings );
 	
@@ -1613,6 +1530,7 @@ Server::StopAutostartApps()
 		BMessenger msgr( settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 		msgr.SendMessage( B_QUIT_REQUESTED );
 	}
+*/
 }
 
 /**
@@ -1776,173 +1694,6 @@ void Server::reply_GET_OWN_STATUSES(BMessage *msg) {
 };
 
 /**
-	Handle an ADD_AUTOSTART_APPSIG request
-*/
-void
-Server::reply_ADD_AUTOSTART_APPSIG( BMessage * msg )
-{
-	if ( msg->FindString("app_sig") == NULL )
-	{
-		_SEND_ERROR("No app_sig provided", msg);
-		return;
-	}
-	
-	const char * new_appsig = msg->FindString("app_sig");
-	
-	BMessage settings;
-	if ( GetSettings(NULL, &settings) != B_OK )
-	{
-		_SEND_ERROR("Error reading settings",msg);
-		return;
-	}
-	
-	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING, i); i++ )
-	{
-		if ( strcmp( new_appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) == 0 )
-		{ // app-sig already present, don't add again
-			msg->SendReply(ACTION_PERFORMED);
-			LOG("im_server", liLow, "Auto-start app already present [%s]", new_appsig);
-			return;
-		}
-	}
-	
-	settings.AddString(AUTOSTART_APPSIG_SETTING, new_appsig);
-	
-	SetSettings( NULL, &settings );
-	
-	msg->SendReply(ACTION_PERFORMED);
-	
-	LOG("im_server", liLow, "Auto-start app added [%s]", new_appsig);
-}
-
-/**
-	Handle an REMOVE_AUTOSTART_APPSIG request
-*/
-void
-Server::reply_REMOVE_AUTOSTART_APPSIG( BMessage * msg )
-{
-	if ( msg->FindString("app_sig") == NULL )
-		_SEND_ERROR("No app_sig provided", msg);
-		return;
-			
-	const char * appsig = msg->FindString("app_sig");
-			
-	BMessage settings;
-	BMessage temp;
-	GetSettings(NULL, &settings);
-	
-	// save app-sigs not to be deleted in temp
-	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING, i); i++ )
-	{
-		if ( strcmp( appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) != 0 )
-		{ // this is not the app-sig to delete, store it
-			temp.AddString(AUTOSTART_APPSIG_SETTING, settings.FindString(AUTOSTART_APPSIG_SETTING,i));
-		}
-	}
-	
-	// delete all app-sigs from settings
-	settings.RemoveName(AUTOSTART_APPSIG_SETTING);
-	
-	// copy app-sigs from temp
-	for ( int i=0; temp.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
-		settings.AddString(AUTOSTART_APPSIG_SETTING, temp.FindString(AUTOSTART_APPSIG_SETTING,i));
-	
-	SetSettings( NULL, &settings );
-
-	msg->SendReply(ACTION_PERFORMED);
-	
-	LOG("im_server", liLow, "Auto-start app removed [%s]", appsig);
-}
-
-/**
-	Return current settings for a protocol
-*/
-void
-Server::reply_GET_SETTINGS( BMessage * msg )
-{
-	const char * protocol = msg->FindString("protocol");
-	
-	if ( protocol[0] == 0 )
-		protocol = NULL;
-	
-	BMessage settings;
-	
-	if ( GetSettings( protocol, &settings ) != B_OK )
-	{
-		_SEND_ERROR("Error getting settings", msg);
-	}
-	
-	msg->SendReply(&settings);
-}
-
-/**
-	Set settings for specified protocol
-*/
-void
-Server::reply_SET_SETTINGS( BMessage * msg )
-{
-	const char * protocol = msg->FindString("protocol");
-	
-	if ( protocol[0] == 0 )
-		protocol = NULL;
-	
-	BMessage settings;
-	
-	if ( msg->FindMessage("settings", &settings) != B_OK )
-	{
-		_SEND_ERROR("No settings provided", msg);
-		return;
-	}
-	
-	if ( SetSettings( protocol, &settings ) != B_OK )
-	{
-		_SEND_ERROR("Error setting settings", msg);
-	}
-	
-	msg->SendReply(ACTION_PERFORMED);
-}
-
-/**
-	GET_SETTINGS_TEMPLATE returns a message describing
-	the settings available for a specified protocol.
-*/
-void
-Server::reply_GET_SETTINGS_TEMPLATE( BMessage * msg )
-{
-	const char * p = msg->FindString("protocol");
-			
-	if ( !p )
-	{
-		p = "";
-	}
-	
-	BMessage t;
-	
-	if ( strlen(p) > 0 )
-	{ // protocol settings
-		if (fProtocols.find(p) == fProtocols.end() )
-		{
-			_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Protocol not loaded",msg);
-			return;
-		}
-		
-		Protocol * protocol = fProtocols[p];
-			
-		t = protocol->GetSettingsTemplate();
-	} else
-	{ // im_server settings
-		t = GenerateSettingsTemplate();
-	}
-	
-	if ( !msg->ReturnAddress().IsValid() )
-	{
-		_ERROR("Invalid return address in GetSettingsTemplate()", msg);
-	}
-
-	msg->SendReply( &t );
-}
-
-/**
 	Returns a list of currently loaded protocols
 */
 void
@@ -2008,4 +1759,60 @@ Server::reply_UPDATE_CONTACT_STATUS( BMessage * msg )
 	Contact contact(ref);
 	
 	UpdateContactStatusAttribute(contact);
+}
+
+/**
+*/
+void
+Server::handle_SETTINGS_UPDATED( BMessage * msg )
+{
+	BMessage settings;
+	
+	const char * sig;
+	
+	if ( sig = msg->FindString("protocol") )
+	{ // notify protocol of change in settings
+		if ( fProtocols.find(sig) == fProtocols.end() )
+		{
+			_ERROR("Cannot notify protocol of changed settings, not loaded");
+			return;
+		}
+		
+		if ( im_load_protocol_settings(sig, &settings) != B_OK )
+			return;
+		
+		Protocol * protocol = fProtocols[sig];
+		
+		if ( protocol->UpdateSettings(settings) != B_OK )
+		{
+			_ERROR("Protocol settings invalid", msg);
+		}
+	} else
+	if ( sig = msg->FindString("client") )
+	{ // notify client of change in settings
+		Broadcast(msg);
+	} else
+	{ // malformed
+		_ERROR("Malformed message in SETTINGS_UPDATED", msg);
+	}
+}
+
+void
+Server::InitSettings()
+{
+	// Save settings template
+	BMessage tmplate = GenerateSettingsTemplate();
+	
+	im_save_client_template("im_server", &tmplate);
+	
+	// Make sure default settings are there
+	BMessage settings;
+	bool temp;
+	im_load_client_settings("im_server", &settings);
+	if ( !settings.FindString("app_sig") )
+		settings.AddString("app_sig", IM_SERVER_SIG);
+	if ( settings.FindBool("auto_start", &temp) != B_OK )
+		settings.AddBool("auto_start", false );
+	im_save_client_settings("im_server", &settings);
+	// done with template and settings.
 }

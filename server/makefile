@@ -8,7 +8,8 @@
 
 # specify the name of the binary
 NAME= im_server
-TARGET_DIR = ../build
+TOPDIR=..
+TARGET_DIR = $(TOPDIR)/build
 
 # specify the type of binary
 #	APP:	Application
@@ -31,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS=  ../common/IMKitUtilities.cpp ../common/BubbleHelper.cpp im_server.cpp im_server_main.cpp Protocol.cpp DeskbarIcon.cpp SettingsWindow.cpp AwayMessageWindow.cpp
+SRCS=  $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/BubbleHelper.cpp im_server.cpp im_server_main.cpp Protocol.cpp DeskbarIcon.cpp AwayMessageWindow.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -68,12 +69,12 @@ endif
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= /boot/home/config/lib
+LIBPATHS=
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = /boot/home/config/include
+SYSTEM_INCLUDE_PATHS =
 
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
@@ -154,4 +155,4 @@ endif
 
 INSTALL_DIR= /boot/home/config/servers
 
-include $(BUILDHOME)/etc/makefile-engine.IMkit
+include $(TOPDIR)/makefile-engine.IMkit

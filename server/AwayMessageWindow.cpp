@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <libim/Helpers.h>
 
 const float kPadding = 5.0;
 
@@ -82,15 +83,12 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 		B_FOLLOW_LEFT | B_FOLLOW_BOTTOM);
 	fView->AddChild(fCancel);
 
-	IM::Manager man;
 	BMessage settings;
-	BMessage reqSettings(IM::GET_SETTINGS);
-	reqSettings.AddString("protocol", "");
-
-	man.SendMessage(&reqSettings, &settings);	
-
-	fTextView->SetText(settings.FindString("default_away"));	
-
+	im_load_client_settings("im_server", &settings);
+	
+	if ( settings.FindString("default_away") )
+		fTextView->SetText(settings.FindString("default_away"));
+	
 	fTextView->MakeFocus(true);
 }
 

@@ -296,6 +296,8 @@ Contact::SetStatus( const char * status )
 		return B_ERROR;
 	}
 	
+	node.SetModificationTime( time(NULL) );
+	
 	return B_OK;
 }
 

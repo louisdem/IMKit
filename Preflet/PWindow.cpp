@@ -1,5 +1,9 @@
 #include "PWindow.h"
 
+#include <libim/Helpers.h>
+#include <Entry.h>
+#include <Roster.h>
+
 const float kControlOffset = 5.0;
 //const float kEdgeOffset = 2.0;
 const float kEdgeOffset = 5.0;
@@ -57,65 +61,40 @@ PWindow::PWindow(void)
 	frame.InsetBy(kEdgeOffset, kEdgeOffset);
 	frame.top += fFontHeight;
 	
-	BMessage requestProts(IM::GET_LOADED_PROTOCOLS);
-	BMessage protocols;
-	fManager->SendMessage(&requestProts, &protocols);
-	protocols.PrintToStream();
-
-	if (protocols.what == IM::ACTION_PERFORMED) {
-//		FIX ME: Find the location of the im_server programmatically (By app signature?)
-		fListView->AddItem(new IconTextItem("IM Server",
-			GetBitmapFromAttribute("/boot/home/config/servers/im_server", "BEOS:M:STD_ICON",
-			'ICON')));
+	// PROTOCOLS
 	
-		BMessage settings;
-		BMessage tmplate;
-		BMessage reqSettings(IM::GET_SETTINGS);
-		reqSettings.AddString("protocol", "");
-		BMessage reqTemplate(IM::GET_SETTINGS_TEMPLATE);
-		reqTemplate.AddString("protocol", "");
-
-		fManager->SendMessage(&reqSettings, &settings);
-		fManager->SendMessage(&reqTemplate, &tmplate);
-
-		fAddOns["IM Server"] = pair<BMessage, BMessage>(settings, tmplate);
-
-		BView *view = new BView(frame, "IM Server", B_FOLLOW_ALL_SIDES, B_WILL_DRAW);
-#if B_BEOS_VERSION > B_BEOS_VERSION_5
-		view->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-		view->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-		view->SetHighColor(ui_color(B_PANEL_TEXT_COLOR));
-#else
-		view->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-		view->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-		view->SetHighColor(0, 0, 0, 0);
-#endif
-
-		BuildGUI(tmplate, settings, view);
-		fPrefView.AddItem(view);
-		fBox->AddChild(view);
-
+	BMessage protocols;
+	im_get_protocol_list(&protocols);
+	
+	protocols.PrintToStream();
+	
+	if (protocols.FindString("protocol")) {
+//		FIX ME: Find the location of the im_server programmatically (By app signature?)
 		for (int16 i = 0; protocols.FindString("protocol", i); i++) {
 			const char *protocol = protocols.FindString("protocol", i);
 			entry_ref ref;
-			protocols.FindRef("ref", i, &ref);	
+			//protocols.FindRef("ref", i, &ref);	
 			
-			fListView->AddItem(new IconTextItem(protocol,
-				GetBitmapFromAttribute(BPath(&ref).Path(), "BEOS:M:STD_ICON", 'ICON')));
+			char protopath[512];
+			sprintf(protopath, "/boot/home/config/add-ons/im_kit/protocols/%s", protocol);
+			BEntry e(protopath, true);
+			e.GetRef(&ref);
 			
 			BMessage protocol_settings;
 			BMessage protocol_template;
-			BMessage reqSettings(IM::GET_SETTINGS);
-			reqSettings.AddString("protocol", protocol);
-			BMessage reqTemplate(IM::GET_SETTINGS_TEMPLATE);
-			reqTemplate.AddString("protocol", protocol);
 			
-			fManager->SendMessage(&reqSettings, &protocol_settings);
-			fManager->SendMessage(&reqTemplate, &protocol_template);
-		
+			im_load_protocol_settings( protocol, &protocol_settings );
+			im_load_protocol_template( protocol, &protocol_template );
+			
+			//printf("Getting icon from %s\n", BPath(&ref).Path() );
+			fListView->AddItem(new IconTextItem(protocol,
+				GetBitmapFromAttribute(BPath(&ref).Path(), "BEOS:M:STD_ICON", 'ICON')));
+			
+			protocol_template.AddString("protocol", protocol); // for identification when saving
+			
 			pair <BMessage, BMessage> p(protocol_settings, protocol_template);
 			fAddOns[protocol] = p; //pair<BMessage, BMessage>(settings, tmplate);
-
+			
 			BView *view = new BView(frame, protocol, B_FOLLOW_ALL_SIDES,
 				B_WILL_DRAW);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
@@ -131,15 +110,70 @@ PWindow::PWindow(void)
 			BuildGUI(protocol_template, protocol_settings, view);
 			fPrefView.AddItem(view);
 			fBox->AddChild(view);
-			view->Hide();
-			
+			if ( fBox->CountChildren() > 1 )
+				view->Hide();
+			else
+				fBox->SetLabel(protocol);
 		};
-	} else {
-		printf("Fatal error - could not get protocols\n");
-		BMessenger(be_app).SendMessage(B_QUIT_REQUESTED);
-		
-		return;
-	};
+	}
+	
+	
+	// CLIENTS
+	
+	BMessage clients;
+	im_get_client_list(&clients);
+	
+	clients.PrintToStream();
+	
+	if (clients.FindString("client")) {
+		printf("Adding clients\n");
+//		FIX ME: Find the location of the im_server programmatically (By app signature?)
+		for (int16 i = 0; clients.FindString("client", i); i++) {
+			const char *client = clients.FindString("client", i);
+			printf("Adding client %s\n", client);
+			entry_ref ref;
+			//protocols.FindRef("ref", i, &ref);	
+			
+			BMessage client_settings;
+			BMessage client_template;
+			
+			im_load_client_settings( client, &client_settings );
+			im_load_client_template( client, &client_template );
+			
+			if ( client_settings.FindString("app_sig") ) {
+				be_roster->FindApp( client_settings.FindString("app_sig"), &ref );
+				printf("Client path: %s\n", BPath(&ref).Path() );
+			}
+			
+			fListView->AddItem(new IconTextItem(client,
+				GetBitmapFromAttribute(BPath(&ref).Path(), "BEOS:M:STD_ICON", 'ICON')));
+			
+			client_template.AddString("client", client); // for identification when saving
+			
+			pair <BMessage, BMessage> p(client_settings, client_template);
+			fAddOns[client] = p; //pair<BMessage, BMessage>(settings, tmplate);
+			
+			BView *view = new BView(frame, client, B_FOLLOW_ALL_SIDES,
+				B_WILL_DRAW);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+			view->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+			view->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+			view->SetHighColor(ui_color(B_PANEL_TEXT_COLOR));
+#else
+			view->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+			view->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+			view->SetHighColor(0, 0, 0, 0);
+#endif
+
+			BuildGUI(client_template, client_settings, view);
+			fPrefView.AddItem(view);
+			fBox->AddChild(view);
+			if ( fBox->CountChildren() > 1 )
+				view->Hide();
+			else
+				fBox->SetLabel(client);
+		};
+	}
 
 	BScrollView *scroller = new BScrollView("list scroller", fListView, B_FOLLOW_LEFT |
 		B_FOLLOW_BOTTOM, 0, false, true);
@@ -240,10 +274,10 @@ void PWindow::MessageReceived(BMessage *msg) {
 		} break;
 		
 		case SAVE: {
-			BMessage outSettings(IM::SET_SETTINGS);
+//			BMessage outSettings(IM::SET_SETTINGS);
 			BMessage cur;
 			BMessage tmplate;
-			BMessage settings(IM::SETTINGS);
+			BMessage settings;
 			BMessage reply;
 			
 			int current = fListView->CurrentSelection();
@@ -316,7 +350,7 @@ void PWindow::MessageReceived(BMessage *msg) {
 				
 				settings.PrintToStream();
 			};
-			
+			/*
 			if (current == 0) {
 				outSettings.AddString("protocol", "");
 			} else {
@@ -331,7 +365,31 @@ void PWindow::MessageReceived(BMessage *msg) {
 				printf("Error applying settings\n");
 			};
 
-
+			*/
+			status_t res = B_ERROR;
+			BMessage updMessage(IM::SETTINGS_UPDATED);
+			
+			if ( tmplate.FindString("protocol") )
+			{
+				res = im_save_protocol_settings( tmplate.FindString("protocol"), &settings );
+				updMessage.AddString("protocol", tmplate.FindString("protocol") );
+			} else
+			if ( tmplate.FindString("client") )
+			{
+				res = im_save_client_settings( tmplate.FindString("client"), &settings );
+				updMessage.AddString("client", tmplate.FindString("client") );
+			} else
+			{
+				LOG("Preflet", liHigh, "Failed to determine type of settings");
+			}
+			
+			if ( res != B_OK )
+			{
+				LOG("Preflet", liHigh, "Error when saving settings");
+			} else
+			{
+				fManager->SendMessage( &updMessage );
+			}
 		} break;
 		default: {
 			BWindow::MessageReceived(msg);
@@ -359,6 +417,11 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 		bool multiLine = false;
 		BView *control = NULL;
 		BMenu *menu = NULL;
+		
+		if ( name != NULL && strcmp(name,"app_sig") == 0 ) {
+			// skip app-sig setting
+			continue;
+		}
 		
 		if (curr.FindInt32("type", &type) != B_OK) {
 			printf("Error getting type for %s, skipping\n");

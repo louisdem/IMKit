@@ -8,6 +8,8 @@
 
 # specify the name of the binary
 NAME= MSN
+TOPDIR=../..
+TARGET_DIR=$(TOPDIR)/build/protocols
 
 # specify the type of binary
 #	APP:	Application

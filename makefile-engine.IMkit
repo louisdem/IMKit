@@ -5,8 +5,8 @@
 ##	Supports Generic Makefile v2.0, 2.01, 2.1, 2.2, 2.3, 2.4
 
 #setting LIBPATHS
-LIBPATHS+=build/lib
-
+LIBPATHS+=$(TOPDIR)/build/lib
+SYSTEM_INCLUDE_PATHS+=$(TOPDIR)
 
 #	determine wheather running on x86 or ppc
 MACHINE=$(shell uname -m)
@@ -347,7 +347,7 @@ else
 endif
 
 #	define the actual work to be done	
-.PHONY: default
+.PHONY: default build clean install cleandep rmapp
 
 default: build
 
@@ -438,11 +438,11 @@ FORCE:
 
 #	Clean up the deps
 cleandep :: FORCE
-	-rm -rf $(DEP_DIR)/*
+	-rm -rf $(DEP_DIR)
 
 #	The  clean command. Delete everything in the object and dep folders.
 clean :: cleandep
-	-rm -rf $(OBJ_DIR)/*
+	-rm -rf $(OBJ_DIR)
 
 
 #	remove just the application from the object folder
@@ -465,7 +465,7 @@ ifeq ($(TYPE), DRIVER)
 	ln -sf $(USER_BIN_PATH)/$(NAME) $(USER_DEV_PATH)/$(DRIVER_PATH)/$(NAME)
 endif
 	
-install :: default
+install ::
 	mkdir -p "$(INSTALL_DIR)"
 	copyattr --data $(TARGET) "$(INSTALL_DIR)/$(NAME)"	
 # having 2 copies of the same binary on a system seems silly.

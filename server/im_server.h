@@ -34,7 +34,7 @@ class Server : public BApplication
 		Contact	CreateContact( const char * proto_id );
 		
 		status_t	LoadAddons();
-		void	UnloadAddons();
+		void		UnloadAddons();
 		
 		void	Process( BMessage * );
 		void	Broadcast( BMessage * );
@@ -46,6 +46,7 @@ class Server : public BApplication
 		status_t	SetSettings(const char * protocol, BMessage*);
 		BMessage	GenerateSettingsTemplate();
 		status_t	UpdateOwnSettings( BMessage );
+		void		InitSettings();
 		
 		void	handleDeskbarMessage( BMessage * );
 		
@@ -62,16 +63,13 @@ class Server : public BApplication
 		void	StartAutostartApps();
 		void	StopAutostartApps();
 		
-		void	reply_ADD_AUTOSTART_APPSIG( BMessage * );
-		void	reply_REMOVE_AUTOSTART_APPSIG( BMessage * );
-		void	reply_GET_SETTINGS_TEMPLATE(BMessage*);
 		void	reply_GET_LOADED_PROTOCOLS(BMessage*);
 		void	reply_SERVER_BASED_CONTACT_LIST(BMessage*);
-		void	reply_GET_SETTINGS( BMessage * );
-		void	reply_SET_SETTINGS( BMessage * );
 		void	reply_GET_CONTACT_STATUS( BMessage * );
 		void	reply_UPDATE_CONTACT_STATUS( BMessage * );
 		void	reply_GET_OWN_STATUSES(BMessage *msg);
+		
+		void	handle_SETTINGS_UPDATED(BMessage *);
 		
 		//BBitmap	*GetBitmap(const char *name, type_code type = 'BBMP');
 		//BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 

@@ -274,10 +274,12 @@ printf("Connection state: %i\n", fConnectionState);
 			"Content-Type: text/plain; charset=UTF-8\r\n"
 			"X-MMS-IM-Format: FN+Arial; EF=I; CO=0; CS=0; PF=22\r\n\r\n";
 		format << message;
-
+		
 		msg->AddPayload(format.String(), format.Length());
 		
 		it->second->Send(msg);
+		
+		return B_OK;
 	};
 };
 
@@ -316,11 +318,11 @@ status_t MSNManager::LogOff(void) {
 		con->Lock();
 		con->Quit();
 	};
-
+	
 	fSwitchBoard.clear();
-
+	
 	fConnectionState = otOffline;
-
+	
 	if (fNoticeCon) {
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
@@ -329,10 +331,10 @@ status_t MSNManager::LogOff(void) {
 		fNoticeCon->Quit();
 		fNoticeCon = NULL;
 	};
-
+	
 	fHandler->StatusChanged(fPassport.String(), otOffline);
 	ret = B_OK;
-
+	
 	return ret;
 };
 

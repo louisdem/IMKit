@@ -8,7 +8,8 @@
 
 # specify the name of the binary
 NAME= ICQ
-TARGET_DIR=../../build/protocols
+TOPDIR=../..
+TARGET_DIR=$(TOPDIR)/build/protocols
 
 # specify the type of binary
 #	APP:	Application
@@ -60,12 +61,12 @@ LIBS= be im sigc /boot/home/config/lib/libicq2000.a stdc++.r4 _APP_
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= /boot/home/config/lib ../../build
+LIBPATHS= /boot/home/config/lib
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = /boot/home/config/include /boot/home/config/include/sigc++-1.0 /boot/home/config/include/libicq2000
+SYSTEM_INCLUDE_PATHS = /boot/home/config/include/sigc++-1.0 /boot/home/config/include/libicq2000
 
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
@@ -146,4 +147,9 @@ endif
 
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
 
-include $(BUILDHOME)/etc/makefile-engine.IMkit
+include $(TOPDIR)/makefile-engine.IMkit
+
+$(TARGET): _APP_
+
+_APP_: $(TOPDIR)/build/im_server
+	-ln -sf $< $@

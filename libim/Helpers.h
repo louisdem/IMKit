@@ -36,4 +36,24 @@ extern void LOG( const char * module, log_importance level, const char * msg, ..
 // if level < g_verbosity_level then LOG() doesn't print the msg
 extern log_importance g_verbosity_level;
 
+// settings management.
+extern status_t im_load_protocol_settings( const char * protocol, BMessage * settings );
+extern status_t im_load_protocol_template( const char * protocol, BMessage * tmplate );
+extern status_t im_load_client_settings( const char * client, BMessage * settings );
+extern status_t im_load_client_template( const char * client, BMessage * tmplate );
+
+extern status_t im_save_protocol_settings( const char * protocol, const BMessage * settings );
+extern status_t im_save_protocol_template( const char * protocol, const BMessage * tmplate );
+extern status_t im_save_client_settings( const char * client, const BMessage * settings );
+extern status_t im_save_client_template( const char * client, const BMessage * tmplate );
+
+/*
+	Returns a message containing string(s) named "protocol" with the name of the protocols
+*/
+extern void im_get_protocol_list( BMessage * list );
+/*
+	Returns a message containing string(s) named "client" with the name of the protocols
+*/
+extern void im_get_client_list( BMessage * list );
+
 #endif

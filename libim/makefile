@@ -8,7 +8,8 @@
 
 # specify the name of the binary
 NAME= libim.so
-TARGET_DIR=../build/lib
+TOPDIR=..
+TARGET_DIR=$(TOPDIR)/build/lib
 
 # specify the type of binary
 #	APP:	Application
@@ -146,4 +147,4 @@ endif
 
 INSTALL_DIR=/boot/home/config/lib
 
-include $(BUILDHOME)/etc/makefile-engine.IMkit
+include $(TOPDIR)/makefile-engine.IMkit

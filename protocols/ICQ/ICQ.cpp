@@ -797,6 +797,8 @@ ICQProtocol::UpdateSettings( BMessage & msg )
 	fClient.icqclient.setUIN( uin );
 	fClient.icqclient.setPassword( password );
 	
+	LOG("ICQ", liLow, "Settings updated");
+	
 	return B_OK;
 }
 

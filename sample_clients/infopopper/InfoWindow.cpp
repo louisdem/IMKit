@@ -4,6 +4,7 @@
 #include <Application.h>
 #include <libim/Constants.h>
 #include <libim/Contact.h>
+#include <String.h>
 
 InfoWindow::InfoWindow()
 :	BWindow( 
