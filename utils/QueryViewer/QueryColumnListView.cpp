@@ -5,9 +5,18 @@ const char *kTrackerQueryPredicate = "_trk/qrystr";
 const char *kTrackerQueryInitMime = "_trk/qryinitmime";
 const char *kTrackerQueryType = "application/x-vnd.Be-query";
 
+const char *kAttrStatName ="_stat/name";
+const char *kAttrStatSize = "_stat/size";
+const char *kAttrStatModified = "_stat/modified";
+const char *kAttrStatCreated = "_stat/created";
+const char *kAttrStatMode = "_stat/mode";
+const char *kAttrStatOwner = "_stat/owner";
+const char *kAttrStatGroup = "_stat/group";
+const char *kAttrPath = "_trk/path";
+const char *kAttrMIMEType = "BEOS:TYPE";
+
 const char *kFolderState = "_trk/columns_le";
 const char *kViewState = "_trk/viewstate_le";
-const int16 kAttrIndexOffset = 5;
 const int32 kSnoozePeriod = 1000 * 1000;
 const int32 kIconSize = 16;
 
@@ -203,6 +212,7 @@ void QueryColumnListView::AttachedToWindow(void) {
 		fQueries.push_back(query);
 	};
 
+	AddStatColumns();
 	BMessage msg;
 	BMimeType mime(fMIMEString.String());
 	mime.GetAttrInfo(&msg);
@@ -273,12 +283,28 @@ status_t QueryColumnListView::AddRowByRef(entry_ref *ref) {
 	BRow *row = new BRow(20);
 
 	file.GetSize(&size);
-	row->SetField(new BStringField(path.Path()), 0);
+	int32 index = 0;
+	
 	BBitmap *icon = getBitmap(path.Path(), kIconSize);
-	row->SetField(new BBitmapField(icon), 1);
-	row->SetField(new BStringField(ref->name), 2);
-	row->SetField(new BSizeField(size), 3);
-	row->SetField(new BDateField(&s.st_mtime), 4);
+	row->SetField(new BBitmapField(icon), index++);
+	row->SetField(new BStringField(ref->name), index++);
+	row->SetField(new BSizeField(size), index++);
+	row->SetField(new BDateField(&s.st_mtime), index++);
+	row->SetField(new BDateField(&s.st_ctime), index++);
+	
+	char *type = MIMETypeFor(ref);
+	char kind[B_MIME_TYPE_LENGTH];
+	BMimeType mimedb(type);
+	mimedb.GetShortDescription(kind);
+	free(type);
+	
+	row->SetField(new BStringField(kind), index++);
+	
+	BPath parentPath;
+	path.GetParent(&parentPath);
+	row->SetField(new BStringField(parentPath.Path()), index++);
+	
+	row->SetField(new BStringField(""), index++);		
 	
 	for (iIt = fIndexAttr.begin(); iIt != fIndexAttr.end(); iIt++) {
 		attr_info info;
@@ -442,8 +468,9 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 //	uint32 type
 //	bool statField
 //	bool editable
-		
-	for (int32 i = kAttrIndexOffset; i < CountColumns(); i++) SetColumnVisible(i, false);
+
+//	Need to offset 1 for the icon col		
+	for (int32 i = 1; i < CountColumns(); i++) SetColumnVisible(i, false);
 	
 	while (source->Position() < source->BufferLength()) {
 		char *publicName = NULL;
@@ -553,28 +580,89 @@ status_t QueryColumnListView::ExtractViewState(BMallocIO *buffer) {
 	};
 };
 
-status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
-	status_t ret = B_OK;
-	int32 index = kAttrIndexOffset;
+void QueryColumnListView::AddColInfo(col_info *column) {
+	fInternalCols[column->internalName] = column;
+	fPublicCols[column->publicName] = column;
+	fHashCols[column->hash] = column;
+};
 
-	float maxWidthMulti = be_plain_font->StringWidth("M");
+col_info *QueryColumnListView::MakeColInfo(BColumn *col, uint32 hash,
+	const char *publicName, const char *internalName, uint32 type) {
+
+	col_info *ret = new col_info;
+	ret->col = col;
+	ret->hash = hash;
+	ret->publicName = publicName;
+	ret->internalName = internalName;
+	ret->type = type;
 	
-	BStringColumn *path = new MenuStringColumn("Path", 0, 0, 0, B_ALIGN_CENTER);
-	path->SetShowHeading(false);
-	AddColumn(path, 0);
-	
+	return ret;
+};
+
+status_t QueryColumnListView::AddStatColumns(void) {
+	int32 index = 0;
+	col_info *colInfo = NULL;
+
 	BBitmapColumn *icon = new BBitmapColumn("", 20, 20, 20, B_ALIGN_CENTER);
 	icon->SetShowHeading(false);
-	AddColumn(icon, 1);
-	
-	BStringColumn *name = new MenuStringColumn("Name", 100, 200, 300,
-		B_TRUNCATE_END, B_ALIGN_LEFT);
-	AddColumn(name, 2);
-	AddColumn(new MenuSizeColumn("Size", 20, 50, 100, B_ALIGN_RIGHT), 3);
-	AddColumn(new MenuDateColumn("Modified", 50, 100, 200, B_ALIGN_LEFT), 4);
+	AddColumn(icon, index++);
 
+	MenuStringColumn *name = new MenuStringColumn("Name", 200, 100, 300,
+		B_TRUNCATE_END, B_ALIGN_LEFT);
+	AddColumn(name, index++);
+	colInfo = MakeColInfo(name, CalculateHash("Name", B_STRING_TYPE), "Name",
+		kAttrStatName, B_STRING_TYPE);
+	AddColInfo(colInfo);
+
+	MenuSizeColumn *size = new MenuSizeColumn("Size", 50, 25, 100, B_ALIGN_RIGHT);
+	AddColumn(size, index++);
+	colInfo = MakeColInfo(size, CalculateHash("Size", B_OFF_T_TYPE), "Size",
+		kAttrStatSize, 	B_OFF_T_TYPE);
+	AddColInfo(colInfo);
+
+	MenuDateColumn *modified = new MenuDateColumn("Modified", 200, 100, 300,
+		B_ALIGN_LEFT);
+	AddColumn(modified, index++);
+	colInfo = MakeColInfo(modified, CalculateHash("Modified", B_TIME_TYPE),
+		"Modifed", kAttrStatModified, B_TIME_TYPE);
+	AddColInfo(colInfo);
+
+	MenuDateColumn *created = new MenuDateColumn("Created", 200, 100, 300,
+		B_ALIGN_LEFT);
+	AddColumn(created, index++);
+	colInfo = MakeColInfo(created, CalculateHash("Created", B_TIME_TYPE), "Created",
+		kAttrStatCreated, B_TIME_TYPE);
+	AddColInfo(colInfo);
+	
+	MenuStringColumn *kind = new MenuStringColumn("Kind", 100, 50, 200, B_ALIGN_LEFT);
+	AddColumn(kind, index++);
+	colInfo = MakeColInfo(kind, CalculateHash("Kind", B_STRING_TYPE), "Kind",
+		kAttrMIMEType, B_STRING_TYPE);		
+
+	MenuStringColumn *path = new MenuStringColumn("Path", 50, 100, 200,
+		B_ALIGN_LEFT);
+	AddColumn(path, index++);
+	colInfo = MakeColInfo(path, CalculateHash("Path", B_STRING_TYPE), kAttrPath,
+		"Path", B_STRING_TYPE);
+	AddColInfo(colInfo);
+	
+	MenuStringColumn *perm = new MenuStringColumn("Permissions", 50, 100, 200,
+		B_ALIGN_LEFT);
+	AddColumn(perm, index++);
+	colInfo = MakeColInfo(perm, CalculateHash("Permissions", B_STRING_TYPE),
+		"Permissions", kAttrStatMode, B_STRING_TYPE);
+	
+	fAttrIndexOffset = index;
+	
 	SetSortingEnabled(true);
 	SetSortColumn(name, false, true);
+};
+
+status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
+	status_t ret = B_OK;
+	int32 index = fAttrIndexOffset;
+
+	float maxWidthMulti = be_plain_font->StringWidth("M");
 
 	for (int32 i = 0; msg->FindString("attr:name", i) != NULL; i++) {
 		bool viewable = false;
@@ -662,6 +750,23 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 	};
 	
 	return ret;
+};
+
+uint32 QueryColumnListView::CalculateHash(const char *string, uint32 type) {
+	char c;
+	uint32 hash = 0;
+
+	while((c = *string++) != 0) {
+		hash = (hash << 7) ^ (hash >> 24);
+		hash ^= c;
+	}
+
+	hash ^= hash << 12;
+
+	hash &= ~0xff;
+	hash |= type;
+
+	return hash;
 };
 
 int32 QueryColumnListView::BackgroundAdder(void *arg) {

@@ -7,6 +7,7 @@
 #include <NodeMonitor.h>
 #include <PopUpMenu.h>
 #include <Query.h>
+#include <TypeConstants.h>
 #include <Volume.h>
 #include <VolumeRoster.h>
 #include <kernel/fs_info.h>
@@ -96,8 +97,14 @@ class QueryColumnListView : public BColumnListView {
 	private:
 				status_t	ExtractColumnState(BMallocIO *buffer);
 				status_t	ExtractViewState(BMallocIO *buffer);
+				status_t	AddStatColumns(void);
 				status_t	AddMIMEColumns(BMessage *msg);
 			static int32	BackgroundAdder(void *arg);
+				uint32		CalculateHash(const char *name, uint32 type);
+				void		AddColInfo(col_info *column);
+				col_info	*MakeColInfo(BColumn *col, uint32 hash,
+								const char *publicName, const char *internalName,
+								uint32 type);
 			
 				status_t	ExtractPredicate(entry_ref *ref, char **buffer,
 								int32 *length);
@@ -118,6 +125,7 @@ class QueryColumnListView : public BColumnListView {
 			hash_info_map	fHashCols;
 		internal_info_map	fInternalCols;
 			public_info_map	fPublicCols;
+				int32		fAttrIndexOffset;
 
 				ref_map		fRefRows;
 				
