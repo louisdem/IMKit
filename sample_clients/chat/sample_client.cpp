@@ -68,7 +68,7 @@ MyApp::MyApp()
 	fMan( new IM::Manager(BMessenger(this)) ),
 	fIsQuiting(false)
 {
-	add_system_beep(kImNewMessageSound, 0);
+	add_system_beep_event(kImNewMessageSound, 0);
 
 	fMan->StartListening();
 	
