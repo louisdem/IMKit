@@ -4,7 +4,7 @@ SUBDIRS = \
 	im_client \
 	logger \
 	tracker_addons \
-	infopopper \
+	im_infopopper \
 	im_binlogger \
 	im_binlog_viewer
 
