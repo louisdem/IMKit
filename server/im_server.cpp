@@ -1469,12 +1469,42 @@ Server::GenerateSettingsTemplate()
 	
 	main_msg.AddMessage("setting", &blink_db);
 	
+	BMessage auto_start;
+	auto_start.AddString("name", "auto_start");
+	auto_start.AddString("description", "Auto-start im_server");
+	auto_start.AddInt32("type", B_BOOL_TYPE );
+	auto_start.AddBool("default", true );
+	
+	main_msg.AddMessage("setting", &auto_start);
+	
 	return main_msg;
 }
 
 status_t
 Server::UpdateOwnSettings( BMessage settings )
 {
+	bool auto_start=false;
+	
+	if ( settings.FindBool("auto_start", &auto_start ) == B_OK )
+	{
+		if ( auto_start )
+		{ // add auto-start
+			if ( system("grep -q AAA_im_server_BBB /boot/home/config/boot/UserBootscript") )
+			{ // not present in auto-start, add
+				system("echo \"# Added by IM Kit.      AAA_im_server_BBB\" >> /boot/home/config/boot/UserBootscript");
+				system("echo \"/boot/home/config/servers/im_server &  # AAA_im_server_BBB\" >> /boot/home/config/boot/UserBootscript");
+			}
+		} else
+		{ // remove auto-start
+			if ( system("grep -q AAA_im_server_BBB /boot/home/config/boot/UserBootscript") == 0 )
+			{ // present in auto-start, remove
+				system("grep -v AAA_im_server_BBB /boot/home/config/boot/UserBootscript > /tmp/im_kit_temp");
+				system("cp /tmp/im_kit_temp /boot/home/config/boot/UserBootscript");
+				system("rm /tmp/im_kit_temp");
+			}
+		}
+	}
+	
 	return B_OK;
 }
 

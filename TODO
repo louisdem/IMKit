@@ -10,7 +10,6 @@ Fixes
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * long message bug in LOG(), make buffer dunamic somehow?
 * Add link to im_server in Be menu or in Preferences
-* Add auto-start option for im_server
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed
 
 New features
