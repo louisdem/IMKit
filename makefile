@@ -17,7 +17,9 @@ default .DEFAULT :
 	# Unpack the Server icons.
 	-mkdir -p /boot/home/config/settings/im_kit	# Yes, it won't work if it does not exist.
 	-unzip -n server/Icons.zip -d /boot/home/config/settings/im_kit/icons
-
+	-mkdir -p ~/config/include/libim	# Yes, it won't work if it does not exist.
+	-cp -u libim/*.h ~/config/include/libim
+	
 	-@for f in $(SUBDIRS) ; do \
 		$(MAKE) -C $$f -f makefile $@ || exit -1; \
 	done

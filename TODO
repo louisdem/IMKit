@@ -8,7 +8,6 @@ ___ Things to fix
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * long message bug in LOG(), make buffer dynamic somehow?
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
-* Add "Send" button to client
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Alt-C in client doesn't work
 * Extract Deskbar icon from im_server, let it live it's own life
@@ -20,6 +19,10 @@ ___ Things to fix
 
 
 ___ New features
+
+Support for wide char encodings (utf-16 etc)?
+
+Per connection encoding setting
 
 Auto-send a user defined message to blocked contacts if they send a message (don't send again
 if already sent the last ten seconds, to prevent ping pong flood)

@@ -1,0 +1,7 @@
+  * The ICQ add-on is built by the enclosed makefiles, but it requires that you
+    download and build/install the following libraries. If you don't wish to
+    build the add-on then remove the entry from src/protocols/makefile.
+    - libsigc++ (http://sourceforge.net/projects/libsigc/)
+      Get version 1.0.4 of libsigc++, I don't think 1.2.x will compile on BeOS.
+    - libicq2000 (http://libicq2000.sourceforge.net/)
+    Configure both with --prefix=/boot/home/config and "make install" them.
