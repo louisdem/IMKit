@@ -8,6 +8,9 @@
 #include "JabberHandler.h"
 #include "JabberManager.h"
 
+#include <list>
+using std::list;
+
 class JabberConnection;
 
 class Jabber : public IM::Protocol, public JabberManager, public JabberHandler
@@ -62,6 +65,8 @@ class Jabber : public IM::Protocol, public JabberManager, public JabberHandler
 		BString		fServer;
 		BString		fPassword;
 		
+		typedef list<BString>	StrList; // new buddy added when off-line.
+		StrList*			fLaterBuddyList;
 		//temp?
 		bool 	fAuth;
 		bool 	fRostered;

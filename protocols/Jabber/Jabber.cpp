@@ -29,7 +29,10 @@ Jabber::Jabber()
 }
 
 Jabber::~Jabber()
-{}
+{
+	fLaterBuddyList->empty();
+	delete fLaterBuddyList;
+}
 
 status_t
 Jabber::Init( BMessenger msgr )
@@ -40,7 +43,9 @@ Jabber::Init( BMessenger msgr )
 	fAgent=false;
 	fFullLogged=false;
 	fPerc=0.0;
+	fLaterBuddyList=new StrList;
 	return B_OK;
+	
 }
 
 status_t
@@ -151,7 +156,7 @@ Jabber::Process( BMessage * msg )
 					
 										
 					if (count > 0 ) {
-						//list<char *> buddies;
+						
 						for ( int i=0; msg->FindString("id",i); i++ )
 						{
 							const char * id = msg->FindString("id",i);
@@ -169,9 +174,12 @@ Jabber::Process( BMessage * msg )
 									BuddyStatusChanged(id,OFFLINE_TEXT);
 								}
 								
-								//else
-								// we add to a temp list.
-															 
+								else
+								{
+								 // we add to a temp list.
+								 // when logged in we will register the new buddy..
+									 fLaterBuddyList->push_back(BString(id));
+								}							 
 							} 
 						};
 						
@@ -182,14 +190,21 @@ Jabber::Process( BMessage * msg )
 					break;
 				case IM::UNREGISTER_CONTACTS:
 				
-						{
+				{
 						const char * buddy=NULL;
 						
 						for ( int i=0; msg->FindString("id", i, &buddy) == B_OK; i++ )
 						{
+							if(!fFullLogged)
 							BuddyStatusChanged(buddy,OFFLINE_TEXT);
+							else
+							{
+							 JabberContact* contact=getContact(buddy);
+							 if(contact)
+								RemoveContact(contact);
+							}
 						}
-					} 
+				} 
 					
 					break;
 				case IM::USER_STARTED_TYPING: 
@@ -419,6 +434,18 @@ Jabber::LoggedIn()
 	fServerMsgr.SendMessage( &msg );
 	
 	fFullLogged=true;
+	
+	while (fLaterBuddyList->size() != 0)
+	{
+		BString id = *(fLaterBuddyList->begin());
+		fLaterBuddyList->pop_front();	// removes first item
+		JabberContact* contact=getContact(id.String());
+		if(!contact)
+		{
+			AddContact(id.String(),id.String(),"");
+			BuddyStatusChanged(id.String(),OFFLINE_TEXT);
+		}	
+	}
 }
 
 void
@@ -733,6 +760,7 @@ void
 Jabber::CheckLoginStatus()
 {
 	if(fAuth && fRostered &&  fAgent) LoggedIn();
+	
 		
 }
 
