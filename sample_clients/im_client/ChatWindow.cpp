@@ -1044,9 +1044,9 @@ ChatWindow::startNotify()
 	
 	((ChatApp*)be_app)->Flash( BMessenger(this) );
 	
-	if ( (Workspaces() & (1 << current_workspace())) == 0)
+//	if ( (Workspaces() & (1 << current_workspace())) == 0) // beep if on another workspace
+	if ( !IsActive() ) // beep if not active
 	{
-		// beep if on other workspace
 		system_beep(kImNewMessageSound);
 	}
 }
