@@ -23,6 +23,8 @@ InfoWindow::InfoWindow()
 	Hide();
 	
 	fDeskbarLocation = BDeskbar().Location();
+	
+	fWidth = 300.0f;
 };
 
 InfoWindow::~InfoWindow(void) {
@@ -44,6 +46,7 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			ResizeAll();
 		}	break;
 		
+		case B_CREATE_PROPERTY:
 		case InfoPopper::AddMessage: {		
 			int8 type;
 			const char *message;
@@ -136,7 +139,9 @@ void InfoWindow::ResizeAll(void) {
 			(*i)->Bounds().Height());
 	};
 	
-	ResizeTo(maxw + fBorder->BorderSize() * 2, curry - 1 + fBorder->BorderSize());
+	//ResizeTo(maxw + fBorder->BorderSize() * 2, curry - 1 + fBorder->BorderSize());
+	
+	ResizeTo( fWidth, curry - 1 + fBorder->BorderSize());
 	
 	PopupAnimation(Bounds().Width(), Bounds().Height());
 };
@@ -204,20 +209,29 @@ BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *sp
 	BPropertyInfo prop_info(main_prop_list);
 	printf("Looking for property %s\n", prop);
 	if ( strcmp(prop,"message") == 0 ) {
-		printf("Matching specifier\n");
 		
-		int32 i;
-		if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
+		printf("Matching specifier..\n");
 		
-		if ( i >= 0 && i < fInfoViews.size() ) {
-			printf("Found message\n");
+		if ( msg->what == B_CREATE_PROPERTY )
+		{
+			printf("Create\n");
 			msg->PopSpecifier();
-			return fInfoViews[i];
-		}
+			return this;
+		} else
+		{
+			int32 i;
+			if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
 		
-		printf("Index out of range: %ld\n",i);
-		msg->PrintToStream();
-		return NULL;
+			if ( i >= 0 && i < fInfoViews.size() ) {
+				printf("Found message\n");
+				msg->PopSpecifier();
+				return fInfoViews[i];
+			}
+		
+			printf("Index out of range: %ld\n",i);
+			msg->PrintToStream();
+			return NULL;
+		}
 	}
 	return BWindow::ResolveSpecifier(msg, index, spec, form, prop);
 };

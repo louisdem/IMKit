@@ -7,6 +7,7 @@
 #include <Messenger.h>
 #include <stdio.h>
 #include <PropertyInfo.h>
+#include <Font.h>
 
 const float kEdgePadding = 2.0;
 const float kCloseWidth = 10.0;
@@ -307,7 +308,16 @@ void InfoView::Draw(BRect drawBounds) {
 		float ty = kEdgePadding+fh.ascent;
 		
 		SetFont( fTitle.second );
-		DrawString(fTitle.first.String(),BPoint(tx,ty));
+		
+		BString str(fTitle.first);
+		
+		TruncateString(
+			&str, 
+			B_TRUNCATE_END, 
+			Bounds().Width()-tx-kEdgePadding-kCloseWidth
+		);
+		
+		DrawString(str.String(),BPoint(tx,ty));
 	}
 	
 	// draw content
@@ -328,11 +338,20 @@ void InfoView::Draw(BRect drawBounds) {
 		float ty = y + kEdgePadding + fh.ascent;
 		
 		// draw the text
-		DrawString(i->first.String(),BPoint(tx,ty));
+		BString str(i->first);
+		
+		TruncateString(
+			&str, 
+			B_TRUNCATE_END, 
+			Bounds().Width()-tx-kEdgePadding-kCloseWidth
+		);
+		
+		DrawString(str.String(),BPoint(tx,ty));
 		
 		y += fh.leading + fh.descent + fh.ascent;
 	}
 	
+	// draw 'close rect'
 	BRect closeRect = bound;
 	closeRect.left = closeRect.right - kCloseWidth;
 	SetHighColor(218, 218, 218);

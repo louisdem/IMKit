@@ -45,6 +45,8 @@ class InfoWindow : public BWindow
 
 		BString				fStatusText;
 		BString				fMessageText;
+		
+		float				fWidth;
 };
 
 extern property_info main_prop_list[];
