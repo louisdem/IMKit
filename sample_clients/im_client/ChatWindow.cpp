@@ -502,8 +502,9 @@ ChatWindow::MessageReceived( BMessage * msg )
 			
 			int32 im_what=IM::ERROR;
 			
-			msg->FindInt32("im_what",&im_what);
-				
+			if ( msg->FindInt32("im_what",&im_what) != B_OK )
+				im_what = IM::ERROR;
+			
 			int32 old_sel_start, old_sel_end;
 			
 			char timestr[10];
@@ -532,14 +533,25 @@ ChatWindow::MessageReceived( BMessage * msg )
 				
 				case IM::ERROR:
 				{
-					fText->Append(timestr, C_TIMESTAMP, C_TIMESTAMP, F_TIMESTAMP);
-					fText->Append("Error: ", C_TEXT, C_TEXT, F_TEXT);
-					fText->Append(msg->FindString("message"), C_TEXT, C_TEXT, F_TEXT);
-					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
+					BMessage error;
+					msg->FindMessage("message", &error);
 					
-					fText->ScrollToSelection();
+					int32 error_what = -1;
+					
+					error.FindInt32("im_what", &error_what );
+					
+					if ( error_what != IM::USER_STARTED_TYPING && 
+						 error_what != IM::USER_STOPPED_TYPING )
+					{ // ignore messages du to typing
+						fText->Append(timestr, C_TIMESTAMP, C_TIMESTAMP, F_TIMESTAMP);
+						fText->Append("Error: ", C_TEXT, C_TEXT, F_TEXT);
+						fText->Append(msg->FindString("error"), C_TEXT, C_TEXT, F_TEXT);
+						fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
+					
+						fText->ScrollToSelection();
 
-					if (!IsActive()) startNotify();
+						if (!IsActive()) startNotify();
+					}
 				}	break;
 				
 				case IM::MESSAGE_RECEIVED:

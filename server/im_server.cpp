@@ -737,21 +737,12 @@ Server::FindBestProtocol( Contact & contact )
 	// first of all, check if source of last message is still online
 	// if it is, we use it.
 	
-/*	map<Contact,string>::iterator i = fPreferredProtocol.find( contact );
-	
-	if ( i != fPreferredProtocol.end() )
-		LOG("im_server", liDebug, "Preferred protocol is [%s]", (i->second).c_str() );
-*/	
 	if ( fPreferredProtocol[contact].length() > 0 )
 	{
 		protocol = fPreferredProtocol[contact];
 		
-//		LOG("im_server", liDebug, "Preferred protocol [%s]", protocol.c_str() );
-		
 		if ( contact.FindConnection(protocol.c_str(), connection) == B_OK )
 		{
-//			LOG("im_server", liDebug, "Preferred protocol connection [%s]", connection );
-			
 			if ( fStatus[connection] == AWAY_TEXT || fStatus[connection] == ONLINE_TEXT )
 			{
 				if ( fStatus[protocol] != OFFLINE_TEXT )
@@ -770,26 +761,40 @@ Server::FindBestProtocol( Contact & contact )
 		
 		if ( fStatus[curr] == AWAY_TEXT || fStatus[curr] == ONLINE_TEXT )
 		{
+			// extract protocol part of connection
 			int separator_pos = curr.find(":");
-			
 			curr.erase(separator_pos, strlen(connection)-separator_pos);
 			
 			if ( fStatus[curr] != OFFLINE_TEXT )
-				// make sure WE'RE online too. Shouldn't
+			{ // make sure WE'RE online on this protocol too
 				protocol = curr;
+				LOG("im_server", liDebug, "Using online protocol %s", protocol.c_str() );
+				return protocol;
+			}
 		}
 	}
 	
-	if ( protocol == "" )
-	{ // no online protocol found, look for one capable of offline messaging
-		protocol = "ICQ";
-		LOG("im_server", liDebug, "Using offline protocol %s", protocol.c_str() );
-	} else
-	{
-		LOG("im_server", liDebug, "Using online protocol %s", protocol.c_str() );
+	// no online protocol found, look for one capable of offline messaging
+	for ( map<string,Protocol*>::iterator p = fProtocols.begin();
+			p != fProtocols.end(); p++ )
+	{ // loop over protocols
+		if ( p->second->HasCapability( Protocol::OFFLINE_MESSAGES ) )
+		{ // does this protocol handle offline messages?
+			if ( contact.FindConnection( p->second->GetSignature(), connection ) == B_OK )
+			{ // check if contact has a connection for this protocol
+				if ( fStatus[p->second->GetSignature()] != OFFLINE_TEXT )
+				{ // make sure we're online with this protocol
+					protocol = p->first;
+					LOG("im_server", liDebug, "Using offline protocol %s", protocol.c_str() );
+					return protocol;
+				}
+			}
+		}
 	}
 	
-	return protocol;
+	// No matching protocol!
+	
+	return "";
 }
 
 /**
@@ -812,7 +817,23 @@ Server::MessageToProtocols( BMessage * msg )
 		
 		if ( msg->FindString("protocol") == NULL )
 		{ // no protocol specified, figure one out
-			msg->AddString("protocol", FindBestProtocol(contact).c_str() );
+			string protocol = FindBestProtocol(contact);
+			
+			if ( protocol == "")
+			{ // No available connection, can't send message!
+				LOG("im_server", liHigh, "Can't send message, no possible connection");
+				
+				// send ERROR message here..
+				BMessage error(ERROR);
+				error.AddRef("contact", contact);
+				error.AddString("error", "Can't send message, no available connections. Go online!");
+				error.AddMessage("message", msg);
+				
+				Broadcast( &error );
+				return;
+			}
+			
+			msg->AddString("protocol", protocol.c_str() );
 		}// done chosing protocol
 		
 		if ( fStatus[msg->FindString("protocol")] == OFFLINE_TEXT )
