@@ -139,7 +139,6 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		case SET_AWAY:
 		case SET_OFFLINE:
 		{
-			printf("IM: set status\n");
 			BMessage newmsg(IM::MESSAGE);
 			newmsg.AddInt32("im_what", IM::SET_STATUS);
 			
@@ -156,7 +155,6 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		
 		case OPEN_SETTINGS:
 		{
-			printf("IM: open settings\n");
 			bool settings_found = false;
 			
 			for ( int i=0; be_app->WindowAt(i); i++ )
@@ -178,28 +176,44 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 void
 IM_DeskbarIcon::MouseDown( BPoint p )
 {
-	BPopUpMenu * menu = new BPopUpMenu("im_db_menu");
+	int32 buttons;
+	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
+	
+	if ( buttons & B_SECONDARY_MOUSE_BUTTON )
+	{
+		BPopUpMenu * menu = new BPopUpMenu("im_db_menu");
 
-	// set status
-	BMenu * status = new BMenu("Set status");
-	status->AddItem( new BMenuItem("Online", new BMessage(SET_ONLINE)) );	
-	status->AddItem( new BMenuItem("Away", new BMessage(SET_AWAY)) );	
-	status->AddItem( new BMenuItem("Offline", new BMessage(SET_OFFLINE)) );	
-	status->SetTargetForItems( this );
+		// set status
+		BMenu * status = new BMenu("Set status");
+		status->AddItem( new BMenuItem("Online", new BMessage(SET_ONLINE)) );	
+		status->AddItem( new BMenuItem("Away", new BMessage(SET_AWAY)) );	
+		status->AddItem( new BMenuItem("Offline", new BMessage(SET_OFFLINE)) );	
+		status->SetTargetForItems( this );
 	
-	menu->AddItem(status);
+		menu->AddItem(status);
 	
-	menu->AddSeparatorItem();
+		menu->AddSeparatorItem();
 	
-	// settings
-	menu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
+		// settings
+		menu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
 	
-	menu->SetTargetForItems( this );
+		menu->SetTargetForItems( this );
 	
-	menu->Go(
-		ConvertToScreen(p),
-		true // delivers message
-	);
+		menu->Go(
+			ConvertToScreen(p),
+			true // delivers message
+		);
+	}
+	
+	if ( buttons & B_PRIMARY_MOUSE_BUTTON )
+	{
+		list<BMessenger>::iterator i = fMsgrs.begin();
+		
+		if ( i != fMsgrs.end() )
+		{
+			(*i).SendMessage( IM::DESKBAR_ICON_CLICKED );
+		}
+	}
 }
 
 // Some code borrowed from CKJ <cedric-vincent@wanadoo.fr>

@@ -25,6 +25,9 @@ class MyApp : public BApplication
 		
 		bool IsQuiting();
 		
+		void Flash( BMessenger );
+		void NoFlash( BMessenger );
+		
 	private:
 		ChatWindow * 	findWindow( entry_ref & );
 		

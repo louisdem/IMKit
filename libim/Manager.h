@@ -20,6 +20,9 @@ class Manager : public BLooper
 
 		status_t SendMessage( BMessage * msg, BMessage * reply=NULL );
 		
+		void FlashDeskbar( BMessenger );
+		void StopFlashingDeskbar( BMessenger );
+		
 		// 
 		void MessageReceived( BMessage * );
 		

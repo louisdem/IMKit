@@ -58,7 +58,12 @@ enum message_what_codes {
 		Information about protocols
 	*/
 	GET_LOADED_PROTOCOLS	= 'IMgp',
-	SERVER_BASED_CONTACT_LIST	= 'IMsl'
+	SERVER_BASED_CONTACT_LIST	= 'IMsl',
+	
+	/*
+		Deskbar icon related messages
+	*/
+	DESKBAR_ICON_CLICKED	= 'DBcl'
 };
 
 #define IM_SERVER_SIG "application/x-vnd.beclan.im_kit"

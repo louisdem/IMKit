@@ -220,6 +220,19 @@ MyApp::findWindow( entry_ref & ref )
 	return NULL;
 }
 
+void
+MyApp::Flash( BMessenger msgr )
+{
+	fMan->FlashDeskbar(msgr);
+}
+
+void
+MyApp::NoFlash( BMessenger msgr )
+{
+	fMan->StopFlashingDeskbar(msgr);
+}
+
+
 /// CHAT WINDOW
 
 ChatWindow::ChatWindow( entry_ref & ref )
@@ -309,6 +322,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case IM::DESKBAR_ICON_CLICKED:
+		{ // deskbar icon clicked, move to current workspace and activate
+			SetWorkspaces( 1 << current_workspace() );
+			Activate();
+		}	break;
+		
 		case IM::MESSAGE:
 		{
 			entry_ref contact;
@@ -391,6 +410,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 						char str[256];
 						sprintf(str, "√ %s", fTitleCache);
 						SetTitle(str);
+						((MyApp*)be_app)->Flash( BMessenger(this) );
 						if ( (Workspaces() & (1 << current_workspace())) == 0)
 						{
 							// beep if on other workspace
@@ -477,9 +497,9 @@ void
 ChatWindow::WindowActivated(bool active)
 {
 	if (active && fChangedNotActivated) {
-		fChangedNotActivated = false;	
+		fChangedNotActivated = false;
 		SetTitle(fTitleCache);
-
+		((MyApp*)be_app)->NoFlash( BMessenger(this) );
 	}
 	BWindow::WindowActivated(active);
 }

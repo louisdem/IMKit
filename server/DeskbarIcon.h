@@ -4,6 +4,8 @@
 #include <View.h>
 #include <Resources.h>
 #include <Bitmap.h>
+#include <list>
+#include <Messenger.h>
 
 class IM_DeskbarIcon : public BView
 {
@@ -42,6 +44,7 @@ class IM_DeskbarIcon : public BView
 		
 		// for flashing
 		int		fFlashCount, fBlink;
+		list<BMessenger>	fMsgrs;
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();
