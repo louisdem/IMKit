@@ -5,10 +5,10 @@ namespace InfoPopper {
 	
 	// Message types you can send
 	enum info_type {
-		Information,	// Normal message
-		Important,		// Important message - more visible
-		Error,			// Error message (displays in red)
-		Progress		// Progress bar - allows updating
+		Information = 0,	// Normal message
+		Important = 1,		// Important message - more visible
+		Error = 2,			// Error message (displays in red)
+		Progress = 3,		// Progress bar - allows updating
 	};
 	
 	enum info_messages {

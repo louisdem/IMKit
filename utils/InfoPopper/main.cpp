@@ -1,7 +1,16 @@
 #include "InfoWindow.h"
 #include <Application.h>
+#include <Beep.h>
 
 #include <libim/InfoPopper.h>
+
+const char *kSoundNames[] = {
+	"InfoPopper: Information Message",
+	"InfoPopper: Important Message",
+	"InfoPopper: Error Message",
+	"InfoPopper: Progress Message",
+	NULL
+};
 
 class InfoApp : public BApplication {
 	public:
@@ -14,7 +23,12 @@ class InfoApp : public BApplication {
 		void MessageReceived(BMessage *msg) {
 			switch (msg->what) {
 				case InfoPopper::AddMessage: {
-					BMessenger(fWin).SendMessage(msg);
+					int8 type = 0;
+					if (msg->FindInt8("type", &type) == B_OK) {
+printf("Type: %i / %s\n", type, kSoundNames[type - 1]);
+						system_beep(kSoundNames[type - 1]);
+						BMessenger(fWin).SendMessage(msg);
+					};
 				} break;
 				
 				default:
@@ -50,6 +64,9 @@ class InfoApp : public BApplication {
 //#pragma mark -
 
 int main(int argc, char *argv[]) {
+	int32 i = 0;
+	while (kSoundNames[i] != NULL) add_system_beep_event(kSoundNames[i++], 0);
+
 	InfoApp app;
 	app.Run();
 };
