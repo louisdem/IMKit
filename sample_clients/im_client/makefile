@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= im_client
+SVG_ICON=IMClient.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/clients
 
