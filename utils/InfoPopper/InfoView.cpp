@@ -579,7 +579,9 @@ BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
 			
 			switch (iconType) {
 				case Attribute: {
-					icon = ReadNodeIcon(path.Path(), size);
+					BBitmap *temp = ReadNodeIcon(path.Path(), size);
+					icon = rescale_bitmap(temp, size);
+					delete temp;
 				} break;
 				case Contents: {
 					// ye ol' "create a bitmap from contens of file"
