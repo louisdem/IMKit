@@ -1,7 +1,7 @@
 # makefile for all sample code
 
 SUBDIRS = \
-	chat \
+	im_client \
 	logger \
 	tracker_addons
 
