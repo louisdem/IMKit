@@ -102,8 +102,9 @@ void IconMenuItem::DrawContent() {
 	iconPos.right = b.left + fIcon->Bounds().Width();
 	iconPos.bottom = iconPos.top + fIcon->Bounds().Height();
 	parent->DrawBitmap(fIcon, iconPos);
-	
+		
 	parent->MovePenTo(loc.x + fIcon->Bounds().Width() + kEdgePadding,
 		loc.y + fFontHeight.ascent + kEdgePadding);
+	parent->SetDrawingMode( B_OP_COPY );
 	parent->DrawString(fLabel.String());
 };
