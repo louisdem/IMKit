@@ -793,7 +793,7 @@ JabberHandler::BuildRoster()
 			else
 				contact->SetGroup("Unsorted");
 		}
-
+		
 		UpdateRoster(contact);
 
 		if (previous) 
@@ -1017,8 +1017,18 @@ JabberHandler::UpdateRoster(JabberContact * contact)
 		{
 			current->SetName(contact->GetName());
 			current->SetGroup(contact->GetGroup());
+			
+			if(contact->GetSubscription() == "remove"){
+			
+				fRoster->RemoveItem(current);
+				//delete current;
+				delete contact;
+				return;
+			}
+			else
 			if(contact->GetSubscription() != "")
 				current->SetSubscription(contact->GetSubscription());
+			
 			delete contact;
 			return;
 		}
