@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= IM_Start_conversation
+TARGET_DIR=../../../build/tracker-addons
 
 # specify the type of binary
 #	APP:	Application

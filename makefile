@@ -22,8 +22,8 @@ default .DEFAULT :
 
 	# Create the _APP_ link needed by all protocols. Note you must do make install
 	# for this to work.
-	-ln -sf /boot/home/config/servers/im_server protocols/ICQ/_APP_
-	-ln -sf /boot/home/config/servers/im_server protocols/AIM/_APP_
+	-ln -sf `pwd`/build/im_server protocols/ICQ/_APP_
+	-ln -sf `pwd`/build/im_server protocols/AIM/_APP_
 
 	# must install lib to make the rest.
 	$(MAKE) -C libim install

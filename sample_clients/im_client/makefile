@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= im_client
+TARGET_DIR=../../build
 
 # specify the type of binary
 #	APP:	Application
@@ -156,6 +157,6 @@ else
   LIBS += zeta icon
 endif
 
-INSTALL_DIR= ../../build
+INSTALL_DIR= ../../install
 
 include $(BUILDHOME)/etc/makefile-engine.IMkit

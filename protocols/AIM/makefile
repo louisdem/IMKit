@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= AIM
+TARGET_DIR=../../build/protocols
 
 # specify the type of binary
 #	APP:	Application

@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= im_logger
+TARGET_DIR=../../build
 
 # specify the type of binary
 #	APP:	Application
@@ -143,6 +144,6 @@ ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot
 	DEFINES += BONE
 endif
 
-INSTALL_DIR= ../../build
+INSTALL_DIR= ../../install
 
 include $(BUILDHOME)/etc/makefile-engine.IMkit

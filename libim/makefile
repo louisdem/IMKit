@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= libim.so
+TARGET_DIR=../build/lib
 
 # specify the type of binary
 #	APP:	Application

@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= im_server
+TARGET_DIR = ../build
 
 # specify the type of binary
 #	APP:	Application

@@ -4,6 +4,10 @@
 
 ##	Supports Generic Makefile v2.0, 2.01, 2.1, 2.2, 2.3, 2.4
 
+#setting LIBPATHS
+LIBPATHS+=build/lib
+
+
 #	determine wheather running on x86 or ppc
 MACHINE=$(shell uname -m)
 ifeq ($(MACHINE), BePC)
@@ -33,6 +37,9 @@ endif
 # 	specify that the binary should be created in the object directory by default
 ifeq ($(TARGET_DIR), )
 	TARGET_DIR	:= $(OBJ_DIR)
+else
+	
+	DUMMY:=$(shell mkdir -p "$(TARGET_DIR)")
 endif
 
 #	the target goes in the TARGET_DIR
