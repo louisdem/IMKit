@@ -487,6 +487,9 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		
 		if ( !BMessenger(IM_SERVER_SIG).IsValid() )
 		{ // im_server not running!
+			fStatus = 2;
+			fModeIcon = fOfflineIcon;
+			
 			LOG("deskbar", liDebug, "Build menu: im_server not running");
 			fMenu->AddItem( new BMenuItem("Start im_server", new BMessage(START_IM_SERVER)) );
 			
@@ -593,6 +596,8 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		fMenu->Go(p, true, true, r, true);
 		
 		delete fMenu;
+		
+		return;
 	};
 	
 	if (buttons & B_PRIMARY_MOUSE_BUTTON) {
@@ -601,6 +606,8 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		if (i != fMsgrs.end()) {
 			(*i).SendMessage( IM::DESKBAR_ICON_CLICKED );
 		};
+		
+		return;
 	};
 	
 
@@ -613,6 +620,8 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		
 		BMessenger tracker("application/x-vnd.Be-TRAK");
 		tracker.SendMessage(&openPeople);
+		
+		return;
 	}
 }
 
