@@ -10,6 +10,7 @@ Fixes
 * ChatWindow - resize problems with textview?
 * Change URLTextView so it highlights URL:s
 * URLTextView doesn't show selected text as selected
+* Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 
 New features
 

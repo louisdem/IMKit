@@ -66,7 +66,7 @@ LoggerApp::MessageReceived( BMessage * msg )
 			
 			char timestr[64];
 			time_t now = time(NULL);
-			strftime(timestr,sizeof(timestr),"[%H:%M] ", localtime(&now) );
+			strftime(timestr,sizeof(timestr),"%Y-%m-%d [%H:%M] ", localtime(&now) );
 			
 			switch ( im_what )
 			{
