@@ -2,6 +2,8 @@
 
 #include "ImageButton.h"
 
+#include "../../common/IMKitUtilities.h"
+
 #include <libim/Contact.h>
 #include <libim/Constants.h>
 #include <libim/Helpers.h>
@@ -9,10 +11,11 @@
 #include <Path.h>
 
 const char *kImNewMessageSound = "IM Message Received";
+const float kPadding = 2.0;
 
 #define kButtonWidth	50
 #define kButtonHeight	50
-#define kButtonDockHeight (kButtonHeight+4)
+#define kButtonDockHeight (kButtonHeight+ (kPadding * 2))
 
 
 #if  B_BEOS_VERSION > B_BEOS_VERSION_5
@@ -32,15 +35,17 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	),
 	fEntry(ref),
 	fMan( new IM::Manager(BMessenger(this))),
-	fChangedNotActivated(false)
+	fChangedNotActivated(false),
+	fStatusBar(NULL)
 {
+	font_height height;
+	be_plain_font->GetHeight(&height);
+	fFontHeight = height.ascent + height.descent + height.leading;
+
 	BRect windowRect(100, 100, 400, 300);
 	BPoint inputDivider(0, 150);
 
-	if (LoadSettings() != B_OK) {
-//		fWindowSettings.AddRect("windowrect", windowRect);
-//		fWindowSettings.AddPoint("inputdivider", inputDivider);
-	} else {
+	if (LoadSettings() == B_OK) {
 		bool was_ok = true;
 		
 		if (fWindowSettings.FindRect("windowrect", &windowRect) != B_OK) {
@@ -63,10 +68,6 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		inputDivider.y = windowRect.Height() - 50;
 	}
 	
-/*
-	windowRect.PrintToStream();
-	inputDivider.PrintToStream();
-*/	
 	MoveTo(windowRect.left, windowRect.top);
 	ResizeTo(windowRect.Width(), windowRect.Height());
 
@@ -138,7 +139,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	BEntry emailAppEntry(&emailAppRef);
 	BPath emailPath;
 	emailAppEntry.GetPath( &emailPath );
-	icon = GetBitmapFromAttribute( emailPath.Path(), "BEOS:L:STD_ICON");
+	icon = GetBitmapFromAttribute( emailPath.Path(), "BEOS:L:STD_ICON", 'ICON');
 #endif
 	
 	btn = new ImageButton(
@@ -154,7 +155,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	// block icon
 	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/Block", "BEOS:L:STD_ICON");
+		"/Block", "BEOS:L:STD_ICON", 'ICON');
 	btn = new ImageButton(
 		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
 		"email button",
@@ -166,9 +167,9 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	);
 	fDock->AddChild(btn);
 	
-	// block icon
+	// Auth icon
 	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/Block", "BEOS:L:STD_ICON");
+		"/GetAuth", "BEOS:L:STD_ICON");
 	btn = new ImageButton(
 		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
 		"request_auth button",
@@ -179,7 +180,8 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		"Get auth"
 	);
 	fDock->AddChild(btn);
-	// done adding buttons
+
+//	Done adding buttons
 	
 	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
@@ -189,15 +191,14 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	inputRect.InsetBy(2.0, 2.0);
 	inputRect.top = inputDivider.y + 5;
 	inputRect.right -= B_V_SCROLL_BAR_WIDTH;
-	
+	inputRect.bottom -= fFontHeight + (kPadding * 4);
+		
 	BRect inputTextRect = inputRect;
-	inputTextRect.OffsetTo(0, 0);
+	inputTextRect.OffsetTo(kPadding, kPadding);
+	inputTextRect.InsetBy(kPadding * 2, kPadding * 2);
 	
-	fInput = new BTextView(
-		inputRect, "input", inputTextRect,
-		B_FOLLOW_ALL,
-		B_WILL_DRAW
-	);
+	fInput = new BTextView(inputRect, "input", inputTextRect, B_FOLLOW_ALL,
+		B_WILL_DRAW);
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fInput->SetViewUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
@@ -222,11 +223,42 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fInput->SetStylable(false);
 	fInput->MakeSelectable(true);
 	
+	BRect statusRect = Bounds();
+	statusRect.top = inputRect.bottom + kPadding;
+
+	fStatusBar = new StatusBar(statusRect);
+
+	AddChild(fStatusBar);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+	fStatusBar->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
+	fStatusBar->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
+	fStatusBar->SetHighUIColor(B_UI_PANEL_TEXT_COLOR);
+#else
+	fStatusBar->SetViewColor(245, 245, 245, 0);
+	fStatusBar->SetLowColor(245, 245, 245, 0);
+	fStatusBar->SetHighColor(0, 0, 0, 0);
+#endif
+
+	BPopUpMenu *pop = new BPopUpMenu("Templates", true, true);
+	fProtocolMenu = new BMenuField(
+		BRect(kPadding, kPadding, Bounds().bottom - kPadding, 100),
+		"Field", NULL, pop);
+	fStatusBar->AddItem(fProtocolMenu);
+	BuildProtocolMenu();
+	pop->ItemAt(0)->SetMarked(true);
+
+	fTypingView = new BStringView(BRect(200, 2,
+		fStatusBar->Bounds().right - kPadding,
+		fStatusBar->Bounds().bottom - kPadding), "adf",
+		"", B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM, B_WILL_DRAW);
+	fStatusBar->AddItem(fTypingView);
+	
 	BRect resizeRect = Bounds();
 	resizeRect.top = inputDivider.y + 1;
 	resizeRect.bottom = inputDivider.y + 4;
 
-	fResize = new ResizeView(fInputScroll,resizeRect);
+	fResize = new ResizeView(fInputScroll, resizeRect, "resizer",
+		B_FOLLOW_BOTTOM | B_FOLLOW_LEFT | B_FOLLOW_RIGHT);
 	AddChild(fResize);
 
 	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE));
@@ -320,11 +352,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	// get contact info
 	reloadContact();
-	
-	font_height height;
-	be_plain_font->GetHeight(&height);
-	fFontHeight = height.ascent + height.descent + height.leading;
-	LOG("im_client", liDebug, "Font Height: %.2f\n", fFontHeight);
+
 }
 
 ChatWindow::~ChatWindow()
@@ -345,12 +373,15 @@ ChatWindow::~ChatWindow()
 		fResize->RemoveSelf();
 		delete fResize;
 	};
-/*
+
 	if (fDock) {
 		fDock->RemoveSelf();
 		delete fDock;
 	};
-*/
+
+	if (fStatusBar) fStatusBar->RemoveSelf();
+	delete fStatusBar;
+
 	fMan->Lock();
 	fMan->Quit();
 }
@@ -425,7 +456,6 @@ ChatWindow::LoadSettings(void) {
 			buffer, (size_t)info.size) == info.size) {
 			
 			if (fWindowSettings.Unflatten(buffer) == B_OK) {
-//				fWindowSettings.PrintToStream();
 				return B_OK;
 			} else {
 				LOG("im_client", liLow, "Could not unflatten settings messsage");
@@ -520,45 +550,48 @@ ChatWindow::MessageReceived( BMessage * msg )
 				{
 					fText->Append(timestr, C_TIMESTAMP, C_TIMESTAMP, F_TIMESTAMP);
 
-					BString message;
-					msg->FindString("message", &message);
-					if (message.Compare("/me ", 4) == 0) 
-					{
+					BString protocol = msg->FindString("protocol");
+					BString message = msg->FindString("message");
+					
+					if (protocol.Length() > 0) {
+						protocol.Prepend(" (");
+						protocol << ") ";
+					} else {
+						protocol = " ";
+					};
+					
+					if (message.Compare("/me ", 4) == 0) {
 						fText->Append("* ", C_ACTION, C_ACTION, F_ACTION);
 						fText->Append(fName, C_ACTION, C_ACTION, F_ACTION);
-						fText->Append(" ", C_ACTION, C_ACTION, F_ACTION);
+						fText->Append(protocol.String(), C_ACTION, C_ACTION, F_ACTION);
 						message.Remove(0, 4);
 						fText->Append(message.String(), C_ACTION, C_ACTION, F_ACTION);
-					} else 
-					{
+					} else {
 						fText->Append(fName, C_OTHERNICK, C_OTHERNICK, F_TEXT);
+						fText->Append(protocol.String(), C_OTHERNICK, C_OTHERNICK, F_TEXT);
 						fText->Append(": ", C_OTHERNICK, C_OTHERNICK, F_TEXT);
 						fText->Append(msg->FindString("message"), C_TEXT, C_TEXT, F_TEXT);
 					}
 					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
 					fText->ScrollToSelection();
 
-					if (!IsActive()) 
-					{
-						startNotify();
-					}
+					if (!IsActive()) startNotify();
+
 				}	break;
 				
-				case IM::CONTACT_STARTED_TYPING: {
-					msg->PrintToStream();
-					printf("User started typing! Tis a miracle, kind sir\n");
+				case IM::CONTACT_STARTED_TYPING: {	
+					IM::Contact c(&fEntry);
+	
+					char nick[512];
+					c.GetNickname(nick, sizeof(nick));
+					
+					BString text = nick;
+					text << " is typing!";
+					fTypingView->SetText(text.String());
+					printf("We are teh typer!!!\n");
 				};
 			}
 			
-/*
-			if ( old_sel_start != old_sel_end )
-			{ // restore selection
-//				fText->Select( old_sel_start, old_sel_end );
-			} else
-			{
-//				fText->Select( fText->TextLength(), fText->TextLength() );
-			}
-*/			
 			fText->ScrollToSelection();
 			
 		}	break;
@@ -570,6 +603,13 @@ ChatWindow::MessageReceived( BMessage * msg )
 			im_msg.AddInt32("im_what",IM::SEND_MESSAGE);
 			im_msg.AddRef("contact",&fEntry);
 			im_msg.AddString("message", fInput->Text() );
+			
+			BMenu *menu = fProtocolMenu->Menu();
+			if (menu) {
+				IconMenuItem *item = (IconMenuItem *)menu->FindMarked();
+				BString protocol = item->Extra();
+				if (protocol.Length() > 0) im_msg.AddString("protocol", protocol);
+			};
 			
 			if ( fMan->SendMessage(&im_msg) == B_OK ) {
 				fInput->SetText("");
@@ -662,6 +702,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 				case B_STAT_CHANGED:
 				case B_ATTR_CHANGED:
 					reloadContact();
+					BuildProtocolMenu();
 					break;
 			}
 		}	break;
@@ -672,21 +713,54 @@ ChatWindow::MessageReceived( BMessage * msg )
 				BPoint point;
 				msg->FindPoint("loc", &point);
 				//printf("Point:\n");
-				//point.PrintToStream();
+				point.PrintToStream();
 				//int rows = ceil((fTextScroll->Frame().Height() - point.y) / fFontHeight);
 				//printf("Can have %i rows\n", rows);
 				
 				fResize->MoveTo(fResize->Frame().left, point.y);
-				fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
+//				fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
 				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1 - kButtonDockHeight - 1);
-				
+
 				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 1);
-				fInputScroll->ResizeTo(fInputScroll->Frame().Width(), Bounds().bottom - point.y);
+
+//LOG("im_client", liLow, "%.2f - %.2f = %.2f", fInputScroll->Frame().top,
+//	fStatusBar->Frame().top, fInputScroll->Frame().top - fStatusBar->Frame().top);
+//				fInputScroll->ResizeTo(fInputScroll->Bounds().right,
+//					fInputScroll->Frame().top - fStatusBar->Frame().top);
+									
+//					(point.y + fResize->Frame().bottom + 1) - fStatusBar->Frame().top);
+
+//				fInputScroll->ResizeTo(fInputScroll->Bounds().right,
+//					(point.y + fResize->Frame().bottom + 1) - fStatusBar->Frame().top);
+//LOG("im_client", liLow, "(%.2f + 1) - %.2f = %.2f", point.y, fStatusBar->Frame().top,
+//	(point.y + 1) - fStatusBar->Frame().top);
+
+//
+				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 1);
+				fInputScroll->ResizeTo(fInputScroll->Frame().Width(),
+//					point.y  - fStatusBar->Frame().top);
+					Bounds().bottom - point.y  - fStatusBar->Frame().top);
+
+//				printf("status bar top: %.2f / %.2f\n", fStatusBar->Bounds().top, fStatusBar->Frame().top);
+//				printf("Point: %.2f\n", point.y);
+//				printf("Window: %2.f / %.2f\n", Bounds().bottom, Frame().bottom);
+//				fInputScroll->ResizeTo(fInputScroll->Frame().Width(), Bounds().bottom - point.y);// - fStatusBar->Frame().top);
+//				printf("Input: (%.2f, %.2f)\n", fInputScroll->Frame().top, fInputScroll->Frame().bottom);
+//				printf("Input: (%.2f, %.2f)\n", fInputScroll->Bounds().top, fInputScroll->Bounds().bottom);
 			};
 		} break;
 		
 		case B_MOUSE_WHEEL_CHANGED: {
 			fText->MessageReceived(msg);
+		} break;
+		
+		case B_COPY: {
+			int32 start = 0;
+			int32 end = 0;
+			
+			fInput->GetSelection(&start, &end);
+			
+			printf("%i - > %i\n", start, end);
 		} break;
 		
 		case B_SIMPLE_DATA: {
@@ -828,53 +902,45 @@ ChatWindow::stopNotify()
 	((ChatApp*)be_app)->NoFlash( BMessenger(this) );
 }
 
-BBitmap *
-ChatWindow::GetBitmapFromAttribute(const char *name, const char *attribute, 
-	type_code type = 'BBMP') {
-	BBitmap 	*bitmap = NULL;
-	size_t 		len = 0;
-	status_t 	error;	
 
-	if ((name == NULL) || (attribute == NULL)) return NULL;
+void ChatWindow::BuildProtocolMenu(void) {
+	BMessage getStatus(IM::GET_CONTACT_STATUS);
+	getStatus.AddRef("contact", &fEntry);
+	BMessage statusMsg;
+	
+	fMan->SendMessage(&getStatus, &statusMsg);
 
-	BNode node(name);
-	
-	if (node.InitCheck() != B_OK) {
-		return NULL;
-	};
-	
-	attr_info info;
-		
-	if (node.GetAttrInfo(attribute, &info) != B_OK) {
-		node.Unset();
-		return NULL;
-	};
-		
-	char *data = (char *)calloc(info.size, sizeof(char));
-	len = (size_t)info.size;
-		
-	if (node.ReadAttr(attribute, 'BBMP', 0, data, len) != len) {
-		node.Unset();
-		free(data);
-	
-		return NULL;
-	};
-	
-//	Icon is a square, so it's right / bottom co-ords are the root of the bitmap length
-//	Offset is 0
-	BRect bound = BRect(0, 0, 0, 0);
-	bound.right = sqrt(len) - 1;
-	bound.bottom = bound.right;
-	
-	bitmap = new BBitmap(bound, B_COLOR_8_BIT);
-	bitmap->SetBits(data, len, 0, B_COLOR_8_BIT);
+	BPath iconDir;
+	find_directory(B_USER_ADDONS_DIRECTORY, &iconDir, true);
+	iconDir.Append("im_kit/protocols");
 
-//	make sure it's ok
-	if(bitmap->InitCheck() != B_OK) {
-		free(data);
-		delete bitmap;
-		return NULL;
+	BMenu *menu = fProtocolMenu->Menu();
+	if (menu == NULL) return;
+	
+//	You have to do this twice... buggered if I know why...
+	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
+	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
+
+	menu->AddItem(new IconMenuItem(NULL, "Any Protocol", NULL, NULL));
+	menu->AddSeparatorItem();
+
+	for (int32 i = 0; statusMsg.FindString("connection", i); i++) {
+		BString connection = statusMsg.FindString("connection", i);
+		BString status = statusMsg.FindString("status", i);
+		BString protocol = "";
+		int32 seperator = connection.FindFirst(":");
+		if (seperator != B_ERROR) {
+			connection.MoveInto(protocol, 0, seperator + 1);
+			protocol.Truncate(seperator);
+			
+			BString iconPath = iconDir.Path();
+			iconPath << "/" << protocol.String();
+			
+			menu->AddItem(new IconMenuItem(GetBitmapFromAttribute(iconPath.String(),
+				 BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', true),
+				 (connection << " (" << status << ")").String(), protocol.String()));
+		};
 	};
 	
-	return bitmap;
-}
+	menu->SetFont(be_plain_font);
+};

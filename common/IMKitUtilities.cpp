@@ -6,7 +6,13 @@
 //  responsibility to delete it) on success, NULL on failure. 
 
 BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 
-	type_code type = 'BBMP') {
+	type_code type = 'BBMP', bool followSymlink = true) {
+
+	BEntry entry(name, followSymlink);
+	entry_ref ref;
+	BPath path;
+	
+	entry.GetRef(&ref);
 
 	BBitmap 	*bitmap = NULL;
 	size_t 		len = 0;
@@ -14,7 +20,7 @@ BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute,
 
 	if ((name == NULL) || (attribute == NULL)) return NULL;
 
-	BNode node(name);
+	BNode node(BPath(&ref).Path());
 	
 	if (node.InitCheck() != B_OK) {
 		return NULL;

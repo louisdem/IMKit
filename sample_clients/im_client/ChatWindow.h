@@ -4,6 +4,8 @@
 #include "main.h"
 #include "../../common/IMKitUtilities.h"
 
+#include <FindDirectory.h>
+
 #include <ScrollView.h>
 #include <NodeMonitor.h>
 #include <stdio.h>
@@ -18,8 +20,12 @@
 #include <PopUpMenu.h>
 #include <Beep.h>
 #include <String.h>
+#include <StringView.h>
 #include <Roster.h>
 #include <Bitmap.h>
+
+#include "IconMenuItem.h"
+#include "StatusBar.h"
 
 #include <be/kernel/fs_attr.h>
 
@@ -53,6 +59,8 @@ class ResizeView;
 class RunView;
 class Theme;
 
+class StatusBar;
+
 class ChatWindow : public BWindow
 {
 	public:
@@ -74,8 +82,7 @@ class ChatWindow : public BWindow
 		status_t LoadSettings(void);
 		
 	private:
-		BBitmap			*GetBitmapFromAttribute(const char *name, const char *attribute,
-							type_code type = 'BBMP');
+		void BuildProtocolMenu(void);
 	
 		enum { 
 			SEND_MESSAGE	= 1,
@@ -104,8 +111,12 @@ class ChatWindow : public BWindow
 		BMessage		fWindowSettings;
 		Theme			*fTheme;
 		
-		float			fFontHeight;		
+		float			fFontHeight;
 		BView			*fDock;
+		
+		BMenuField		*fProtocolMenu;
+		StatusBar		*fStatusBar;
+		BStringView		*fTypingView;
 };
 
 #endif

@@ -96,7 +96,6 @@ Server::Server()
 		{
 			BPath p(&ref);
 			
-			printf("ref.name: %s / %s\n", ref.name, p.Path());
 			if ( db.AddItem( &ref ) != B_OK )
 				LOG("im_server", liHigh, "Error adding icon to deskbar!");
 		} else
@@ -499,6 +498,8 @@ Server::Process( BMessage * msg )
 		case CONTACT_LIST:
 		case CONTACT_INFO:
 		case CONTACT_AUTHORIZED:
+		case CONTACT_STARTED_TYPING:
+		case CONTACT_STOPPED_TYPING:
 		{
 			MessageFromProtocols(msg);
 		}	break;

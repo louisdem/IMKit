@@ -32,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp ChatApp.cpp ChatWindow.cpp InputFilter.cpp ResizeView.cpp Theme.cpp Utilities.cpp URLCrunch.cpp RunView.cpp $(TOPDIR)/common/IMKitUtilities.cpp ImageButton.cpp
+SRCS= main.cpp ChatApp.cpp ChatWindow.cpp InputFilter.cpp ResizeView.cpp Theme.cpp Utilities.cpp URLCrunch.cpp RunView.cpp $(TOPDIR)/common/IMKitUtilities.cpp ImageButton.cpp $(TOPDIR)/common/IconMenuItem.cpp StatusBar.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

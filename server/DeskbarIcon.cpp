@@ -14,7 +14,6 @@
 
 #include <Path.h>
 #include <FindDirectory.h>
-//#include "SettingsWindow.h"
 
 BView *
 instantiate_deskbar_item()
@@ -107,7 +106,42 @@ IM_DeskbarIcon::_init()
 	fDirtyMenu = true;
 	fMenu = NULL;
 	
-	SetDrawingMode(B_OP_OVER);	
+	SetDrawingMode(B_OP_OVER);
+	
+	BMessage protStatus;
+	fStatuses.clear();
+	IM::Manager man;
+	man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
+
+	fTipText = "Online Status:";
+	
+	for ( int i=0; protStatus.FindString("protocol",i); i++ ) {
+		const char *protocol = protStatus.FindString("protocol",i);
+		const char *status = protStatus.FindString("status", i);
+
+		fStatuses[protocol] = status;
+
+		fTipText << "\n  " << protocol << ": " << status << "";
+		
+		if ((fStatus > 0) && (strcmp(status, ONLINE_TEXT) == 0)) fStatus = 0;
+		if ((fStatus > 1) && (strcmp(status, AWAY_TEXT) == 0)) fStatus = 1;
+	}
+
+	LOG("deskbar", liDebug, "Initial status: %i	", fStatus);
+	
+	switch (fStatus) {
+//		Online
+		case 0: {
+			fCurrIcon = fModeIcon = fOnlineIcon;
+		} break;
+//		Away
+		case 1: {
+			fCurrIcon = fModeIcon = fAwayIcon;
+		} break;
+		default: {
+			fCurrIcon = fModeIcon =  fOfflineIcon;
+		};
+	};
 }
 
 void
@@ -227,10 +261,8 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			BMessage newmsg(IM::MESSAGE);
 			newmsg.AddInt32("im_what", IM::SET_STATUS);
 			
-			if ( protocol != NULL ) {
-				newmsg.AddString("protocol", protocol);
-			};
-			printf("Protocol: %s\n", protocol);
+			if ( protocol != NULL ) newmsg.AddString("protocol", protocol);
+
 			newmsg.AddString("status", item->Label());
 			
 			fCurrIcon = fModeIcon; 
@@ -302,7 +334,7 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 	if ((transit == B_OUTSIDE_VIEW) || (transit == B_EXITED_VIEW)) {
 		fTip->SetHelp(Parent(), NULL);
 	} else {
-		if (fDirtyStatus == true) {
+		if ((fDirtyStatus == true) || (fStatuses.size() == 0)) {
 			fStatuses.clear();
 			
 			BMessage protStatus;
@@ -320,10 +352,10 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 			}
 			
 			fDirtyStatus = false;
-
-			fTip->SetHelp(Parent(), (char *)fTipText.String());
-			fTip->EnableHelp();
 		};
+
+		fTip->SetHelp(Parent(), (char *)fTipText.String());
+		fTip->EnableHelp();
 	};		
 };
 
@@ -336,7 +368,7 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 	
 	if ( buttons & B_SECONDARY_MOUSE_BUTTON )
 	{
-		if (fDirtyMenu) {
+		if ((fDirtyMenu) || (fMenu->CountItems() == 2)) {
 			delete fMenu;
 			fMenu = new BPopUpMenu("im_db_menu", false, false);
 			fMenu->SetFont(be_plain_font);

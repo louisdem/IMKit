@@ -4,6 +4,8 @@
 #include <Bitmap.h>
 #include <Node.h>
 #include <be/kernel/fs_attr.h>
+#include <Path.h>
+#include <Entry.h>
 
 #include <stdlib.h>
 
@@ -11,7 +13,7 @@
 #define BEOS_LARGE_ICON_ATTRIBUTE	"BEOS:L:STD_ICON"
 
 BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute,
-	type_code type = 'BBMP');
+	type_code type = 'BBMP', bool followSymlink = true);
 
 char *ReadAttribute(BNode node, const char *attribute);
 
