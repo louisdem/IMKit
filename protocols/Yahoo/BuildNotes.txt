@@ -2,10 +2,21 @@ You need to fetch and install libyahoo2.
 
 http://libyahoo2.sf.net/
 
+We've been using 0.7.4, not sure if other versions will work.
+
 To get it to build you need to fiddle a bit with the makefile:
 
-add -lbind where appropriate (right after -lsocket), and remove -ansi
-from the compiler flags if you want the sample client to compile (not
-sure if this is really needed or not)
+	configure --prefix=/boot/home/config, as usual.
 
-configure --prefix=/boot/home/config, as usual.
+Then edit src/makefile:
+
+	where it says -lsocket, also add -lbind on the same line, right after -lsocket.
+
+	remove -ansi from the CFLAGS line
+
+edit src/sample_client.c, line 1020: 
+
+	change (socklen_t*) to (int*)
+
+Then you should be able to run "make ; make install", after which the Yahoo add-on
+should compile.
