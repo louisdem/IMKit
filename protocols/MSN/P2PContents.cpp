@@ -19,8 +19,8 @@ void P2PContents::AddField(const char *field, const char *contents, int32 length
 	fDirty = true;
 	if (length == -1) length = strlen(contents);
 	
-	BMallocIO value;
-	value.Write(contents, length);
+	BMallocIO * value = new BMallocIO();
+	value->Write(contents, length);
 	
 	fFields[field] = value;
 };
@@ -61,7 +61,7 @@ char *P2PContents::Flatten(void) {
 			if (fIt != fFields.end()) {
 				fFlattened.Write(fIt->first.String(), fIt->first.Length());
 				fFlattened.Write(": ", strlen(": "));
-				fFlattened.Write((char *)fIt->second.Buffer(), fIt->second.BufferLength());
+				fFlattened.Write((char *)fIt->second->Buffer(), fIt->second->BufferLength());
 				fFlattened.Write("\r\n", strlen("\r\n"));
 			};
 		};
@@ -78,7 +78,7 @@ char *P2PContents::Flatten(void) {
 			if (alreadyUsed == false) {
 				fFlattened.Write(fIt->first.String(), fIt->first.Length());
 				fFlattened.Write(": ", strlen(": "));
-				fFlattened.Write((char *)fIt->second.Buffer(), fIt->second.BufferLength());
+				fFlattened.Write((char *)fIt->second->Buffer(), fIt->second->BufferLength());
 				fFlattened.Write("\r\n", strlen("\r\n"));
 			};
 		};
@@ -87,7 +87,7 @@ char *P2PContents::Flatten(void) {
 //		for (fIt = fFields.begin(); fIt != fFields.end(); fIt++) {
 //			fFlattened.Write(fIt->first.String(), fIt->first.Length());
 //			fFlattened.Write(": ", strlen(": "));
-//			fFlattened.Write(fIt->second.Buffer(), fIt->second.BufferLength());
+//			fFlattened.Write(fIt->second->Buffer(), fIt->second->BufferLength());
 //			fFlattened.Write("\r\n", strlen("\r\n"));
 //		};
 		

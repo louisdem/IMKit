@@ -41,8 +41,8 @@ void P2PHeader::AddField(char *field, char *contents, int32 length = -1) {
 	fDirty = true;
 
 	if (length == -1) length = strlen(contents);
-	BMallocIO data;
-	data.Write(contents, length);
+	BMallocIO * data = new BMallocIO();
+	data->Write(contents, length);
 	
 	fFields[field] = data;
 };
@@ -122,7 +122,7 @@ const char *P2PHeader::Flatten(void) {
 			if (fIt != fFields.end()) {
 				fFlattened.Write(fIt->first.String(), fIt->first.Length());
 				fFlattened.Write(": ", strlen(": "));
-				fFlattened.Write((char *)fIt->second.Buffer(), fIt->second.BufferLength());
+				fFlattened.Write((char *)fIt->second->Buffer(), fIt->second->BufferLength());
 				fFlattened.Write("\r\n", strlen("\r\n"));
 			};
 		};
@@ -139,7 +139,7 @@ const char *P2PHeader::Flatten(void) {
 			if (alreadyUsed == false) {
 				fFlattened.Write(fIt->first.String(), fIt->first.Length());
 				fFlattened.Write(": ", strlen(": "));
-				fFlattened.Write((char *)fIt->second.Buffer(), fIt->second.BufferLength());
+				fFlattened.Write((char *)fIt->second->Buffer(), fIt->second->BufferLength());
 				fFlattened.Write("\r\n", strlen("\r\n"));
 			};
 		};

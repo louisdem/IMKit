@@ -9,9 +9,15 @@ To get it to build you need to fiddle a bit with the makefile:
 	configure --prefix=/boot/home/config  --with-struct-callbacks
 
 Then edit src/makefile:
-
-	where it says -lsocket, also add -lbind on the same line, right after -lsocket.
-
+	
+	R5:
+		Change the line:
+			LIBS =  $(GLIB_LIBS)
+		to
+			LIBS =  $(GLIB_LIBS) -lbind -lsocket
+	Zeta:
+		where it says -lsocket, also add -lbind on the same line, right after -lsocket.
+	
 	remove -ansi from the CFLAGS line
 
 	change the line:

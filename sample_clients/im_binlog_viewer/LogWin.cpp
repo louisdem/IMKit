@@ -201,7 +201,7 @@ int32 LogWin::GenerateContents(void *arg) {
 		if (logFile.InitCheck() == B_OK) {
 			BMessage msg;
 			while (msg.Unflatten(&logFile) == B_OK) {
-				msgr.SendMessage(msg);
+				msgr.SendMessage(&msg);
 			};
 		};
 	};

@@ -7,7 +7,7 @@
 
 #include <map>
 
-typedef map<BString, BMallocIO> fieldmap;
+typedef map<BString, BMallocIO*> fieldmap;
 
 class P2PContents {
 	public:

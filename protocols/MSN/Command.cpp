@@ -14,6 +14,8 @@ Command::Command(const char *type)
 };
 
 Command::~Command(void) {
+	for ( payloadv::iterator i=fPayloads.begin(); i != fPayloads.end(); i++ )
+		delete (*i);
 };
 
 status_t Command::AddParam(const char *param, bool encode = false) {
@@ -79,7 +81,14 @@ const char *Command::Param(int32 index, bool decode = false) {
 		};
 	};
 	
-	return param.String();
+	static char * param_string = NULL;
+	
+	if ( param_string )
+		free( param_string );
+	
+	param_string = strdup(param.String());
+	
+	return param_string;
 };
 
 status_t Command::AddPayload(const char *payload, int32 length = -1, bool encode = true) {
@@ -87,15 +96,25 @@ status_t Command::AddPayload(const char *payload, int32 length = -1, bool encode
 
 	if (length == -1) length = strlen(payload);
 
-	BMallocIO content;
-	content.WriteAt(0, payload, length);
+	BMallocIO * content = new BMallocIO;
+	content->WriteAt(0, payload, length);
 	fPayloads.push_back(content);
 	
 	return B_OK;
 };
 
 const char *Command::Payload(int32 index) {
-	return fPayloads[index].AsString();
+//	return fPayloads[index]->AsString();
+	static char * payload_string = NULL;
+	
+	if ( payload_string )
+		free( payload_string );
+	
+	payload_string = (char*)malloc( fPayloads[index]->BufferLength() + 1 );
+	memcpy( payload_string, fPayloads[index]->Buffer(), fPayloads[index]->BufferLength() );
+	payload_string[fPayloads[index]->BufferLength()] = 0;
+	
+	return payload_string;
 }
 
 const char *Command::Flatten(int32 sequence) {
@@ -128,7 +147,7 @@ const char *Command::Flatten(int32 sequence) {
 			temp = " ";
 			
 			for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-				payload += i->BufferLength();
+				payload += (*i)->BufferLength();
 			};
 			
 			temp << payload;
@@ -143,8 +162,8 @@ const char *Command::Flatten(int32 sequence) {
 			payloadv::iterator i;
 
 			for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-				fFlattened.WriteAt(offset, i->Buffer(), i->BufferLength());
-				offset += i->BufferLength();
+				fFlattened.WriteAt(offset, (*i)->Buffer(), (*i)->BufferLength());
+				offset += (*i)->BufferLength();
 			};
 		};
 				
@@ -172,7 +191,7 @@ void Command::Debug(void) {
 		int32 size = 0;
 		int32 c = 0;
 		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
-			size += j->BufferLength();
+			size += (*j)->BufferLength();
 		};
 		
 		printf(" %i", size);
@@ -182,8 +201,8 @@ void Command::Debug(void) {
 	
 	if (Payloads() > 0) {
 		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
-			char *buffer = (char *)j->Buffer();
-			for (int32 i = 0; i < j->BufferLength(); i++) {
+			char *buffer = (char *)(*j)->Buffer();
+			for (int32 i = 0; i < (*j)->BufferLength(); i++) {
 				if ((buffer[i] == '\r') || (buffer[i] == '\n'))
 					printf("%c", buffer[i]);
 				else if ((buffer[i] < 0x20) || (buffer[i] > 0x7e))
@@ -214,7 +233,7 @@ status_t Command::MakeObject(const char *string) {
 	position = seperator + 1;
 	
 	seperator = command.FindFirst(" ", position);
-	if (seperator == B_ERROR) {
+	if (seperator < 0) {
 		fTrID = 0;
 		command.CopyInto(temp, position, command.Length() - position);
 		temp.ReplaceLast("\r\n", "");
@@ -230,12 +249,15 @@ status_t Command::MakeObject(const char *string) {
 	
 	position = seperator;
 	
-	while ((seperator = command.FindFirst(" ", position)) != B_ERROR) {
+	while ((seperator = command.FindFirst(" ", position)) >= 0) {
 		int32 wordBoundary = command.FindFirst(" ", seperator + 1);
+		if ( wordBoundary < 0 )
+			wordBoundary = command.Length();
+		
 		temp = "";
 		command.CopyInto(temp, position + 1, wordBoundary - position - 1);
-
-		fParams.push_back(temp.String());
+		
+		fParams.push_back(BString(temp.String()));
 		position = wordBoundary;
 	};
 	

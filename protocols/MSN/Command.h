@@ -7,7 +7,7 @@
 #include <vector>
 #include <map.h>
 
-typedef vector<BMallocIO> payloadv;
+typedef vector<BMallocIO*> payloadv;
 
 /**
 	Class to manage encoding and decoding of MSN commands.

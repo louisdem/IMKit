@@ -35,7 +35,7 @@ HTTPFormatter::HTTPFormatter(const char *response, int32 length) {
 	const char *kSeperator = "\r\n";
 	const int32 kSeperatorLen = strlen("\r\n");
 	
-	while ((seperator = buffer.FindFirst(kSeperator, position)) != B_ERROR) {
+	while ((seperator = buffer.FindFirst(kSeperator, position)) >= 0) {
 		if ( seperator == position ) {
 			// end of headers, copy rest to content
 			buffer.CopyInto( fContent, position+2, buffer.Length()-position-2 );
@@ -51,9 +51,12 @@ HTTPFormatter::HTTPFormatter(const char *response, int32 length) {
 	if ( line.Compare("HTTP/1.", strlen("HTTP/1.")) == 0 )
 	{ // Actual HTTP response. Not present in MSN messages
 		seperator = line.FindFirst("/");
-		position = line.FindFirst(" ", seperator);
+		position = line.FindFirst(" ");//, seperator);
+
 		line.CopyInto(fVersion, seperator + 1, position - seperator - 1);
-		seperator = line.FindFirst(" ", position);
+		seperator = line.FindFirst(" ", position + 1);//, seperator + 1);
+		if ( seperator < 0 )
+			seperator = line.Length();
 		line.CopyInto(buffer, position + 1, seperator - position - 1);
 		fStatus = atol(buffer.String());
 		i++;
@@ -64,12 +67,12 @@ HTTPFormatter::HTTPFormatter(const char *response, int32 length) {
 	
 	for (; i != tempVect.end(); i++) {
 		BString line = *i;
-		if ((seperator = line.FindFirst(": ")) != B_ERROR) {
+		if ((seperator = line.FindFirst(": ")) >= 0) {
 			BString name;
 			BString value;
 			line.CopyInto(name, 0, seperator);
 			line.CopyInto(value, seperator + 2, line.Length() - (seperator + 2));
-
+			
 			fHeaders[name] = value;
 		};
 	};
@@ -205,11 +208,11 @@ const char *HTTPFormatter::Flatten(void) {
 		fFlattened << "Host: " << fHost << "\r\n";
 		
 		HeaderMap::iterator i;
-
+		
 		for (i = fHeaders.begin(); i != fHeaders.end(); i++) {
 			fFlattened << i->first.String() << ": " << i->second.String() << "\r\n";
 		};
-
+		
 		fFlattened << "\r\n\r\n";
 
 		fDirty = false;

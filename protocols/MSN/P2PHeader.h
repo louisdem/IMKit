@@ -10,7 +10,7 @@
 
 extern const char *kMSNLPVer;
 
-typedef map<BString, BMallocIO> fieldmap;
+typedef map<BString, BMallocIO*> fieldmap;
 
 class P2PHeader {
 	public:
