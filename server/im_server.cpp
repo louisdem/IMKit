@@ -62,16 +62,28 @@ Server::Server()
 	
 	// add deskbar icon
 	BDeskbar db;
-	entry_ref ref;
+
+	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
+		LOG("Error removing deskbar icon (this is ok..)");
 	
-	if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
-	{
-		if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
-			LOG("Error removing deskbar icon (this is ok..)");
-		
-		if ( db.AddItem( &ref, &fDeskbarIconID ) != B_OK )
-			LOG("Error adding icon to deskbar!");
+	
+	IM_DeskbarIcon * i = new IM_DeskbarIcon();
+	
+	if ( db.AddItem( i ) != B_OK )
+	{ // couldn't add BView, try entry_ref
+		entry_ref ref;
+	
+		if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
+		{
+			if ( db.AddItem( &ref ) != B_OK )
+				LOG("Error adding icon to deskbar!");
+		} else
+		{
+			LOG("be_roster->FindApp() failed");
+		}
 	}
+	
+	delete i;
 	
 	Run();
 }

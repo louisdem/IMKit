@@ -185,20 +185,31 @@ MyApp::MessageReceived( BMessage * msg )
 			{ // open new window on message received or user request
 				LOG("Creating new window to handle message");
 				win = new ChatWindow(ref);
-				win->Lock();
-				win->Show();
-				win->PostMessage(msg);
-				win->Unlock();
+				if ( win->Lock() )
+				{
+					win->Show();
+					win->PostMessage(msg);
+					win->Unlock();
+				} else
+				{
+					LOG("This is a fatal error that should never occur. Lock fail on new win.");
+				}
+				
 			} else
 			{
-				win->Lock();
-				win->PostMessage(msg);
-				if ( win->IsMinimized() )
-				{ // window is hidden, move to this workspace and show it
-					win->SetWorkspaces( B_CURRENT_WORKSPACE );
-					win->Minimize(false);
+				if ( win->Lock() )
+				{
+					win->PostMessage(msg);
+					if ( win->IsMinimized() )
+					{ // window is hidden, move to this workspace and show it
+						win->SetWorkspaces( B_CURRENT_WORKSPACE );
+						win->Minimize(false);
+					}
+					win->Unlock();
+				} else
+				{
+					LOG("This is a fatal error that should never occur. Lock fail on old win.");
 				}
-				win->Unlock();
 			}
 		}	break;
 		default:
@@ -354,7 +365,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			rgb_color contact_nick_color	= (rgb_color){255,  0,  0};
 			rgb_color own_text_color		= (rgb_color){  0,  0,  0};
 			rgb_color contact_text_color	= (rgb_color){  0,  0,  0};
-			rgb_color time_text_color		= (rgb_color){150,150,150};
+			rgb_color time_text_color		= (rgb_color){130,130,130};
 			
 			int32 old_sel_start, old_sel_end;
 			
@@ -492,7 +503,7 @@ ChatWindow::FrameResized( float w, float h )
 void
 ChatWindow::WindowActivated(bool active)
 {
-	if (active && fChangedNotActivated) 
+	if (active) 
 		stopNotify();
 	
 	BWindow::WindowActivated(active);

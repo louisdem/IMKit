@@ -17,6 +17,7 @@
 BView *
 instantiate_deskbar_item()
 {
+	printf("IM: Instantiating Deskbar item\n");
 	return new IM_DeskbarIcon();
 }
 
@@ -86,11 +87,16 @@ IM_DeskbarIcon::Draw( BRect rect )
 	SetHighColor( Parent()->ViewColor() );
 	FillRect( Bounds() );
 	
-	SetDrawingMode(B_OP_OVER);
-	
-	DrawBitmap( fCurrIcon, BPoint(0,0) );
-	
-	SetDrawingMode(B_OP_COPY);
+	if ( fCurrIcon )
+	{
+		SetDrawingMode(B_OP_OVER);
+		DrawBitmap( fCurrIcon, BPoint(0,0) );
+		SetDrawingMode(B_OP_COPY);
+	} else
+	{
+		SetHighColor(255,0,0);
+		FillRect( Bounds() );
+	}
 }
 
 void
@@ -113,11 +119,17 @@ IM_DeskbarIcon::Pulse()
 status_t
 IM_DeskbarIcon::Archive( BMessage * msg, bool deep )
 {
-	BView::Archive(msg,deep);
+	printf("IM_DeskbarIcon::Archive()\n");
+	status_t res = BView::Archive(msg,deep);
 	
 	msg->AddString("add_on", IM_SERVER_SIG );
+	msg->AddString("add-on", IM_SERVER_SIG );
 	
-	return B_NO_ERROR;
+	msg->AddString("class", "IM_DeskbarIcon");
+	
+	printf("~IM_DeskbarIcon::Archive() returns %ld\n", res);
+	
+	return res;
 }
 
 void
@@ -147,6 +159,12 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			fFlashCount--;
 			printf("IM: fFlashCount: %ld\n", fFlashCount);
+			
+			if ( fFlashCount < 0 )
+			{
+				fFlashCount = 0;
+				printf("IM: fFlashCount below zero, fixing\n");
+			}
 		}	break;
 		
 		case SET_ONLINE:
@@ -217,6 +235,8 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			ConvertToScreen(p),
 			true // delivers message
 		);
+		
+		delete menu;
 	}
 	
 	if ( buttons & B_PRIMARY_MOUSE_BUTTON )

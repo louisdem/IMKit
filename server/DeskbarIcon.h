@@ -7,7 +7,7 @@
 #include <list>
 #include <Messenger.h>
 
-class IM_DeskbarIcon : public BView
+class _EXPORT IM_DeskbarIcon : public BView
 {
 	public:
 		IM_DeskbarIcon();
