@@ -303,7 +303,7 @@ Yahoo::LoggedOut()
 }
 
 void
-Yahoo::GotBuddyList( list<string> & buddies )
+Yahoo::GotBuddyList( list<string> & /*buddies*/ )
 {
 	LOG("Yahoo", liDebug, "Yahoo::GotBuddyList()");
 }

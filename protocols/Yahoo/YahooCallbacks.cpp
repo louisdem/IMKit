@@ -64,26 +64,26 @@ int fileno(FILE * stream);
 
 #define MAX_PREF_LEN 255
 
-static char *local_host = NULL;
+//static char *local_host = NULL;
 
-static int do_mail_notify = 0;
-static int do_yahoo_debug = 0;
-static int ignore_system = 0;
-static int do_typing_notify = 1;
-static int accept_webcam_viewers = 1;
-static int send_webcam_images = 0;
-static int webcam_direction = YAHOO_WEBCAM_DOWNLOAD;
+//static int do_mail_notify = 0;
+//static int do_yahoo_debug = 0;
+//static int ignore_system = 0;
+//static int do_typing_notify = 1;
+//static int accept_webcam_viewers = 1;
+//static int send_webcam_images = 0;
+//static int webcam_direction = YAHOO_WEBCAM_DOWNLOAD;
 static time_t curTime = 0;
 static time_t pingTimer = 0;
-static time_t webcamTimer = 0;
-static double webcamStart = 0;
+//static time_t webcamTimer = 0;
+//static double webcamStart = 0;
 
 /* id of the webcam connection (needed for uploading) */
-static int webcam_id = 0;
+//static int webcam_id = 0;
 
-static int poll_loop=1;
+//static int poll_loop=1;
 
-static void register_callbacks();
+//static void register_callbacks();
 
 typedef struct {
 	char yahoo_id[255];
@@ -170,14 +170,14 @@ FILE *popen(const char *command, const char *type);
 int pclose(FILE *stream);
 int gethostname(char *name, size_t len);
 
-static double get_time()
-{
-	struct timeval ct;
-	gettimeofday(&ct, 0);
+//static double get_time()
+//{
+//	struct timeval ct;
+//	gettimeofday(&ct, 0);
 
 	/* return time in milliseconds */
-	return (ct.tv_sec * 1E3 + ct.tv_usec / 1E3);
-}
+//	return (ct.tv_sec * 1E3 + ct.tv_usec / 1E3);
+//}
 
 static int yahoo_ping_timeout_callback( int id, time_t & pingTimer )
 {
@@ -186,12 +186,12 @@ static int yahoo_ping_timeout_callback( int id, time_t & pingTimer )
 	return 1;
 }
 
-static int yahoo_webcam_timeout_callback(int id)
-{
-}
+//static int yahoo_webcam_timeout_callback(int /*id*/)
+//{
+//}
 
-static char * get_buddy_name(char * yid)
-{
+//static char * get_buddy_name(char * yid)
+//{
 /*	YList * b;
 	for (b = buddies; b; b = b->next) {
 		yahoo_account * ya = (yahoo_account *)b->data;
@@ -199,8 +199,8 @@ static char * get_buddy_name(char * yid)
 			return ya->name&&*ya->name?ya->name:ya->yahoo_id;
 	}
 */
-	return yid;
-}
+//	return yid;
+//}
 
 extern "C" int ext_yahoo_log(char *fmt,...)
 {
@@ -214,43 +214,43 @@ extern "C" int ext_yahoo_log(char *fmt,...)
 	return 0;
 }
 
-extern "C" void ext_yahoo_got_conf_invite(int id, char *who, char *room, char *msg, YList *members)
+extern "C" void ext_yahoo_got_conf_invite(int /*id*/, char */*who*/, char */*room*/, char */*msg*/, YList */*members*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_userdecline(int id, char *who, char *room, char *msg)
+extern "C" void ext_yahoo_conf_userdecline(int /*id*/, char */*who*/, char */*room*/, char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_userjoin(int id, char *who, char *room)
+extern "C" void ext_yahoo_conf_userjoin(int /*id*/, char */*who*/, char */*room*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_userleave(int id, char *who, char *room)
+extern "C" void ext_yahoo_conf_userleave(int /*id*/, char */*who*/, char */*room*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_message(int id, char *who, char *room, char *msg, int utf8)
+extern "C" void ext_yahoo_conf_message(int /*id*/, char */*who*/, char */*room*/, char */*msg*/, int /*utf8*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_cat_xml(int id, char *xml) 
+extern "C" void ext_yahoo_chat_cat_xml(int /*id*/, char */*xml*/) 
 {
 }
 
-extern "C" void ext_yahoo_chat_join(int id, char *room, char * topic, YList *members, int fd)
+extern "C" void ext_yahoo_chat_join(int /*id*/, char */*room*/, char * /*topic*/, YList */*members*/, int /*fd*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_userjoin(int id, char *room, struct yahoo_chat_member *who)
+extern "C" void ext_yahoo_chat_userjoin(int /*id*/, char */*room*/, struct yahoo_chat_member */*who*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_userleave(int id, char *room, char *who)
+extern "C" void ext_yahoo_chat_userleave(int /*id*/, char */*room*/, char */*who*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_message(int id, char *who, char *room, char *msg, int msgtype, int utf8)
+extern "C" void ext_yahoo_chat_message(int /*id*/, char */*who*/, char */*room*/, char */*msg*/, int /*msgtype*/, int /*utf8*/)
 {
 }
 
@@ -266,7 +266,7 @@ extern "C" void ext_yahoo_got_buddies(int id, YList * buds)
 	gYahooConnections[id]->cbGotBuddies(buds);
 }
 
-extern "C" void ext_yahoo_got_ignore(int id, YList * igns)
+extern "C" void ext_yahoo_got_ignore(int /*id*/, YList * /*igns*/)
 {
 }
 
@@ -276,77 +276,77 @@ extern "C" void ext_yahoo_got_im(int id, char *who, char *msg, long tm, int stat
 	gYahooConnections[id]->cbGotIM(who,msg,tm,stat,utf8);
 }
 
-extern "C" void ext_yahoo_rejected(int id, char *who, char *msg)
+extern "C" void ext_yahoo_rejected(int /*id*/, char */*who*/, char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_contact_added(int id, char *myid, char *who, char *msg)
+extern "C" void ext_yahoo_contact_added(int /*id*/, char */*myid*/, char */*who*/, char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_typing_notify(int id, char *who, int stat)
+extern "C" void ext_yahoo_typing_notify(int /*id*/, char */*who*/, int /*stat*/)
 {
 }
 
-extern "C" void ext_yahoo_game_notify(int id, char *who, int stat)
+extern "C" void ext_yahoo_game_notify(int /*id*/, char */*who*/, int /*stat*/)
 {
 }
 
-extern "C" void ext_yahoo_mail_notify(int id, char *from, char *subj, int cnt)
+extern "C" void ext_yahoo_mail_notify(int /*id*/, char */*from*/, char */*subj*/, int /*cnt*/)
 {
 }
 
-extern "C" void ext_yahoo_got_webcam_image(int id, const char *who,
-		const unsigned char *image, unsigned int image_size, unsigned int real_size,
-		unsigned int timestamp)
+extern "C" void ext_yahoo_got_webcam_image(int /*id*/, const char */*who*/,
+		const unsigned char */*image*/, unsigned int /*image_size*/, unsigned int /*real_size*/,
+		unsigned int /*timestamp*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_viewer(int id, char *who, int connect)
+extern "C" void ext_yahoo_webcam_viewer(int /*id*/, char */*who*/, int /*connect*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_closed(int id, char *who, int reason)
+extern "C" void ext_yahoo_webcam_closed(int /*id*/, char */*who*/, int /*reason*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_data_request(int id, int send)
+extern "C" void ext_yahoo_webcam_data_request(int /*id*/, int /*send*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_invite(int id, char *from)
+extern "C" void ext_yahoo_webcam_invite(int /*id*/, char */*from*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_invite_reply(int id, char *from, int accept)
+extern "C" void ext_yahoo_webcam_invite_reply(int /*id*/, char */*from*/, int /*accept*/)
 {
 }
 
-extern "C" void ext_yahoo_system_message(int id, char *msg)
+extern "C" void ext_yahoo_system_message(int /*id*/, char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_got_file(int id, char *who, char *url, long expires, char *msg, char *fname, unsigned long fesize)
+extern "C" void ext_yahoo_got_file(int /*id*/, char */*who*/, char */*url*/, long /*expires*/, char */*msg*/, char */*fname*/, unsigned long /*fesize*/)
 {
 }
 
-extern "C" void ext_yahoo_got_identities(int id, YList * ids)
+extern "C" void ext_yahoo_got_identities(int /*id*/, YList * /*ids*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_yahoologout(int id)
+extern "C" void ext_yahoo_chat_yahoologout(int /*id*/)
 { 
 }
 
-extern "C" void ext_yahoo_chat_yahooerror(int id)
+extern "C" void ext_yahoo_chat_yahooerror(int /*id*/)
 { 
 }
 
-extern "C" void ext_yahoo_got_search_result(int id, int found, int start, int total, YList *contacts)
+extern "C" void ext_yahoo_got_search_result(int /*id*/, int /*found*/, int /*start*/, int /*total*/, YList */*contacts*/)
 {
 }
 
-extern "C" void ext_yahoo_got_cookies(int id)
+extern "C" void ext_yahoo_got_cookies(int /*id*/)
 {
 }
 
@@ -529,7 +529,7 @@ extern "C" int ext_yahoo_connect_async(int id, char *host, int port,
  * Callback handling code starts here
  */
 
-static void connect_complete(void *data, int source, yahoo_input_condition condition)
+static void connect_complete(void *data, int source, yahoo_input_condition /*condition*/)
 {
 	struct connect_callback_data *ccd = (struct connect_callback_data *)data;
 	int error, err_size = sizeof(error);

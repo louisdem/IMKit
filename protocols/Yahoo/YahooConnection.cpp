@@ -132,7 +132,7 @@ YahooConnection::RemoveBuddy( const char * who )
 }
 
 void
-YahooConnection::cbStatusChanged( char * who, int stat, char * msg, int away )
+YahooConnection::cbStatusChanged( char * who, int stat, char * /*msg*/, int /*away*/ )
 {
 	const char * status=NULL;
 	
@@ -193,14 +193,14 @@ YahooConnection::cbGotBuddies( YList * buds )
 }
 
 void
-YahooConnection::cbGotIM(char *who, char *msg, long tm, int stat, int utf8)
+YahooConnection::cbGotIM(char *who, char *msg, long /*tm*/, int /*stat*/, int /*utf8*/)
 {
 	parse_html(msg);
 	fManager->GotMessage( who, msg );
 }
 
 void
-YahooConnection::cbLoginResponse(int succ, char *url)
+YahooConnection::cbLoginResponse(int succ, char */*url*/)
 {
 	if(succ == YAHOO_LOGIN_OK) {
 		fStatus = yahoo_current_status(fID);

@@ -6,7 +6,7 @@
 
 ## Application Specific Settings ---------------------------------------------
 
-ifeq ($(wildcard /boot/home/config/include/libyahoo2/yahoo2.h),)
+ifeq ($(wildcard /boot/home/config/include/yahoo2.h),)
 
 .PHONY: default
 default:
