@@ -120,7 +120,7 @@ ChatApp::ChatApp()
 		settings.AddBool("command_sends", true);
 	if (settings.FindString("people_handler", &fPeopleHandler) != B_OK) {
 		fPeopleHandler = kDefaultPeopleHandler;
-		settings.AddString("people_hanlder", kDefaultPeopleHandler);
+		settings.AddString("people_handler", kDefaultPeopleHandler);
 	};
 	
 	im_save_client_settings("im_client", &settings);
