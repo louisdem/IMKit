@@ -420,11 +420,11 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			fDirtyMenu = false;
 		};
 		
-		BPoint pos;
-		ConvertToScreen(&pos);
-		BRect r(pos.x - 2, pos.y - 2, pos.x + 2, pos.y + 2);
+		ConvertToScreen(&p);
+		BRect r(p, p);
+		r.InsetBySelf(-2, -2);
 		
-		fMenu->Go(pos, true, true, r, true);	
+		fMenu->Go(p, true, true, r, true);	
 	}
 	
 	if ( buttons & B_PRIMARY_MOUSE_BUTTON )
