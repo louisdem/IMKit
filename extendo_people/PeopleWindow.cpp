@@ -54,7 +54,7 @@ bool PeopleWindow::QuitRequested() {
 		path.Append(leaf);
 		if (leaf[0] == 0) {
 			if (be_app->CountWindows() == 1 /* us */)
-				be_app->PostMessage(B_QUIT_REQUESTED);
+				be_app_messenger.SendMessage(B_QUIT_REQUESTED);
 			return true;
 		}
 		BFile(path.Path(),B_CREATE_FILE);
@@ -68,7 +68,8 @@ bool PeopleWindow::QuitRequested() {
 	}
 	
 	if (be_app->CountWindows() == 1 /* us */)
-		be_app->PostMessage(B_QUIT_REQUESTED);
+		be_app_messenger.SendMessage(B_QUIT_REQUESTED);
 	
 	return true;
 }
+
