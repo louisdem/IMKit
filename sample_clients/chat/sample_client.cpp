@@ -12,6 +12,7 @@
 #include <MenuField.h>
 #include <MenuItem.h>
 #include <PopUpMenu.h>
+#include <Beep.h>
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
