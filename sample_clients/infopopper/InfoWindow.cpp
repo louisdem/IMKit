@@ -107,6 +107,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 			char contactname[512];
 			char nickname[512];
 			char email[512];
+			char status[512];
 			
 			IM::Contact contact(&ref);
 			
@@ -119,6 +120,14 @@ InfoWindow::MessageReceived( BMessage * msg )
 			if (contact.GetNickname(nickname, sizeof(nickname)) != B_OK) {
 				strcpy(nickname, "<unknown nick>");
 			};
+			if (contact.GetNickname(status, sizeof(status)) != B_OK) {
+				strcpy(status, "<unknown status>");
+			};
+			
+			if ( strcasecmp(status, "blocked") == 0 ) {
+				// break here if status is BLOCKED
+				break;
+			}
 			
 			InfoView::info_type type = InfoView::Information;
 			

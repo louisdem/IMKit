@@ -21,6 +21,7 @@ ___ Things to fix
 * MSN: Don't create connections for blocked contacts.
 * MSN: Crashes if trying to log in with no net connection
 * Crashes when chatting on ICQ - typing notifcations?
+* im_server: send status offline messages when quiting
 
 ___ New features
 
