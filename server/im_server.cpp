@@ -1233,8 +1233,17 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	// update status
 	fStatus[proto_id] = new_status;
 	
+	// Add old total status to msg, to remove duplicated message to user
+	char total_status[512];
+	if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
+		msg->AddString("old_total_status", total_status);
+	
 	// calculate total status for contact
 	UpdateContactStatusAttribute(contact);
+
+	// Add new total status to msg, to remove duplicated message to user
+	if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
+		msg->AddString("total_status", total_status);
 }
 
 

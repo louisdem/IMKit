@@ -147,8 +147,11 @@ InfoWindow::MessageReceived( BMessage * msg )
 					BString shortMessage = message;
 					
 					if ( shortMessage.FindFirst("\n") >= 0 )
+					{
 						shortMessage.Truncate( shortMessage.FindFirst("\n") );
-									
+						shortMessage.Append("...");
+					}
+					
 					if ( shortMessage.Length() > 30 ) {
 						shortMessage.Truncate(27);
 						shortMessage.Append("...");
@@ -160,19 +163,24 @@ InfoWindow::MessageReceived( BMessage * msg )
 					type = InfoView::Important;
 				}	break;
 				
-				case IM::STATUS_CHANGED: {						
-					text = fStatusText;
-
-					text.ReplaceAll("$status$", msg->FindString("status"));
+				case IM::STATUS_CHANGED: {
+					const char * new_status = msg->FindString("total_status");
+					const char * old_status = msg->FindString("old_total_status");
+					
+					if ( new_status && old_status && strcmp(new_status,old_status) )
+					{ // only show if total status has changed
+						text = fStatusText;
+						
+						text.ReplaceAll("$status$", msg->FindString("total_status"));
+					}
 				}	break;
 			}
-
+			
 			text.ReplaceAll("\\n", "\n");
 			text.ReplaceAll("$nickname$", nickname);
 			text.ReplaceAll("$contactname$", contactname);
 			text.ReplaceAll("$email$", email);
 			text.ReplaceAll("$id$", msg->FindString("id"));
-
 			
 			if ( text != "" )
 			{ // a message to display
