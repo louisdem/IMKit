@@ -90,15 +90,11 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	// add buttons
 	ImageButton * btn;
 	BBitmap * icon;
-/*	
-	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/People", "BEOS:L:STD_ICON");
-*/
-
+	long err = 0;
+	
 	// people icon
 #if  B_BEOS_VERSION > B_BEOS_VERSION_5
 	BNode peopleApp("/boot/beos/apps/People");
-	long err = 0;
 
 	#ifdef GET_NODE_ICON
 		icon = GetNodeIcon(peopleApp, 32, &err);
@@ -130,8 +126,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	}
 	
 #if  B_BEOS_VERSION > B_BEOS_VERSION_5
-	BNode emailApp(&emailAddRef);
-	long err = 0;
+	BNode emailApp(&emailAppRef);
 
 	#ifdef GET_NODE_ICON
 		icon = GetNodeIcon(emailApp, 32, &err);
