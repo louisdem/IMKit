@@ -6,7 +6,8 @@ First of all, a few notes:
     you know where to look for it.
 
   * When running "make install" the Tracker add-ons will be installed directly 
-    in ~/config/add-ons/Tracker where they belong.
+    in ~/config/add-ons/Tracker where they belong, libim.so will be placed in
+    ~/config/lib and im_server in ~/config/servers.
 
   * The ICQ add-on is built by the enclosed makefiles, but it requires that you
     download and build/install the following libraries. If you don't wish to
@@ -21,8 +22,7 @@ Now, on to the making:
   To compile do this 
      1. Open a Terminal 
      2. Change to the imkit/src folder 
-     3. Run "make" 
-     4. Run "make install"
+     3. Run "make install" twice
 
 Simple enough.
 
