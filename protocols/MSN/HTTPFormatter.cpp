@@ -32,21 +32,31 @@ HTTPFormatter::HTTPFormatter(const char *response, int32 length) {
 	const int32 kSeperatorLen = strlen("\r\n");
 	
 	while ((seperator = buffer.FindFirst(kSeperator, position)) != B_ERROR) {
+		if ( seperator == position ) {
+			// end of headers, copy rest to content
+			buffer.CopyInto( fContent, position+2, buffer.Length()-position-2 );
+			break;
+		}
 		buffer.CopyInto(line, position, seperator - position);
-
 		position = seperator + kSeperatorLen;		
 		tempVect.push_back(line);
 	};
 	
 	vector<BString>::iterator i = tempVect.begin();
 	line = *i;
-	seperator = line.FindFirst("/");
-	position = line.FindFirst(" ", seperator);
-	line.CopyInto(fVersion, seperator + 1, position - seperator - 1);
-	seperator = line.FindFirst(" ", position);
-	line.CopyInto(buffer, position + 1, seperator - position - 1);
-	fStatus = atol(buffer.String());
-	i++;
+	if ( line.Compare("HTTP/1.", strlen("HTTP/1.")) == 0 )
+	{ // Actual HTTP response. Not present in MSN messages
+		seperator = line.FindFirst("/");
+		position = line.FindFirst(" ", seperator);
+		line.CopyInto(fVersion, seperator + 1, position - seperator - 1);
+		seperator = line.FindFirst(" ", position);
+		line.CopyInto(buffer, position + 1, seperator - position - 1);
+		fStatus = atol(buffer.String());
+		i++;
+	} else {
+		// Let's suppose this is ok and set the status to 200
+		fStatus = 200;
+	}
 	
 	for (; i != tempVect.end(); i++) {
 		BString line = *i;

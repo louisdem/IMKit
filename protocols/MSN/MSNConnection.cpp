@@ -769,7 +769,7 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	};
 	
 	if (command->Type() == "MSG") {
-		LOG(kProtocolName, liDebug, "Processing MSG: command->Payload(0), [%s]");
+/*		LOG(kProtocolName, liDebug, "Processing MSG: command->Payload(0), [%s]");
 	
 		BString sender = command->Param(0);
 
@@ -780,6 +780,30 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 			
 			fManMsgr.SendMessage(&msgRecvd);
 		};
+		
+		delete command;
+		return B_OK;*/
+		
+		HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
+		
+		const char * type = http.HeaderContents("Content-Type");
+		
+		if ( type )
+		{ // we have a type, handle it.
+			if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
+				LOG("MSN", liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
+				BMessage immsg(IM::MESSAGE);
+				immsg.AddString("protocol", "MSN");
+				immsg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
+				immsg.AddString("id", command->Param(0) );
+				immsg.AddString("message", http.Content());
+				fManMsgr.SendMessage(&immsg);
+			} else {
+				LOG("MSN", liDebug, "Got message of unknown type <%s>\n", type );
+			}
+		} else {
+			LOG("ICQ", liDebug, "No Content-Type in message!\n");
+		}
 		
 		delete command;
 		return B_OK;
