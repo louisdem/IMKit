@@ -1,0 +1,13 @@
+bin:
+contains pre-compiled add-ons . One for MDR 2.x and one for 3.x.
+the 2.x one is a bit broken, but since I don't have 2.x any more
+I didn't bother fixing it. A re-compile should do it.
+
+src: 
+contains code for compiling the add-on. You need to place it in
+the right dir to make it work, though. For 3.x it should go in the
+haiku/current/src/kits/mail folder. Then a make should work.
+For 2.x, I think it's supposed to be in the filter folder.
+
+If someone wants to test and verify these instructions, and then
+update this file, feel free to do so!
