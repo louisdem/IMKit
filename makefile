@@ -9,10 +9,10 @@ SUBDIRS = \
 default .DEFAULT :
 	# These two lines shouldn't be here. They should be in libim/makefile somehow.
 	-mkdir /boot/home/config/include/libim
-	-cp libim/*.h /boot/home/config/include/libim
+	-cp -u libim/*.h /boot/home/config/include/libim
 	
 	# copy the engine to a known location
-	-cp makefile-engine.IMkit $(BUILDHOME)/etc/makefile-engine.IMkit
+	-cp -u makefile-engine.IMkit $(BUILDHOME)/etc/makefile-engine.IMkit
 
 	# must install lib to make the rest.
 	$(MAKE) -C libim install
