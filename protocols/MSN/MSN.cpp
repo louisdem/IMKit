@@ -290,7 +290,8 @@ status_t MSNProtocol::UpdateSettings( BMessage & msg ) {
 uint32 MSNProtocol::GetEncoding() 
 {
 //	return fClient.fEncoding;
-	return B_ISO1_CONVERSION;
+//	return B_ISO1_CONVERSION;
+	return 0xffff; // No conversion, MSN handles UTF-8
 }
 
 status_t MSNProtocol::StatusChanged(const char *nick, online_types status) {
@@ -333,7 +334,7 @@ status_t MSNProtocol::MessageFromUser(const char *passport, const char *msg) {
 	im_msg.AddString("protocol", kProtocolName);
 	im_msg.AddString("id", NormalizeNick(passport));
 	im_msg.AddString("message", msg);
-	im_msg.AddInt32("charset",B_ISO1_CONVERSION);
+	//im_msg.AddInt32("charset",B_ISO1_CONVERSION);
 	
 	fMsgr.SendMessage(&im_msg);											
 

@@ -21,6 +21,7 @@ Things to fix
 * Extract Deskbar icon from im_server, let it live it's own life
 * Contact's BNode::SetTo crashes with invalid pointer sometimes?
 * Fix Preflet so it reads SVG icons(?)
+* Setting for im_server, log level
 
 New features
 

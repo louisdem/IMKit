@@ -789,8 +789,8 @@ status_t MSNConnection::handleMSG( Command * command ) {
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else
 		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
-			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),
-				tnStartedTyping);
+			//printf("TypingUser: %s\n", http.HeaderContents("TypingUser") );
+			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
 		} else {
 			LOG("MSN", liDebug, "Got message of unknown type <%s>", type );
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));

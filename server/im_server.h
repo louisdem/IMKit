@@ -68,6 +68,7 @@ class Server : public BApplication
 		void	reply_GET_CONTACT_STATUS( BMessage * );
 		void	reply_UPDATE_CONTACT_STATUS( BMessage * );
 		void	reply_GET_OWN_STATUSES(BMessage *msg);
+		void	reply_GET_CONTACTS_FOR_PROTOCOL( BMessage * );
 		
 		void	handle_SETTINGS_UPDATED(BMessage *);
 		

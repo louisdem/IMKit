@@ -150,3 +150,9 @@ endif
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
 
 include $(TOPDIR)/makefile-engine.IMkit
+
+
+$(TARGET): _APP_
+
+_APP_: $(TOPDIR)/build/im_server
+	-ln -sf $< $@

@@ -185,7 +185,10 @@ Server::MessageReceived( BMessage * msg )
 		case UPDATE_CONTACT_STATUS:
 			reply_UPDATE_CONTACT_STATUS(msg);
 			break;
-		
+		case GET_CONTACTS_FOR_PROTOCOL:
+			reply_GET_CONTACTS_FOR_PROTOCOL(msg);
+			break;
+			
 		case FLASH_DESKBAR:
 		case STOP_FLASHING:
 		case REGISTER_DESKBAR_MESSENGER:
@@ -1822,4 +1825,21 @@ Server::InitSettings()
 		settings.AddBool("auto_start", false );
 	im_save_client_settings("im_server", &settings);
 	// done with template and settings.
+}
+
+void
+Server::reply_GET_CONTACTS_FOR_PROTOCOL( BMessage * msg )
+{
+	if ( msg->FindString("protocol") == NULL )
+	{
+		msg->SendReply( ERROR );
+		
+		return;
+	}
+	
+	BMessage reply(ACTION_PERFORMED);
+	
+	GetContactsForProtocol( msg->FindString("protocol"), &reply );
+	
+	msg->SendReply( &reply );
 }

@@ -71,6 +71,7 @@ enum message_what_codes {
 	GET_CONTACT_STATUS		='IMc0',
 	GET_OWN_STATUSES		='IMc1',
 	UPDATE_CONTACT_STATUS	= 'IMc2',
+	GET_CONTACTS_FOR_PROTOCOL = 'IMc3',
 	
 	/*
 		Deskbar icon related messages
