@@ -40,13 +40,38 @@ merge_contacts( entry_ref _src, entry_ref _dst )
 			else
 				dst_data[0] = 0;
 			
-			char result[1024];
-			sprintf(result,"%s;%s", data, dst_data);
+			// remove trailing ';'
+			if ( strlen(dst_data) > 0 && dst_data[strlen(dst_data)-1] == ';' )
+				dst_data[strlen(dst_data)-1] = 0;
 			
-			dst.WriteAttr(
-				attr_name, info.type, 0,
-				result, strlen(result)+1
-			);
+			if ( strlen(data) > 0 && data[strlen(data)-1] == ';' )
+				data[strlen(data)-1] = 0;
+			
+			char result[1024];
+			result[0] = 0;
+			
+			if ( data[0] != 0 && dst_data[0] != 0 )
+			{ // both contacts have connections
+				sprintf(result,"%s;%s", data, dst_data);
+			} else
+			{
+				if ( dst_data[0] != 0 )
+				{ // only dst has connections
+					strcpy(result, dst_data);
+				}
+				if ( data[0] != 0 )
+				{ // only src has connections
+					strcpy(result, data);
+				}
+			}
+			
+			if ( result[0] )
+			{ // no need to write the attr if there's no data..
+				dst.WriteAttr(
+					attr_name, info.type, 0,
+					result, strlen(result)+1
+				);
+			}
 		} else
 		{ // other attr, just copy
 			src.ReadAttr(
