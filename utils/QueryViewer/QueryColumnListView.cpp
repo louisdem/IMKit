@@ -310,7 +310,8 @@ status_t QueryColumnListView::AddRowByRef(entry_ref *ref) {
 				} break;
 				
 				case B_TIME_TYPE: {
-					field = new BDateField(0);
+					time_t time = 0;
+					field = new BDateField(&time);
 				} break;
 				
 				default: {

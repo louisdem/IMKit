@@ -25,6 +25,7 @@ QueryWindow::QueryWindow(BRect rect)
 	fQueryList = new BOutlineListView(outline, "Queries", B_SINGLE_SELECTION_LIST,
 		B_FOLLOW_ALL_SIDES, B_WILL_DRAW);
 	fQueryList->SetSelectionMessage(new BMessage(qwQuerySelected));
+	fQueryList->SetInvocationMessage(new BMessage(qwQueryInvoked));
 		
 	BScrollView *scroll = new BScrollView("Scroller", fQueryList,
 		B_FOLLOW_LEFT | B_FOLLOW_TOP_BOTTOM, 0, false, true);
@@ -91,6 +92,22 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 				fCurrentQView->Show();
 			};
 			
+		} break;
+		
+		case qwQueryInvoked: {
+			int32 index = -1;
+			if (msg->FindInt32("index", &index) != B_OK) return;
+			
+			IconCountItem *item = reinterpret_cast<IconCountItem *>(fQueryList->ItemAt(index));
+			if (item == NULL) return;
+			
+			entry_ref ref;
+			if (get_ref_for_path(item->Path(), &ref) == B_OK) {
+				BMessage open(B_REFS_RECEIVED);
+				open.AddRef("refs", &ref);
+				
+				be_roster->Launch("application/x-vnd.Be-TRAK", &open);
+			};
 		} break;
 		
 		case mscActionTaken: {

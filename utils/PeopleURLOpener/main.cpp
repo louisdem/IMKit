@@ -4,6 +4,13 @@
 
 #include "IMKitUtilities.h"
 
+extern "C" void process_refs(entry_ref dir_ref, BMessage *msg, void *) {
+	msg->what = B_REFS_RECEIVED;
+	msg->AddRef("dir_ref", &dir_ref);
+	
+	be_roster->Launch("application/x-vnd.BeClan.IMKit.PeopleURLOpener", msg);
+};
+
 class PUPApp : public BApplication {
 	public:
 				PUPApp(void)
@@ -15,7 +22,7 @@ class PUPApp : public BApplication {
 					int32 urlsAdded = 0;
 
 					entry_ref htmlRef;
-					be_roster->FindApp("text/html", &htmlRef);
+					be_roster->FindApp("application/x-vnd.Be.URL.http", &htmlRef);
 					BPath htmlPath(&htmlRef);
 
 					BMessage argv(B_ARGV_RECEIVED);

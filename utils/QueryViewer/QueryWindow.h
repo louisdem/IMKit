@@ -31,6 +31,7 @@ class QueryWindow : public BWindow {
 					enum {
 							qwQuerySelected = 'qw01',
 							qwQueryUpdated = 'qw02',
+							qwQueryInvoked = 'qw03',
 					};
 			
 					void	CreateGroups(BDirectory dir, BListItem *under, BRect rect);

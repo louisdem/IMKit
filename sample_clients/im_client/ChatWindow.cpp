@@ -763,7 +763,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 		
 		case VIEW_WEBPAGE: {
 			entry_ref htmlRef;
-			be_roster->FindApp("text/html", &htmlRef);
+			be_roster->FindApp("application/x-vnd.Be.URL.http", &htmlRef);
 			BPath htmlPath(&htmlRef);
 
 			BMessage argv(B_ARGV_RECEIVED);
