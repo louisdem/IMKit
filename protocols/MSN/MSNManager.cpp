@@ -231,9 +231,13 @@ printf("Got SB redir\n");
 				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
 				
 //				fConnections.remove(con);
-
-				con->Lock();
-				con->Quit();
+				
+//				fSwitchboard.remove(
+				
+//				con->Lock();
+//				con->Quit();
+				
+				BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 //				LOG(kProtocolName, liLow, "After close we have %i connections", fConnections.size());
 				
 //				if (fConnections.size() == 0) {
@@ -281,6 +285,8 @@ printf("Connection state: %i\n", fConnectionState);
 		
 		return B_OK;
 	};
+	
+	return B_ERROR;
 };
 
 status_t MSNManager::AddBuddy(const char *buddy) {

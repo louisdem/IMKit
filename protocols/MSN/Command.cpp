@@ -123,7 +123,7 @@ status_t Command::MakeObject(const char *string) {
 	
 	command.CopyInto(fType, 0, seperator);
 	fType.ToUpper();
-
+	
 	position = seperator + 1;
 	
 	seperator = command.FindFirst(" ", position);
@@ -133,9 +133,9 @@ status_t Command::MakeObject(const char *string) {
 		fParams.push_back(command.String());
 		return B_OK;
 	} else {
-		command.CopyInto(temp, position, command.Length() - position);
-		int32 end = temp.FindFirst(" ");
-		temp.Truncate(end);
+		temp = "";
+		command.CopyInto(temp, position, seperator-position);
+		
 		fTrID = atol(temp.String());
 		if ((fTrID == 0) && (temp != "0")) fParams.push_back(temp);
 	};

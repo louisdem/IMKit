@@ -90,7 +90,9 @@ class MSNManager : public BLooper {
 			BString		fDisplayName;
 			BString		fPassword;
 			BString		fAwayMsg;
-			
+	
+	protected:
+		friend class MSNConnection;
 		MSNHandler		*fHandler;
 };
 

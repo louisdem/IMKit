@@ -24,7 +24,7 @@ MSNConnection::MSNConnection(const char *server, uint16 port, MSNManager *man)
 	fManMsgr = BMessenger(fManager);
 	
 	uint8 serverLen = strlen(server);
-	fServer = (char *)calloc(serverLen + 1, sizeof(char));
+	fServer = strdup(server);//(char *)calloc(serverLen + 1, sizeof(char));
 	memcpy(fServer, server, serverLen);
 	fServer[serverLen] = '\0';
 	fPort = port;
@@ -105,7 +105,10 @@ void MSNConnection::StartReceiver(void) {
 	fSockMsgr = new BMessenger(NULL, (BLooper *)this);
 
 	fThread = spawn_thread(Receiver, "MSN socket", B_NORMAL_PRIORITY, (void *)this);
-	if (fThread > B_ERROR) resume_thread(fThread);
+	if (fThread > B_ERROR) 
+		resume_thread(fThread);
+	else
+		LOG(kProtocolName, liHigh, "Error creating receiver thread in MSNConnection!");
 	
 };
 
@@ -121,8 +124,10 @@ void MSNConnection::StopReceiver(void) {
 //		quit in a decent way.
 		suspend_thread(fThread);
 		resume_thread(fThread);
+		int32 res=0;
+		wait_for_thread(fThread, &res);
 	}
-
+	
 	fThread = -1;
 };
 
@@ -130,17 +135,17 @@ int32 MSNConnection::Receiver(void *con) {
 	MSNConnection *connection = reinterpret_cast<MSNConnection *>(con);
 
 	const uint32 kSleep = 2000000;
-	const char *kHost = connection->Server();
+	const char *kHost = strdup(connection->Server());
 	const uint16 kPort = connection->Port();
 	const BMessenger *kMsgr = connection->fSockMsgr;
 	
 	int32 socket = 0;
-
+	
 	if ( !connection->fSockMsgr->IsValid() ) {
 		LOG(kProtocolName, liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
 		return B_ERROR;
 	}
-
+	
 	BMessage reply;
 	status_t ret = 0;
 
@@ -161,6 +166,8 @@ int32 MSNConnection::Receiver(void *con) {
 	char buffer[1024];
 	BString commandBuff = "";
 	int32 kNewLineLen = strlen("\r\n");
+	
+	LOG(kProtocolName, liLow, "%s:%i: Starting receiver loop", kHost, kPort);
 	
 	while (kMsgr->IsValid() == true) {
 		FD_ZERO(&read);
@@ -309,8 +316,8 @@ int32 MSNConnection::NetworkSend(Command *command) {
 //		LOG(kProtocolName, liDebug, "%s:%i: Sending; ", Server(), Port());
 //		PrintHex((uchar *)data, data_size);
 		
-		LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
-			Port(), data_size);
+//		LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
+//			Port(), data_size);
 		
 		while (sent_data < data_size) {
 			int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
@@ -469,6 +476,7 @@ void MSNConnection::ClearQueues(void) {
 };
 
 status_t MSNConnection::ProcessCommand(Command *command) {
+//	printf("Processing command: %s\n", command->Flatten(command->TransactionID()) );
 	if (command->Type() == "VER") {
 		return handleVER( command );
 	} else
@@ -479,8 +487,8 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 		return handleCVR( command );
 	} else	
 	if (command->Type() == "RNG") {
-		return handleXFR( command );
-	} else	
+		return handleRNG( command );
+	} else
 	if (command->Type() == "XFR") {
 		return handleXFR( command );
 	} else
@@ -492,11 +500,15 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	} else
 	if (command->Type() == "MSG") {
 		return handleMSG( command );
+	} else
+	if (command->Type() == "QNG") {
+		// we ignore this, it's just a '"don't ping until x secs have passed" command
+		return B_OK;
 	} else {
 		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
 			fPort, command->Type().String());
-		PrintHex((uchar *)command->Flatten(0), command->FlattenedSize());
-	
+		//PrintHex((uchar *)command->Flatten(command->TransactionID()), command->FlattenedSize());
+		
 		return B_ERROR;
 	}
 };
@@ -556,7 +568,7 @@ status_t MSNConnection::handleRNG( Command * command ) {
 	LOG(kProtocolName, liDebug, "%s:%i got a chat invite from %s (%s)",
 		fServer, fPort, command->Param(4), command->Param(3));
 	ServerAddress sa = ExtractServerDetails((char *)command->Param(0));
-
+	
 	BMessage newCon(msnmsgNewConnection);
 	newCon.AddString("host", sa.first);
 	newCon.AddInt16("port", sa.second);
@@ -565,20 +577,20 @@ status_t MSNConnection::handleRNG( Command * command ) {
 	newCon.AddString("authString", command->Param(2));
 	newCon.AddString("inviterPassport", command->Param(3));
 	newCon.AddString("inviterDisplayName", command->Param(4));
-
+	
 	BString temp;
 	temp << command->TransactionID();
-	newCon.AddString("sessionID", temp);
-		
+	newCon.AddString("sessionID", temp.String() );
+	
 	fManMsgr.SendMessage(&newCon);
-
+	
 	return B_OK;
 }
 
 status_t MSNConnection::handleXFR( Command * command ) {
 	LOG("MSN", liDebug, "Processing XFR");
 	ServerAddress sa = ExtractServerDetails((char *)command->Param(1));
-
+	
 	BMessage newCon(msnmsgNewConnection);
 	newCon.AddString("host", sa.first);
 	newCon.AddInt16("port", sa.second);
@@ -666,6 +678,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
 		fServer, fPort, recvdBytes, "nexus.passport.com");
+//	printf("%s\n", recv->Flatten() );
 	if (recvdBytes < 0) {
 		BMessage closeCon(msnmsgCloseConnection);
 		closeCon.AddPointer("connection", this);
@@ -674,7 +687,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 		return B_ERROR;
 	};
-
+	
+	
 	BString passportURLs = recv->HeaderContents("PassportURLs");
 	int32 begin = passportURLs.FindFirst("DALogin=");
 	BString loginHost = "";
@@ -711,64 +725,43 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
 		fServer, fPort, SSLSend(loginHost.String(), send, &recv),
 		loginHost.String());
-//
-////		We got redirected.
-//		if (recv->Status() == 302) {
-//			loginDocument = "";
-//			loginHost = recv->HeaderContents("Location");
-//			begin = 0;
-//		
-//			begin = loginHost.FindFirst("//");
-//			if (begin != B_ERROR) loginHost.Remove(0, begin + strlen("//"));
-//			
-//			begin = loginHost.FindFirst("/");
-//			if (begin != B_ERROR) {
-//				loginHost.MoveInto(loginDocument, begin, begin - loginHost.Length());
-//				loginHost.Remove(begin, begin - loginHost.Length());
-//			} else {
-//				printf("Erk!\n");
-//				exit(0);
-//			};
-//			
-//			send = new HTTPFormatter(loginHost.String(), loginDocument.String());
-//			BString authStr = "Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=";
-//			authStr << fManager->Passport() << ",pwd=" << fManager->Password();
-//			authStr << "," << command->Param(2);
-//
-//			delete recv;
-//
-//			LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-//				fServer, fPort, SSLSend(loginHost.String(), send, &recv),
-//				loginHost.String());
-//		};
-////		We got redirected. Again.
-//		if (recv->Status() == 302) {
-//			loginDocument = "";
-//			loginHost = recv->HeaderContents("Location");
-//			begin = 0;
-//
-//			begin = loginHost.FindFirst("//");
-//			if (begin != B_ERROR) loginHost.Remove(0, begin + strlen("//"));
-//			
-//			begin = loginHost.FindFirst("/");
-//			if (begin != B_ERROR) {
-//				loginHost.MoveInto(loginDocument, begin, begin - loginHost.Length());
-//				loginHost.Remove(begin, begin - loginHost.Length());
-//			} else {
-//				printf("Erk!\n");
-//				exit(0);
-//			};
-//
-//			
-//			send = new HTTPFormatter(loginHost.String(), loginDocument.String());
-//			BString authStr = "Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=";
-//			authStr << fManager->Passport() << ",pwd=" << fManager->Password();
-//			authStr << "," << command->Param(2);
-//
-//			LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-//				fServer, fPort, SSLSend(loginHost.String(), send, &recv),
-//				loginHost.String());
-//		};
+	
+	// check status for 302, redirect
+	if ( recv->Status() != 200 ) {
+		LOG(kProtocolName, liDebug, "Got non-200 status: %d", recv->Status() );
+		
+		int repeatCount = 5; // max 5 redirects
+		
+		while ( recv->Status() == 302 && repeatCount-- > 0 ) {
+			BString location = recv->HeaderContents("Location");
+			
+			location.ReplaceFirst("https://", "");
+			int first_slash = location.FindFirst("/");
+			location.CopyInto( loginHost, 0, first_slash );
+			location.CopyInto( loginDocument, first_slash, location.Length() - first_slash );
+			
+			LOG(kProtocolName, liHigh, "Redirected to (%s) (%s)", loginHost.String(), loginDocument.String() );
+			
+			send = new HTTPFormatter(loginHost.String(), loginDocument.String());
+			BString authStr = "Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=";
+			authStr << fManager->Passport() << ",pwd=" << fManager->Password();
+			authStr << "," << command->Param(2);
+			authStr.ReplaceAll("@", "%40");
+			
+			send->AddHeader("Authorization", authStr.String());
+			delete recv;
+			LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
+				fServer, fPort, SSLSend(loginHost.String(), send, &recv),
+				loginHost.String());
+		}
+		
+		if ( repeatCount == 0 ) {
+			// error, too many redirects
+			LOG( kProtocolName, liHigh, "%s:%i got too many redirects when loggin in", fServer, fPort );
+			return B_ERROR;
+		}
+	}
+	
 ////	We get the ticket!
 	if (recv->Status() == 200) {
 		BString authInfo = recv->HeaderContents("Authentication-Info");
@@ -793,21 +786,6 @@ status_t MSNConnection::handleUSR( Command * command ) {
 }
 
 status_t MSNConnection::handleMSG( Command * command ) {
-/*		LOG(kProtocolName, liDebug, "Processing MSG: command->Payload(0), [%s]");
-	
-		BString sender = command->Param(0);
-
-		if (sender != "Hotmail") {
-			BMessage msgRecvd(msnMessageRecveived);
-			msgRecvd.AddString("passport", sender.String());
-			msgRecvd.AddString("message", command->Payload(0));
-			
-			fManMsgr.SendMessage(&msgRecvd);
-		};
-		
-		delete command;
-		return B_OK;*/
-		
 	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
 		
 	const char * type = http.HeaderContents("Content-Type");
@@ -816,12 +794,13 @@ status_t MSNConnection::handleMSG( Command * command ) {
 	{ // we have a type, handle it.
 		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
 			LOG("MSN", liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
-			BMessage immsg(IM::MESSAGE);
+/*			BMessage immsg(IM::MESSAGE);
 			immsg.AddString("protocol", "MSN");
 			immsg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
 			immsg.AddString("id", command->Param(0) );
 			immsg.AddString("message", http.Content());
-			fManMsgr.SendMessage(&immsg);
+			fManMsgr.SendMessage(&immsg);*/
+			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else {
 			LOG("MSN", liDebug, "Got message of unknown type <%s>\n", type );
 		}

@@ -1,5 +1,7 @@
 #include "HTTPFormatter.h"
 
+#include <stdio.h>
+
 HTTPFormatter::HTTPFormatter(void) {
 	_init();
 };
@@ -23,6 +25,8 @@ void HTTPFormatter::_init(void) {
 };
 
 HTTPFormatter::HTTPFormatter(const char *response, int32 length) {
+	_init();
+	
 	BString buffer = response;
 	BString line = "";
 	int32 seperator = 0;
