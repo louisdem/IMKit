@@ -17,6 +17,8 @@
 #include "CLV/ColumnTypes.h"
 #include "QueryColumnListView.h"
 
+#include "IMKitUtilities.h"
+
 typedef map<BString, QueryColumnListView *> cl_map; // Path / QCLV map
 typedef map<entry_ref, IconCountItem *> di_map; // Directory / IconTextItem map
 

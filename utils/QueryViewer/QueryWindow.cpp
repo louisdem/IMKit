@@ -2,6 +2,7 @@
 
 const float kEdgeSpacer = 5.0;
 const char *kQueryDir = "/boot/home/config/settings/BeClan/QueryViewer/Queries";
+const char *kCollapseAttr = "queryviewer:collapse";
 
 QueryWindow::QueryWindow(BRect rect)
 	: BWindow(rect, "QueryViewer", B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS) {
@@ -80,6 +81,19 @@ QueryWindow::QueryWindow(BRect rect)
 };
 
 QueryWindow::~QueryWindow(void) {
+	if (fQueryList) {
+		int32 items = fQueryList->FullListCountItems();
+
+		for (int32 i = 0; i < items; i++) {
+			IconCountItem *item = ((IconCountItem *)fQueryList->ItemAt(i));
+			if ((item) && (fQueryList->CountItemsUnder(item, false) > 0)) {
+				bool collapse = !item->IsExpanded();
+				WriteAttribute(BNode(item->Path()), kCollapseAttr,
+					(char *)&collapse, sizeof(bool), B_STRING_TYPE);
+			};
+		};
+	};
+	
 	be_app_messenger.SendMessage(B_QUIT_REQUESTED);
 };
 
@@ -227,6 +241,12 @@ void QueryWindow::CreateGroups(BDirectory dir, BListItem *under, BRect rect) {
 			entry.GetRef(&ref);
 
 			fQueryList->AddUnder(item, under);
+
+			int32 length = -1;
+			char *collapse = ReadAttribute(BNode(&entry), kCollapseAttr, &length);
+			if ((length > 0) && (collapse[0] != 0x00)) fQueryList->Collapse(item);
+			free(collapse);
+
 			fDirectoryItem[ref] = item;
 			CreateGroups(BDirectory(&entry), item, rect);
 			
