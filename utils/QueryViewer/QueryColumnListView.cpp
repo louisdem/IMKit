@@ -6,11 +6,57 @@ const char *kTrackerQueryInitMime = "_trk/qryinitmime";
 const char *kTrackerQueryType = "application/x-vnd.Be-query";
 
 const char *kFolderState = "_trk/columns_le";
+const char *kViewState = "_trk/viewstate_le";
 const int16 kAttrIndexOffset = 5;
 const int32 kSnoozePeriod = 1000 * 1000;
 const int32 kIconSize = 16;
 
 mime_map QueryColumnListView::fMimeTypes;
+
+void PrintHex(const unsigned char* buf, size_t size) {
+	uint16 i = 0;
+	uint16 j = 0;
+	int breakpoint = 0;
+
+	for(;i < size; i++) {
+		fprintf(stdout, "%02x ", (unsigned char)buf[i]);
+		breakpoint++;	
+
+		if(!((i + 1)%16) && i) {
+			fprintf(stdout, "\t\t");
+			for(j = ((i+1) - 16); j < ((i+1)/16) * 16; j++)	{
+				if(buf[j] < 30) {
+					fprintf(stdout, ".");
+				} else {
+					fprintf(stdout, "%c", (unsigned char)buf[j]);
+				};
+			}
+			fprintf(stdout, "\n");
+			breakpoint = 0;
+		}
+	}
+	
+	if(breakpoint == 16) {
+		fprintf(stdout, "\n");
+		return;
+	}
+
+	for(; breakpoint < 16; breakpoint++) {
+		fprintf(stdout, "   ");
+	}
+	
+	fprintf(stdout, "\t\t");
+
+	for(j = size - (size%16); j < size; j++) {
+		if(buf[j] < 30) {
+			fprintf(stdout, ".");
+		} else {
+			fprintf(stdout, "%c", (unsigned char)buf[j]);
+		};
+	}
+	
+	fprintf(stdout, "\n");
+}
 
 QueryColumnListView::QueryColumnListView(BRect rect, const char *name,
 	uint32 resizingMode, uint32 drawFlags, entry_ref ref, BMessage *msg = NULL,
@@ -162,26 +208,43 @@ void QueryColumnListView::AttachedToWindow(void) {
 	mime.GetAttrInfo(&msg);
 	AddMIMEColumns(&msg);
 	
-	BString queryPath = fMIMEString;
-	queryPath.ReplaceAll("/", "_");
-	queryPath.Prepend("/boot/home/config/settings/Tracker/DefaultQueryTemplates/");
-	
+	BPath path(&fRef);
 	int32 length = -1;
-	char *value = ReadAttribute(queryPath.String(), kFolderState, &length);
+	char *value = ReadAttribute(path.Path(), kFolderState, &length);
+	if (length < 0) {
+		BString queryPath = fMIMEString;
+		queryPath.ReplaceAll("/", "_");
+		queryPath.Prepend("/boot/home/config/settings/Tracker/DefaultQueryTemplates/");
+		
+		length = -1;
+		value = ReadAttribute(queryPath.String(), kFolderState, &length);
+	};
+
 	if (length > 1) {		
 		BMallocIO buffer;
 		buffer.WriteAt(0, value, length);
 		buffer.Seek(0, SEEK_SET);
 		ExtractColumnState(&buffer);
 	};
-
 	free(value);
 	
-//	printf("_trk/viewstate_le\n");
-//	value = ReadAttribute(queryPath.String(), "_trk/viewstate_le", &length);
-//	PrintHex((uchar *)value, length);
-//	free(value);
-
+	value = ReadAttribute(path.Path(), "_trk/viewstate_le", &length);
+	if (length < 0) {
+		BString queryPath = fMIMEString;
+		queryPath.ReplaceAll("/", "_");
+		queryPath.Prepend("/boot/home/config/settings/Tracker/DefaultQueryTemplates/");
+		
+		length = -1;
+		value = ReadAttribute(queryPath.String(), kViewState, &length);
+	};
+	
+	if (length > 1) {
+		BMallocIO buffer;
+		buffer.WriteAt(0, value, length);
+		buffer.Seek(0, SEEK_SET);
+		ExtractViewState(&buffer);
+	};
+	free(value);
 
 	fSelfMsgr = new BMessenger(this);
 	
@@ -370,7 +433,7 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 	status_t ret = B_ERROR;
 
 //	Data is;
-//	int32, int32; Key / Hash
+//	int32, int32; Key / Version
 //	int32 nameLen, char [nameLen + 1]
 //	float offset, float width
 //	align alignment
@@ -386,15 +449,18 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 		char *publicName = NULL;
 		char *internalName = NULL;
 		float width = -1;
-		alignment align;
-		uint32 type;	
+		alignment align = B_ALIGN_LEFT;
+		uint32 type = 0;
 		int32 length = -1;
+		uint32 hash = 0;
+				
+		source->Seek(sizeof(int32), SEEK_CUR); // Key
+		source->Seek(sizeof(int32), SEEK_CUR); // Version
 		
-		source->Seek(sizeof(int32) * 2, SEEK_CUR);	// Key / Hash
 		source->Read(&length, sizeof(int32));
 		publicName = (char *)calloc(length + 1, sizeof(char));
 		source->Read(publicName, length + 1);
-		
+			
 		source->Seek(sizeof(float), SEEK_CUR); // Offset
 		source->Read(&width, sizeof(float));
 		source->Read(&align, sizeof(alignment));
@@ -403,17 +469,88 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 		internalName = (char *)calloc(length + 1, sizeof(char));
 		source->Read(internalName, length + 1);
 		
-		source->Seek(sizeof(uint32), SEEK_CUR); // Hash
+		source->Read(&hash, sizeof(uint32));
+		
+		public_info_map::iterator pIt = fPublicCols.find(publicName);
+		if (pIt != fPublicCols.end()) {
+			hash = B_SWAP_INT32(hash);
+			pIt->second->hash = hash;
+			fHashCols[hash] = pIt->second;
+		} else {
+			printf("Couldn't find a place to store the hash for %s/%s\n",
+				internalName, publicName);
+		};
+		
 		source->Read(&type, sizeof(int32));
 
-		source->Seek(sizeof(bool), SEEK_CUR); // statField
+		bool isStat = false;
+		source->Read(&isStat, sizeof(bool));
+//		if (isStat) printf("\"%s\" / \"%s\" is a stat field\n", internalName, publicName);
 		source->Seek(sizeof(bool), SEEK_CUR); // editable
 	
 		ai_map::iterator iIt = fAttrIndex.find(internalName);
 		if (iIt != fAttrIndex.end()) SetColumnVisible(iIt->second, true);
+		
+		free(publicName);
+		free(internalName);
 	};
 
 	return ret;
+};
+
+status_t QueryColumnListView::ExtractViewState(BMallocIO *buffer) {
+//	Data is;
+//	uint32: viewmode
+//	uint32: last icon mode
+//	BPoint: list origin
+//	BPoint: icon origin
+//	uint32: Primary sort hash
+//	uint32: Primary sort type
+//	uint32: Secondary sort hash
+//	uint32: Secondary sort type
+//	bool: Reverse sort
+
+	uint32 primaryAttr = 0;
+	uint32 primaryType = 0;
+	uint32 secondaryAttr = 0;
+	uint32 secondaryType = 0;
+	bool reverse = false;
+
+	buffer->Seek(sizeof(uint32), SEEK_CUR);	// Key
+	buffer->Seek(sizeof(int32), SEEK_CUR);	// Version
+	buffer->Seek(sizeof(uint32), SEEK_CUR);	// View mode
+	buffer->Seek(sizeof(uint32), SEEK_CUR);	// Last icon mode
+	buffer->Seek(sizeof(BPoint), SEEK_CUR);	// List origin
+	buffer->Seek(sizeof(BPoint), SEEK_CUR);	// Icon origon
+
+	buffer->Read(&primaryAttr, sizeof(primaryAttr));
+	buffer->Read(&primaryType, sizeof(primaryType));		
+	primaryAttr = B_SWAP_INT32(primaryAttr);
+	primaryType = B_SWAP_INT32(primaryType);
+	
+	buffer->Read(&secondaryAttr, sizeof(secondaryAttr));
+	buffer->Read(&secondaryType, sizeof(secondaryType));
+	secondaryAttr = B_SWAP_INT32(secondaryAttr);
+	secondaryType = B_SWAP_INT32(secondaryType);
+	
+	buffer->Read(&reverse, sizeof(reverse));
+	reverse = !reverse;
+	
+	bool addToSort = false;
+	hash_info_map::iterator hIt = fHashCols.find(primaryAttr);
+	if (hIt != fHashCols.end()) {
+		if (hIt->second->type == primaryType) {
+			SetSortColumn(hIt->second->col, addToSort, reverse);
+			addToSort = true;
+		};
+	};
+		
+	hIt = fHashCols.find(secondaryAttr);
+	if (hIt != fHashCols.end()) {
+		if (hIt->second->type == secondaryType) {
+			SetSortColumn(hIt->second->col, addToSort, reverse);
+		};
+	};
 };
 
 status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
@@ -453,6 +590,7 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 		float width = 0;
 		float maxWidth = 0;
 		float minWidth = 0;
+		BColumn *column = NULL;
 
 		if (msg->FindString("attr:name", i, &internalName) != B_OK) continue;
 		if (msg->FindString("attr:public_name", i, &publicName) != B_OK) continue;
@@ -470,8 +608,8 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 			case B_CHAR_TYPE:
 			case B_STRING_TYPE: {
 				doAdd = true;
-				AddColumn(new MenuStringColumn(publicName, width, minWidth,
-					maxWidth, align), index);
+				column = new MenuStringColumn(publicName, width, minWidth, maxWidth,
+					align);
 			} break;
 			
 			case B_UINT8_TYPE:
@@ -483,20 +621,20 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 			case B_UINT64_TYPE:
 			case B_INT64_TYPE: {
 				doAdd = true;
-				AddColumn(new MenuIntegerColumn(publicName, width, minWidth,
-					maxWidth, align), index);
+				column = new MenuIntegerColumn(publicName, width, minWidth,
+					maxWidth, align);
 			} break;
 			
 			case B_SIZE_T_TYPE: {
 				doAdd = true;
-				AddColumn(new MenuSizeColumn(publicName, width, minWidth,
-					maxWidth, align), index);
+				column = new MenuSizeColumn(publicName, width, minWidth,
+					maxWidth, align);
 			} break;
 			
 			case B_TIME_TYPE: {
 				doAdd = true;
-				AddColumn(new MenuDateColumn(publicName, width, minWidth,
-					maxWidth, align), index);
+				column = new MenuDateColumn(publicName, width, minWidth,
+					maxWidth, align);
 			} break;
 			
 			default: {
@@ -506,8 +644,19 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 		};
 		
 		if (doAdd) {
+				col_info *colInfo = new col_info;
+				colInfo->col = column;
+				colInfo->hash = 0;
+				colInfo->publicName = publicName;
+				colInfo->internalName = internalName;
+				colInfo->type = B_SWAP_INT32(type);
+
+				fInternalCols[internalName] = colInfo;
+				fPublicCols[publicName] = colInfo;				
+
 				fAttrIndex[internalName] = index;
 				fIndexAttr[index] = internalName;
+				AddColumn(column, index);
 				index++;
 		};
 	};

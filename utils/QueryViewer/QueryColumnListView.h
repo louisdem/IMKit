@@ -32,12 +32,26 @@ extern const char *kTrackerQueryPredicate;
 extern const char *kTrackerQueryType;
 extern const char *kTrackerQueryInitMime;
 
+typedef struct {
+	BColumn *col;
+	uint32 hash;
+	BString publicName;
+	BString internalName;
+	int32 index;
+	int32 type;
+} col_info;
+
 typedef map<BString, BString> attr_map;
 typedef map<BString, uint32> type_map;
 typedef map<BString, int32> ai_map;
 typedef map<int32, BString> ia_map;
 typedef map<entry_ref, BRow *> ref_map;
 typedef vector<entry_ref> pending_stack;
+typedef map<BString, BColumn *> pc_map;
+
+typedef map<uint32, col_info *> hash_info_map;
+typedef map<BString, col_info *> internal_info_map;
+typedef map<BString, col_info *> public_info_map;
 
 typedef map<BString, BString> mime_map;
 
@@ -81,6 +95,7 @@ class QueryColumnListView : public BColumnListView {
 			const char		*Name(void);
 	private:
 				status_t	ExtractColumnState(BMallocIO *buffer);
+				status_t	ExtractViewState(BMallocIO *buffer);
 				status_t	AddMIMEColumns(BMessage *msg);
 			static int32	BackgroundAdder(void *arg);
 			
@@ -100,6 +115,10 @@ class QueryColumnListView : public BColumnListView {
 				ai_map		fAttrIndex;
 				ia_map		fIndexAttr;
 				
+			hash_info_map	fHashCols;
+		internal_info_map	fInternalCols;
+			public_info_map	fPublicCols;
+
 				ref_map		fRefRows;
 				
 				thread_id	fThreadID;
