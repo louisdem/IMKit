@@ -90,7 +90,7 @@ ifeq ($(CPU), x86)
 	CFLAGS += $(OPTIMIZER) $(DEBUG)
 
 #	SETTING: set warning level
-	ifeq ($(WARNINGS), ALL)
+	ifeq ($(WARNINGS), ALL )
 		CFLAGS += -W -Wall -Wno-multichar -Wno-ctor-dtor-privacy -Woverloaded-virtual -Wreturn-type -Wnon-virtual-dtor
 	else
 	ifeq ($(WARNINGS), NONE)
