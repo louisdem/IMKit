@@ -65,15 +65,15 @@ install: icons index attributes
 	copyattr --data --recursive --move "$(BUILD)/utils" /boot/apps/im_kit
 	
 
+# create indexes
 index:
-	# create indexes
 	-mkindex -t string IM:connections
 	-mkindex -t string IM:status
 	
+# add attributes to application/x-person
 attributes:
-	# add attributes to application/x-person
-	-/boot/apps/im_kit/utils/mimetype_attribute --mime application/x-person --internal-name "IM:connections" --public-name "IM Connections" --type string --width 80 --viewable --public
-	-/boot/apps/im_kit/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public
+	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:connections" --public-name "IM Connections" --type string --width 80 --viewable --public
+	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public
 	
 
 icons:
