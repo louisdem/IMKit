@@ -11,7 +11,7 @@ SUBDIRS = \
 	utils \
 	Preflet
 
-.PHONY: default clean symlinks dist
+.PHONY: default clean install dist
 
 default .DEFAULT :
 	# Unpack the Server icons.
@@ -45,8 +45,37 @@ symlinks:
 	mkdir "$(COMMON_ADDONS)/im_kit"
 	ln -sf "$(BUILD)/protocols" "$(COMMON_ADDONS)/im_kit"
 	ln -sf "$(BUILD)/tracker-addons/IM_Merge_contacts" "$(COMMON_ADDONS)/Tracker"
-	ln -sf "$(BUILD)/tracker-addons/IM_Start_conversation" "$(COMMON_ADDONS)/Tracker"
+	ln -sf "$(BUILD)/clients/im_client" "$(COMMON_ADDONS)/Tracker"
 	ln -sf "$(BUILD)/settings/InstantMessaging" /boot/home/config/be/Preferences
+
+
+install:
+	copyattr --data --move "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
+	rmdir "$(BUILD)/lib"
+	-if [ ! -d "$(COMMON_SERVERS)" ]; then \
+		mkdir -p "$(COMMON_SERVERS)"; \
+	fi
+	
+	copyattr --data --move "$(BUILD)/im_server"  "$(COMMON_SERVERS)"
+	rm -rf "$(COMMON_ADDONS)/im_kit"
+	mkdir -p "$(COMMON_ADDONS)/im_kit"
+	copyattr --data --recursive --move "$(BUILD)/protocols" "$(COMMON_ADDONS)/im_kit"
+	copyattr --data --move "$(BUILD)/tracker-addons/IM_Merge_contacts" "$(COMMON_ADDONS)/Tracker"
+	rmdir "$(BUILD)/tracker-addons"
+	mkdir -p /boot/apps/im_kit
+	copyattr --data --recursive --move "$(BUILD)/clients" /boot/apps/im_kit
+	ln -sf "/boot/apps/im_kit/clients/im_client" "$(COMMON_ADDONS)/Tracker"
+	copyattr --data --recursive --move "$(BUILD)/settings" /boot/apps/im_kit
+	ln -sf "/boot/apps/im_kit/settings/InstantMessaging" /boot/home/config/be/Preferences
+	copyattr --data --recursive --move "$(BUILD)/utils" /boot/apps/im_kit
+	
+	# create indexes
+	-mkindex -t string IM:connections
+	-mkindex -t string IM:status
+
+	# add attributes to application/x-person
+	-/boot/apps/im_kit/utils/mimetype_attribute --mime application/x-person --internal-name "IM:connections" --public-name "IM Connections" --type string --width 80 --viewable --public
+	-/boot/apps/im_kit/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public
 
 dist: all
 	mkdir -p "$(DIST)"

@@ -11,19 +11,16 @@ ___ Things to fix
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Extract Deskbar icon from im_server, let it live it's own life
 * Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to Zeta bug?
-* Fix Preflet so it reads SVG icons(?)
 * im_client: when settings are changed, make them apply to existing windows too
 * MSN and AIM: Add support for UNREGISTER_CONTACTS message
 * Change 'command sends message' option to a one-of-two menu
 * Make the clients handle the new 'multiple contacts per message' thing
-* Add ~/people to Deskbar context menu
 * Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
 * MSN: Don't create connections for blocked contacts.
 * MSN: Crashes if trying to log in with no net connection
 * Crashes when chatting on ICQ - typing notifcations?
-* im_server: send status offline messages when quiting
 * binlog viewer: auto-wrap long lines, if we support variable height list items?
-* Line 1299, im_server.cpp: remove call to FindAllContacts()
+* Add to readme/documentation, german docs: http://besly.mittilgart.de
 
 ___ New features
 
