@@ -19,8 +19,6 @@ int main(void)
 LoggerApp::LoggerApp()
 :	BApplication("application/x-vnd.m_eiman.im_logger")
 {
-	fFile = fopen("IM log.txt", "a+");
-	
 	fMan = new IM::Manager(this);
 	
 	fMan->StartListening();
@@ -29,11 +27,20 @@ LoggerApp::LoggerApp()
 	msg.AddString("app_sig", "application/x-vnd.m_eiman.im_logger");
 	
 	fMan->SendMessage( &msg );
+
+/*
+	fMaxFiles = 10;
+
+	fFiles = new BFile *[fMaxFiles];
+	if (fFiles == NULL) be_app->PostMessage(B_QUIT_REQUESTED);
+	fLastFile = 0;
+*/
+
 }
 
 LoggerApp::~LoggerApp()
 {
-	fclose(fFile);
+//	delete [] fFiles;
 	
 	fMan->Lock();
 	fMan->Quit();
@@ -63,6 +70,30 @@ LoggerApp::MessageReceived( BMessage * msg )
 			char name[512];
 			char nickname[512];
 			
+			
+			BString protocol;
+			BString id;
+			
+			if (msg->FindString("protocol", &protocol) != B_OK) return;
+			if (msg->FindString("id", &id) != B_OK) return;
+
+			char datestamp[11];
+			time_t now = time(NULL);
+			strftime(datestamp, sizeof(datestamp), "%Y.%m.%d", localtime(&now));
+
+			BString directory = "./Logs/";
+			directory << protocol << "/" <<  id << "/";
+			BString filename = directory;
+			filename << datestamp << ".txt";
+
+			BFile file(filename.String(), B_READ_WRITE | B_CREATE_FILE | B_OPEN_AT_END);
+			if (file.InitCheck() != B_OK) {
+				if (create_directory(directory.String(), 0777) != B_OK) return;
+				
+				file = BFile(filename.String(), B_READ_WRITE | B_CREATE_FILE | B_OPEN_AT_END);
+				if (file.InitCheck() != B_OK) return;
+			};
+						
 			if ( c.GetName(name,sizeof(name)) != B_OK )
 				strcpy(name,"unknown contact");
 			
@@ -70,28 +101,52 @@ LoggerApp::MessageReceived( BMessage * msg )
 				strcpy(name,"unknown nick");
 			
 			char timestr[64];
-			time_t now = time(NULL);
 			strftime(timestr,sizeof(timestr),"%Y-%m-%d [%H:%M] ", localtime(&now) );
-			
+
 			switch ( im_what )
 			{
 				case IM::MESSAGE_SENT:
 				{
-					fprintf(fFile,"%s You say to %s (%s): %s\n", timestr, name, nickname, msg->FindString("message"));
-					fflush(fFile);
+					BString log = "At ";
+					log << timestr << "you tell " << name << " (" << nickname << 
+						"): " << msg->FindString("message") << "\n";
+					
+					file.Write(log.String(), log.Length());
 				}	break;
 				
 				case IM::MESSAGE_RECEIVED:
 				{
-					fprintf(fFile,"%s %s (%s) says: %s\n", timestr, name, nickname, msg->FindString("message"));
-					fflush(fFile);
+					BString log = "At ";
+					log << timestr << name << " (" << nickname << ") said: " <<
+						msg->FindString("message") << "\n";
+					
+					file.Write(log.String(), log.Length());
 				}	break;
 				
 				default:
 					break;
 			}
+			
+			file.Unset();
+			
 		}	break;
 		default:
 			BApplication::MessageReceived(msg);
 	}
 }
+
+/*
+void LoggerApp::SetMaxFiles(int max) {
+//	Arbitrary max, anyone know a proper / realistic one?
+	if ((max < 100) > (max > 0)) {
+		fMaxFiles = max;
+		return B_OK;
+	} else {
+		return B_ERROR;
+	};
+};
+
+int LoggerApp::MaxFiles(void) {
+	return fMaxFiles;
+};
+*/
