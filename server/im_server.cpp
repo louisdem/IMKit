@@ -59,12 +59,20 @@ _SEND_ERROR( const char * text, BMessage * msg )
 Server::Server()
 :	BApplication(IM_SERVER_SIG)
 {
-	BDirectory dir;
-//	These should use find_directory()
-	dir.CreateDirectory("/boot/home/config/settings/im_kit", NULL);
-	dir.CreateDirectory("/boot/home/config/settings/im_kit/icons", NULL);
-	dir.CreateDirectory("/boot/home/config/settings/im_kit/add-ons", NULL);
-	dir.CreateDirectory("/boot/home/config/settings/im_kit/add-ons/protocols", NULL);
+	BPath prefsPath;
+	
+	// Create our settings directories
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&prefsPath,true,NULL) == B_OK)
+	{
+		BDirectory dir(prefsPath.Path());
+		if (dir.InitCheck() == B_OK)
+		{
+			dir.CreateDirectory("im_kit", &dir);
+			dir.CreateDirectory("im_kit/icons", &dir);
+			dir.CreateDirectory("im_kit/add-ons", &dir);
+			dir.CreateDirectory("im_kit/add-ons/protocols", &dir);
+		}
+	}
 	
 	LoadAddons();
 	
@@ -92,8 +100,6 @@ Server::Server()
 	
 	delete i;
 	
-	BPath prefsPath;
-	find_directory(B_USER_SETTINGS_DIRECTORY, &prefsPath, true);
 	prefsPath.Append("im_kit/icons");
 	
 	// load icons for "change icon depending on state"
@@ -364,25 +370,41 @@ Server::StartQuery()
 
 /**
 */
-void
+status_t
 Server::LoadAddons()
 {
+	BDirectory settingsDir; // base directory for protocol settings
+	BDirectory addonsDir; // directory for protocol addons
+	status_t rc;
+	
+	// STEP 1: Check if we can access settings for the protocols!
+	BPath path;
+	if ((rc=find_directory(B_USER_SETTINGS_DIRECTORY,&path,true)) != B_OK ||
+		(rc=path.Append("im_kit/add-ons/protocols")) != B_OK ||
+		(rc=settingsDir.SetTo(path.Path())) != B_OK)
+	{ // we couldn't access the settings directory for the protocols!
+		LOG("im_server", HIGH, "cannot access protocol settings directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
+		return rc;
+	}
+	
+	// STEP 2: Check if we can access the add-on directory for the protocols!
+	if ((rc=find_directory(B_USER_ADDONS_DIRECTORY, &path, true)) != B_OK ||
+		(rc=path.Append("im_kit/protocols")) != B_OK ||
+		(rc=addonsDir.SetTo(path.Path())) != B_OK)
+	{ // we couldn't access the addons directory for the protocols!
+		LOG("im_server", HIGH, "cannot access protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
+		return rc;
+	}
+
+	// Okies, we've been able to access our critical dirs, so now we should be sure we can load any addons that are there
 	UnloadAddons(); // make sure we don't load any addons twice
 
 	// try loading all files in ./add-ons
 	
 	// get path
 	BEntry entry;
-	BPath path;
-	find_directory(B_USER_ADDONS_DIRECTORY, &path, true);
-	path.Append("im_kit/protocols");
-	
-	// setup Directory to get list of files
-	BDirectory dir( path.Path() );
-	
-	LOG("im_server", MEDIUM, "add-on directory: %s", path.Path());
-	
-	while( dir.GetNextEntry( (BEntry*)&entry, TRUE ) == B_NO_ERROR )
+	addonsDir.Rewind();
+	while( addonsDir.GetNextEntry( (BEntry*)&entry, TRUE ) == B_NO_ERROR )
 	{ // continue until no more files
 		if( entry.InitCheck() != B_NO_ERROR )
 			continue;
@@ -419,58 +441,70 @@ Server::LoadAddons()
 		{
 			LOG("im_server", LOW, "load_protocol() fail, file [%s]", path.Path());
 			unload_add_on( curr_image );
+			continue;
 		}
 		
 		LOG("im_server", MEDIUM, "Protocol loaded: [%s]", protocol->GetSignature());
 		
-		// add to list
-		fProtocols[protocol->GetSignature()] = protocol;
-		
-		// add to fAddOnInfo
-		AddOnInfo pinfo;
-		pinfo.protocol = protocol;
-		pinfo.image = curr_image;
-		pinfo.signature = protocol->GetSignature();
-		//pinfo.online_status = OFFLINE_TEXT;
-		strcpy(pinfo.path,path.Path());
-		fAddOnInfo[protocol] = pinfo;
-		
 		// try to read settings from protocol attribute
-		char settings_path[512];
-		sprintf(settings_path,"/boot/home/config/settings/im_kit/add-ons/protocols/%s",pinfo.signature);
-		BDirectory sdir;
-		sdir.CreateFile(settings_path,NULL,true);
-		BNode node(settings_path);
-		char settings[1024*1024];
-		int32 num_read=0;
-		
-		fStatus[protocol->GetSignature()] = OFFLINE_TEXT;
-		
-		num_read = node.ReadAttr(
-			"im_settings", B_RAW_TYPE, 0,
-			settings, sizeof(settings)
-		);
-		if ( num_read > 0 )
-		{
-			LOG("im_server", HIGH, "Read settings data");
-			
-			BMessage settings_msg;
-			if ( settings_msg.Unflatten(settings) == B_OK )
-			{
-				protocol->UpdateSettings(settings_msg);
-			} else
-			{
-				_ERROR("Error unflattening settings");
+		BNode node(&settingsDir,protocol->GetSignature());
+		if (node.InitCheck() == B_OK)
+		{ // okies, ready to roll
+			attr_info info;
+
+			fStatus[protocol->GetSignature()] = OFFLINE_TEXT;
+
+			if ((rc=node.GetAttrInfo("im_settings", &info)) == B_OK &&
+				info.type == B_RAW_TYPE && info.size > 0)
+			{ // found an attribute with data
+				char* settings = new char[info.size]; // FIXME: does new[] throw when memory exhausted?
+				node.ReadAttr("im_settings", info.type, 0, settings, info.size);
+
+				LOG("im_server", HIGH, "Read settings data");
+				
+				BMessage settings_msg;
+				if ( settings_msg.Unflatten(settings) == B_OK )
+				{
+					protocol->UpdateSettings(settings_msg);
+				}
+				else
+				{
+					_ERROR("Error unflattening settings");
+				}
+				
+				delete settings;
 			}
-		} else
+			else
+			{
+				_ERROR("No settings found");
+			}
+		} // done handling settings
+
+		if ((rc=protocol->Init( BMessenger(this) )) != B_OK)
 		{
-			_ERROR("No settings found");
+			LOG("im_server", HIGH, "Error initializing protocol '%s' (error 0x%ld/%s)!", protocol->GetSignature(), rc, strerror(rc));
+			//FIXME: does protocol->Shutdown() have to be called?
+			delete protocol;
+			unload_add_on( curr_image );
 		}
-		
-		// we should care about the result here..
-		protocol->Init( BMessenger(this) );
-	}
+		else
+		{
+			// add to list
+			fProtocols[protocol->GetSignature()] = protocol;
+
+			// add to fAddOnInfo
+			AddOnInfo pinfo;
+			pinfo.protocol = protocol;
+			pinfo.image = curr_image;
+			pinfo.signature = protocol->GetSignature();
+			pinfo.path = path.Path();
+			fAddOnInfo[protocol] = pinfo;
+		}
+	} // while()
+	
 	LOG("im_server", MEDIUM, "All add-ons loaded.");
+	
+	return B_OK;
 }
 
 /**

@@ -44,7 +44,7 @@ status_t AIMProtocol::Shutdown() {
 	fManager->LogOff();
 	if (fManager->Lock()) fManager->Quit();
 	
-	LOG("icq", MEDIUM, "AIMProtocol::Shutdown() done");
+	LOG("AIM", MEDIUM, "AIMProtocol::Shutdown() done");
 		
 	return B_OK;
 }

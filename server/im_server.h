@@ -33,7 +33,7 @@ class Server : public BApplication
 		Contact	FindContact( const char * proto_id );
 		Contact	CreateContact( const char * proto_id );
 		
-		void	LoadAddons();
+		status_t	LoadAddons();
 		void	UnloadAddons();
 		
 		void	Process( BMessage * );
