@@ -69,12 +69,15 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			char status[512];
 			BBitmap *icon = NULL;
 			
-			if (msg->FindString("protocol", &protocol) == B_OK) {		
-				protoicons::iterator pIt = fProtocolIcons.find(protocol);
-				if (pIt != fProtocolIcons.end()) icon = pIt->second;
-			};
-			
 			IM::Contact contact(&ref);
+			
+			if (msg->FindString("protocol", &protocol) == B_OK) {
+				icon = contact.GetBuddyIcon(protocol);
+				if ( !icon ) {
+					protoicons::iterator pIt = fProtocolIcons.find(protocol);
+					if (pIt != fProtocolIcons.end()) icon = pIt->second;
+				}
+			};
 			
 			if (contact.GetName(contactname, sizeof(contactname) ) != B_OK ) {
 				strcpy(contactname, "<unknown contact>");
@@ -91,9 +94,9 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			
 //			Exit if user is blocked
 			if ( strcasecmp(status, "blocked") == 0 ) break;
-
+			
 			InfoPopper::info_type type = InfoPopper::Information;
-
+			
 			switch (im_what) {
 				case IM::ERROR:
 				{
