@@ -227,8 +227,9 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			BMessage newmsg(IM::MESSAGE);
 			newmsg.AddInt32("im_what", IM::SET_STATUS);
 
-			const char *protocol = msg->FindString("protocol");
-			if (protocol) {
+			const char *protocol = NULL;
+			printf("Protocol: %s\n", protocol);
+			if (msg->FindString("protocol", &protocol) == B_OK) {
 				newmsg.AddString("protocol", strdup(protocol));
 			};
 			newmsg.AddString("status", item->Label());
@@ -357,7 +358,6 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			BMenu * status = new BMenu("Set status");
 			BMenu *total = new BMenu("All Protocols");
 			BMessage msg(SET_STATUS);
-			msg.AddString("protocol", "");
 			total->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(msg)) );	
 			total->AddItem(new BMenuItem(AWAY_TEXT, new BMessage(msg)) );	
 			total->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(msg)) );	
