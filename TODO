@@ -22,6 +22,7 @@ ___ Things to fix
 * binlog viewer: auto-wrap long lines, if we support variable height list items?
 * Add to readme/documentation, german docs: http://besly.mittilgart.de
 * im_server: ContactMonitor_Modified, merging "online" > "offline". Several AIM.
+* im_server: move "no indexes" BAlert to after BApplication is ReadyToRun
 
 ___ New features
 

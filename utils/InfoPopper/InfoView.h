@@ -86,7 +86,7 @@ class InfoView : public BView
 		BString			fText;
 		
 		float			fHeight;
-		infoview_layout	fLayout;
+		//infoview_layout	fLayout;
 };
 
 #endif
