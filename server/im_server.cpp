@@ -252,6 +252,10 @@ Server::MessageReceived( BMessage * msg )
 
 		// IM-Kit specified messages:
 		
+		case GET_CONTACT_STATUS:
+			reply_GET_CONTACT_STATUS(msg);
+			break;
+		
 		case FLASH_DESKBAR:
 		case STOP_FLASHING:
 		case REGISTER_DESKBAR_MESSENGER:
@@ -1756,7 +1760,7 @@ Server::handle_STATUS_SET( BMessage * msg )
 		
 		p->Process( &connections );
 	}
-		
+	
 	if ( strcmp(OFFLINE_TEXT,status) == 0 )
 	{ // we're offline. set all connections for protocol to offline
 		if ( fProtocols.find(protocol) == fProtocols.end() )
@@ -1764,11 +1768,11 @@ Server::handle_STATUS_SET( BMessage * msg )
 			_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);
 			return;
 		}
-			
+		
 		BMessage contacts;
-			
+		
 		GetContactsForProtocol(protocol, &contacts );
-			
+		
 		for ( int i=0; contacts.FindString("id", i); i++ )
 		{
 			BMessage update(MESSAGE);
@@ -1776,15 +1780,15 @@ Server::handle_STATUS_SET( BMessage * msg )
 			update.AddString("protocol", protocol);
 			update.AddString("id", contacts.FindString("id",i) );
 			update.AddString("status", OFFLINE_TEXT);
-				
+			
 			PostMessage( &update );
 		}
 	}
 	//fAddOnInfo[protocol].online_status = status;
-		
+	
 	// Find out 'total' online status
 	fStatus[protocol] = status;
-		
+	
 	string total_status = OFFLINE_TEXT;
 	
 	for ( map<string,Protocol*>::iterator i = fProtocols.begin(); i != fProtocols.end(); i++ )
@@ -1805,6 +1809,35 @@ Server::handle_STATUS_SET( BMessage * msg )
 	msg->AddString("total_status", total_status.c_str() );
 	LOG("im_server", HIGH, "Total status changed to %s", total_status.c_str() );
 	// end 'Find out total status'
-		
+	
 	handleDeskbarMessage(msg);
+}
+
+void
+Server::reply_GET_CONTACT_STATUS( BMessage * msg )
+{
+	entry_ref ref;
+	
+	if ( msg->FindRef("contact",&ref) != B_OK )
+	{
+		_ERROR("Missing contact in GET_CONTACT_STATUS",msg);
+		return;
+	}
+	
+	Contact contact(ref);
+	char connection[255];
+	
+	BMessage reply;
+	reply.AddRef("contact", &ref);
+	
+	for ( int i=0; contact.ConnectionAt(i,connection) == B_OK; i++ )
+	{
+		reply.AddString("connection", connection);
+		if ( fStatus[connection] == "" )
+			reply.AddString("status", OFFLINE_TEXT );
+		else
+			reply.AddString("status", fStatus[connection].c_str() );
+	}
+	
+	msg->SendReply(&reply);
 }

@@ -219,7 +219,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	font_height height;
 	be_plain_font->GetHeight(&height);
 	fFontHeight = height.ascent + height.descent + height.leading;
-	printf("Font Height: %.2f\n", fFontHeight);
+	LOG("im_client", HIGH, "Font Height: %.2f\n", fFontHeight);
 }
 
 ChatWindow::~ChatWindow()

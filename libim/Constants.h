@@ -64,6 +64,11 @@ enum message_what_codes {
 	SERVER_BASED_CONTACT_LIST	= 'IMsl',
 	
 	/*
+		Contact related messages
+	*/
+	GET_CONTACT_STATUS		='IMc0',
+	
+	/*
 		Deskbar icon related messages
 	*/
 	DESKBAR_ICON_CLICKED	= 'DBcl',

@@ -10,7 +10,7 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 	
 	if ( node.InitCheck() != B_OK )
 	{
-		LOG("sample_client", LOW, "Invalid entry_ref in setAttributeIfNotSet");
+		LOG("im_client", LOW, "Invalid entry_ref in setAttributeIfNotSet");
 		return;
 	}
 	
@@ -27,7 +27,7 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 	
 	if ( num_written != (int32)strlen(value) + 1 )
 	{
-		LOG("sample_client", MEDIUM, "Error writing attribute %s (%s)\n",attr,value);
+		LOG("im_client", MEDIUM, "Error writing attribute %s (%s)\n",attr,value);
 	} else
 	{
 		//LOG("Attribute set");
