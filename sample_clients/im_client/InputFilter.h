@@ -17,6 +17,7 @@ class InputFilter : public BMessageFilter {
 	private:
 		BTextView	 			*fParent;
 		BMessage				*fMessage;
+		bigtime_t				fLastTyping;
 };
 
 #endif

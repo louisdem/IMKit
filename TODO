@@ -22,6 +22,7 @@ Things to fix
 * Change Preflet so it can run when im_server isn't running, and also start im_server
 * Change im_server so it touches contact files when updating their status
 * Contact's BNode::SetTo crashes with invalid pointer sometimes?
+* Settings for clients
 
 New features
 

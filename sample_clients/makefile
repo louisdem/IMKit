@@ -3,7 +3,8 @@
 SUBDIRS = \
 	im_client \
 	logger \
-	tracker_addons
+	tracker_addons \
+	infopopper
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \
