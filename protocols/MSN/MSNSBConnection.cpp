@@ -58,7 +58,7 @@ status_t
 MSNSBConnection::handleCAL( Command * cmd )
 {
 	// Invite someone (response)
-	LOG(kProtocolName, liDebug, "Processing CAL (SB)");
+	LOG(kProtocolName, liDebug, "C %lX: Processing CAL (SB)", this);
 	return B_OK;
 }
 
@@ -66,7 +66,7 @@ status_t
 MSNSBConnection::handleJOI( Command * cmd )
 {
 	// someone new in chat
-	LOG(kProtocolName, liDebug, "Processing JOI (SB): %s", cmd->Param(0));
+	LOG(kProtocolName, liDebug, "C %lX: Processing JOI (SB): %s", this, cmd->Param(0));
 	
 	fParticipants.push_back( cmd->Param(0) );
 	
@@ -84,9 +84,26 @@ status_t
 MSNSBConnection::handleIRO( Command * cmd )
 {
 	// List of those already in chat
-	LOG(kProtocolName, liDebug, "Processing IRO (SB): %s", cmd->Param(2));
-
+	LOG(kProtocolName, liDebug, "C %lX: Processing IRO (SB): %s", this, cmd->Param(2));
+	
 	fParticipants.push_back( cmd->Param(2) );
+	
+	return B_OK;
+}
+
+/**
+	Fully connected (got list of participants), send any pending messages
+*/
+status_t
+MSNSBConnection::handleANS( Command * cmd )
+{
+	// send any pending messages
+	for ( list<Command*>::iterator i=fPendingMessages.begin(); i != fPendingMessages.end(); i++ )
+	{
+		Send( *i );
+	}
+	
+	fPendingMessages.clear();
 	
 	return B_OK;
 }
@@ -95,7 +112,7 @@ status_t
 MSNSBConnection::handleBYE( Command * cmd )
 {
 	// Someone left the conversation
-	LOG(kProtocolName, liDebug, "Processing BYE (SB): %s left.", cmd->Param(0));
+	LOG(kProtocolName, liDebug, "C %lX: Processing BYE (SB): %s left.", this, cmd->Param(0));
 	
 	fParticipants.remove( cmd->Param(0) );
 	
@@ -119,7 +136,7 @@ status_t
 MSNSBConnection::handleUSR( Command * cmd  )
 {
 	// Just send any pending messages here.
-	LOG(kProtocolName, liDebug, "Processing USR (SB)");
+	LOG(kProtocolName, liDebug, "C %lX: Processing USR (SB)", this);
 	
 	GoOnline();
 	

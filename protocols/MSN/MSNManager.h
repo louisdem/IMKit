@@ -101,6 +101,7 @@ class MSNManager : public BLooper {
 		list<BString>	fBuddy;
 		MSNConnection	*fNoticeCon;
 		connectionlist	fConnections;	
+		connectionlist	fConnectionPool;
 		
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;

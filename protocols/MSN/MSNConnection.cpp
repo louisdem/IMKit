@@ -34,16 +34,45 @@ void MD5(unsigned char *text, char * digest)
 }
 
 
+MSNConnection::MSNConnection()
+: BLooper("MSNConnection looper") {
+	fState = otOffline;
+	fTrID = 0;
+	fManager = NULL;
+	fRunner = NULL;
+	fKeepAliveRunner = NULL;
+	fServer = NULL;
+	fSock = -1;
+	fSockMsgr = NULL;
+	fThread = -1;
+	
+	Run();
+};
+
 MSNConnection::MSNConnection(const char *server, uint16 port, MSNManager *man)
 : BLooper("MSNConnection looper") {
+	fState = otOffline;
+	fTrID = 0;
+	fManager = NULL;
+	fRunner = NULL;
+	fKeepAliveRunner = NULL;
+	fServer = NULL;
+	fSock = -1;
+	fSockMsgr = NULL;
+	fThread = -1;
+	
+	Run();
+	SetTo(server,port,man);
+};
+
+void
+MSNConnection::SetTo(const char *server, uint16 port, MSNManager *man)
+{
 	fTrID = 0;
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
-	uint8 serverLen = strlen(server);
-	fServer = strdup(server);//(char *)calloc(serverLen + 1, sizeof(char));
-	memcpy(fServer, server, serverLen);
-	fServer[serverLen] = '\0';
+	fServer = strdup(server);
 	fPort = port;
 	
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
@@ -55,15 +84,19 @@ MSNConnection::MSNConnection(const char *server, uint16 port, MSNManager *man)
 	fState = otConnecting;
 	
 	fSock = ConnectTo(fServer, fPort);
+	
 	StartReceiver();
-};
+}
 
 MSNConnection::~MSNConnection(void) {
-	delete fRunner;
-	delete fKeepAliveRunner;
+	if ( fRunner )
+		delete fRunner;
+	if ( fKeepAliveRunner )
+		delete fKeepAliveRunner;
 	
-	free(fServer);
-	snooze(1000);
+	if ( fServer )
+		free(fServer);
+//	snooze(1000);
 	
 	StopReceiver();
 	
@@ -79,19 +112,26 @@ MSNConnection::~MSNConnection(void) {
 };
 
 bool MSNConnection::QuitRequested() {
+	if ( fState == otOnline )
+	{ // leave gracefully if connected
+		Command *bye = new Command("OUT");
+		bye->UseTrID(false);
+		Send(bye, qsImmediate);
+	}
+	
 	return true;
 }
 
 int32 MSNConnection::ConnectTo(const char *hostname, uint16 port) {
 	if (hostname == NULL) {
-		LOG(kProtocolName, liLow, "ConnectTo() called with NULL hostname - probably"
-			" not authorised to login at this time");
+		LOG(kProtocolName, liLow, "C %lX: ConnectTo() called with NULL hostname - probably"
+			" not authorised to login at this time", this);
 		return B_ERROR;
 	};
 
 	int32 sock = 0;
 
-	LOG(kProtocolName, liLow, "MSNConn::ConnectTo(\"%s\", %i)", hostname, port);
+	LOG(kProtocolName, liLow, "C %lX: MSNConn::ConnectTo(\"%s\", %i)", this, hostname, port);
 
 	struct sockaddr_in remoteAddr;
 	remoteAddr.sin_family = AF_INET;
@@ -102,8 +142,8 @@ int32 MSNConnection::ConnectTo(const char *hostname, uint16 port) {
 		if (he) {
 			remoteAddr.sin_addr = *((struct in_addr *)he->h_addr_list[0]);
 		} else {
-			LOG(kProtocolName, liLow, "MSNConn::ConnectTo(%s, %i) couldn't resolve",
-				hostname, port);
+			LOG(kProtocolName, liLow, "C %lX: MSNConn::ConnectTo(%s, %i) couldn't resolve",
+				this, hostname, port);
 			return B_ERROR;
 		};
 	};
@@ -111,28 +151,31 @@ int32 MSNConnection::ConnectTo(const char *hostname, uint16 port) {
 	memset(&(remoteAddr.sin_zero), 0, 8);
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG(kProtocolName, liMedium, "MSNConn::ConnectTo(%s, %i): Couldn't create socket",
-			hostname, port);	
+		LOG(kProtocolName, liMedium, "C %lX: MSNConn::ConnectTo(%s, %i): Couldn't create socket",
+			this, hostname, port);	
 		return B_ERROR;
 	};
 
 	if (connect(sock, (struct sockaddr *)&remoteAddr, sizeof(remoteAddr)) == -1) {
-		LOG(kProtocolName, liMedium, "MSNConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
+		LOG(kProtocolName, liMedium, "C %lX: MSNConn::ConnectTo: Couldn't connect to %s:%i", 
+			this, hostname, port);
 		return B_ERROR;
 	};
+
+	LOG(kProtocolName, liLow, "C %lX:   Connected.", this);
 
 	return sock;
 };
 
 void MSNConnection::StartReceiver(void) {
-	fSockMsgr = new BMessenger(NULL, (BLooper *)this);
-
-	fThread = spawn_thread(Receiver, "MSN socket", B_NORMAL_PRIORITY, (void *)this);
-	if (fThread > B_ERROR) 
-		resume_thread(fThread);
-	else
-		LOG(kProtocolName, liHigh, "Error creating receiver thread in MSNConnection!");
+	fSockMsgr = new BMessenger(this);
 	
+	fThread = spawn_thread(Receiver, "MSN socket", B_NORMAL_PRIORITY, (void *)this);
+	if (fThread > B_ERROR) {
+		resume_thread(fThread);
+		LOG(kProtocolName, liHigh, "C %lX: Started receiver thread", this);
+	} else
+		LOG(kProtocolName, liHigh, "C %lX: Error creating receiver thread in MSNConnection!", this);
 };
 
 void MSNConnection::StopReceiver(void) {
@@ -155,6 +198,8 @@ void MSNConnection::StopReceiver(void) {
 };
 
 int32 MSNConnection::Receiver(void *con) {
+	LOG(kProtocolName, liLow, "C[r] %lX: Receiver init", con);
+
 	MSNConnection *connection = reinterpret_cast<MSNConnection *>(con);
 
 	const uint32 kSleep = 2000000;
@@ -166,23 +211,25 @@ int32 MSNConnection::Receiver(void *con) {
 	int32 socket = 0;
 	
 	if ( !(*kMsgr)->IsValid() ) {
-		LOG(kProtocolName, liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
+		LOG(kProtocolName, liLow, "C[r] %lX: Messenger wasn't valid!", connection);
 		return B_ERROR;
 	}
 	
 	BMessage reply;
 	status_t ret = 0;
-
+/*
 	if ((ret = (*kMsgr)->SendMessage(msnmsgGetSocket, &reply)) == B_OK) {
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) {
-			LOG(kProtocolName, liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
+			LOG(kProtocolName, liLow, "C[r] %lX: Couldn't get socket: %i", connection, ret);
 			return B_ERROR;
 		};
 	} else {
-		LOG(kProtocolName, liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
+		LOG(kProtocolName, liLow, "C[r] %lX: Couldn't obtain socket: %i", connection, ret);
 		return B_ERROR;
 	}
-	
+*/
+	socket = connection->fSock;
+		
 	struct fd_set read;
 	struct fd_set error;
 	int16 bytes = 0;
@@ -191,7 +238,7 @@ int32 MSNConnection::Receiver(void *con) {
 	BString commandBuff = "";
 	int32 kNewLineLen = strlen("\r\n");
 	
-	LOG(kProtocolName, liLow, "%s:%i: Starting receiver loop", kHost, kPort);
+	LOG(kProtocolName, liLow, "C[r] %lX: Starting receiver loop", connection);
 	
 	while ((*kMsgr)->IsValid() == true) {
 		FD_ZERO(&read);
@@ -204,8 +251,7 @@ int32 MSNConnection::Receiver(void *con) {
 
 		if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
 			if (FD_ISSET(socket, &error)) {
-				LOG(kProtocolName, liLow, "%s:%i: Got socket error", kHost,
-					kPort);
+				LOG(kProtocolName, liLow, "C[r] %lX: Got socket error", connection);
 				snooze(kSleep);
 				continue;
 			};
@@ -218,8 +264,8 @@ int32 MSNConnection::Receiver(void *con) {
 				} else {
 					if ((*kMsgr)->IsValid() == false) return B_OK;
 					
-					LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0 (or 0)",
-						kHost, kPort);
+					LOG(kProtocolName, liLow, "C[r] %lX: Socket got less than 0 (or 0)",
+						connection);
 					perror("SOCKET ERROR");
 					
 					BMessage msg(msnmsgCloseConnection);
@@ -247,8 +293,8 @@ int32 MSNConnection::Receiver(void *con) {
 			int32 payloadLen = 0;
 
 			if (comm->ExpectsPayload(&payloadLen) == true) {
-				LOG(kProtocolName, liDebug, "%s:%i: Payload of %i, have %i bytes",
-					kHost, kPort, payloadLen, processed);
+				LOG(kProtocolName, liDebug, "C[r] %lX: Payload of %i, have %i bytes",
+					connection, payloadLen, processed);
 				
 				while (processed < payloadLen) {
 					FD_ZERO(&read);
@@ -261,8 +307,8 @@ int32 MSNConnection::Receiver(void *con) {
 			
 					if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
 						if (FD_ISSET(socket, &error)) {
-							LOG(kProtocolName, liLow, "%s:%i: Got socket error", kHost,
-								kPort);
+							LOG(kProtocolName, liLow, "C[r] %lX: Got socket error", 
+								connection);
 							snooze(kSleep);
 							continue;
 						};
@@ -275,8 +321,8 @@ int32 MSNConnection::Receiver(void *con) {
 							} else {
 								if ( (*kMsgr)->IsValid() == false) return B_OK;
 		
-								LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0 (or 0)",
-									kHost, kPort);
+								LOG(kProtocolName, liLow, "C[r] %lX: Socket got less than 0 (or 0)",
+									connection);
 								perror("SOCKET ERROR");
 		
 								BMessage msg(msnmsgCloseConnection);
@@ -342,8 +388,7 @@ int32 MSNConnection::NetworkSend(Command *command) {
 			
 			if (sent <= 0) {
 				delete command;
-				LOG(kProtocolName, liLow, "%s:%i: Couldn't send packet", Server(),
-					Port());
+				LOG(kProtocolName, liLow, "C %lX: Couldn't send packet", this);
 				perror("Send Error");
 				return sent;
 			};
@@ -413,26 +458,6 @@ ServerAddress MSNConnection::ExtractServerDetails(char *details) {
 
 status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	HTTPFormatter **recv) {
-/*
-	cryptPushData(session, send->Flatten(), send->Length(), &sentData);
-
-	status = cryptFlushData(session);
-	
-	int received = 0;
-
-	status = cryptPopData(session, buffer, sizeof(buffer), &received);
-	if (received > 0) {
-		buffer[received] = 0;
-	} else {
-		cryptDestroySession(session);
-		return received;
-	};
-	
-	cryptDestroySession(session);
-	
-	*recv = new HTTPFormatter(buffer, received);
-	return received;
-*/
 	int err;
 	int sd;
 	struct sockaddr_in sa;
@@ -494,7 +519,7 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	}
 	buffer[received] = '\0';
 	*recv = new HTTPFormatter(buffer, received);
-	printf ("Got %d chars:'%s'\n", err, buffer);
+	LOG(kProtocolName, liDebug, "C %lX: Got %d chars:'%s'", this, received, buffer);
 	SSL_shutdown (ssl);  /* send SSL/TLS close_notify */
 	
 	/* Clean up. */
@@ -591,18 +616,21 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	if (command->Type() == "IRO") {
 		return handleIRO(command);
 	} else
+	if (command->Type() == "ANS") {
+		return handleANS(command);
+	} else
 	if (command->Type() == "BYE") {
 		return handleBYE(command);
 	} else {
-		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
-			fPort, command->Type().String());
+		LOG(kProtocolName, liLow, "C %lX: Got an unsupported message \"%s\"", this, 
+			command->Type().String());
 		command->Debug();
 		return B_ERROR;
 	}
 };
 
 status_t MSNConnection::handleVER( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing VER");
+	LOG(kProtocolName, liDebug, "C %lX: Processing VER", this);
 	Command *reply = new Command("CVR");
 	reply->AddParam(kClientVer);
 	reply->AddParam(fManager->Passport());
@@ -638,7 +666,7 @@ status_t MSNConnection::handleNLN( Command * command ) {
 }
 
 status_t MSNConnection::handleCVR( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing CVR");
+	LOG(kProtocolName, liDebug, "C %lX: Processing CVR", this);
 	Command *reply = new Command("USR");
 	reply->AddParam("TWN");	// Authentication type
 	reply->AddParam("I");	// Initiate
@@ -650,11 +678,11 @@ status_t MSNConnection::handleCVR( Command * command ) {
 }
 
 status_t MSNConnection::handleRNG( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing RNG");
+	LOG(kProtocolName, liDebug, "C %lX: Processing RNG", this);
 //		The details are actually param 1, but param 0 will be interpretted as the
 //		TrID
-	LOG(kProtocolName, liDebug, "%s:%i got a chat invite from %s (%s)",
-		fServer, fPort, command->Param(4), command->Param(3));
+	LOG(kProtocolName, liDebug, "C %lX: got a chat invite from %s (%s)",
+		this, command->Param(4), command->Param(3));
 	ServerAddress sa = ExtractServerDetails((char *)command->Param(0));
 	
 	BMessage newCon(msnmsgNewConnection);
@@ -676,7 +704,7 @@ status_t MSNConnection::handleRNG( Command * command ) {
 }
 
 status_t MSNConnection::handleXFR( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing XFR");
+	LOG(kProtocolName, liDebug, "C %lX: Processing XFR", this);
 	ServerAddress sa = ExtractServerDetails((char *)command->Param(1));
 	
 	BMessage newCon(msnmsgNewConnection);
@@ -707,7 +735,7 @@ status_t MSNConnection::handleXFR( Command * command ) {
 }
 
 status_t MSNConnection::handleCHL( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing CHL");
+	LOG(kProtocolName, liDebug, "C %lX: Processing CHL", this);
 	BString chal = command->Param(0);
 	chal << kClientIDCode;
 	
@@ -726,7 +754,7 @@ status_t MSNConnection::handleCHL( Command * command ) {
 }
 
 status_t MSNConnection::handleUSR( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing USR");
+	LOG(kProtocolName, liDebug, "C %lX: Processing USR", this);
 	if (strcmp(command->Param(0), "OK") == 0) {
 		LOG(kProtocolName, liHigh, "Online!");
 		
@@ -765,8 +793,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 	int32 recvdBytes = SSLSend("nexus.passport.com", send, &recv);
 
-	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-		fServer, fPort, recvdBytes, "nexus.passport.com");
+	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
+		this, recvdBytes, "nexus.passport.com");
 
 	if (recvdBytes < 0) {
 		BMessage closeCon(msnmsgCloseConnection);
@@ -811,13 +839,13 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	send->AddHeader("Authorization", authStr.String());
 	delete recv;
 		
-	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-		fServer, fPort, SSLSend(loginHost.String(), send, &recv),
+	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
+		this, SSLSend(loginHost.String(), send, &recv),
 		loginHost.String());
 	
 	// check status for 302, redirect
 	if ( recv->Status() != 200 ) {
-		LOG(kProtocolName, liDebug, "Got non-200 status: %d", recv->Status() );
+		LOG(kProtocolName, liDebug, "C %lX: Got non-200 status: %d", this, recv->Status() );
 		
 		int repeatCount = 5; // max 5 redirects
 		
@@ -829,7 +857,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 			location.CopyInto( loginHost, 0, first_slash );
 			location.CopyInto( loginDocument, first_slash, location.Length() - first_slash );
 			
-			LOG(kProtocolName, liHigh, "Redirected to (%s) (%s)", loginHost.String(), loginDocument.String() );
+			LOG(kProtocolName, liHigh, "C %lX: Redirected to (%s) (%s)", this, loginHost.String(), loginDocument.String() );
 			
 			send = new HTTPFormatter(loginHost.String(), loginDocument.String());
 			BString authStr = "Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=";
@@ -839,14 +867,14 @@ status_t MSNConnection::handleUSR( Command * command ) {
 			
 			send->AddHeader("Authorization", authStr.String());
 			delete recv;
-			LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-				fServer, fPort, SSLSend(loginHost.String(), send, &recv),
+			LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
+				this, SSLSend(loginHost.String(), send, &recv),
 				loginHost.String());
 		}
 		
 		if ( repeatCount == 0 ) {
 			// error, too many redirects
-			LOG( kProtocolName, liHigh, "%s:%i got too many redirects when loggin in", fServer, fPort );
+			LOG( kProtocolName, liHigh, "C %lX: got too many redirects when loggin in", this );
 			return B_ERROR;
 		}
 	}
@@ -875,7 +903,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 }
 
 status_t MSNConnection::handleMSG( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing MSG");
+	LOG(kProtocolName, liDebug, "C %lX: Processing MSG", this);
 	
 	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
 	
@@ -884,37 +912,37 @@ status_t MSNConnection::handleMSG( Command * command ) {
 	if ( type )
 	{ // we have a type, handle it.
 		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
-			LOG(kProtocolName, liHigh, "Got a private message [%s] from <%s>", http.Content(), command->Param(0) );
+			LOG(kProtocolName, liHigh, "C %lX: Got a private message [%s] from <%s>", this, http.Content(), command->Param(0) );
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else
 		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
-			LOG(kProtocolName, liHigh, "User typing from <%s>\n", command->Param(0) );
+			LOG(kProtocolName, liHigh, "C %lX: User typing from <%s>", this, command->Param(0) );
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
 		} else
 		if (strcmp(type, "text/x-msmsgsinitialemailnotification; charset=UTF-8") == 0) {
-			LOG(kProtocolName, liHigh, "HotMail number of messages in Inbox" );
+			LOG(kProtocolName, liHigh, "C %lX: HotMail number of messages in Inbox", this );
 			// Ignore this. It just tells us how many emails are in the Hotmail inbox.
 		} else
 		if (strcmp(type, "text/x-msmsgsprofile; charset=UTF-8") == 0) {
-			LOG(kProtocolName, liHigh, "Profile message" );
+			LOG(kProtocolName, liHigh, "C %lX: Profile message", this );
 			// Maybe we should process this, it's a profile message.
 		} else
 		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {
-			LOG(kProtocolName, liDebug, "Got an invite, we're popular!");
+			LOG(kProtocolName, liDebug, "C %lX: Got an invite, we're popular!", this);
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
 		} else {
-			LOG(kProtocolName, liDebug, "Got message of unknown type <%s>", type );
+			LOG(kProtocolName, liDebug, "C %lX: Got message of unknown type <%s>", this, type );
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
 		}
 	} else {
-		LOG(kProtocolName, liDebug, "No Content-Type in message!\n");
+		LOG(kProtocolName, liDebug, "C %lX: No Content-Type in message!", this);
 	}
 		
 	return B_OK;
 }
 
 status_t MSNConnection::handleADC(Command *command) {
-	LOG(kProtocolName, liDebug, "Processing ADC");
+	LOG(kProtocolName, liDebug, "C %lX: Processing ADC", this);
 
 	BString listStr = command->Param(0);
 	BString passport = command->Param(1, true);
@@ -940,7 +968,7 @@ status_t MSNConnection::handleADC(Command *command) {
 };
 
 status_t MSNConnection::handleLST(Command *command) {
-	LOG(kProtocolName, liDebug, "Processing LST");
+	LOG(kProtocolName, liDebug, "C %lX: Processing LST", this);
 	
 	BString passport = command->Param(0);
 	passport.ReplaceFirst("N=", "");
@@ -952,17 +980,17 @@ status_t MSNConnection::handleLST(Command *command) {
 		//	This is a bitmask. 1 = FL, 2 = AL, 4 = BL, 8 = RL
 		int32 lists = atol(command->Param(3));
 	
-		LOG(kProtocolName, liDebug, "%s (%s) is in list %i", passport.String(), display.String(), lists);
+		LOG(kProtocolName, liDebug, "C %lX: %s (%s) is in list %i", this, passport.String(), display.String(), lists);
 
 		if (lists == ltReverseList) {
-			LOG(kProtocolName, liDebug, "\"%s\" (%s) is only on our reverse list. Likely they "
-				"added us while we were offline. Ask for authorisation", display.String(),
+			LOG(kProtocolName, liDebug, "C %lX: \"%s\" (%s) is only on our reverse list. Likely they "
+				"added us while we were offline. Ask for authorisation", this, display.String(),
 				passport.String());
 			fManager->Handler()->AuthRequest(ltReverseList, passport.String(), display.String());
 		};
 	} else
 	{
-		LOG(kProtocolName, liDebug, "%s (%s) is in no lists", passport.String(), display.String() );
+		LOG(kProtocolName, liDebug, "C %lX: %s (%s) is in no lists", this, passport.String(), display.String() );
 	}
 	
 	return B_OK;
@@ -970,7 +998,7 @@ status_t MSNConnection::handleLST(Command *command) {
 
 status_t MSNConnection::handleQRY(Command *command) {
 	// ignore this. It's a challenge response status indicator.
-	LOG(kProtocolName, liDebug, "Processing QRY");
+	LOG(kProtocolName, liDebug, "C %lX: Processing QRY", this);
 	return B_OK;
 }
 
@@ -979,26 +1007,26 @@ status_t MSNConnection::handleGTC(Command *command) {
 	// to handle people added to the RL. See protocol spec, Notification,
 	// Getting details, Privacy settings.
 	// Eg: GTC {TrID} GTC N
-	LOG(kProtocolName, liDebug, "Processing GTC");
+	LOG(kProtocolName, liDebug, "C %lX: Processing GTC", this);
 	return B_OK;
 }
 
 status_t MSNConnection::handleBLP(Command *command) {
 	// Default list for contact not on either BL or AL.
 	// Eg: BLP {TrID} BLP AL
-	LOG(kProtocolName, liDebug, "Processing BLP");
+	LOG(kProtocolName, liDebug, "C %lX: Processing BLP", this);
 	return B_OK;
 }
 
 status_t MSNConnection::handlePRP(Command *command) {
 	// Contact phone numbers
-	LOG(kProtocolName, liDebug, "Processing PRP");
+	LOG(kProtocolName, liDebug, "C %lX: Processing PRP", this);
 	return B_OK;
 }
 
 status_t MSNConnection::handleCHG(Command *command) {
 	// Own status changed
-	LOG(kProtocolName, liDebug, "Processing CHG");
+	LOG(kProtocolName, liDebug, "C %lX: Processing CHG", this);
 	
 	BString status = command->Param(0);
 	
@@ -1010,7 +1038,7 @@ status_t MSNConnection::handleCHG(Command *command) {
 	if ( status == "AWY" ) {
 		statusChange.AddInt8("status", otAway);
 	} else {
-		LOG(kProtocolName, liDebug, "Unknown status: %s", status.String() );
+		LOG(kProtocolName, liDebug, "C %lX: Unknown status: %s", this, status.String() );
 		statusChange.what = 0; // so we don't send the message.
 	}
 	
@@ -1022,7 +1050,7 @@ status_t MSNConnection::handleCHG(Command *command) {
 
 status_t MSNConnection::handleFLN(Command *command) {
 	// Contact went offline
-	LOG(kProtocolName, liDebug, "Processing FLN");
+	LOG(kProtocolName, liDebug, "C %lX: Processing FLN", this);
 	
 	BMessage statusChange(msnmsgStatusChanged);
 	statusChange.AddString("passport", command->Param(0) );
@@ -1034,7 +1062,7 @@ status_t MSNConnection::handleFLN(Command *command) {
 
 
 status_t MSNConnection::handleSYN( Command * command ) {
-	LOG(kProtocolName, liDebug, "Processing SYN");
+	LOG(kProtocolName, liDebug, "C %lX: Processing SYN", this);
 	
 	// process SYN here as needed
 	// ...
@@ -1052,24 +1080,30 @@ status_t MSNConnection::handleSYN( Command * command ) {
 
 status_t MSNConnection::handleJOI(Command *command) {
 	// Someone joining conversation
-	LOG(kProtocolName, liDebug, "Processing JOI");
+	LOG(kProtocolName, liDebug, "C %lX: Processing JOI", this);
 	return B_OK;
 }
 
 status_t MSNConnection::handleCAL(Command *command) {
 	// Inititation response
-	LOG(kProtocolName, liDebug, "Processing CAL");
+	LOG(kProtocolName, liDebug, "C %lX: Processing CAL", this);
 	return B_OK;
 }
 
 status_t MSNConnection::handleIRO(Command *command) {
 	// people already in conversation
-	LOG(kProtocolName, liDebug, "Processing IRO");
+	LOG(kProtocolName, liDebug, "C %lX: Processing IRO", this);
+	return B_OK;
+}
+
+status_t MSNConnection::handleANS(Command *command) {
+	// Fully connected to chat session
+	LOG(kProtocolName, liDebug, "C %lX: Processing ANS", this);
 	return B_OK;
 }
 
 status_t MSNConnection::handleBYE(Command *command) {
 	// someone left conversation
-	LOG(kProtocolName, liDebug, "Processing BYE");
+	LOG(kProtocolName, liDebug, "C %lX: Processing BYE", this);
 	return B_OK;
 }

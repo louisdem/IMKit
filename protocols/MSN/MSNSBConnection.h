@@ -36,6 +36,7 @@ class MSNSBConnection : public MSNConnection
 		virtual status_t handleIRO( Command * );
 		virtual status_t handleBYE( Command * );
 		virtual status_t handleUSR( Command * );
+		virtual status_t handleANS( Command * );
 };
 
 #endif

@@ -128,11 +128,17 @@ status_t MSNManager::Login(const char *server, uint16 port, const char *passport
 	fPassport = passport;
 	fPassword = password;
 	fDisplayName = displayname;
+	
+	// set up connection pool
+	while ( fConnectionPool.size() < 3 )
+		fConnectionPool.push_back( new MSNConnection() );
 
 	if (fConnectionState == otOffline) {
 		if (fNoticeCon == NULL) {
-			fNoticeCon = new MSNConnection(server, port, this);
-			fNoticeCon->Run();
+			fNoticeCon = *fConnectionPool.begin();
+			fConnectionPool.pop_front();
+			fConnectionPool.push_back( new MSNConnection() );
+			fNoticeCon->SetTo( server, port, this );
 		};
 		
 		Command *command = new Command("VER");
@@ -198,9 +204,13 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				port, type);
 			
 			if (strcmp(type, "NS") == 0) {
-				MSNConnection *con = new MSNConnection(host, port, this);
-				con->Run();
-					
+				//MSNConnection *con = new MSNConnection(host, port, this);
+				MSNConnection *con = *fConnectionPool.begin();
+				fConnectionPool.pop_front();
+				fConnectionPool.push_back( new MSNConnection() );
+				con->SetTo( host, port, this );
+				//con->Lock();
+				
 				Command *command = new Command("VER");
 				command->AddParam(kProtocolsVers);
 					
@@ -208,12 +218,14 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				
 				fNoticeCon = con;
 					
+				LOG(kProtocolName, liDebug, "  Set fNoticeCon");
+				
 				return;
 			}
 			
 			if (strcmp(type, "RNG") == 0) {
 				MSNSBConnection *con = new MSNSBConnection(host, port, this);
-				con->Run();
+				//con->Run();
 				
 				const char *auth = msg->FindString("authString");
 				const char *sessionID = msg->FindString("sessionID");
@@ -233,7 +245,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			
 			if (strcmp(type, "SB") == 0) {
 				MSNSBConnection *con = new MSNSBConnection(host, port, this);
-				con->Run();
+				//con->Run();
 				
 				const char *authString = msg->FindString("authString");
 				
@@ -268,8 +280,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			msg->FindPointer("connection", (void **)&con);
 			
 			if (con != NULL) {
-//				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
-				LOG(kProtocolName, liLow, "Connection (%P) closed", con);
+				LOG(kProtocolName, liLow, "Connection (%lX) closed", con);
 				
 				list<thread_id> threads;
 				
@@ -287,6 +298,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					fHandler->StatusChanged(Passport(), otOffline);
 					
 					fNoticeCon = NULL;
+					LOG(kProtocolName, liDebug, "  Unset fNoticeCon");
 				};
 				
 				threads.push_back( con->Thread() );
@@ -308,15 +320,34 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			if (con != NULL) {
 				connectionlist::iterator i = find(fConnections.begin(), fConnections.end(), con);
 				
+				LOG(kProtocolName, liLow, "Connection (%lX) removed", con);
+				
 				if ( i != fConnections.end() )
 				{ // don't call anything in con, it's already deleted.
-					LOG(kProtocolName, liLow, "Connection removed");
-					
 					fConnections.erase( i );
 				}
 				
-				if ( con == fNoticeCon )
+				if ( con == fNoticeCon ) {
+					list<thread_id> threads;
+					
+					LOG(kProtocolName, liLow, "  Notice connection closed, going offline");
+					connectionlist::iterator i;
+					for (i = fConnections.begin(); i != fConnections.end(); i++) {
+						threads.push_back( (*i)->Thread() );
+						Command * bye = new Command("OUT");
+						bye->UseTrID(false);
+						(*i)->Send(bye, qsImmediate);
+						BMessenger(*i).SendMessage(B_QUIT_REQUESTED);
+					}
+					
+					wait_for_threads( threads );
+					
+					fHandler->StatusChanged(Passport(), otOffline);
+					
 					fNoticeCon = NULL;
+
+					LOG(kProtocolName, liDebug, "  Unset fNoticeCon");
+				}
 			};
 		} break;
 		
@@ -340,11 +371,24 @@ void MSNManager::MessageReceived(BMessage *msg) {
 
 status_t MSNManager::MessageUser(const char *passport, const char *message) {
 	if ((fConnectionState != otOffline) && (fConnectionState != otConnecting)) {
-		if (fNoticeCon == NULL) return B_ERROR;
+		if (fNoticeCon == NULL) {
+			LOG(kProtocolName, liDebug, "Could not message %s, fNoticeCon is null", passport);
+			return B_ERROR;
+		}
 		
+		// Set up message
+		Command *msg = new Command("MSG");
+		msg->AddParam("N"); // Don't ack packet
+		BString format = "MIME-Version: 1.0\r\n"
+			"Content-Type: text/plain; charset=UTF-8\r\n"
+			"X-MMS-IM-Format: FN=Arial; EF=I; CO=0; CS=0; PF=22\r\n\r\n";
+		format << message;
+		
+		msg->AddPayload(format.String(), format.Length());
+		
+		// Find connection
 		bool needSB = false;
 		connectionlist::iterator it;
-		//switchboardmap::iterator it = fSwitchBoard.find(passport);
 		for ( it=fConnections.begin(); it != fConnections.end(); it++ )
 		{
 			MSNSBConnection * c = dynamic_cast<MSNSBConnection*>( *it );
@@ -356,7 +400,7 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 		Command *sbReq = NULL;
 		
 		if (it == fConnections.end()) {
-			LOG(kProtocolName, liDebug, "Could not message \"%s\" - no connection established",
+			LOG(kProtocolName, liDebug, "Could not message %s, no open connection: opening new",
 				passport);
 			
 			sbReq =  new Command("XFR");
@@ -367,24 +411,16 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 			needSB = true;
 		};
 		
-		Command *msg = new Command("MSG");
-		msg->AddParam("N"); // Don't ack packet
-		BString format = "MIME-Version: 1.0\r\n"
-			"Content-Type: text/plain; charset=UTF-8\r\n"
-			"X-MMS-IM-Format: FN=Arial; EF=I; CO=0; CS=0; PF=22\r\n\r\n";
-		format << message;
-		
-		msg->AddPayload(format.String(), format.Length());
-		
 		if (needSB) {
 			fWaitingSBs[sbReq->TransactionID()] = pair<BString,Command*>(passport, msg);
 		} else {
-			//it->second->Send(msg);
 			(*it)->Send(msg);
 		};
 		
 		return B_OK;
 	};
+	
+	LOG(kProtocolName, liHigh, "Error sending message to %s", passport);
 	
 	return B_ERROR;
 };
@@ -409,36 +445,33 @@ uchar MSNManager::IsConnected(void) const {
 status_t MSNManager::LogOff(void) {
 	status_t ret = B_ERROR;
 
-	LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
 	connectionlist::iterator it;
 	
 	list<thread_id> threads;
 	
+	for (it = fConnectionPool.begin(); it != fConnectionPool.end(); it++) {
+		BMessenger((*it)).SendMessage(B_QUIT_REQUESTED);
+	}
+	fConnectionPool.clear();
+	
+	LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
+
 	for (it = fConnections.begin(); it != fConnections.end(); it++) {
 		MSNConnection *con = (*it);
 		
 		threads.push_back( con->Thread() );
 		
-		LOG(kProtocolName, liLow, "Killing switchboard connection to %s:%i",
-			con->Server(), con->Port());
-		Command *bye = new Command("OUT");
-		bye->UseTrID(false);
-		con->Send(bye, qsImmediate);
+		LOG(kProtocolName, liLow, "Killing switchboard connection %lX", con);
 		
-		if ( con->Lock() ) {
-			LOG(kProtocolName, liDebug, "  Lock()+Quit()");
-			con->Quit();
-		} else {
-			LOG(kProtocolName, liDebug, "  B_QUIT_REQUESTED");
-			BMessenger(con).SendMessage(B_QUIT_REQUESTED);
-		}
+		LOG(kProtocolName, liDebug, "  B_QUIT_REQUESTED");
+		BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 	};
-	
 	fConnections.clear();
 	
 	fConnectionState = otOffline;
 	
 	if (fNoticeCon) {
+		LOG(kProtocolName, liDebug, "Closing fNoticeCon");
 		threads.push_back( fNoticeCon->Thread() );
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
@@ -447,6 +480,7 @@ status_t MSNManager::LogOff(void) {
 		BMessenger(fNoticeCon).SendMessage(B_QUIT_REQUESTED);
 		
 		fNoticeCon = NULL;
+		LOG(kProtocolName, liDebug, "  Unset fNoticeCon");
 	};
 	
 	if ( fPassport != "" )
@@ -474,11 +508,9 @@ status_t MSNManager::SetAway(bool away = true) {
 		
 		if (away) {
 			awayCom->AddParam("AWY");
-			//fHandler->StatusChanged(Passport(), otAway);
 			fConnectionState = otAway;
 		} else {
 			awayCom->AddParam("NLN");
-			//fHandler->StatusChanged(Passport(), otOnline);
 			fConnectionState = otOnline;
 		};
 		
@@ -488,7 +520,11 @@ status_t MSNManager::SetAway(bool away = true) {
 		awayCom->AddParam(caps.String());
 	
 		fNoticeCon->Send(awayCom);
+		
+		return B_OK;
 	};
+	
+	return B_ERROR;
 };
 
 status_t MSNManager::SetDisplayName(const char *displayname) {

@@ -20,7 +20,6 @@
 #include "MSNHandler.h"
 #include "Command.h"
 #include "HTTPFormatter.h"
-#include "md5.h"
 
 typedef pair <char *, int16> ServerAddress;
 typedef list<Command *> CommandQueue;
@@ -28,11 +27,14 @@ class MSNManager;
 
 class MSNConnection : public BLooper {
 	public:
+						MSNConnection();
 						MSNConnection(const char *server, uint16 port,
 							MSNManager *man);
 						~MSNConnection();
 						
 		void			MessageReceived(BMessage *msg);
+		
+		void			SetTo( const char * server, uint16 port, MSNManager * man );
 		
 		status_t		Send(Command *command, queuestyle queue = qsQueue);
 		status_t		ProcessCommand(Command *command);
@@ -64,6 +66,7 @@ class MSNConnection : public BLooper {
 		virtual status_t handleJOI( Command * );
 		virtual status_t handleCAL( Command * );
 		virtual status_t handleIRO( Command * );
+		virtual status_t handleANS( Command * );
 		virtual status_t handleBYE( Command * );
 		
 		void			StartReceiver(void);

@@ -30,6 +30,7 @@ MSNProtocol::MSNProtocol()
 	fDisplayName = "IM Kit User";
 	fManager = new MSNManager(dynamic_cast<MSNHandler *>(this));
 	
+	// OpenSSL random seed
 	int random_data[32];
 	for ( int i=0; i<32; i++ )
 	{

@@ -32,7 +32,7 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= MSN.cpp MSNConnection.cpp MSNManager.cpp Command.cpp HTTPFormatter.cpp md5.cpp MSNSBConnection.cpp 
+SRCS= MSN.cpp MSNConnection.cpp MSNManager.cpp Command.cpp HTTPFormatter.cpp MSNSBConnection.cpp 
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
