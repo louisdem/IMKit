@@ -191,8 +191,6 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 void InfoView::Draw(BRect drawBounds) {
 	BRect bound = Bounds();
 	
-//	printf("Drawing. Width is %.0f pixels\n", Bounds().Width());
-
 	// draw progress background
 	if (fProgress > 0.0) {
 		bound.right *= fProgress;
@@ -261,9 +259,9 @@ void InfoView::MouseDown(BPoint point) {
 	
 	switch (buttons) {
 		case B_PRIMARY_MOUSE_BUTTON: {
-			BRect closeRect;
-			closeRect = Bounds();
+			BRect closeRect = Bounds().InsetByCopy(2,2);
 			closeRect.left = closeRect.right - kCloseWidth;
+			closeRect.bottom = closeRect.top + kCloseWidth;	
 			
 			if (closeRect.Contains(point) == false) {		
 				entry_ref launchRef;
@@ -333,10 +331,7 @@ void InfoView::MouseDown(BPoint point) {
 };
 
 void InfoView::SetText(const char *app, const char *title, const char *text, float newMaxWidth) {
-	if ( newMaxWidth < 0 )
-		newMaxWidth = Bounds().Width();
-	
-//	printf("Setting new text, wrapping to %.0f pixels\n", newMaxWidth);
+	if ( newMaxWidth < 0 ) newMaxWidth = Bounds().Width();
 	
 	// delete old lines
 	vline::iterator lIt;
@@ -377,7 +372,7 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	fLines.push_front(titleLine);
 	y += fontHeight;
 	
-	const char spacers[] = " \t\n-\\/";
+	const char spacers[] = " \n-\\/";
 	BString textBuffer = text;
 	textBuffer.ReplaceAll("\t", "    ");
 	text = textBuffer.String();
@@ -403,7 +398,7 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	};
 	
 	offset = 0;
-	float maxWidth = newMaxWidth - kEdgePadding; //kWidth;
+	float maxWidth = newMaxWidth - kEdgePadding - iconRight;
 	bool wasNewline = false;
 	
 	for (int32 i = 0; i < count; i++) {
@@ -418,14 +413,10 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 			
 			offset = spaces[i] + 1;
 			
-/*			// debug
-			printf("Line (newline) '%s' is %.0f pixels\n", 
-				tempLine->text.String(), 
-				tempLine->font.StringWidth(tempLine->text.String())
-			);
-*/			
 			fLines.push_front(tempLine);
-		} else if (i+1 < count && StringWidth(text + offset, spaces[i+1] - offset) > maxWidth) {
+		} else if ((i+1 < count) &&
+			(StringWidth(text + offset, spaces[i+1] - offset) > maxWidth)) {
+			
 			lineinfo *tempLine = new lineinfo;
 			tempLine->font = be_plain_font;
 			if (wasNewline == false) {
@@ -440,15 +431,10 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 			tempLine->text.Append(text + offset, spaces[i] - offset);
 			
 			// strip first space
-			if ( (tempLine->text.String())[0] == ' ' )
+			if ((tempLine->text.String())[0] == ' ') {
 				tempLine->text.RemoveFirst(" ");
+			};
 			
-/*			// debug
-			printf("Line (too long) '%s' is %.0f pixels\n", 
-				tempLine->text.String(), 
-				tempLine->font.StringWidth(tempLine->text.String())
-			);
-*/			
 			fLines.push_front(tempLine);
 			
 			offset = spaces[i];
@@ -466,23 +452,16 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	};
 	
 	// strip first space
-	if ( (tempLine->text.String())[0] == ' ' )
-		tempLine->text.RemoveFirst(" ");
-			
-/*	// debug
-	printf("Line (no more text) '%s' is %.0f pixels\n", 
-		tempLine->text.String(), 
-		tempLine->font.StringWidth(tempLine->text.String())
-	);
-*/
+	if ( (tempLine->text.String())[0] == ' ' ) tempLine->text.RemoveFirst(" ");
+
+	free(spaces);		
+
 	fLines.push_front(tempLine);
 	
-	free(spaces);
-	
-	fHeight = y + kEdgePadding;
+	fHeight = y + (kEdgePadding * 2);
 	
 	BMessenger msgr(Parent());
-	msgr.SendMessage( InfoWindow::ResizeToFit );
+	msgr.SendMessage(InfoWindow::ResizeToFit);
 };
 
 bool
