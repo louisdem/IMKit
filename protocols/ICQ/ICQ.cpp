@@ -82,7 +82,7 @@ SimpleClient::SimpleClient(unsigned int uin, const string& pass)
   icqclient.socket.connect(slot(this,&SimpleClient::socket_cb));
   icqclient.contact_userinfo_change_signal.connect(slot(this,&SimpleClient::contact_userinfo_change_cb));
   icqclient.server_based_contact_list.connect(slot(this,&SimpleClient::server_based_contact_list_cb));
-  icqclient.want_auto_resp.connect(slot(this,&SimpleClient::want_auto_resp_cb));
+//  icqclient.want_auto_resp.connect(slot(this,&SimpleClient::want_auto_resp_cb)); Disabled to see if it stops the ICQ crashes.
 }
 
 SimpleClient::SimpleClient()
@@ -104,7 +104,7 @@ SimpleClient::SimpleClient()
   icqclient.socket.connect(slot(this,&SimpleClient::socket_cb));
   icqclient.contact_userinfo_change_signal.connect(slot(this,&SimpleClient::contact_userinfo_change_cb));
   icqclient.server_based_contact_list.connect(slot(this,&SimpleClient::server_based_contact_list_cb));
-  icqclient.want_auto_resp.connect(slot(this,&SimpleClient::want_auto_resp_cb));
+//  icqclient.want_auto_resp.connect(slot(this,&SimpleClient::want_auto_resp_cb)); Disabled to see if it stops the ICQ crashes.
 }
 
 void SimpleClient::run() {
@@ -444,11 +444,13 @@ SimpleClient::server_based_contact_list_cb( ServerBasedContactEvent * ev )
 	fMsgr.SendMessage( &msg );
 }
 
+/* Disabled to see if it stops the ICQ crashes.
 void
 SimpleClient::want_auto_resp_cb( ICQMessageEvent * ev )
 {
 	ev->setAwayMessage( fAwayMessage );
 }
+*/
 
 void
 SimpleClient::setMessenger( BMessenger msgr )

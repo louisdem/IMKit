@@ -93,7 +93,7 @@ class SimpleClient : public SigC::Object {
   void contact_userinfo_change_cb( UserInfoChangeEvent *ev );
   void server_based_contact_list_cb( ServerBasedContactEvent * ev );
   void self_status_change_cb( StatusChangeEvent * ev );
-  void want_auto_resp_cb( ICQMessageEvent* );
+  //void want_auto_resp_cb( ICQMessageEvent* ); // Disabled to see if it stops the ICQ crashes.
   
   // -- Callbacks from our Select object --
   void select_socket_cb(int fd, Select::SocketInputCondition cond);
