@@ -243,8 +243,10 @@ or with the BMessenger provided by im_server if you're in a protocol add-on.
 <tr><td class='messageSource'   colspan='3'>Sent by protocols to clients and im_server</td></tr>
 	<tr><td class='messageParameterOptional'>&nbsp;</td><td class='messageParameterType'>string</td><td class='messageParameterName' width='100%'>protocol</td></tr>
 	<tr><td class='messageParameterOptional'>&nbsp;</td><td class='messageParameterType'>string</td><td class='messageParameterName' width='100%'>status</td></tr>
+	<tr><td class='messageParameterOptional'>&nbsp;</td><td class='messageParameterType'>string</td><td class='messageParameterName' width='100%'>total_status</td></tr>
 <tr><td class='messageDescription' colspan='3'>
-	Own status changed to 'status', which should be one of ONLINE_TEXT, AWAY_TEXT or OFFLINE_TEXT.
+	Own status for protocol 'protocol' changed to 'status', which should be one of ONLINE_TEXT, AWAY_TEXT or OFFLINE_TEXT.<br/>
+	Total status is now 'total_status', the highest connection state of all protocols.
 </td></tr>
 
 <tr><td class='messageDivider' colspan='3'>&nbsp;</td></tr>

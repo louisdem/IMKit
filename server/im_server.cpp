@@ -165,6 +165,25 @@ Server::~Server()
 {
 	LOG("im_server", liDebug, "~Server start");
 	
+	// broadcast STATUS_SET (offline) for all !offlin protocols
+	map<string,Protocol*>::iterator p;
+	
+	for ( p = fProtocols.begin(); p != fProtocols.end(); p++ )
+	{
+		if ( fStatus[ (p->second)->GetSignature() ] != OFFLINE_TEXT )
+		{ // need to set this protocol offline
+			BMessage msg(MESSAGE);
+			msg.AddInt32("im_what", STATUS_SET);
+			msg.AddString("protocol", (p->second)->GetSignature() );
+			msg.AddString("status", OFFLINE_TEXT);
+			msg.AddString("total_status", OFFLINE_TEXT);
+			
+			Broadcast( &msg );
+			handleDeskbarMessage( &msg );
+		}
+	}
+	// done broadcasting STATUS_SET
+	
 	StopAutostartApps();
 	
 	UnloadAddons();
