@@ -135,13 +135,14 @@ int32 MSNConnection::Receiver(void *con) {
 	MSNConnection *connection = reinterpret_cast<MSNConnection *>(con);
 
 	const uint32 kSleep = 2000000;
-	const char *kHost = strdup(connection->Server());
+	const char *kHost = connection->Server();
 	const uint16 kPort = connection->Port();
-	const BMessenger *kMsgr = connection->fSockMsgr;
+	BMessenger **kMsgr = &connection->fSockMsgr;
+//	BMessenger kManMsgr = connection->fManMsgr;
 	
 	int32 socket = 0;
 	
-	if ( !connection->fSockMsgr->IsValid() ) {
+	if ( !(*kMsgr)->IsValid() ) {
 		LOG(kProtocolName, liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
 		return B_ERROR;
 	}
@@ -149,7 +150,7 @@ int32 MSNConnection::Receiver(void *con) {
 	BMessage reply;
 	status_t ret = 0;
 
-	if ((ret = connection->fSockMsgr->SendMessage(msnmsgGetSocket, &reply)) == B_OK) {
+	if ((ret = (*kMsgr)->SendMessage(msnmsgGetSocket, &reply)) == B_OK) {
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) {
 			LOG(kProtocolName, liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
 			return B_ERROR;
@@ -169,7 +170,7 @@ int32 MSNConnection::Receiver(void *con) {
 	
 	LOG(kProtocolName, liLow, "%s:%i: Starting receiver loop", kHost, kPort);
 	
-	while (kMsgr->IsValid() == true) {
+	while ((*kMsgr)->IsValid() == true) {
 		FD_ZERO(&read);
 		FD_ZERO(&error);
 		
@@ -192,7 +193,7 @@ int32 MSNConnection::Receiver(void *con) {
 					commandBuff += buffer;
 					processed += bytes;
 				} else {
-					if (kMsgr->IsValid() == false) return B_OK;
+					if ((*kMsgr)->IsValid() == false) return B_OK;
 					
 					LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0 (or 0)",
 						kHost, kPort);
@@ -249,7 +250,7 @@ int32 MSNConnection::Receiver(void *con) {
 								commandBuff += buffer;
 								processed += bytes;
 							} else {
-								if (kMsgr->IsValid() == false) return B_OK;
+								if ( (*kMsgr)->IsValid() == false) return B_OK;
 		
 								LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0 (or 0)",
 									kHost, kPort);
@@ -278,7 +279,7 @@ int32 MSNConnection::Receiver(void *con) {
 			BMessage dataReady(msnmsgDataReady);
 			dataReady.AddPointer("command", comm);
 			
-			kMsgr->SendMessage(&dataReady);
+			(*kMsgr)->SendMessage(&dataReady);
 			
 // 			this line needed to process several commands at once if they're in the
 //			buffer
@@ -332,8 +333,8 @@ int32 MSNConnection::NetworkSend(Command *command) {
 			sent_data += sent;
 		};
 		
-		LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
-			data_size);
+//		LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
+//			data_size);
 		
 		delete command;
 		return sent_data;
@@ -802,7 +803,7 @@ status_t MSNConnection::handleMSG( Command * command ) {
 			fManMsgr.SendMessage(&immsg);*/
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else {
-			LOG("MSN", liDebug, "Got message of unknown type <%s>\n", type );
+			LOG("MSN", liDebug, "Got message of unknown type <%s>", type );
 		}
 	} else {
 		LOG("ICQ", liDebug, "No Content-Type in message!\n");
