@@ -1131,7 +1131,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 	}
 	
 	//LOG("im_server", liMedium, "STATUS_CHANGED total status is now %s", new_status.c_str());
-
+	
 	// update status attribute
 	BNode node(contact);
 	
@@ -1154,13 +1154,6 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		
 		if ( !is_blocked )
 		{ // only update IM:status if not blocked
-/*			if ( node.WriteAttr(
-				"IM:status", B_STRING_TYPE, 0,
-				status, strlen(status)+1
-			) != (int32)strlen(status)+1 )
-			{
-				_ERROR("Error writing status attribute");
-			}*/
 			contact.SetStatus( status );
 		}
 		
@@ -1329,22 +1322,22 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 		query.PushAttr("IM:connections");
 		query.PushString(protocol);
 		query.PushOp(B_CONTAINS);
-
+		
 		query.SetVolume(&vol);
-			
+		
 		query.Fetch();
-			
+		
 		entry_ref entry;
-			
+		
 		while (query.GetNextRef(&entry) == B_OK) {
 			refs.push_back(entry);
 		};
-			
+		
 		query.Clear();
 	};
 	
-	refs.sort();
-	refs.unique();
+//	refs.sort();
+//	refs.unique();
 	
 	list <entry_ref>::iterator iter;
 	for (iter = refs.begin(); iter != refs.end(); iter++) {
@@ -1363,7 +1356,9 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 			msg->AddString("id", id);
 		};
 	};
-
+	
+	//LOG("im_server", liDebug, "GetConnectionsForProcol(%s)", msg, protocol );
+	
 	refs.clear();
 }
 
@@ -1606,13 +1601,23 @@ Server::handle_STATUS_SET( BMessage * msg )
 		
 		for ( int i=0; contacts.FindString("id", i); i++ )
 		{
-			BMessage update(MESSAGE);
-			update.AddInt32("im_what", STATUS_CHANGED);
-			update.AddString("protocol", protocol);
-			update.AddString("id", contacts.FindString("id",i) );
-			update.AddString("status", OFFLINE_TEXT);
+			string proto_id;
+			proto_id += protocol;
+			proto_id += ":";
+			proto_id += contacts.FindString("id", i);
 			
-			BMessenger(this).SendMessage( &update );
+			if ( fStatus[proto_id] != OFFLINE_TEXT  && fStatus[proto_id] != "" )
+			{ // only send a message if there's been a change.
+				BMessage update(MESSAGE);
+				update.AddInt32("im_what", STATUS_CHANGED);
+				update.AddString("protocol", protocol);
+				update.AddString("id", contacts.FindString("id",i) );
+				update.AddString("status", OFFLINE_TEXT);
+				
+				BMessenger(this).SendMessage( &update );
+				
+				fStatus[proto_id] = OFFLINE_TEXT;
+			}
 		}
 	}
 	//fAddOnInfo[protocol].online_status = status;
