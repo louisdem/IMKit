@@ -74,7 +74,7 @@ class Server : public BApplication
 		void	HandleContactUpdate( BMessage * );
 		
 		Contact	FindContact( const char * proto_id );
-		Contact	CreateContact( const char * proto_id );
+		Contact	CreateContact( const char * proto_id , const char *namebase );
 		
 		status_t	LoadAddons();
 		void		UnloadAddons();

@@ -730,7 +730,7 @@ Server::FindContact( const char * proto_id )
 	@param proto_id The protocol:id connection of the new contact
 */
 Contact
-Server::CreateContact( const char * proto_id )
+Server::CreateContact( const char * proto_id , const char *namebase )
 {
 	LOG("im_server", liHigh, "Creating new contact for connection [%s]", proto_id);
 	
@@ -744,12 +744,14 @@ Server::CreateContact( const char * proto_id )
 	// make sure that the target directory exists before we try to create
 	// new files
 
-	// TO BE ADDED
+	create_directory("/boot/home/people",0777);
 	
-	// create a new 
+	// create a new contact, try using the raw SN as the base filename
+	dir.CreateFile(namebase,&file,true);
+	
 	for (int i=1; file.InitCheck() != B_OK; i++ )
 	{
-		sprintf(filename,"Unknown contact %d",i);
+		sprintf(filename,"%s %d",namebase,i);
 		
 		dir.CreateFile(filename,&file,true);
 	}
@@ -1153,7 +1155,7 @@ Server::MessageFromProtocols( BMessage * msg )
 		
 		if ( contact.InitCheck() != B_OK )
 		{ // No matching contact, create a new one!
-			contact.SetTo( CreateContact( proto_id.c_str() ) );
+			contact.SetTo( CreateContact( proto_id.c_str() , id ) );
 			
 			// register the contact we created
 			BMessage connection(MESSAGE);
@@ -1915,7 +1917,7 @@ Server::reply_SERVER_BASED_CONTACT_LIST( BMessage * msg )
 		
 		if ( c.InitCheck() != B_OK )
 		{
-			CreateContact( proto_id.c_str() );
+			CreateContact( proto_id.c_str(), id );
 		}
 	}
 }
