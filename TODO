@@ -13,6 +13,9 @@ Fixes
 
 New features
 
+Add a new attribute, IM Specific Status, for network-specific status (well, d'uh.)
+For things like "out to lunch" or whatever messages you can set on e.g. MSN.
+
 Status notification client, like in MSN (and BeMSN! :)
 
 More attributes for info like timezone, location, etc?
