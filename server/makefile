@@ -10,6 +10,8 @@
 NAME= im_server
 TOPDIR=..
 TARGET_DIR = $(TOPDIR)/build
+BUILD_REVISION = $(shell svn info makefile | grep "Revision" | sed -e s/evision:\ //g)
+BUILD_DATE := $(shell date +%Y-%m-%d)
 
 # specify the type of binary
 #	APP:	Application
@@ -99,7 +101,7 @@ OPTIMIZE= SOME
 #	to use.  For example, setting DEFINES to "DEBUG=1" will cause the
 #	compiler option "-DDEBUG=1" to be used.  Setting DEFINES to "DEBUG"
 #	would pass "-DDEBUG" on the compiler's command line.
-DEFINES=
+DEFINES=BUILD_DATE="\"$(BUILD_DATE)\"" BUILD_REVISION="\"$(BUILD_REVISION)\""
 
 #	specify special warning levels
 #	if unspecified default warnings will be used

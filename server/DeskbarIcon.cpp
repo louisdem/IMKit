@@ -25,6 +25,8 @@ instantiate_deskbar_item()
 	return new IM_DeskbarIcon();
 }
 
+//#pragma mark -
+
 BArchivable *
 IM_DeskbarIcon::Instantiate( BMessage * archive )
 {
@@ -428,6 +430,10 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			};
 		
 		} break;
+		
+		case B_ABOUT_REQUESTED: {
+			AboutRequested();
+		} break;
 
 		default:
 			BView::MessageReceived(msg);
@@ -580,7 +586,11 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 //		settings
 		fMenu->AddSeparatorItem();
 		fMenu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
-		
+
+//		About
+		fMenu->AddSeparatorItem();
+		fMenu->AddItem(new BMenuItem("About", new BMessage(B_ABOUT_REQUESTED)));
+	
 //		Quit
 		fMenu->AddSeparatorItem();
 		fMenu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
@@ -599,19 +609,11 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		
 		return;
 	};
-	
-	if (buttons & B_PRIMARY_MOUSE_BUTTON) {
-		list<BMessenger>::iterator i = fMsgrs.begin();
-		
-		if (i != fMsgrs.end()) {
-			(*i).SendMessage( IM::DESKBAR_ICON_CLICKED );
-		};
-		
-		return;
-	};
-	
 
-	if ((buttons & B_TERTIARY_MOUSE_BUTTON) || (modifiers() & B_COMMAND_KEY)) {
+	if ((buttons & B_TERTIARY_MOUSE_BUTTON) ||
+		((modifiers() & B_COMMAND_KEY) & (buttons & B_PRIMARY_MOUSE_BUTTON))) {
+		
+		
 		entry_ref ref;
 		if (get_ref_for_path("/boot/home/people/", &ref) != B_OK) return;
 		
@@ -623,6 +625,16 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		
 		return;
 	}
+
+	if (buttons & B_PRIMARY_MOUSE_BUTTON) {
+		list<BMessenger>::iterator i = fMsgrs.begin();
+		
+		if (i != fMsgrs.end()) {
+			(*i).SendMessage( IM::DESKBAR_ICON_CLICKED );
+		};
+		
+		return;
+	};
 }
 
 void
@@ -717,6 +729,22 @@ void IM_DeskbarIcon::DetachedFromWindow() {
 	};
 }
 
+void IM_DeskbarIcon::AboutRequested(void) {
+	BAlert *alert = new BAlert("About",
+		"SVN Version: " BUILD_REVISION "\n"
+		"Built on: " BUILD_DATE "\n\n"
+		"The IM Kit is a collaborative effort released under the BeClan banner."
+		" Collaborators include: \n"
+		"  - Mikael \"m_eiman\" Eiman\n"
+		"  - Mikael \"tic\" Jansson\n"
+		"  - B \"Lazy Sod ;)\" GA\n"
+		"  - Michael \"slaad\" Davidson\n", "Wow!", NULL, NULL, B_WIDTH_AS_USUAL,
+		B_EVEN_SPACING, B_INFO_ALERT);
+	alert->SetShortcut(0, B_ESCAPE);
+	alert->SetFeel(B_NORMAL_WINDOW_FEEL);
+	alert->Go(NULL);
+};
+
 void
 IM_DeskbarIcon::reloadSettings()
 {
@@ -734,6 +762,8 @@ IM_DeskbarIcon::reloadSettings()
 			
 	LOG("deskbar", liMedium, "IM: Settings applied");
 }
+
+//#pragma mark -
 
 void IM_DeskbarIcon::BuildQueryMenu(void) {
 	querymap::iterator qIt;

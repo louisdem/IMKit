@@ -1,6 +1,7 @@
 #ifndef DESKBAR_ICON_H
 #define DESKBAR_ICON_H
 
+#include <Alert.h>
 #include <Bitmap.h>
 #include <Directory.h>
 #include <Messenger.h>
@@ -58,6 +59,8 @@ class _EXPORT IM_DeskbarIcon : public BView
 		
 		virtual void AttachedToWindow();
 		virtual void DetachedFromWindow();
+		
+		virtual void AboutRequested();
 		
 	private:
 		enum {
