@@ -42,18 +42,12 @@ class Server : public BApplication
 		void	AddEndpoint( BMessenger );
 		void	RemoveEndpoint( BMessenger );
 		
-		void	reply_GET_SETTINGS_TEMPLATE(BMessage*);
-		void	reply_GET_LOADED_PROTOCOLS(BMessage*);
-		void	reply_SERVER_BASED_CONTACT_LIST(BMessage*);
 		status_t	GetSettings(const char * protocol, BMessage*);
 		status_t	SetSettings(const char * protocol, BMessage*);
-		void	reply_GET_SETTINGS( BMessage * );
-		void	reply_SET_SETTINGS( BMessage * );
-		
-		void	handleDeskbarMessage( BMessage * );
-		
 		BMessage	GenerateSettingsTemplate();
 		status_t	UpdateOwnSettings( BMessage );
+		
+		void	handleDeskbarMessage( BMessage * );
 		
 		void	MessageToProtocols(BMessage*);
 		void	MessageFromProtocols(BMessage*);
@@ -65,8 +59,14 @@ class Server : public BApplication
 		
 		void	StartAutostartApps();
 		void	StopAutostartApps();
+		
 		void	reply_ADD_AUTOSTART_APPSIG( BMessage * );
 		void	reply_REMOVE_AUTOSTART_APPSIG( BMessage * );
+		void	reply_GET_SETTINGS_TEMPLATE(BMessage*);
+		void	reply_GET_LOADED_PROTOCOLS(BMessage*);
+		void	reply_SERVER_BASED_CONTACT_LIST(BMessage*);
+		void	reply_GET_SETTINGS( BMessage * );
+		void	reply_SET_SETTINGS( BMessage * );
 		
 		BBitmap	*GetBitmap(const char *name, type_code type = 'BBMP');
 		BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 
@@ -79,8 +79,9 @@ class Server : public BApplication
 		map<string,Protocol*>		fProtocols;
 		map<Protocol*,AddOnInfo>	fAddOnInfo;
 		map<string,string>			fStatus;// proto_id_string,status_string
+		map<Contact,string>			fPreferredProtocol;
 		
-		map<node_ref,list<pair<string,string> > >	contacts_protocols_ids;
+		//map<node_ref,list<pair<string,string> > >	contacts_protocols_ids;
 
 		BMessage					fIcons;
 		

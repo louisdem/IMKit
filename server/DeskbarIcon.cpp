@@ -266,7 +266,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			switch (im_what) {
 				case IM::STATUS_SET: {
-					const char *status = msg->FindString("status");
+					const char *status = msg->FindString("total_status");
 					
 					LOG("deskbar", LOW, "Status set to %s", status);
 					if (strcmp(status, ONLINE_TEXT) == 0) {

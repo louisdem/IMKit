@@ -620,6 +620,7 @@ Server::HandleContactUpdate( BMessage * msg )
 	{
 		case B_ENTRY_CREATED:
 			// .. add to contact list
+			
 			break;
 		case B_ENTRY_REMOVED:
 			// .. remove from contact list
@@ -968,6 +969,18 @@ Server::FindBestProtocol( Contact & contact )
 	
 	// first of all, check if source of last message is still online
 	// if it is, we use it.
+	if ( fPreferredProtocol[contact].length() > 0 )
+	{
+		protocol = fPreferredProtocol[contact];
+		
+		if ( contact.FindConnection(protocol.c_str(), connection) == B_OK )
+		{
+			if ( fStatus[connection] == AWAY_TEXT || fStatus[connection] == ONLINE_TEXT )
+			{
+				return protocol;
+			}
+		}
+	}
 	
 	// look for an online protocol
 	for ( int i=0; contact.ConnectionAt(i,connection) == B_OK; i++ )
@@ -1259,6 +1272,12 @@ Server::MessageFromProtocols( BMessage * msg )
 	if ( contact.InitCheck() == B_OK )
 	{
 		msg->AddRef("contact",contact);
+		
+		if ( im_what == MESSAGE_RECEIVED )
+		{ // message received from contact, store the protocol in fPreferredProtocol
+			fPreferredProtocol[contact] = protocol;
+			LOG("im_server", DEBUG, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
+		}
 	}
 	
 	if ( im_what == STATUS_CHANGED && protocol != NULL && id != NULL )

@@ -166,12 +166,14 @@ ChatApp::MessageReceived( BMessage * msg )
 			}
 			
 			ChatWindow * win = findWindow(ref);
+			BMessenger _msgr(win); // fix for Lock() failing, hopefully.
 			
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
 				LOG("im_client", MEDIUM, "Creating new window to handle message");
 				win = new ChatWindow(ref);
-				if ( win->Lock() )
+				_msgr = BMessenger(win);
+				if ( _msgr.LockTarget() )
 				{
 					win->Show();
 					win->SetFlags(win->Flags() ^ B_AVOID_FOCUS);
@@ -194,7 +196,7 @@ ChatApp::MessageReceived( BMessage * msg )
 				
 			} else
 			{
-				if ( win->Lock() )
+				if (_msgr.LockTarget() )
 				{
 					win->PostMessage(msg);
 					if ( win->IsMinimized() )
