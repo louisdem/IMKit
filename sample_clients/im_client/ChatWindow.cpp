@@ -4,6 +4,8 @@
 
 #include <libim/Contact.h>
 #include <libim/Helpers.h>
+#include <Mime.h>
+#include <Path.h>
 
 const char *kImNewMessageSound = "IM Message Received";
 
@@ -120,8 +122,15 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fDock->AddChild(btn);
 	
 	// email icon
+	entry_ref emailAppRef;
+	if ( be_roster->FindApp( "text/x-email", &emailAppRef ) != B_OK )
+	{ // failed to get email icon, oopsie.
+		LOG("im_client", LOW, "Failed to get email app icon");
+		emailAppRef = fEntry; // this isn't what we should be doing, but it might be better than nothing.
+	}
+	
 #if  B_BEOS_VERSION > B_BEOS_VERSION_5
-	BNode emailApp("/boot/beos/apps/BeMail");
+	BNode emailApp(&emailAddRef);
 	long err = 0;
 
 	#ifdef GET_NODE_ICON
@@ -130,8 +139,10 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		icon = GetTrackerIcon(emailApp, 32, &err);
 	#endif
 #else
-	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/Email", "BEOS:L:STD_ICON");
+	BEntry emailAppEntry(&emailAppRef);
+	BPath emailPath;
+	emailAppEntry.GetPath( &emailPath );
+	icon = GetBitmapFromAttribute( emailPath.Path(), "BEOS:L:STD_ICON");
 #endif
 	
 	btn = new ImageButton(

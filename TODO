@@ -1,4 +1,4 @@
-Fixes
+Things to fix
 
 * Protocol doc needs to be updated and extended to describe Deskbar add-on and probably more.
 * Strangeness when getting the server based contact list. Contact info messages duplicated? Not indexed?
@@ -17,6 +17,7 @@ Fixes
 * Change Merge contacts, or make a new one, so it can be used from the Terminal
 * Client: not scrolling correctly in conversation when opening a conversation with a history
 * When running Zeta: reused message from sending message is corrupted somewhere along the line
+* Crash in BubbleHelper, ...( FindView( WindowAt() ) ). 
 
 New features
 
