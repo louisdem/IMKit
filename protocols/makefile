@@ -1,9 +1,9 @@
 # makefile for all sample code
 
 SUBDIRS = \
-	ICQ \
 	AIM \
 	MSN \
+	ICQ \
 	Yahoo
 
 default .DEFAULT :
