@@ -95,6 +95,7 @@ class ChatWindow : public BWindow
 			BLOCK,
 			EMAIL,
 			AUTH,
+			VIEW_LOG,
 			
 			CLEAR_TYPING	= 1000,
 			PROTOCOL_SELECTED,
