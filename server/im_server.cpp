@@ -569,6 +569,8 @@ Server::Process( BMessage * msg )
 		case SEND_MESSAGE:
 		case GET_CONTACT_INFO:
 		case SEND_AUTH_ACK:
+		case USER_STARTED_TYPING:
+		case USER_STOPPED_TYPING:
 		{
 			MessageToProtocols(msg);
 		}	break;

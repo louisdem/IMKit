@@ -77,6 +77,8 @@ class SimpleClient : public SigC::Object {
   BMessenger	fMsgr;
   int32			fEncoding;
   
+  string		fAwayMessage;
+  
  protected:
 
   // -- Callbacks from libicq2000 --
@@ -89,6 +91,7 @@ class SimpleClient : public SigC::Object {
   void contact_userinfo_change_cb( UserInfoChangeEvent *ev );
   void server_based_contact_list_cb( ServerBasedContactEvent * ev );
   void self_status_change_cb( StatusChangeEvent * ev );
+  void want_auto_resp_cb( ICQMessageEvent* );
   
   // -- Callbacks from our Select object --
   void select_socket_cb(int fd, Select::SocketInputCondition cond);
@@ -101,6 +104,7 @@ class SimpleClient : public SigC::Object {
   
   void setMessenger( BMessenger );
   void setEncoding( int32 );
+  void setAwayMessage( string );
 };
 
 class ICQProtocol : public IM::Protocol

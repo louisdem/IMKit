@@ -66,7 +66,7 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 	
 	rect = Bounds();
 	rect.InsetBy(kPadding, kPadding);
-
+	
 	rect.left = rect.right - (be_plain_font->StringWidth("Set Away") + (kPadding * 2));
 	rect.bottom -= kPadding;
 	rect.top = rect.bottom - (fFontHeight + kPadding);
@@ -85,45 +85,57 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 	fTextView->MakeFocus(true);
 }
 
-AwayMessageWindow::~AwayMessageWindow(void) {
-	free(fProtocol);
+AwayMessageWindow::~AwayMessageWindow(void) 
+{
+	if ( fProtocol )
+		free(fProtocol);
 
-	if (fScroller) fScroller->RemoveSelf();
+/*	if (fScroller) 
+		fScroller->RemoveSelf();
 	delete fScroller;
 	
 	delete fTextView;
 	
-	if (fOkay) fOkay->RemoveSelf();
+	if (fOkay) 
+		fOkay->RemoveSelf();
 	delete fOkay;
 	
-	if (fCancel) fCancel->RemoveSelf();
+	if (fCancel) 
+		fCancel->RemoveSelf();
 	delete fCancel;
 	
-	if (fView) fView->RemoveSelf();
+	if (fView) 
+		fView->RemoveSelf();
+	
 	delete fView;
+*/
 };
 
 bool AwayMessageWindow::QuitRequested(void) {
-	return BWindow::QuitRequested();
+	//return BWindow::QuitRequested();
+	return true;
 };
+
 void AwayMessageWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case CANCEL_AWAY: {
-			Quit();
-//			PostMessage(B_QUIT_REQUESTED);
+			//Quit();
+			PostMessage(B_QUIT_REQUESTED);
 		} break;
+		
 		case SET_AWAY: {
-			BMessage *status = new BMessage(IM::MESSAGE);
-			status->AddInt32("im_what", IM::SET_STATUS);
-			if (fProtocol) status->AddString("protocol", fProtocol);
-			status->AddString("away_msg", fTextView->Text());
-			status->AddString("status", AWAY_TEXT);
+			BMessage status(IM::MESSAGE);
+			status.AddInt32("im_what", IM::SET_STATUS);
+			if (fProtocol) status.AddString("protocol", fProtocol);
+			status.AddString("away_msg", fTextView->Text());
+			status.AddString("status", AWAY_TEXT);
 			
 			IM::Manager man;
-			man.SendMessage(status);
-		
-			Quit();
-//			PostMessage(B_QUIT_REQUESTED);
+			
+			man.OneShotMessage(&status);
+			
+			//Quit();
+			PostMessage(B_QUIT_REQUESTED);
 		} break;
 	
 		default: {

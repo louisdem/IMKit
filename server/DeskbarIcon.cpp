@@ -221,23 +221,25 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		{
 			BMenuItem *item = NULL;
 			msg->FindPointer("source", reinterpret_cast<void **>(&item));
-			if (item == NULL) return;
-		
-			BMessage newmsg(IM::MESSAGE);
-			newmsg.AddInt32("im_what", IM::SET_STATUS);
-
-			const char *protocol = NULL;
-			if (msg->FindString("protocol", &protocol) == B_OK) {
-				newmsg.AddString("protocol", strdup(protocol));
-			};
-			printf("Protocol: %s\n", protocol);
-			newmsg.AddString("status", item->Label());
+			if (item == NULL) 
+				return;
+			
+			const char *protocol = msg->FindString("protocol");
 			
 			if (strcmp("Away", item->Label()) == 0) {
 				AwayMessageWindow *w = new AwayMessageWindow(protocol);
 				w->Show();
 				return;
 			}
+			
+			BMessage newmsg(IM::MESSAGE);
+			newmsg.AddInt32("im_what", IM::SET_STATUS);
+			
+			if ( protocol != NULL ) {
+				newmsg.AddString("protocol", protocol);
+			};
+			printf("Protocol: %s\n", protocol);
+			newmsg.AddString("status", item->Label());
 			
 			fCurrIcon = fModeIcon; 
 			Invalidate();
@@ -348,7 +350,7 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 	if ( !BMessenger(IM_SERVER_SIG).IsValid() )
 	{
 		BDeskbar db;
-	
+		
 		db.RemoveItem( DESKBAR_ICON_NAME );
 	}
 
@@ -359,7 +361,7 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 	{
 		if (fDirtyMenu) {
 			delete fMenu;
-			fMenu = new BPopUpMenu("im_db_menu");
+			fMenu = new BPopUpMenu("im_db_menu", false);
 			
 			// set status
 			BMenu * status = new BMenu("Set status");

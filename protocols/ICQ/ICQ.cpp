@@ -63,7 +63,8 @@ bool g_is_quiting = false;
 
 SimpleClient::SimpleClient(unsigned int uin, const string& pass)
 : icqclient(uin, pass),
-	fEncoding(0xffff)
+	fEncoding(0xffff),
+	fAwayMessage("away")
 {
 
   /*
@@ -81,10 +82,12 @@ SimpleClient::SimpleClient(unsigned int uin, const string& pass)
   icqclient.socket.connect(slot(this,&SimpleClient::socket_cb));
   icqclient.contact_userinfo_change_signal.connect(slot(this,&SimpleClient::contact_userinfo_change_cb));
   icqclient.server_based_contact_list.connect(slot(this,&SimpleClient::server_based_contact_list_cb));
+  icqclient.want_auto_resp.connect(slot(this,&SimpleClient::want_auto_resp_cb));
 }
 
 SimpleClient::SimpleClient()
-:	fEncoding(0xffff)
+:	fEncoding(0xffff),
+	fAwayMessage("away")
 {
   /*
    * set up the libicq2000 callbacks: the SigC callback system is used
@@ -101,6 +104,7 @@ SimpleClient::SimpleClient()
   icqclient.socket.connect(slot(this,&SimpleClient::socket_cb));
   icqclient.contact_userinfo_change_signal.connect(slot(this,&SimpleClient::contact_userinfo_change_cb));
   icqclient.server_based_contact_list.connect(slot(this,&SimpleClient::server_based_contact_list_cb));
+  icqclient.want_auto_resp.connect(slot(this,&SimpleClient::want_auto_resp_cb));
 }
 
 void SimpleClient::run() {
@@ -439,6 +443,12 @@ SimpleClient::server_based_contact_list_cb( ServerBasedContactEvent * ev )
 }
 
 void
+SimpleClient::want_auto_resp_cb( ICQMessageEvent * ev )
+{
+	ev->setAwayMessage( fAwayMessage );
+}
+
+void
 SimpleClient::setMessenger( BMessenger msgr )
 {
 	fMsgr = msgr;
@@ -448,6 +458,12 @@ void
 SimpleClient::setEncoding( int32 encoding )
 {
 	fEncoding = encoding;
+}
+
+void
+SimpleClient::setAwayMessage( string msg )
+{
+	fAwayMessage = msg;
 }
 
 int32
@@ -565,6 +581,11 @@ ICQProtocol::Process( BMessage * msg )
 						if ( strcmp(status,AWAY_TEXT) == 0 )
 						{
 							fClient.icqclient.setStatus(STATUS_AWAY);
+							
+							if ( msg->FindString("away_msg") != NULL )
+							{ // let's use this away message eventually.
+								fClient.setAwayMessage( msg->FindString("away_msg") );
+							}
 						} else
 						if ( strcmp(status,ONLINE_TEXT) == 0 )
 						{
