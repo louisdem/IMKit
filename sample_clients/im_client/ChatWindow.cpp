@@ -192,7 +192,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		buttonRect,
 		"open in people button",
 		new BMessage(SHOW_INFO),
-		B_FOLLOW_ALL,
+		B_FOLLOW_NONE,
 		B_WILL_DRAW,
 		icon,
 		NULL
