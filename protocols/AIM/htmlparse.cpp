@@ -83,4 +83,6 @@ void parse_html( char * msg )
 	copy[copy_pos] = 0;
 	
 	strcpy(msg, copy);
+	
+	delete copy;
 }
