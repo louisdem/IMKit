@@ -7,15 +7,11 @@
 
 const float kEdgePadding = 2.0;
 
-InfoView::InfoView( info_type type, const char * text, BMessage *details,
-	const char * progID, float prog )
+InfoView::InfoView( info_type type, const char * text, BMessage *details )
 :	BView( BRect(0,0,1,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW ),
 	fType(type),
 	fRunner(NULL),
-	fProgress(prog),
 	fDetails(details) {
-	
-	if ( progID ) fProgressID = progID;
 	
 	BMessage iconMsg;
 	if (fDetails->FindMessage("icon", &iconMsg) == B_OK) {
@@ -28,6 +24,17 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details,
 			bits[i] = B_TRANSPARENT_MAGIC_RGBA32;
 		};
 	};
+	
+	const char * messageID = NULL;
+	if (fDetails->FindString("messageID", &messageID) != B_OK) 
+	{
+		fMessageID = ""; 
+	} else 
+	{
+		fMessageID = messageID;
+	}
+	if (fDetails->FindFloat("progress", &fProgress) != B_OK) fProgress = 0.0;
+	if (fDetails->FindInt32("timeout", &fTimeout) != B_OK) fTimeout = 5;
 	
 	float w,h;
 	
@@ -65,16 +72,10 @@ InfoView::AttachedToWindow()
 	BMessage msg(REMOVE_VIEW);
 	msg.AddPointer("view", this);
 	
-	bigtime_t delay = 5*1000*1000;
+	bigtime_t delay = fTimeout*1000*1000;
 	
-	switch ( fType )
-	{
-		case Progress:
-			delay = 15*1000*1000;
-			break;
-	}
-	
-	fRunner = new BMessageRunner( BMessenger(Window()), &msg, 5*1000*1000, 1 );
+	if ( delay > 0 )
+		fRunner = new BMessageRunner( BMessenger(Window()), &msg, delay, 1 );
 }
 
 void InfoView::MessageReceived(BMessage * msg) {
@@ -222,7 +223,13 @@ void InfoView::MouseDown(BPoint point) {
 			} else {
 				be_roster->Launch(&launchRef, &messages);
 			};
-					
+			
+			// remove the info view after a click
+			BMessage remove_msg(REMOVE_VIEW);
+			remove_msg.AddPointer("view", this);
+			
+			BMessenger msgr(Window());
+			msgr.SendMessage(&remove_msg);
 		} break;
 	};
 };
@@ -257,7 +264,7 @@ InfoView::SetText(const char * _text)
 }
 
 bool
-InfoView::HasProgressID( const char * id )
+InfoView::HasMessageID( const char * id )
 {
-	return fProgressID == id;
+	return fMessageID == id;
 }

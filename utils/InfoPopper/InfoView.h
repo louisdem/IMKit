@@ -25,7 +25,7 @@ using namespace InfoPopper;
 class InfoView : public BView
 {
 	public:		
-		InfoView( info_type, const char * text, BMessage *details, const char * progID = NULL, float prog = 0.0);
+		InfoView( info_type, const char * text, BMessage *details );
 		~InfoView();
 		
 		void AttachedToWindow();
@@ -43,17 +43,17 @@ class InfoView : public BView
 		*/
 		void SetText( const char * );
 		
-		bool HasProgressID( const char * );
+		bool HasMessageID( const char * );
 
 		void MouseDown(BPoint point);
-
 		
 	private:
 		info_type		 fType;
 		BMessageRunner	* fRunner;
 		list<pair<BString,const BFont*> >	fLines;
 		float			fProgress;
-		BString			fProgressID;
+		BString			fMessageID;
+		int32			fTimeout;
 		
 		BMessage		*fDetails;
 		BBitmap			*fBitmap;

@@ -40,11 +40,32 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			if (msg->FindString("content", &message) != B_OK) return;
 			if (msg->FindString("title", &title) != B_OK) return;
 			
+			const char *messageID;
+			if ( msg->FindString("messageID",&messageID) == B_OK )
+			{ // message ID present, remove current message if present
+				list<InfoView*>::iterator i;
+				
+				for ( i=fInfoViews.begin(); i!=fInfoViews.end(); i++ )
+				{
+					if ( (*i)->HasMessageID(messageID) )
+					{
+						(*i)->RemoveSelf();
+						delete *i;
+						fInfoViews.remove(*i);
+						break;
+					}
+				}
+			}
+			
 			BString msgText = title;
 			msgText << ":\n" << message;
 			msgText.ReplaceAll("\n", "\n  ");
-		
-			InfoView *view = new InfoView((InfoPopper::info_type)type, msgText.String(), new BMessage(*msg));
+			
+			InfoView *view = new InfoView(
+				(InfoPopper::info_type)type, 
+				msgText.String(), 
+				new BMessage(*msg)
+			);
 			
 			fInfoViews.push_back(view);
 			
