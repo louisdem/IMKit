@@ -137,7 +137,7 @@ status_t AIMManager::Send(Flap *f) {
 		};
 	} else {
 		AIMConnection *con = fConnections.front();
-		con->Send(f);
+		if (con != NULL) con->Send(f);
 	};
 };
 
@@ -746,4 +746,17 @@ status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
 //	Send(notify);
 	
 	return B_OK;
+};
+
+status_t AIMManager::SetAway(const char *message) {
+	Flap *away = new Flap(SNAC_DATA);
+	away->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00, 0x00000000));
+	away->AddTLV(new TLV(0x0003,  "text/aolrtf; charset=\"us-ascii\"",
+		strlen("text/aolrtf; charset=\"us-ascii\"")));
+	away->AddTLV(new TLV(0x0004, message, strlen(message)));
+	
+	Send(away);
+
+	fHandler->StatusChanged(fOurNick, AMAN_AWAY);
+
 };

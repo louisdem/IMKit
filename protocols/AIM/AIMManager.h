@@ -63,7 +63,9 @@ class AIMManager : public BLooper {
 			status_t	LogOff(void);
 			status_t	RequestBuddyIcon(const char *buddy);
 			
+			status_t	SetAway(const char *message);
 			status_t	TypingNotification(const char *buddy, uint16 typing);
+		inline uchar	ConnectionState(void) const { return fConnectionState; };
 			
 	private:	
 			char		*EncodePassword(const char *pass);

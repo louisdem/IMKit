@@ -77,13 +77,18 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				}	break;
 				
 				case IM::SET_STATUS: {
-					LOG("AIM", HIGH, "Set status");
 					const char *status = msg->FindString("status");
+					LOG("AIM", HIGH, "Set status to %s", status);
 					
 					if (strcmp(status, OFFLINE_TEXT) == 0) {
 						fManager->LogOff();
 					} else
 					if (strcmp(status, AWAY_TEXT) == 0) {
+						if (fManager->ConnectionState() == (uchar)AMAN_ONLINE) {
+							const char *away_msg = msg->FindString("away_msg");
+							LOG("AIM", LOW, "Setting away message: %s", away_msg);
+							fManager->SetAway(away_msg);
+						};
 					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {	
 						fManager->Login("login.oscar.aol.com", (uint16)5190,
@@ -183,6 +188,10 @@ status_t AIMProtocol::Process(BMessage * msg) {
 const char * AIMProtocol::GetSignature() {
 	return "AIM";
 }
+
+//uint32 AIMProtocol::Capabilities() {
+//	return PROT_AWAY_MESSAGES | PROT_TYPING_NOTIFICATIONS;
+//};
 
 BMessage AIMProtocol::GetSettingsTemplate() {
 	BMessage main_msg(IM::SETTINGS_TEMPLATE);

@@ -29,6 +29,7 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 		virtual status_t Process( BMessage * );
 		
 		virtual const char * GetSignature();
+//		virtual uint32	Capabilities();
 	
 		virtual BMessage GetSettingsTemplate();
 		

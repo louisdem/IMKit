@@ -15,6 +15,7 @@
 
 #include "../common/IMKitUtilities.h"
 #include "../common/BubbleHelper.h"
+#include "AwayMessageWindow.h"
 
 #include <libim/Manager.h>
 #include <be/kernel/fs_attr.h>
@@ -86,6 +87,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BString				fTipText;
 		map<string, string>	fStatuses;
 		BPopUpMenu			*fMenu;
+		
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

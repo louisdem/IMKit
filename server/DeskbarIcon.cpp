@@ -110,6 +110,8 @@ IM_DeskbarIcon::_init()
 	fDirtyStatus = true;
 	fDirtyMenu = true;
 	fMenu = NULL;
+	
+	SetDrawingMode(B_OP_OVER);	
 }
 
 void
@@ -120,9 +122,7 @@ IM_DeskbarIcon::Draw( BRect rect )
 	
 	if ( fCurrIcon )
 	{
-		SetDrawingMode(B_OP_OVER);
 		DrawBitmap( fCurrIcon, BPoint(0,0) );
-//		SetDrawingMode(B_OP_COPY);
 	} else
 	{
 		SetHighColor(255,0,0);
@@ -234,6 +234,12 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			};
 			newmsg.AddString("status", item->Label());
 			
+			if (strcmp("Away", item->Label()) == 0) {
+				AwayMessageWindow *w = new AwayMessageWindow(protocol);
+				w->Show();
+				return;
+			};
+			
 			fCurrIcon = fModeIcon; 
 			Invalidate();
 			
@@ -311,6 +317,8 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 		fTip->SetHelp(Parent(), NULL);
 	} else {
 		if (fDirtyStatus == true) {
+			fStatuses.clear();
+			
 			BMessage protStatus;
 			IM::Manager man;
 			man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);

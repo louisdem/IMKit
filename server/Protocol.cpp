@@ -2,10 +2,8 @@
 
 using namespace IM;
 
-Protocol::Protocol()
-{
+Protocol::Protocol() {
 }
 
-Protocol::~Protocol()
-{
+Protocol::~Protocol() {
 }
