@@ -773,7 +773,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			char *url = ReadAttribute(BNode(&fEntry), "META:url", &length);
 			if ((url != NULL) && (length > 1)) {
 				url = (char *)realloc(url, (length + 1) * sizeof(char));
-				url[length] = '\0;';
+				url[length] = '\0';
 				
 				argv.AddString("argv", url);	
 				argv.AddInt32("argc", 2);
