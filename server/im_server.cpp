@@ -424,6 +424,7 @@ Server::LoadAddons()
 		pinfo.protocol = protocol;
 		pinfo.image = curr_image;
 		pinfo.signature = protocol->GetSignature();
+		//pinfo.online_status = OFFLINE_TEXT;
 		strcpy(pinfo.path,path.Path());
 		fAddOnInfo[protocol] = pinfo;
 		
@@ -958,6 +959,39 @@ Server::SetSettings( const char * protocol_sig, BMessage * settings )
 	return B_OK;			
 }
 
+string
+Server::FindBestProtocol( Contact & contact )
+{
+	char connection[255];
+	
+	string protocol = "";
+	
+	// first of all, check if source of last message is still online
+	// if it is, we use it.
+	
+	// look for an online protocol
+	for ( int i=0; contact.ConnectionAt(i,connection) == B_OK; i++ )
+	{
+		string curr = connection;
+		
+		if ( fStatus[curr] == AWAY_TEXT || fStatus[curr] == ONLINE_TEXT )
+		{
+			int separator_pos = curr.find(":");
+		
+			curr.erase(separator_pos, strlen(connection)-separator_pos);
+		
+			protocol = curr;
+		}
+	}
+	
+	if ( protocol == "" )
+	{ // no online protocol found, look for one capable of offline messaging
+		protocol = "ICQ";
+	}
+	
+	return protocol;
+}
+
 void
 Server::MessageToProtocols( BMessage * msg )
 {
@@ -975,7 +1009,7 @@ Server::MessageToProtocols( BMessage * msg )
 		
 		if ( msg->FindString("protocol") == NULL )
 		{ // no protocol specified, figure one out
-			char connection[255];
+			/*char connection[255];
 			
 			if ( contact.ConnectionAt(0,connection) != B_OK )
 			{ // trying to send to a Contact with no connections
@@ -990,8 +1024,8 @@ Server::MessageToProtocols( BMessage * msg )
 					connection[i] = 0;
 					break;
 				}
-			
-			msg->AddString("protocol",connection);
+			*/
+			msg->AddString("protocol", FindBestProtocol(contact).c_str() );
 		} // done chosing protocol
 		
 		if ( msg->FindString("id") == NULL )
@@ -1135,7 +1169,7 @@ void
 Server::MessageFromProtocols( BMessage * msg )
 {
 	const char * protocol = msg->FindString("protocol");
-
+	
 	// convert strings to utf8
 	type_code _type;
 	char * name;
@@ -1242,7 +1276,9 @@ Server::MessageFromProtocols( BMessage * msg )
 			return;
 		}
 		
-		if ( strcmp(ONLINE_TEXT,msg->FindString("status")) == 0 )
+		const char * status = msg->FindString("status");
+		
+		if ( strcmp(ONLINE_TEXT,status) == 0 )
 		{ // we're online. register contacts. (should be: only do this if we were offline)
 			if ( fProtocols.find(protocol) == fProtocols.end() )
 			{
@@ -1258,6 +1294,31 @@ Server::MessageFromProtocols( BMessage * msg )
 			
 			p->Process( &connections );
 		}
+		
+		//fAddOnInfo[protocol].online_status = status;
+		
+		// Find out 'total' online status
+		fStatus[protocol] = status;
+		
+		string total_status = OFFLINE_TEXT;
+		
+		for ( map<string,string>::iterator i = fStatus.begin(); i != fStatus.end(); i++ )
+		{
+			if ( i->second == ONLINE_TEXT )
+			{
+				total_status = ONLINE_TEXT;
+				break;
+			}
+			
+			if ( i->second == AWAY_TEXT )
+			{
+				total_status = AWAY_TEXT;
+			}
+		}
+		
+		msg->AddString("total_status", total_status.c_str() );
+		//
+		
 		handleDeskbarMessage(msg);
 	}
 	
@@ -1290,29 +1351,30 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	// update status
 	fStatus[proto_id] = new_status;
-
+	
 	// calculate total status for contact
-/*	for ( int i=0; i<contact.CountConnections(); i++ )
-	{ // calc total status
+	new_status = OFFLINE_TEXT;
+	
+	for ( int i=0; i<contact.CountConnections(); i++ )
+	{
 		char connection[512];
 		
 		contact.ConnectionAt(i,connection);
 		
-		if ( proto_id != connection )
-		{ // not this connection, check status
-			string curr = fStatus[connection];
+		string curr = fStatus[connection];
 			
-			if ( curr == AWAY_TEXT && new_status == OFFLINE_TEXT )
-			{
-				new_status = AWAY_TEXT;
-			}
-			if ( curr == ONLINE_TEXT )
-			{
-				new_status = ONLINE_TEXT;
-			}
+		if ( curr == ONLINE_TEXT )
+		{
+			new_status = ONLINE_TEXT;
+			break;
+		}
+		
+		if ( curr == AWAY_TEXT && new_status == OFFLINE_TEXT )
+		{
+			new_status = AWAY_TEXT;
 		}
 	}
-*/	
+	
 	// update status attribute
 	BNode node(contact);
 	
@@ -1330,7 +1392,7 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 		{
 			_ERROR("Error writing status attribute",msg);
 		}
-			
+		
 		BBitmap *large = NULL;
 		BBitmap *small = NULL;
 		

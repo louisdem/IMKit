@@ -72,6 +72,8 @@ class Server : public BApplication
 		BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 
 			type_code type = 'BBMP');
 		
+		string	FindBestProtocol( Contact & contact );
+		
 		BQuery						fQuery;
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
