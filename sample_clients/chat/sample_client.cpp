@@ -105,6 +105,7 @@ MyApp::RefsReceived( BMessage * msg )
 	
 	msg->what = IM::MESSAGE;
 	msg->AddInt32("im_what", IM::MESSAGE_RECEIVED);
+	msg->AddBool("user_opened", true);
 	
 	PostMessage(msg);
 }
@@ -190,6 +191,13 @@ MyApp::MessageReceived( BMessage * msg )
 					win->Show();
 					win->PostMessage(msg);
 					win->Unlock();
+					
+					bool user_opened;
+					
+					if ( msg->FindBool("user_opened",&user_opened) != B_OK )
+					{ // play sound if not opened by user
+						system_beep(kImNewMessageSound);
+					}
 				} else
 				{
 					LOG("This is a fatal error that should never occur. Lock fail on new win.");
