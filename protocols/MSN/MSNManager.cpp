@@ -148,6 +148,13 @@ status_t MSNManager::Login(const char *server, uint16 port, const char *passport
 			fNoticeCon->SetTo( server, port, this );
 		};
 		
+		if ( !fNoticeCon || !fNoticeCon->IsConnected() )
+		{
+			LOG(kProtocolName, liDebug, "MSNManager::Login: Error connecting");
+			
+			return B_ERROR;
+		}
+		
 		Command *command = new Command("VER");
 		command->AddParam(kProtocolsVers);
 		fNoticeCon->Send(command);

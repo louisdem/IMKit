@@ -279,25 +279,12 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	mobilePhoneMsg.AddString("description", "Mobile Phone Number");
 	mobilePhoneMsg.AddInt32("type", B_STRING_TYPE);
 	
-/*	Since MSN uses UTF-8 this isn't needed here.
-	BMessage enc_msg;
-	enc_msg.AddString("name","encoding");
-	enc_msg.AddString("description","Text encoding");
-	enc_msg.AddInt32("type", B_STRING_TYPE);
-	enc_msg.AddString("valid_value", "ISO 8859-1");
-	enc_msg.AddString("valid_value", "UTF-8");
-	enc_msg.AddString("valid_value", "JIS");
-	enc_msg.AddString("valid_value", "Shift-JIS");
-	enc_msg.AddString("valid_value", "EUC");
-	enc_msg.AddString("default", "ISO 8859-1");
-*/		
 	main_msg.AddMessage("setting", &user_msg);
 	main_msg.AddMessage("setting", &pass_msg);
 	main_msg.AddMessage("setting", &screen_msg);
 //	main_msg.AddMessage("setting", &homePhoneMsg);
 //	main_msg.AddMessage("setting", &workPhoneMsg);
 //	main_msg.AddMessage("setting", &mobilePhoneMsg);
-//	main_msg.AddMessage("setting", &enc_msg); See note above.
 	
 	return main_msg;
 }
@@ -308,18 +295,15 @@ status_t MSNProtocol::UpdateSettings( BMessage & msg ) {
 	const char *displayname = NULL;
 //	const char *encoding = NULL;
 
-	/* don't check for encoding, as it doesnt belong to the template anymore. emwe */
-	
 	msg.FindString("passport", &passport);
 	msg.FindString("password", &password);
 	msg.FindString("displayname", &displayname);
-//	msg.FindString("encoding", &encoding);
 	
-	if ((passport == NULL) || (password == NULL) /* || (encoding == NULL) */ ) {
+	if ((passport == NULL) || (password == NULL) ) {
 //		invalid settings, fail
 		return B_ERROR;
 	};
-
+	
 	fPassport = passport;
 	fPassword = password;
 	fDisplayName = displayname;
@@ -468,7 +452,7 @@ status_t MSNProtocol::ContactList(list<BString> *contacts) {
 	}
 };
 
-status_t MSNProtocol::AuthRequest(list_types list,const char *passport, const char *displayname) {
+status_t MSNProtocol::AuthRequest(list_types /*list*/,const char *passport, const char *displayname) {
 	BString reason = displayname;
 	reason << " wishes to add you to their list";
 

@@ -44,7 +44,9 @@ class MSNConnection : public BLooper {
 		inline uint16	Port(void) const { return fPort; };
 
 		bool			QuitRequested();
-	
+		
+		bool			IsConnected();
+		
 	protected:
 		virtual status_t handleVER( Command * );
 		virtual status_t handleNLN( Command * );
@@ -85,7 +87,7 @@ class MSNConnection : public BLooper {
 		static int32	Receiver(void *con);
 		status_t		SSLSend(const char *host, HTTPFormatter *send,
 			HTTPFormatter **recv);
-		void			Error( const char * );
+		void			Error( const char *, bool disconnected=false );
 		void			Progress( const char * id, const char * msg, float );
 		
 		list<BString>	fContacts;

@@ -170,6 +170,10 @@ bool MSNConnection::QuitRequested() {
 	return true;
 }
 
+bool MSNConnection::IsConnected() {
+	return fSock > B_ERROR;
+}
+
 int32 MSNConnection::ConnectTo(const char *hostname, uint16 port) {
 	if (hostname == NULL) {
 		LOG(kProtocolName, liLow, "C %lX: ConnectTo() called with NULL hostname - probably"
@@ -209,13 +213,19 @@ int32 MSNConnection::ConnectTo(const char *hostname, uint16 port) {
 			this, hostname, port);
 		return B_ERROR;
 	};
-
+	
 	LOG(kProtocolName, liLow, "C %lX:   Connected.", this);
 
 	return sock;
 };
 
 void MSNConnection::StartReceiver(void) {
+	if ( fSock <= B_ERROR )
+	{ // error!
+		Error("Not connected", true);
+		return;
+	}
+	
 	fSockMsgr = new BMessenger(this);
 	
 	fThread = spawn_thread(Receiver, "MSN socket", B_NORMAL_PRIORITY, (void *)this);
@@ -251,8 +261,8 @@ int32 MSNConnection::Receiver(void *con) {
 	MSNConnection *connection = reinterpret_cast<MSNConnection *>(con);
 
 	const uint32 kSleep = 2000000;
-	const char *kHost = strdup(connection->Server()); // memory leak.
-	const uint16 kPort = connection->Port();
+//	const char *kHost = strdup(connection->Server()); // memory leak.
+//	const uint16 kPort = connection->Port();
 	BMessenger **kMsgr = &connection->fSockMsgr;
 //	BMessenger kManMsgr = connection->fManMsgr;
 	
@@ -264,8 +274,8 @@ int32 MSNConnection::Receiver(void *con) {
 	}
 	
 	BMessage reply;
-	status_t ret = 0;
 /*
+	status_t ret = 0;
 	if ((ret = (*kMsgr)->SendMessage(msnmsgGetSocket, &reply)) == B_OK) {
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) {
 			LOG(kProtocolName, liLow, "C[r] %lX: Couldn't get socket: %i", connection, ret);
@@ -518,14 +528,14 @@ ServerAddress MSNConnection::ExtractServerDetails(char *details) {
 
 status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	HTTPFormatter **recv) {
-	int err;
+	int err=B_ERROR;
 	int sd;
 	struct sockaddr_in sa;
 	struct hostent *hp;
 	SSL_CTX* ctx;
 	SSL*     ssl;
-	X509*    server_cert;
-	char*    str;
+//	X509*    server_cert;
+//	char*    str;
 	char     buffer [1024*1024];
 	SSL_METHOD *meth;
 
@@ -689,11 +699,18 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	}
 };
 
-void MSNConnection::Error( const char * message ) {
+void MSNConnection::Error( const char * message, bool disconnected ) {
 	BMessage msg( msnmsgError );
 	msg.AddString( "error", message );
+	msg.AddBool("disconnected", disconnected);
 	
 	fManMsgr.SendMessage( &msg );
+	
+	if ( disconnected ) {
+		BMessage disMsg(msnmsgCloseConnection );
+		disMsg.AddPointer("connection", this);
+		fManMsgr.SendMessage( &disMsg );
+	}
 }
 
 void MSNConnection::Progress( const char * id, const char * message, float progress ) {
@@ -705,7 +722,7 @@ void MSNConnection::Progress( const char * id, const char * message, float progr
 	fManMsgr.SendMessage( &msg );
 }
 
-status_t MSNConnection::handleVER( Command * command ) {
+status_t MSNConnection::handleVER( Command * /*command*/ ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing VER", this);
 	Command *reply = new Command("CVR");
 	reply->AddParam(kClientVer);
@@ -760,7 +777,7 @@ status_t MSNConnection::handleNLN( Command * command ) {
 	return B_OK;
 }
 
-status_t MSNConnection::handleCVR( Command * command ) {
+status_t MSNConnection::handleCVR( Command * /*command*/ ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing CVR", this);
 	Command *reply = new Command("USR");
 	reply->AddParam("TWN");	// Authentication type
@@ -1153,13 +1170,13 @@ status_t MSNConnection::handleLST(Command *command) {
 	return B_OK;
 };
 
-status_t MSNConnection::handleQRY(Command *command) {
+status_t MSNConnection::handleQRY(Command * /*command*/) {
 	// ignore this. It's a challenge response status indicator.
 	LOG(kProtocolName, liDebug, "C %lX: Processing QRY", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handleGTC(Command *command) {
+status_t MSNConnection::handleGTC(Command * /*command*/) {
 	// ignore this. It's a setting for the client that dictates how
 	// to handle people added to the RL. See protocol spec, Notification,
 	// Getting details, Privacy settings.
@@ -1168,20 +1185,20 @@ status_t MSNConnection::handleGTC(Command *command) {
 	return B_OK;
 }
 
-status_t MSNConnection::handleBLP(Command *command) {
+status_t MSNConnection::handleBLP(Command * /*command*/) {
 	// Default list for contact not on either BL or AL.
 	// Eg: BLP {TrID} BLP AL
 	LOG(kProtocolName, liDebug, "C %lX: Processing BLP", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handlePRP(Command *command) {
+status_t MSNConnection::handlePRP(Command * /*command*/) {
 	// Contact phone numbers
 	LOG(kProtocolName, liDebug, "C %lX: Processing PRP", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handleCHG(Command *command) {
+status_t MSNConnection::handleCHG(Command * command) {
 	// Own status changed
 	LOG(kProtocolName, liDebug, "C %lX: Processing CHG", this);
 	
@@ -1218,7 +1235,7 @@ status_t MSNConnection::handleFLN(Command *command) {
 }
 
 
-status_t MSNConnection::handleSYN( Command * command ) {
+status_t MSNConnection::handleSYN( Command * /*command*/ ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing SYN", this);
 	
 	// process SYN here as needed
@@ -1241,31 +1258,31 @@ status_t MSNConnection::handleSYN( Command * command ) {
 	return B_OK;
 }
 
-status_t MSNConnection::handleJOI(Command *command) {
+status_t MSNConnection::handleJOI(Command * /*command*/) {
 	// Someone joining conversation
 	LOG(kProtocolName, liDebug, "C %lX: Processing JOI", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handleCAL(Command *command) {
+status_t MSNConnection::handleCAL(Command * /*command*/) {
 	// Inititation response
 	LOG(kProtocolName, liDebug, "C %lX: Processing CAL", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handleIRO(Command *command) {
+status_t MSNConnection::handleIRO(Command * /*command*/) {
 	// people already in conversation
 	LOG(kProtocolName, liDebug, "C %lX: Processing IRO", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handleANS(Command *command) {
+status_t MSNConnection::handleANS(Command * /*command*/) {
 	// Fully connected to chat session
 	LOG(kProtocolName, liDebug, "C %lX: Processing ANS", this);
 	return B_OK;
 }
 
-status_t MSNConnection::handleBYE(Command *command) {
+status_t MSNConnection::handleBYE(Command * /*command*/) {
 	// someone left conversation
 	LOG(kProtocolName, liDebug, "C %lX: Processing BYE", this);
 	return B_OK;
