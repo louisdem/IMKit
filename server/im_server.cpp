@@ -706,6 +706,8 @@ Server::GetSettings( const char * protocol_sig, BMessage * settings )
 		);
 	}
 	
+	LOG("im_server", DEBUG, "Settings path: %s", settings_path);
+
 	char data[1024*1024];
 	
 	BNode node( settings_path );

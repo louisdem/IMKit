@@ -299,7 +299,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		B_WILL_DRAW
 	);
 	fInput->SetWordWrap(true);
-	fInput->SetStylable(true);
+	fInput->SetStylable(false);
 
 	BScrollView *inputScroll = new BScrollView(
 		"input_scroller", fInput,
@@ -720,5 +720,5 @@ URLTextView::MouseUp( BPoint where )
 void
 URLTextView::MakeFocus( bool )
 {
-	BView::MakeFocus(false);
+	BTextView::MakeFocus(false);
 }
