@@ -90,6 +90,10 @@ Server::Server()
 	
 	InitSettings();
 	
+	BMessage settings;
+	if ( im_load_client_settings("im_server", &settings) == B_OK )
+		UpdateOwnSettings(settings);
+	
 	LoadAddons();
 	
 	// add deskbar icon

@@ -261,13 +261,16 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		case SET_STATUS:
 		{
 			BMenuItem *item = NULL;
-			msg->FindPointer("source", reinterpret_cast<void **>(&item));
-			if (item == NULL) 
-				return;
-			
+
 			const char *protocol = msg->FindString("protocol");
+			const char *status = msg->FindString("status");
 			
-			if (strcmp("Away", item->Label()) == 0) {
+			if ( !status ) {
+				LOG("deskbar", liDebug, "No 'status' in SET_STATUS message", msg);
+				return;
+			}
+			
+			if (strcmp(AWAY_TEXT, status) == 0) {
 				AwayMessageWindow *w = new AwayMessageWindow(protocol);
 				w->Show();
 				return;
@@ -277,8 +280,8 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			newmsg.AddInt32("im_what", IM::SET_STATUS);
 			
 			if ( protocol != NULL ) newmsg.AddString("protocol", protocol);
-
-			newmsg.AddString("status", item->Label());
+			
+			newmsg.AddString("status", status);
 			
 			fCurrIcon = fModeIcon; 
 			Invalidate();
@@ -508,10 +511,13 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			
 			LOG("deskbar", liDebug, "'All protocols'");
 			BMenu *total = new BMenu("All Protocols");
-			BMessage msg(SET_STATUS);
-			total->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(msg)) );	
-			total->AddItem(new BMenuItem(AWAY_TEXT, new BMessage(msg)) );	
-			total->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(msg)) );	
+			BMessage *msg_online = new BMessage(SET_STATUS); msg_online->AddString("status", ONLINE_TEXT);
+			total->AddItem(new BMenuItem(ONLINE_TEXT, msg_online) );	
+			BMessage *msg_away = new BMessage(SET_STATUS); msg_away->AddString("status", AWAY_TEXT);
+			total->AddItem(new BMenuItem(AWAY_TEXT, msg_away) );	
+			BMessage *msg_offline = new BMessage(SET_STATUS); msg_offline->AddString("status", OFFLINE_TEXT);
+			total->AddItem(new BMenuItem(OFFLINE_TEXT, msg_offline) );	
+			
 			total->ItemAt(fStatus)->SetMarked(true);
 			total->SetTargetForItems(this);
 			total->SetFont(be_plain_font);
@@ -528,11 +534,17 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			for (it = fStatuses.begin(); it != fStatuses.end(); it++) {
 				string name = (*it).first;
 				BMenu *protocol = new BMenu(name.c_str());
+				
 				BMessage protMsg(SET_STATUS);
-				protMsg.AddString("protocol", name.c_str());			
-				protocol->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(protMsg)));
-				protocol->AddItem(new BMenuItem(AWAY_TEXT, new BMessage(protMsg)));
-				protocol->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(protMsg)));
+				protMsg.AddString("protocol", name.c_str());
+				
+				BMessage *msg1 = new BMessage(protMsg); msg1->AddString("status", ONLINE_TEXT);
+				protocol->AddItem(new BMenuItem(ONLINE_TEXT, msg1));
+				BMessage *msg2 = new BMessage(protMsg); msg2->AddString("status", AWAY_TEXT);
+				protocol->AddItem(new BMenuItem(AWAY_TEXT, msg2));
+				BMessage *msg3 = new BMessage(protMsg); msg3->AddString("status", OFFLINE_TEXT);
+				protocol->AddItem(new BMenuItem(OFFLINE_TEXT, msg3));
+				
 				protocol->SetTargetForItems(this);
 				if ((*it).second == ONLINE_TEXT) {
 					protocol->ItemAt(0)->SetMarked(true);
