@@ -1420,9 +1420,16 @@ Server::MessageFromProtocols( BMessage * msg )
 				LOG("im_server", liHigh, "Unable to decode buddy icon.");
 			} else {
 				LOG("im_server", liDebug, "Setting %s's icon to be %p\n", protocol, icon);
-			
+				
 				status_t ret = contact.SetBuddyIcon(protocol, icon);
 				LOG("im_server", liDebug, "Gets: %s (%ld)\n", strerror(ret), ret);
+				
+				if ( ret == B_OK && contact.GetBuddyIcon("general") == NULL )
+				{
+					LOG("im_server", liDebug, "Also setting the general icon, since none was set\n");
+					ret = contact.SetBuddyIcon("general", icon);
+					LOG("im_server", liDebug, "Gets: %s (%ld)\n", strerror(ret), ret);
+				}
 				
 				BMessage update(MESSAGE);
 				update.AddInt32("im_what", BUDDY_ICON_UPDATED);
