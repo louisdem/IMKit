@@ -28,6 +28,9 @@ LoggerApp::LoggerApp()
 	
 	fMan->SendMessage( &msg );
 
+
+	// create ./Logs directory
+	create_directory("Logs", 0777);
 /*
 	fMaxFiles = 10;
 
@@ -67,25 +70,28 @@ LoggerApp::MessageReceived( BMessage * msg )
 			
 			msg->FindInt32("im_what",&im_what);
 			
+			if ( im_what != IM::MESSAGE_RECEIVED && im_what != IM::MESSAGE_SENT )
+				// don't create log files unless needed
+				return;
+			
 			char name[512];
 			char nickname[512];
 			
+			if ( c.GetName(name,sizeof(name)) != B_OK )
+				strcpy(name,"unknown contact");
 			
-			BString protocol;
-			BString id;
+			if ( c.GetNickname(nickname,sizeof(nickname)) != B_OK )
+				strcpy(name,"unknown nick");
 			
-			if (msg->FindString("protocol", &protocol) != B_OK) return;
-			if (msg->FindString("id", &id) != B_OK) return;
-
 			char datestamp[11];
 			time_t now = time(NULL);
-			strftime(datestamp, sizeof(datestamp), "%Y.%m.%d", localtime(&now));
-
+			strftime(datestamp, sizeof(datestamp), "%Y-%m-%d", localtime(&now));
+			
 			BString directory = "./Logs/";
-			directory << protocol << "/" <<  id << "/";
+			directory << name << " [" << nickname << "]" << "/";
 			BString filename = directory;
 			filename << datestamp << ".txt";
-
+			
 			BFile file(filename.String(), B_READ_WRITE | B_CREATE_FILE | B_OPEN_AT_END);
 			if (file.InitCheck() != B_OK) {
 				if (create_directory(directory.String(), 0777) != B_OK) return;
@@ -93,16 +99,10 @@ LoggerApp::MessageReceived( BMessage * msg )
 				file = BFile(filename.String(), B_READ_WRITE | B_CREATE_FILE | B_OPEN_AT_END);
 				if (file.InitCheck() != B_OK) return;
 			};
-						
-			if ( c.GetName(name,sizeof(name)) != B_OK )
-				strcpy(name,"unknown contact");
-			
-			if ( c.GetNickname(nickname,sizeof(nickname)) != B_OK )
-				strcpy(name,"unknown nick");
-			
+				
 			char timestr[64];
 			strftime(timestr,sizeof(timestr),"%Y-%m-%d [%H:%M] ", localtime(&now) );
-
+			
 			switch ( im_what )
 			{
 				case IM::MESSAGE_SENT:
