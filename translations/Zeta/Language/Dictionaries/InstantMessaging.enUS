@@ -22,3 +22,31 @@
 "Away Message"
 "Person handler"
 "Application signature"
+
+# preferences: im_logger
+"Auto-start"
+
+# preferences: im_binlogger
+"Auto-start"
+
+# preferences: im_infopopper
+"Status change text"
+"Message received text"
+"Icon size"
+
+# preferences: AIM
+"Screen Name"
+"Password"
+"User Profile"
+
+# preferences: ICQ
+"Password"
+"Text encoding"
+
+# preferences: MSN
+"Passport Email"
+"Password"
+"Display Name"
+
+# preferences: Yahoo
+"Password"

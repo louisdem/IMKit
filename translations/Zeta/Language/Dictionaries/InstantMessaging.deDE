@@ -22,3 +22,31 @@
 "Away Message"				"Abwesenheitsnachricht"
 "Person handler"			"Person handler"		# dunno
 "Application signature"		"Anwendungssignatur"
+
+# preferences: im_logger
+"Auto-start"				"Automatisch starten"
+
+# preferences: im_binlogger
+"Auto-start"				"Automatisch starten"
+
+# preferences: im_infopopper
+"Status change text"		"Statuswechseltext"
+"Message received text"		"Nachrichtenempfangstext"
+"Icon size"					"Symbolgröße"
+
+# preferences: AIM
+"Screen Name"				"Screen-Name"
+"Password"					"Passwort"
+"User Profile"				"Benutzerprofil"
+
+# preferences: ICQ
+"Password"					"Passwort"
+"Text encoding"				"Textkodierung"
+
+# preferences: MSN
+"Passport Email"			"Passport-Email"
+"Password"					"Passwort"
+"Display Name"				"Bildschirmname"
+
+# preferences: Yahoo
+"Password"					"Passwort"
