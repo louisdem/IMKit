@@ -60,9 +60,6 @@ status_t AIMProtocol::Process(BMessage * msg) {
 		
 			switch (im_what) {
 				case IM::UNREGISTER_CONTACTS: {
-					printf("Unregister\n");
-					msg->PrintToStream();
-					
 					fManager->RemoveBuddy(msg->FindString("id"));
 					
 				} break;
@@ -70,9 +67,6 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				{
 					if ( !fManager->IsConnected() )
 						break;
-					
-					printf("AIM: Got Register\n");
-					msg->PrintToStream();
 					
 					type_code garbage;
 					int32 count = 0;
@@ -92,7 +86,12 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				}	break;
 				
 				case IM::SET_STATUS: {
-					const char *status = msg->FindString("status");
+					const char *status = NULL;
+					if (msg->FindString("status", &status) != B_OK) {
+						LOG("AIM", liHigh, "Status set to NULL!");
+						return B_ERROR;
+					};
+
 					LOG("AIM", liMedium, "Set status to %s", status);
 					
 					if (strcmp(status, OFFLINE_TEXT) == 0) {
@@ -100,11 +99,11 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					} else
 					if (strcmp(status, AWAY_TEXT) == 0) {
 						if (fManager->ConnectionState() == (uchar)AMAN_ONLINE) {
-							const char *away_msg = msg->FindString("away_msg");
-							if (away_msg != NULL) {
+							const char *away_msg;
+							if (msg->FindString("away_msg", &away_msg) == B_OK) {
 								LOG("AIM", liMedium, "Setting away message: %s", away_msg);
 								fManager->SetAway(away_msg);
-							}
+							};
 						};
 					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {

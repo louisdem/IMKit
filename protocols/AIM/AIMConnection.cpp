@@ -8,7 +8,8 @@ void PrintHex(const unsigned char* buf, size_t size);
 const char *kProtocolName = "AIM";
 const char *kThreadName = "IM Kit: AIM Connection";
 
-AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man) {
+AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man)
+	: BLooper("AIM Connection") {
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
