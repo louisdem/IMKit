@@ -208,13 +208,15 @@ status_t AIMManager::HandleServiceControl(BMessage *msg) {
 //			For some reason we're getting this upon sending an icon upload request
 //			We should be getting a EXTENDED_STATUS
 
-			Flap *icon = new Flap(SNAC_DATA);
-			icon->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, ICON_UPLOAD));
-			icon->AddInt16(0x0000);		// First icon
-			icon->AddInt16(fIconSize);
-			icon->AddRawData((uchar *)fIcon, fIconSize);
-			
-			Send(icon);
+			if ((fIcon) && (fIconSize > 0)) {
+				Flap *icon = new Flap(SNAC_DATA);
+				icon->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, ICON_UPLOAD));
+				icon->AddInt16(0x0000);		// First icon
+				icon->AddInt16(fIconSize);
+				icon->AddRawData((uchar *)fIcon, fIconSize);
+				
+				Send(icon);
+			};
 			
 		} break;
 
