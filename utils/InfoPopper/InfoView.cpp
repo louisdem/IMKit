@@ -11,9 +11,10 @@
 
 const float kEdgePadding = 2.0;
 const float kCloseWidth = 10.0;
+const float kWidth = 300.0f;
 
-InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
-//InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
+//InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
+InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
 
 // 
 property_info message_prop_list[] = {
@@ -23,7 +24,8 @@ property_info message_prop_list[] = {
 	0 // terminate list
 };
 
-InfoView::InfoView( info_type type, const char * text, BMessage *details )
+InfoView::InfoView( info_type type, const char *app, const char *title,
+	const char * text, BMessage *details)
 :	BView( BRect(0,0,1,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW ),
 	fType(type),
 	fRunner(NULL),
@@ -75,16 +77,10 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details )
 	if (fDetails->FindFloat("progress", &fProgress) != B_OK) fProgress = 0.0;
 	if (fDetails->FindInt32("timeout", &fTimeout) != B_OK) fTimeout = 5;
 	
-	float w,h;
+	SetText(app, title, text);
+	ResizeToPreferred();
 	
-	SetText( text );
-	
-	GetPreferredSize(&w,&h);
-	
-	ResizeTo(w,h);
-	
-	switch ( type )
-	{
+	switch (type) {
 		case InfoPopper::Information: {
 			SetViewColor(218,218,218);
 		} break;
@@ -104,6 +100,9 @@ InfoView::~InfoView(void) {
 	if (fRunner) delete fRunner;
 	if (fDetails) delete fDetails;
 	if (fBitmap) delete fBitmap;
+
+	vline::iterator lIt;
+	for (lIt = fLines.begin(); lIt != fLines.end(); lIt++) delete (*lIt);
 }
 
 void
@@ -112,7 +111,8 @@ InfoView::AttachedToWindow()
 	BMessage msg(REMOVE_VIEW);
 	msg.AddPointer("view", this);
 	
-	bigtime_t delay = fTimeout*1000*1000;
+//	bigtime_t delay = fTimeout*1000*1000;
+bigtime_t delay = 10 * 1000 * 1000;
 	
 	if ( delay > 0 )
 		fRunner = new BMessageRunner( BMessenger(Window()), &msg, delay, 1 );
@@ -121,38 +121,23 @@ InfoView::AttachedToWindow()
 void InfoView::MessageReceived(BMessage * msg) {
 	switch (msg->what) {
 		case B_GET_PROPERTY: {
-			msg->PrintToStream();
-			
 			BMessage specifier;
-			if ( msg->FindMessage("specifiers",0,&specifier) != B_OK )
-				return;
-			
 			const char * property;
-			if ( specifier.FindString("property",&property) != B_OK )
-				return;
+			
+			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) return;
+			if (specifier.FindString("property", &property) != B_OK) return;
 			
 			BMessage reply(B_REPLY);
 			
-			if ( strcmp(property, "content") == 0 ) {
-				BString content;
-				
-				for ( list<pair<BString,const BFont*> >::iterator i=fContent.begin(); i!=fContent.end(); i++ ) {
-					if ( content != "" )
-						content.Append("\n");
-					content.Append(i->first);
-				}
-				reply.AddString("result", content.String());
-			}
+			if (strcmp(property, "content") == 0) {
+				reply.AddString("result", fText);
+			};
 			
-			if ( strcmp(property, "title") == 0 ) {
-				BString title;
-				title = fTitle.first;
-				title.RemoveLast(":");
-				
-				reply.AddString("result", title.String());
-			}
+			if (strcmp(property, "title") == 0)  {
+				reply.AddString("result", fTitle);
+			};
 			
-			if ( strcmp(property, "icon") == 0 ) {
+			if (strcmp(property, "icon") == 0) {
 /*				if ( fBitmap )
 				{
 					int32 bitmap_size = fBitmap->FlattenedSize();
@@ -160,32 +145,28 @@ void InfoView::MessageReceived(BMessage * msg) {
 					if ( fBitmap->Flatten(bitmap_data, bitmap_size) == B_OK )
 						reply.AddData("result", bitmap_data, bitmap_size);
 				}
-*/			}
+*/			};
 
 			msg->SendReply(&reply);
-		}	break;
+		} break;
 		
 		case B_SET_PROPERTY: {
-			msg->PrintToStream();
-			
 			BMessage specifier;
-			if ( msg->FindMessage("specifiers",0,&specifier) != B_OK )
-				return;
-			
 			const char * property;
-			if ( specifier.FindString("property",&property) != B_OK )
-				return;
+			
+			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) return;
+			if (specifier.FindString("property", &property) != B_OK) return;
 			
 			BMessage reply(B_REPLY);
 			
-			if ( strcmp(property, "content") == 0 ) {
-			}
+			if (strcmp(property, "content") == 0) {
+			};
 			
-			if ( strcmp(property, "title") == 0 ) {
-			}
+			if (strcmp(property, "title") == 0) {
+			};
 			
-			if ( strcmp(property, "icon") == 0 ) {
-			}
+			if (strcmp(property, "icon") == 0) {
+			};
 
 			msg->SendReply(&reply);
 		}	break;
@@ -203,59 +184,8 @@ void InfoView::MessageReceived(BMessage * msg) {
 };
 
 void InfoView::GetPreferredSize(float *w, float *h) {
-	*h = kEdgePadding;
-	*w = 0.0f;
-	
-	// figure out height of title
-	SetFont( fTitle.second );
-	
-	BFont font;
-	GetFont(&font);
-	
-	font_height fh;
-	font.GetHeight( &fh );
-	float title_bottom = fh.ascent + fh.leading + fh.descent;
-	*h += title_bottom;
-	
-	*w = kEdgePadding * 2 + StringWidth( fTitle.first.String() );
-	
-	for (list<pair<BString,const BFont*> >::iterator i = fContent.begin(); i !=fContent.end(); i++) {
-		// height
-		SetFont(i->second);
-		GetFont(&font);
-		
-		font.GetHeight( &fh );
-		
-		float line_height = fh.ascent + fh.descent + fh.leading;
-		
-		*h += line_height;
-		
-		// width
-		float width = kEdgePadding * 2 + StringWidth( (i->first).String() );
-		
-		if ( width > *w ) *w = width;
-	};
-	
-	*h += kEdgePadding;
-	
-	if ( fBitmap )
-	{
-		switch ( gLayout )
-		{
-			case TitleAboveIcon:
-				if (*h < fBitmap->Bounds().Height() + kEdgePadding * 2 + title_bottom) 
-					*h = fBitmap->Bounds().Height() + kEdgePadding * 2 + title_bottom;
-				*w += fBitmap->Bounds().Width() + kEdgePadding*2;
-				break;
-			case AllTextRightOfIcon:
-				if (*h < fBitmap->Bounds().Height() + kEdgePadding * 2) 
-					*h = fBitmap->Bounds().Height() + kEdgePadding * 2;
-				*w += fBitmap->Bounds().Width() + kEdgePadding*2;
-				break;
-		}
-	}
-	
-	*w += kCloseWidth;
+	*w = kWidth;
+	*h = fHeight;
 };
 
 void InfoView::Draw(BRect drawBounds) {
@@ -272,88 +202,38 @@ void InfoView::Draw(BRect drawBounds) {
 	
 	SetDrawingMode( B_OP_ALPHA );
 	
-	float title_bottom = 0.0;
-	float icon_right = 0.0;
-	
-	// figure out height of title
-	SetFont( fTitle.second );
-	
-	BFont font;
-	GetFont(&font);
-	
-	font_height fh;
-	font.GetHeight( &fh );
-	title_bottom = fh.ascent + fh.leading + fh.descent;
-	
 	// draw icon
-	if ( fBitmap )
-	{
-		icon_right = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
+	if (fBitmap) {
+		font_height fh;
+		be_plain_font->GetHeight( &fh );
+
+		float title_bottom = fh.ascent + fh.leading + fh.descent;
+		float icon_right = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
 		
 		float ix = kEdgePadding;
-		float iy;
-		if ( gLayout == TitleAboveIcon )
+		float iy = 0;
+		if (gLayout == TitleAboveIcon) {
 			iy = kEdgePadding + title_bottom + (Bounds().Height() - title_bottom - fBitmap->Bounds().Height()) / 2;
-		else
+		} else {
 			iy = (Bounds().Height() - fBitmap->Bounds().Height()) / 2.0;
+		};
 		
 		DrawBitmap(fBitmap,	BPoint(ix,iy));
 	}
 	
-	// Draw title
-	{
-		float tx = kEdgePadding;
-		if ( gLayout == AllTextRightOfIcon )
-			tx = icon_right + kEdgePadding;
-		float ty = kEdgePadding+fh.ascent;
+//	Draw content
+	vline::iterator lIt;
+	for (lIt = fLines.begin(); lIt != fLines.end(); lIt++) {
+		lineinfo *l = (*lIt);
 		
-		SetFont( fTitle.second );
-		
-		BString str(fTitle.first);
-		
-		TruncateString(
-			&str, 
-			B_TRUNCATE_END, 
-			Bounds().Width()-tx-kEdgePadding-kCloseWidth
-		);
-		
-		DrawString(str.String(),BPoint(tx,ty));
-	}
-	
-	// draw content
-	float y = title_bottom;
-	
-	list<pair<BString,const BFont*> >::iterator i;
-	for (i = fContent.begin(); i !=fContent.end(); i++) {
-		// set font
-		SetFont( i->second );
-		
-		GetFont(&font);
-		
-		font_height fh;
-		font.GetHeight( &fh );
-		
-		// figure out text position
-		float tx = icon_right + kEdgePadding;
-		float ty = y + kEdgePadding + fh.ascent;
-		
-		// draw the text
-		BString str(i->first);
-		
-		TruncateString(
-			&str, 
-			B_TRUNCATE_END, 
-			Bounds().Width()-tx-kEdgePadding-kCloseWidth
-		);
-		
-		DrawString(str.String(),BPoint(tx,ty));
-		
-		y += fh.leading + fh.descent + fh.ascent;
-	}
+		SetFont(&l->font);
+		DrawString(l->text.String(), l->text.Length(), l->location);
+	};
 	
 	// draw 'close rect'
-	BRect closeRect = bound;
+	BRect closeRect = Parent()->Bounds();
 	closeRect.left = closeRect.right - kCloseWidth;
+	closeRect.bottom = closeRect.top + kCloseWidth;
 	SetHighColor(218, 218, 218);
 	FillRect(closeRect);
 	
@@ -450,44 +330,117 @@ void InfoView::MouseDown(BPoint point) {
 	};
 };
 
-void
-InfoView::SetText(const char * _text)
-{
-	BString text(_text);
+void InfoView::SetText(const char *app, const char *title, const char *text) {
+	fApp = app;
+	fTitle = title;
+	fText = text;
+
+	font_height fh;
+	float fontHeight = 0;
+	float iconRight = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
+	float y = kEdgePadding;
+
+	lineinfo *appLine = new lineinfo;
+	be_bold_font->GetHeight(&fh);
+	fontHeight = fh.leading + fh.descent + fh.ascent;
+	y += fontHeight;
+	if (gLayout == AllTextRightOfIcon) {
+		appLine->location = BPoint(iconRight, y);
+	} else {
+		appLine->location = BPoint(kEdgePadding, y);
+	};
+	appLine->text = app;
+	appLine->font = be_bold_font;
+	fLines.push_front(appLine);
+	y += fontHeight;
+
+	be_plain_font->GetHeight(&fh);
+	fontHeight = fh.leading + fh.descent + fh.ascent;
+
+	lineinfo *titleLine = new lineinfo;
+	titleLine->location = BPoint(iconRight + kEdgePadding, y);
+	titleLine->font = be_plain_font;
+	titleLine->text = title;
+	fLines.push_front(titleLine);
+	y += fontHeight;
+
+	const char spacers[] = " \t\n-\\/";
+	BString textBuffer = text;
+	textBuffer.ReplaceAll("\t", "    ");
+	text = textBuffer.String();
+
+	size_t offset = 0;
+	size_t n = 0;
+	int16 count = 0;
+	int16 length = strlen(text);
+	int16 *spaces = NULL;;
+	int16 index = 0;
 	
-	fTitle = pair<BString,const BFont*>("",be_bold_font);
-	fContent.clear();
+	while ((n = strcspn(text + offset, spacers)) < (length - offset)) {
+		++count;
+		offset += n + 1;
+	};
 	
-	while ( text.Length() > 0 )
-	{
-		int32 nl;
-		if ( (nl = text.FindFirst("\n")) >= 0 || (nl = text.FindFirst("\\n")) >= 0 )
-		{ // found a newline
-			BString line;
-			text.CopyInto(line, 0, nl);
-			fContent.push_back( pair<BString,const BFont*>(line,be_plain_font) );
+	spaces = (int16 *)calloc(count, sizeof(int16));
+	offset = 0;
+	
+	while ((n = strcspn(text + offset, spacers)) < (length - offset)) {
+		spaces[index++] = n + offset;
+		offset += n + 1;
+	};
+	
+	offset = 0;
+	float maxWidth = kWidth;
+	bool wasNewline = false;
+		
+	for (int32 i = 0; i < count; i++) {
+		if (text[spaces[i]] == '\n') {
+			lineinfo *tempLine = new lineinfo;
+			tempLine->text = "";
+			tempLine->text.Append(text + offset, spaces[i] - offset);
+			wasNewline = true;
+			tempLine->font = be_plain_font;
+			tempLine->location = BPoint(iconRight + kEdgePadding, y);
+			y += fontHeight;
 			
-			if ( text[nl] == '\n' )
-				text.Remove(0,nl+1);
-			else
-				text.Remove(0,nl+2);
-		} else
-		{
-			fContent.push_back( pair<BString,const BFont*>(text,be_plain_font) );
-			text = "";
-		}
-	}
+			offset = spaces[i] + 1;
+			
+			fLines.push_front(tempLine);
+		} else if (StringWidth(text + offset, spaces[i] - offset) > maxWidth) {
+			lineinfo *tempLine = new lineinfo;
+			tempLine->font = be_plain_font;
+			if (wasNewline == false) {
+				tempLine->location = BPoint(iconRight + (kEdgePadding * 2), y);
+			} else {
+				tempLine->location = BPoint(iconRight, y);
+				wasNewline = false;
+			};
+			
+			y += fontHeight;
+			tempLine->text = "";
+			tempLine->text.Append(text + offset, spaces[i] - offset);
+
+			fLines.push_front(tempLine);
+
+			offset = spaces[i];
+		};
+	};
 	
-	// move first line to fTitle
-	list<pair<BString,const BFont*> >::iterator i = fContent.begin();
+	lineinfo *tempLine = new lineinfo;
+	tempLine->text = "";
+	tempLine->text.Append(text + offset, strlen(text) - offset);
+	tempLine->font = be_plain_font;
+	if (wasNewline) {
+		tempLine->location = BPoint(10, y);
+	} else {
+		tempLine->location = BPoint(0, y);
+	};
+	fLines.push_front(tempLine);
 	
-	if ( i != fContent.end() )
-	{ // there's a first line, move it
-		fTitle = *i;
-		fTitle.second = be_bold_font;
-		fContent.erase(i);
-	}
-}
+	free(spaces);
+	
+	fHeight = y + kEdgePadding;
+};
 
 bool
 InfoView::HasMessageID( const char * id )

@@ -25,7 +25,6 @@ class InfoApp : public BApplication {
 				case InfoPopper::AddMessage: {
 					int8 type = 0;
 					if (msg->FindInt8("type", &type) == B_OK) {
-printf("Type: %i / %s\n", type, kSoundNames[type - 1]);
 						system_beep(kSoundNames[type - 1]);
 					};
 					BMessenger(fWin).SendMessage(msg);

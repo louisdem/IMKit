@@ -23,6 +23,7 @@ namespace InfoPopper {
 // AddMessage
 ///// Message data - required!
 //  int8 type: One of the info_type constants - changes appearance
+//  String appTitle: The main title of the message (Eg. "The IM Kit")
 //  String title: The name of the origin of the message, for example
 //  String content: The message to be displayed
 //// Optional message specifiers

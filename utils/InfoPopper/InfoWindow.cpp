@@ -49,53 +49,46 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 		case B_CREATE_PROPERTY:
 		case InfoPopper::AddMessage: {		
 			int8 type;
-			const char *message;
-			const char *title;
+			const char *message = NULL;
+			const char *title = NULL;
+			const char *app = NULL;
 			
 			if (msg->FindInt8("type", &type) != B_OK) type = InfoPopper::Information;
-			if (msg->FindString("content", &message) != B_OK)
-			{
+			if (msg->FindString("content", &message) != B_OK) {
 				printf("Error: missing content\n");
 				msg->PrintToStream();
 				return;
-			}
-			if (msg->FindString("title", &title) != B_OK) 
-			{
+			};
+			if (msg->FindString("appTitle", &app) != B_OK) {
+				printf("Error: missing app name\n");
+				msg->PrintToStream();
+			};
+			if (msg->FindString("title", &title) != B_OK) {
 				printf("Error: missing title\n");
 				msg->PrintToStream();
 				return;
 			}
 			
-			const char *messageID;
-			if ( msg->FindString("messageID",&messageID) == B_OK )
-			{ // message ID present, remove current message if present
+			const char *messageID = NULL;
+			if (msg->FindString("messageID",&messageID) == B_OK) {
+//			message ID present, remove current message if present
 				vector<InfoView*>::iterator i;
 				
-				for ( i=fInfoViews.begin(); i!=fInfoViews.end(); i++ )
-				{
-					if ( (*i)->HasMessageID(messageID) )
-					{
+				for (i=fInfoViews.begin(); i!=fInfoViews.end(); i++) {
+					if ((*i)->HasMessageID(messageID)) {
 						(*i)->RemoveSelf();
 						delete *i;
 						fInfoViews.erase(i);
 						break;
-					}
-				}
-			}
+					};
+				};
+			};
 			
-			BString msgText = title;
-			msgText << ":\n" << message;
-			msgText.ReplaceAll("\n", "\n  ");
+			InfoView *view = new InfoView((InfoPopper::info_type)type, app, title,
+				message, new BMessage(*msg));
 			
-			InfoView *view = new InfoView(
-				(InfoPopper::info_type)type, 
-				msgText.String(), 
-				new BMessage(*msg)
-			);
-			
-			fInfoViews.push_back(view);
-			
-			fBorder->AddChild( view );
+			fInfoViews.push_back(view);			
+			fBorder->AddChild(view);
 			
 			ResizeAll();
 		} break;

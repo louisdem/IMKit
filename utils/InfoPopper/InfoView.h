@@ -5,7 +5,7 @@
 #include <MessageRunner.h>
 #include <TextView.h>
 #include <String.h>
-#include <list>
+#include <slist>
 
 #include <Bitmap.h>
 #include <storage/Entry.h>
@@ -19,6 +19,14 @@ enum {
 	REMOVE_VIEW = 'ReVi'
 };
 
+typedef struct line_struct {
+	BFont font;
+	BString text;
+	BPoint location;
+} lineinfo;
+
+typedef slist<lineinfo *> vline;
+
 // -------------- INFO VIEW -----------------
 
 using namespace InfoPopper;
@@ -31,7 +39,8 @@ class InfoView : public BView
 			AllTextRightOfIcon
 		};
 		
-		InfoView( info_type, const char * text, BMessage *details );
+		InfoView(info_type type, const char *app, const char *title,
+			const char *text, BMessage *details);
 		~InfoView();
 		
 		void AttachedToWindow();
@@ -47,7 +56,7 @@ class InfoView : public BView
 			The first line of the text is set to use be_bold_font, and the
 			rest of the lines are set to use be_plain_font.
 		*/
-		void SetText( const char * );
+		void SetText(const char *app, const char *title, const char *text);
 		
 		bool HasMessageID( const char * );
 
@@ -59,14 +68,20 @@ class InfoView : public BView
 	private:
 		info_type		 fType;
 		BMessageRunner	* fRunner;
-		list<pair<BString,const BFont*> >	fContent;
-		pair<BString,const BFont*>			fTitle;
 		float			fProgress;
 		BString			fMessageID;
 		int32			fTimeout;
 		
 		BMessage		*fDetails;
 		BBitmap			*fBitmap;
+		
+		vline			fLines;
+
+		BString			fApp;
+		BString			fTitle;
+		BString			fText;
+		
+		float			fHeight;
 };
 
 #endif
