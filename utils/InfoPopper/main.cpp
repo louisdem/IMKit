@@ -1,7 +1,7 @@
 #include "InfoWindow.h"
 #include <Application.h>
 
-#include "InfoPopper.h"
+#include <libim/InfoPopper.h>
 
 class InfoApp : public BApplication {
 	public:

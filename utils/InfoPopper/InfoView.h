@@ -12,7 +12,7 @@
 #include <Roster.h>
 #include <Path.h>
 
-#include "InfoPopper.h"
+#include <libim/InfoPopper.h>
 
 enum {
 	REMOVE_VIEW = 'ReVi'

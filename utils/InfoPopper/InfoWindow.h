@@ -12,7 +12,7 @@
 
 #include "InfoView.h"
 #include "BorderView.h"
-#include "InfoPopper.h"
+#include <libim/InfoPopper.h>
 
 // -------------- INFO WINDOW -----------------
 
