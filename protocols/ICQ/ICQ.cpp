@@ -647,10 +647,16 @@ ICQProtocol::Process( BMessage * msg )
 					fClient.icqclient.addContact( c );
 					
 					// report message sent
-					msg->RemoveName("contact");
-					msg->ReplaceInt32("im_what", IM::MESSAGE_SENT);
+					//msg->RemoveName("contact");
+					//msg->ReplaceInt32("im_what", IM::MESSAGE_SENT);
 					
-					fMsgr.SendMessage(msg);
+					BMessage replyMsg(IM::MESSAGE);
+					replyMsg.AddInt32("im_what", IM::MESSAGE_SENT);
+					replyMsg.AddString("protocol", "ICQ");
+					replyMsg.AddString("id", id);
+					replyMsg.AddString("message", message_text);
+					
+					fMsgr.SendMessage(replyMsg);
 				}	break;
 				case IM::SEND_AUTH_ACK:
 				{
