@@ -147,7 +147,10 @@ status_t AIMManager::Send(Flap *f) {
 status_t AIMManager::Login(const char *server, uint16 port, const char *username,
 	const char *password) {
 	
-	if ((username == NULL) || (password == NULL)) return B_ERROR;
+	if ((username == NULL) || (password == NULL)) {
+		LOG("AIM", liDebug, "AIMManager::Login: username or password not set");
+		return B_ERROR;
+	}
 	
 	if (fConnectionState == AMAN_OFFLINE) {
 		uint8 nickLen = strlen(username);
@@ -183,6 +186,7 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 
 		return B_OK;
 	} else {
+		LOG("AIM", liDebug, "AIMManager::Login: Already online");
 		return B_ERROR;
 	};
 };

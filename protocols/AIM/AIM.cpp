@@ -68,12 +68,12 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						list<char *> buddies;
 						for ( int i=0; msg->FindString("id",i); i++ )
 						{
-							const char * id = msg->FindString("id",i);//ReNick(msg->FindString("id",i)).String();
+							const char * id = msg->FindString("id",i);//NormalizeNick(msg->FindString("id",i)).String();
 							buddies.push_back(strdup(id));
 						};
 						fManager->AddBuddies(buddies);
 					} else {
-						fManager->AddBuddy(msg->FindString("id")); //ReNick(msg->FindString("id")).String());
+						fManager->AddBuddy(msg->FindString("id")); //NormalizeNick(msg->FindString("id")).String());
 					};
 				}	break;
 				
@@ -97,6 +97,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						if (fManager->IsConnected() == AMAN_AWAY) {
 							fManager->SetAway(NULL);
 						} else {
+							LOG("AIM", liDebug, "Calling fManager.Login()");
 							fManager->Login("login.oscar.aol.com", (uint16)5190,
 								fScreenName, fPassword);
 						};
@@ -109,7 +110,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				case IM::GET_CONTACT_INFO:
 				{
 					LOG("AIM", liLow, "Getting contact info");
-					const char * id = ReNick(msg->FindString("id")).String();
+					const char * id = NormalizeNick(msg->FindString("id")).String();
 					
 					BMessage *infoMsg = new BMessage(IM::MESSAGE);
 					infoMsg->AddInt32("im_what", IM::CONTACT_INFO);
@@ -125,7 +126,14 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				case IM::SEND_MESSAGE:
 				{
 					const char * message_text = msg->FindString("message");
-					const char * id = ReNick(msg->FindString("id")).String();
+					BString srcid = msg->FindString("id");
+					BString normal = NormalizeNick(srcid.String());
+					BString screen = GetScreenNick(normal.String());
+					
+					const char * id = screen.String();
+					
+					LOG("AIM", liDebug, "SEND_MESSAGE (%s, %s)", msg->FindString("id"), msg->FindString("message"));
+					LOG("AIM", liDebug, "  %s > %s > %s", srcid.String(), normal.String(), screen.String() );
 					
 					if ( !id )
 						return B_ERROR;
@@ -310,13 +318,13 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	BMessage msg(IM::MESSAGE);
 	msg.AddString("protocol", "AIM");
 
-printf("StatChanged: %s vs %s\n", nick, ReNick(nick).String());
+printf("StatChanged: %s vs %s\n", nick, NormalizeNick(nick).String());
 
 	if (strcmp(nick, fScreenName) == 0) {
 		msg.AddInt32("im_what", IM::STATUS_SET);
 	} else {
 		msg.AddInt32("im_what", IM::STATUS_CHANGED);
-		msg.AddString("id", ReNick(nick));
+		msg.AddString("id", NormalizeNick(nick));
 	};
 
 	switch (status) {
@@ -345,7 +353,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
 	im_msg.AddString("protocol", "AIM");
-	im_msg.AddString("id", ReNick(nick));
+	im_msg.AddString("id", NormalizeNick(nick));
 	im_msg.AddString("message", msg);
 	im_msg.AddInt32("charset",B_ISO1_CONVERSION);
 	
@@ -357,7 +365,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
 status_t AIMProtocol::UserIsTyping(const char *nick, typing_notification type) {
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddString("protocol", "AIM");
-	im_msg.AddString("id", ReNick(nick));
+	im_msg.AddString("id", NormalizeNick(nick));
 
 	switch (type) {
 		case STILL_TYPING:
@@ -382,18 +390,42 @@ status_t AIMProtocol::SSIBuddies(list<BString> buddies) {
 	serverBased.AddString("protocol", "AIM");
 
 	for (i = buddies.begin(); i != buddies.end(); i++) {
-		LOG("AIM", liLow, "Got server side buddy %s", ReNick(i->String()).String());
-		serverBased.AddString("id", ReNick(i->String()));
+		LOG("AIM", liLow, "Got server side buddy %s", NormalizeNick(i->String()).String());
+		serverBased.AddString("id", NormalizeNick(i->String()));
 	};
 			
 	fMsgr.SendMessage(&serverBased);
 };
 
-BString AIMProtocol::ReNick(const char *nick) {
-	BString renick = nick;
-
-	renick.ReplaceAll(" ", "");
-	renick.ToLower();
+BString AIMProtocol::NormalizeNick(const char *nick) {
+	BString normal = nick;
 	
-	return renick;
+	normal.ReplaceAll(" ", "");
+	normal.ToLower();
+	
+	map<string,BString>::iterator i = fNickMap.find(normal.String());
+	
+	if ( i == fNickMap.end() ) {
+		// add 'real' nick if it's not already there
+		LOG("AIM", liDebug, "Adding normal (%s) vs screen (%s)", normal.String(), nick );
+		fNickMap[string(normal.String())] = BString(nick);
+	}
+	
+	LOG("AIM", liDebug, "Screen (%s) to ncreen (%s)", nick, normal.String() );
+	
+	return normal;
+};
+
+BString AIMProtocol::GetScreenNick( const char *nick ) {
+	map<string,BString>::iterator i = fNickMap.find(nick);
+	
+	if ( i != fNickMap.end() ) {
+		// found the nick
+		LOG("AIM", liDebug, "Converted normal (%s) to screen (%s)", nick, (*i).second.String() );
+		return (*i).second;
+	}
+	
+	LOG("AIM", liDebug, "Nick (%s) not found in fNickMap, not converting", nick );
+	
+	return BString(nick);
 };

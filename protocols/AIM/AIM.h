@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <string>
 
 #include <sys/time.h>
 #include <sys/types.h>
@@ -43,7 +44,8 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 			status_t 	SSIBuddies(list<BString> buddies);
 
 	private:
-			BString 	ReNick(const char *nick);
+			BString 	NormalizeNick(const char *nick);
+			BString 	GetScreenNick(const char *nick);
 	
 		#define ICQ_THREAD_NAME "AIM Protocol"
 		
@@ -53,5 +55,6 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 		char			*fScreenName;
 		char			*fPassword;
 
+		map<string,BString>		fNickMap;
 };
 
