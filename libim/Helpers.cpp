@@ -59,7 +59,7 @@ check_for_tty()
 	{ // redirect output to ~/im_kit.log if not run from Terminal
 		close(STDOUT_FILENO);
 		open("/boot/home/im_kit.log", O_WRONLY|O_CREAT|O_APPEND|O_TEXT);
-		chmod("/boot/hmoe/im_kit.log", 0x600 );
+		chmod("/boot/home/im_kit.log", 0x600 );
 	}
 }
 
