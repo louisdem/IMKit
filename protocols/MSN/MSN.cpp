@@ -265,13 +265,6 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	screen_msg.AddString("description", "Display Name");
 	screen_msg.AddInt32("type", B_STRING_TYPE);
 
-	BMessage auth_msg;
-	auth_msg.AddString("name", "authmessage");
-	auth_msg.AddString("description", "Default auth. request");
-	auth_msg.AddInt32("type", B_STRING_TYPE);
-	auth_msg.AddString("default", "Please add me to your list!");
-	auth_msg.AddBool("multi_line", true);
-
 	BMessage homePhoneMsg;
 	homePhoneMsg.AddString("name", "homephone");
 	homePhoneMsg.AddString("description", "Home Phone Number");
@@ -301,7 +294,6 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	main_msg.AddMessage("setting", &user_msg);
 	main_msg.AddMessage("setting", &pass_msg);
 	main_msg.AddMessage("setting", &screen_msg);
-	main_msg.AddMessage("setting", &auth_msg);
 //	main_msg.AddMessage("setting", &homePhoneMsg);
 //	main_msg.AddMessage("setting", &workPhoneMsg);
 //	main_msg.AddMessage("setting", &mobilePhoneMsg);
@@ -338,8 +330,6 @@ status_t MSNProtocol::UpdateSettings( BMessage & msg ) {
 
 uint32 MSNProtocol::GetEncoding() 
 {
-//	return fClient.fEncoding;
-//	return B_ISO1_CONVERSION;
 	return 0xffff; // No conversion, MSN handles UTF-8
 }
 
@@ -391,7 +381,6 @@ status_t MSNProtocol::MessageFromUser(const char *passport, const char *_msg) {
 	im_msg.AddString("protocol", kProtocolName);
 	im_msg.AddString("id", NormalizeNick(passport));
 	im_msg.AddString("message", msg.String());
-	//im_msg.AddInt32("charset",B_ISO1_CONVERSION);
 	
 	fMsgr.SendMessage(&im_msg);											
 	
@@ -487,7 +476,6 @@ status_t MSNProtocol::AuthRequest(list_types list,const char *passport, const ch
 	im_msg.AddString("protocol", kProtocolName);
 	im_msg.AddString("id", passport);
 	im_msg.AddString("message", reason);
-//	im_msg.AddInt32("charset",fEncoding);
 	
 	fMsgr.SendMessage(&im_msg);
 	

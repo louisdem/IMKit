@@ -440,6 +440,14 @@ int32 MSNManager::Buddies(void) const {
 	return fBuddy.size();
 };
 
+Buddy *MSNManager::BuddyDetails(const char *passport) {
+	Buddy *bud = NULL;
+	buddymap::iterator bIt = fBuddy.find(passport);
+	if (bIt != fBuddy.end()) bud = bIt->second;
+	
+	return bud;
+};
+
 uchar MSNManager::IsConnected(void) const {
 	return fConnectionState;
 };
@@ -502,7 +510,7 @@ status_t MSNManager::RequestBuddyIcon(const char *buddy) {
 
 status_t MSNManager::TypingNotification(const char *passport, uint16 typing) {
 	LOG(kProtocolName, liDebug, "Typing notify to %s", passport);
-	
+		
 	if ((fConnectionState != otOffline) && (fConnectionState != otConnecting)) {
 		if (fNoticeCon == NULL) {
 			LOG(kProtocolName, liDebug, "Can't send typing notify to %s, fNoticeCon is null", passport);
@@ -515,11 +523,11 @@ status_t MSNManager::TypingNotification(const char *passport, uint16 typing) {
 		BString format = "MIME-Version: 1.0\r\n"
 			"Content-Type: text/x-msmsgscontrol\r\n"
 			"TypingUser: ";
-		format << fPassport;
-		format << "\r\n\r\n\r\n";
+		format << fPassport << "\r\n";
+		format << "\r\n\r\n";
 		
 		msg->AddPayload(format.String(), format.Length());
-		
+						
 		// Find connection
 		bool needSB = false;
 		connectionlist::iterator it;
@@ -636,5 +644,6 @@ status_t MSNManager::BlockUser(const char *passport) {
 		ret = fNoticeCon->Send(com);
 	};
 	
-	return ret;};
+	return ret;
+};
 

@@ -48,16 +48,15 @@ class MSNHandler;
 class Command;
 
 #include "Command.h"
+#include "Buddy.h"
 
 typedef map<BString, MSNConnection *> switchboardmap;
 typedef map<int32, Command *> tridmap;
-
 // Confusing data structures, Ahoy! This is a map of TrIDs to the user the Command is targetted.
 typedef map<int32, pair<BString, Command *> > waitingmsgmap;
-
 typedef map<BString, int8> waitingauth;
-
 typedef list<MSNConnection*> connectionlist;
+typedef map<BString, Buddy *> buddymap;
 
 class MSNManager : public BLooper {
 	public:
@@ -70,6 +69,8 @@ class MSNManager : public BLooper {
 			status_t	AddBuddy(const char *buddy);
 			status_t	AddBuddies(list<char *>buddies);
 			int32		Buddies(void) const;
+			buddymap	*BuddyList(void) { return &fBuddy; };
+			Buddy		*BuddyDetails(const char *passport);
 
 			status_t	Login(const char *server, uint16 port,
 							const char *passport, const char *password,
@@ -77,10 +78,11 @@ class MSNManager : public BLooper {
 			uchar		IsConnected(void) const;
 			status_t	LogOff(void);
 			status_t	RequestBuddyIcon(const char *buddy);
-			
-			status_t	AuthUser(const char *passport);
-			status_t	BlockUser(const char *passport);
-			status_t	SetDisplayName(const char *profile);
+				
+//			status_t	AddUser(
+			status_t	AuthUser(const char *passport);		// Adding to *our* list
+			status_t	BlockUser(const char *passport);	// Blocking user
+			status_t	SetDisplayName(const char *profile);// Changing our display name
 			status_t	SetAway(bool away = true);
 			status_t	TypingNotification(const char *buddy, uint16 typing);
 		inline uchar	ConnectionState(void) const { return fConnectionState; };
@@ -98,11 +100,11 @@ class MSNManager : public BLooper {
 		waitingauth		fWaitingAuth;	// For people requesting OUR auth
 		waitingauth		fWantsAuth;		// For people whose auth WE want
 		
-		list<BString>	fBuddy;
+			buddymap	fBuddy;
 		MSNConnection	*fNoticeCon;
 		connectionlist	fConnections;	
 		connectionlist	fConnectionPool;
-		
+	
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
 			uchar		fConnectionState;

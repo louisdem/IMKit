@@ -7,17 +7,66 @@
 #include <openssl/err.h>
 #include <openssl/md5.h>
 
+#include "MSNObject.h"
+
 const char *kClientVer = "0x0409 win 4.10 i386 MSNMSGR 6.0.0602 MSMSGS";
 const char *kProtocolsVers = "MSNP10 MSNP9 CVR0";
 
 const int16 kDefaultPort = 1863;
-const uint32 kOurCaps = ccUnknown2;
+const uint32 kOurCaps = ccUnknown2 | ccMSNC1;
 
 extern const char *kClientIDString = "msmsgs@msnmsgr.com";
 extern const char *kClientIDCode = "Q1P7W2E4J9R8U3S5";
 
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
+
+const char b64_table[] = {
+	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+	'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+	'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+	'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+	'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+	'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+	'w', 'x', 'y', 'z', '0', '1', '2', '3',
+	'4', '5', '6', '7', '8', '9', '+', '/'
+};
+
+char *Base64Encode(const char *in, off_t length) {
+	unsigned long concat;
+	int i = 0;
+	int k = 0;
+	int curr_linelength = 4; //--4 is a safety extension, designed to cause retirement *before* it actually gets too long
+	char *out = (char *)calloc((int)ceil(length * 1.33) + 4, sizeof(char));
+
+	while (i < length) {
+		concat = ((in[i] & 0xff) << 16);
+		
+		if ((i+1) < length)
+			concat |= ((in[i+1] & 0xff) << 8);
+		if ((i+2) < length)
+			concat |= (in[i+2] & 0xff);
+			
+		i += 3;
+				
+		out[k++] = b64_table[(concat >> 18) & 63];
+		out[k++] = b64_table[(concat >> 12) & 63];
+		out[k++] = b64_table[(concat >> 6) & 63];
+		out[k++] = b64_table[concat & 63];
+
+		if (i >= length) {
+			int v;
+			for (v = 0; v <= (i - length); v++)
+				out[k-v] = '=';
+		}
+
+		curr_linelength += 4;
+	}
+	
+	out[k] = '\0';
+	return out;
+}
+
 
 void MD5(unsigned char *text, char * digest)
 {
@@ -28,8 +77,7 @@ void MD5(unsigned char *text, char * digest)
 	MD5_Update(&state, text, (unsigned short)strlen((const char*)text));
 	MD5_Final(md5data, &state);
 	
-	int i;
-	for (i=0; i<MD5_DIGEST_LENGTH; i++)
+	for (int32 i = 0; i < MD5_DIGEST_LENGTH; i++)
 		sprintf(&(digest[i*2]),"%02x",md5data[i]);
 }
 
@@ -45,7 +93,7 @@ MSNConnection::MSNConnection()
 	fSock = -1;
 	fSockMsgr = NULL;
 	fThread = -1;
-	
+
 	Run();
 };
 
@@ -321,8 +369,8 @@ int32 MSNConnection::Receiver(void *con) {
 							} else {
 								if ( (*kMsgr)->IsValid() == false) return B_OK;
 		
-								LOG(kProtocolName, liLow, "C[r] %lX: Socket got less than 0 (or 0)",
-									connection);
+								LOG(kProtocolName, liLow, "C[r] %lX: Socket got less than 0 (or 0: %i)",
+									connection, bytes);
 								perror("SOCKET ERROR");
 		
 								BMessage msg(msnmsgCloseConnection);
@@ -405,6 +453,12 @@ int32 MSNConnection::NetworkSend(Command *command) {
 void MSNConnection::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case msnmsgPulse: {
+			if ((fState == otOnline) || (fState == otAway)) {
+				CommandQueue::iterator i;
+				for (i = fWaitingOnline.begin(); i != fWaitingOnline.end(); i++) {
+					NetworkSend(*i);
+				};
+			};
 			if (fOutgoing.size() == 0) return;
 			
 			Command *c = fOutgoing.front();
@@ -646,6 +700,16 @@ status_t MSNConnection::handleNLN( Command * command ) {
 	BString passport = command->Param(1);
 	BString friendly = command->Param(2);
 	BString caps = command->Param(3);
+
+	buddymap *buddies = fManager->BuddyList();
+	buddymap::iterator it = buddies->find(passport);
+	Buddy *buddy;
+	if (it == buddies->end()) {
+		buddy = new Buddy(passport.String());
+		buddies->insert(pair<BString, Buddy*>(passport, buddy));
+	} else {
+		buddy = it->second;
+	};
 	
 	online_types status = otOffline;
 	
@@ -656,6 +720,15 @@ status_t MSNConnection::handleNLN( Command * command ) {
 	if (statusStr == "AWY") status = otAway;
 	if (statusStr == "PHN") status = otPhone;
 	if (statusStr == "LUN") status = otLunch;
+
+	buddy->Status(status);
+	buddy->Capabilities(atol(caps.String()));
+	buddy->FriendlyName(friendly.String());
+
+	if (command->Params() > 4) {
+		BString obj = command->Param(4, true);
+		buddy->DisplayPicture(new MSNObject(obj.String(), obj.Length()));
+	};
 	
 	BMessage statusChange(msnmsgStatusChanged);
 	statusChange.AddString("passport", passport);
@@ -746,7 +819,10 @@ status_t MSNConnection::handleCHL( Command * command ) {
 	
 	MD5( (uchar*)chal.String(), digest );
 	
+	PrintHex((uchar *)digest, 32);
+	
 	reply->AddPayload(digest, 32);
+	reply->Debug();
 	
 	Send(reply);
 
@@ -906,6 +982,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 status_t MSNConnection::handleMSG( Command * command ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing MSG", this);
+//command->Debug();
 	
 	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
 	
@@ -932,6 +1009,9 @@ status_t MSNConnection::handleMSG( Command * command ) {
 		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {
 			LOG(kProtocolName, liDebug, "C %lX: Got an invite, we're popular!", this);
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
+		} else
+		if (strcmp(type, "application/x-msnmsgrp2p") == 0) {
+			LOG(kProtocolName, liDebug, "C %lX: Got Peer To Peer message!", this);
 		} else {
 			LOG(kProtocolName, liDebug, "C %lX: Got message of unknown type <%s>", this, type );
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
@@ -1075,6 +1155,12 @@ status_t MSNConnection::handleSYN( Command * command ) {
 	BString caps = "";
 	caps << kOurCaps;
 	reply->AddParam( caps.String() );
+	
+	MSNObject beep("/boot/home/Desktop/drop.png", "industroslaad@netscape.net");
+	
+	reply->AddParam(beep.Value(), true);
+	reply->Debug();
+	
 	Send(reply);
 	
 	return B_OK;

@@ -157,46 +157,12 @@ const char *Command::Flatten(int32 sequence) {
 
 int32 Command::FlattenedSize(void) {
 	return fFlattened.BufferLength();
-//	if (fDirty) {
-//		int32 payloadSize = 0;
-//		int32 size = 0;
-//		BString temp = "";
-//		
-//		size += fType.Length();
-//
-//		if (fUseTrID) {
-//			size++; // Space
-//			temp << fTrID;
-//			size += temp.Length();
-//		};
-//		if (Params() > 0) {
-//			vector<BString>::iterator i;
-//			for (i = fParams.begin(); i != fParams.end(); i++) 
-//				size += i->Length() + 1;
-//		}
-//		
-//		if (Payloads() > 0 ) {
-//			vector<clpair*>::iterator i;
-//			for (i = fPayloads.begin(); i != fPayloads.end(); i++) 
-//				payloadSize += (*i)->length;
-//			
-//			temp = "";
-//			temp << payloadSize;
-//			size += temp.Length() + 1;
-//			
-//			size += payloadSize;
-//		};
-//		
-//		size += strlen("\r\n");
-//		
-//		fFlattenedSize = size;
-//	};
-//	
-//	return fFlattenedSize;
 };
 
 void Command::Debug(void) {
-	printf("%s {TrID}", fType.String());
+	printf("%s", fType.String());
+	if (fUseTrID) printf(" {TrID}");
+	
 	vector<BString>::iterator i;
 	for (i = fParams.begin(); i != fParams.end(); i++) printf(" %s", i->String());
 	
@@ -221,7 +187,7 @@ void Command::Debug(void) {
 				if ((buffer[i] == '\r') || (buffer[i] == '\n'))
 					printf("%c", buffer[i]);
 				else if ((buffer[i] < 0x20) || (buffer[i] > 0x7e))
-					printf("0x%02x ", buffer[i]);
+					printf("0x%02x ", (unsigned char)buffer[i]);
 				else 
 					printf("%c", buffer[i]);
 			};

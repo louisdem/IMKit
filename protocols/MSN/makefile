@@ -32,7 +32,8 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= MSN.cpp MSNConnection.cpp MSNManager.cpp Command.cpp HTTPFormatter.cpp MSNSBConnection.cpp 
+SRCS= MSN.cpp MSNConnection.cpp MSNManager.cpp Command.cpp HTTPFormatter.cpp 
+SRCS+=  MSNSBConnection.cpp MSNObject.cpp P2PContents.cpp P2PHeader.cpp Buddy.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -119,10 +120,17 @@ APP_VERSION =
 #	/dev/video/usb when loaded. Default is "misc".
 DRIVER_PATH = 
 
+#	Detect BONE
+ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
+	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
+	LIBS += socket bind
+	DEFINES += BONE
+endif
+
 ifeq ($(CHECK_MEM), true)
 	COMPILER_FLAGS += -fcheck-memory-usage -D_NO_INLINE_ASM=1 -D_KERNEL_MODE=1
 	DEBUG_BUILD=true
-	LIBS += socket bind
+#	LIBS += socket bind
 endif
 
 #   Custom overrides that can be set from the command line.
@@ -136,15 +144,6 @@ ifeq ($(DEBUG_BUILD), true)
 		COMPILER_FLAGS += -fno-debug-opt
 	endif
 
-endif
-
-
-
-#	Detect BONE
-ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
-	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
-	LIBS += socket bind
-	DEFINES += BONE
 endif
 
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols

@@ -14,12 +14,12 @@
 #include <libim/Protocol.h>
 #include <libim/Constants.h>
 
-#include <cryptlib/cryptlib.h>
-
 #include "MSNManager.h"
 #include "MSNHandler.h"
 #include "Command.h"
 #include "HTTPFormatter.h"
+#include "P2PHeader.h"
+#include "P2PContents.h"
 
 typedef pair <char *, int16> ServerAddress;
 typedef list<Command *> CommandQueue;
