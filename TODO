@@ -1,6 +1,6 @@
 Fixes
 
-* SET_STATUS - If no protocol is provided, send to all loaded protocols.
+* Protocol doc needs to be updated and extended to describe Deskbar add-on and probably more.
 * Strangeness when getting the server based contact list. Contact info messages duplicated? Not indexed?
 * Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
 * Add status changes to im_logger?
@@ -17,10 +17,6 @@ Search for contacts
 
 New client: Relay station
 * Forward all messages received from !relay_target to relay_target
-
-Deskbar replicant
-* Flash on new messages
-* Popup with latest message?
 
 Features in sample_client
 * Smileys
