@@ -364,6 +364,7 @@ void MSNConnection::MessageReceived(BMessage *msg) {
 			Command *command = NULL;
 			if (msg->FindPointer(("command"), (void **)&command) == B_OK) {
 				ProcessCommand(command);
+				delete command;
 			};
 		} break;
 		
@@ -469,223 +470,247 @@ void MSNConnection::ClearQueues(void) {
 
 status_t MSNConnection::ProcessCommand(Command *command) {
 	if (command->Type() == "VER") {
-		LOG("MSN", liDebug, "Processing VER");
-		Command *reply = new Command("CVR");
-		reply->AddParam(kClientVer);
-		reply->AddParam(fManager->Passport());
-		
-		Send(reply);
-		
-		delete command;
-		return B_OK;
-	};
-	
+		return handleVER( command );
+	} else
 	if ((command->Type() == "NLN") || (command->Type() == "ILN")) {
-//		XXX - We should probably look at the caps and nick	
-		BString statusStr = command->Param(0);
-		BString passport = command->Param(1);
-		BString friendly = command->Param(2);
-		BString caps = command->Param(3);
-				
-		online_types status = otOffline;
-		
-		if (statusStr == "NLN") status = otOnline;
-		if (statusStr == "BSY") status = otBusy;
-		if (statusStr == "IDL") status = otIdle;
-		if (statusStr == "BRB") status = otBRB;
-		if (statusStr == "AWY") status = otAway;
-		if (statusStr == "PHN") status = otPhone;
-		if (statusStr == "LUN") status = otLunch;
-		
-		BMessage statusChange(msnmsgStatusChanged);
-		statusChange.AddString("passport", passport);
-		statusChange.AddInt8("status", (int8)status);
-		
-		fManMsgr.SendMessage(&statusChange);
-
-		delete command;
-		return B_OK;
-	};
-	
+		return handleNLN( command );
+	} else	
 	if (command->Type() == "CVR") {
-		LOG("MSN", liDebug, "Processing CVR");
-		Command *reply = new Command("USR");
-		reply->AddParam("TWN");	// Authentication type
-		reply->AddParam("I");	// Initiate
-		reply->AddParam(fManager->Passport());
-						
-		Send(reply);
-		
-		delete command;
-		return B_OK;
-	};
-	
+		return handleCVR( command );
+	} else	
 	if (command->Type() == "RNG") {
-		LOG("MSN", liDebug, "Processing RNG");
+		return handleXFR( command );
+	} else	
+	if (command->Type() == "XFR") {
+		return handleXFR( command );
+	} else
+	if (command->Type() == "CHL") {
+		return handleCHL( command );
+	} else
+	if (command->Type() == "USR") {
+		return handleUSR( command );
+	} else
+	if (command->Type() == "MSG") {
+		return handleMSG( command );
+	} else {
+		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
+			fPort, command->Type().String());
+		PrintHex((uchar *)command->Flatten(0), command->FlattenedSize());
+	
+		return B_ERROR;
+	}
+};
+
+status_t MSNConnection::handleVER( Command * command ) {
+	LOG("MSN", liDebug, "Processing VER");
+	Command *reply = new Command("CVR");
+	reply->AddParam(kClientVer);
+	reply->AddParam(fManager->Passport());
+		
+	Send(reply);
+		
+	return B_OK;
+}
+
+status_t MSNConnection::handleNLN( Command * command ) {
+//		XXX - We should probably look at the caps and nick	
+	BString statusStr = command->Param(0);
+	BString passport = command->Param(1);
+	BString friendly = command->Param(2);
+	BString caps = command->Param(3);
+				
+	online_types status = otOffline;
+		
+	if (statusStr == "NLN") status = otOnline;
+	if (statusStr == "BSY") status = otBusy;
+	if (statusStr == "IDL") status = otIdle;
+	if (statusStr == "BRB") status = otBRB;
+	if (statusStr == "AWY") status = otAway;
+	if (statusStr == "PHN") status = otPhone;
+	if (statusStr == "LUN") status = otLunch;
+		
+	BMessage statusChange(msnmsgStatusChanged);
+	statusChange.AddString("passport", passport);
+	statusChange.AddInt8("status", (int8)status);
+		
+	fManMsgr.SendMessage(&statusChange);
+	return B_OK;
+}
+
+status_t MSNConnection::handleCVR( Command * command ) {
+	LOG("MSN", liDebug, "Processing CVR");
+	Command *reply = new Command("USR");
+	reply->AddParam("TWN");	// Authentication type
+	reply->AddParam("I");	// Initiate
+	reply->AddParam(fManager->Passport());
+						
+	Send(reply);
+		
+	return B_OK;
+}
+
+status_t MSNConnection::handleRNG( Command * command ) {
+	LOG("MSN", liDebug, "Processing RNG");
 //		The details are actually param 1, but param 0 will be interpretted as the
 //		TrID
-		LOG(kProtocolName, liDebug, "%s:%i got a chat invite from %s (%s)",
-			fServer, fPort, command->Param(4), command->Param(3));
-		ServerAddress sa = ExtractServerDetails((char *)command->Param(0));
+	LOG(kProtocolName, liDebug, "%s:%i got a chat invite from %s (%s)",
+		fServer, fPort, command->Param(4), command->Param(3));
+	ServerAddress sa = ExtractServerDetails((char *)command->Param(0));
 
-		BMessage newCon(msnmsgNewConnection);
-		newCon.AddString("host", sa.first);
-		newCon.AddInt16("port", sa.second);
-		newCon.AddString("type", "RNG");
-		newCon.AddString("authType", command->Param(1));
-		newCon.AddString("authString", command->Param(2));
-		newCon.AddString("inviterPassport", command->Param(3));
-		newCon.AddString("inviterDisplayName", command->Param(4));
+	BMessage newCon(msnmsgNewConnection);
+	newCon.AddString("host", sa.first);
+	newCon.AddInt16("port", sa.second);
+	newCon.AddString("type", "RNG");
+	newCon.AddString("authType", command->Param(1));
+	newCon.AddString("authString", command->Param(2));
+	newCon.AddString("inviterPassport", command->Param(3));
+	newCon.AddString("inviterDisplayName", command->Param(4));
 
-		BString temp;
-		temp << command->TransactionID();
-		newCon.AddString("sessionID", temp);
+	BString temp;
+	temp << command->TransactionID();
+	newCon.AddString("sessionID", temp);
 		
-		fManMsgr.SendMessage(&newCon);
+	fManMsgr.SendMessage(&newCon);
 
-		delete command;
-		return B_OK;
+	return B_OK;
+}
+
+status_t MSNConnection::handleXFR( Command * command ) {
+	LOG("MSN", liDebug, "Processing XFR");
+	ServerAddress sa = ExtractServerDetails((char *)command->Param(1));
+
+	BMessage newCon(msnmsgNewConnection);
+	newCon.AddString("host", sa.first);
+	newCon.AddInt16("port", sa.second);
+	newCon.AddString("type", command->Param(0));
+		
+	if (strcmp(command->Param(0), "NS") == 0) {
+		StopReceiver();
+			
+		ClearQueues();
+			
+		BMessage closeCon(msnmsgCloseConnection);
+		closeCon.AddPointer("connection", this);
+			
+		fManMsgr.SendMessage(&closeCon);
 	};
-	
-	if (command->Type() == "XFR") {
-		LOG("MSN", liDebug, "Processing XFR");
-		ServerAddress sa = ExtractServerDetails((char *)command->Param(1));
-
-		BMessage newCon(msnmsgNewConnection);
-		newCon.AddString("host", sa.first);
-		newCon.AddInt16("port", sa.second);
-		newCon.AddString("type", command->Param(0));
 		
-		if (strcmp(command->Param(0), "NS") == 0) {
-			StopReceiver();
-			
-			ClearQueues();
-			
-			BMessage closeCon(msnmsgCloseConnection);
-			closeCon.AddPointer("connection", this);
-			
-			fManMsgr.SendMessage(&closeCon);
-		};
-		
-		if (strcmp(command->Param(0), "SB") == 0) {
-			newCon.AddString("authType", command->Param(2));
-			newCon.AddString("authString", command->Param(3));
-		};			
+	if (strcmp(command->Param(0), "SB") == 0) {
+		newCon.AddString("authType", command->Param(2));
+		newCon.AddString("authString", command->Param(3));
+	};			
 
-		fManMsgr.SendMessage(&newCon);
+	fManMsgr.SendMessage(&newCon);
 
-		delete command;
-		return B_OK;
-	};
+	return B_OK;
+}
+
+status_t MSNConnection::handleCHL( Command * command ) {
+	LOG("MSN", liDebug, "Processing CHL");
+	BString chal = command->Param(0);
+
+	Command *reply = new Command("QRY");
+	reply->AddParam(kClientIDString);
+
+	MD5 *md5 = new MD5();
+	md5->update((uchar *)chal.String(), (uint16)chal.Length());
+	md5->update((uchar *)kClientIDCode, (uint16)strlen(kClientIDCode));
+	md5->finalize();
+
+	reply->AddPayload(md5->hex_digest(), 32);
+
+	Send(reply);
 	
-//	Server Challenge
-	if (command->Type() == "CHL") {
-		LOG("MSN", liDebug, "Processing CHL");
-		BString chal = command->Param(0);
+	delete md5;	
 
-		Command *reply = new Command("QRY");
-		reply->AddParam(kClientIDString);
+	return B_OK;
+}
 
-		MD5 *md5 = new MD5();
-		md5->update((uchar *)chal.String(), (uint16)chal.Length());
-		md5->update((uchar *)kClientIDCode, (uint16)strlen(kClientIDCode));
-		md5->finalize();
+status_t MSNConnection::handleUSR( Command * command ) {
+	LOG("MSN", liDebug, "Processing USR");
+	if (strcmp(command->Param(0), "OK") == 0) {
+		LOG(kProtocolName, liHigh, "Online!");
 
-		reply->AddPayload(md5->hex_digest(), 32);
+		GoOnline();
 
+		BMessage statusChange(msnmsgOurStatusChanged);
+		statusChange.AddInt8("status", fState);
+		fManMsgr.SendMessage(&statusChange);
+
+		Command *reply = new Command("CHG");
+		reply->AddParam("NLN");
+		BString caps = "";
+		caps << kOurCaps;
+
+		reply->AddParam(caps.String());
 		Send(reply);
-	
-		delete md5;	
-		delete command;	
+			
+		Command *rea = new Command("PRP");
+		rea->AddParam("MFN");
+		rea->AddParam(fManager->DisplayName(), true);
+		Send(rea);
+
+		Command *syn = new Command("SYN");
+		syn->AddParam("0");
+		syn->AddParam("0");
+		Send(syn);
+						
 		return B_OK;
 	};
-	
-	if (command->Type() == "USR") {
-		LOG("MSN", liDebug, "Processing USR");
-		if (strcmp(command->Param(0), "OK") == 0) {
-			LOG(kProtocolName, liHigh, "Online!");
 
-			GoOnline();
+	HTTPFormatter *send = new HTTPFormatter("nexus.passport.com",
+		"/rdr/pprdr.asp");
+	HTTPFormatter *recv = NULL;
 
-			BMessage statusChange(msnmsgOurStatusChanged);
-			statusChange.AddInt8("status", fState);
-			fManMsgr.SendMessage(&statusChange);
+	int32 recvdBytes = SSLSend("nexus.passport.com", send, &recv);
 
-			Command *reply = new Command("CHG");
-			reply->AddParam("NLN");
-			BString caps = "";
-			caps << kOurCaps;
+	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
+		fServer, fPort, recvdBytes, "nexus.passport.com");
+	if (recvdBytes < 0) {
+		BMessage closeCon(msnmsgCloseConnection);
+		closeCon.AddPointer("connection", this);
 
-			reply->AddParam(caps.String());
-			Send(reply);
-			
-			Command *rea = new Command("PRP");
-			rea->AddParam("MFN");
-			rea->AddParam(fManager->DisplayName(), true);
-			Send(rea);
+		fManMsgr.SendMessage(&closeCon);
 
-			Command *syn = new Command("SYN");
-			syn->AddParam("0");
-			syn->AddParam("0");
-			Send(syn);
-						
-			delete command;
-			return B_OK;
-		};
+		return B_ERROR;
+	};
 
-		HTTPFormatter *send = new HTTPFormatter("nexus.passport.com",
-			"/rdr/pprdr.asp");
-		HTTPFormatter *recv = NULL;
+	BString passportURLs = recv->HeaderContents("PassportURLs");
+	int32 begin = passportURLs.FindFirst("DALogin=");
+	BString loginHost = "";
+	if (begin != B_ERROR) {
+		int32 end = passportURLs.FindFirst(",", begin);
+		passportURLs.CopyInto(loginHost, begin + strlen("DALogin="),
+			end - begin - strlen("DALogin="));
+	} else {
+		delete recv;
+		delete send;
+		return B_OK;
+	};
 
-		int32 recvdBytes = SSLSend("nexus.passport.com", send, &recv);
-
-		LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-			fServer, fPort, recvdBytes, "nexus.passport.com");
-		if (recvdBytes < 0) {
-			BMessage closeCon(msnmsgCloseConnection);
-			closeCon.AddPointer("connection", this);
-	
-			fManMsgr.SendMessage(&closeCon);
-
-			return B_ERROR;
-		};
-
-		BString passportURLs = recv->HeaderContents("PassportURLs");
-		int32 begin = passportURLs.FindFirst("DALogin=");
-		BString loginHost = "";
-		if (begin != B_ERROR) {
-			int32 end = passportURLs.FindFirst(",", begin);
-			passportURLs.CopyInto(loginHost, begin + strlen("DALogin="),
-				end - begin - strlen("DALogin="));
-		} else {
-			delete recv;
-			delete send;
-			return B_OK;
-		};
-
-		BString loginDocument = "";
-		begin = loginHost.FindFirst("/");
-		loginHost.MoveInto(loginDocument, begin, loginHost.Length() - begin);
+	BString loginDocument = "";
+	begin = loginHost.FindFirst("/");
+	loginHost.MoveInto(loginDocument, begin, loginHost.Length() - begin);
 
 //		XXX - We should connect to the host above and get redired around a bit. But
 //		That's pissing me off!
 
-		loginHost = "login.passport.com";
-		loginDocument = "/login2.srf?lc=1033";
+	loginHost = "login.passport.com";
+	loginDocument = "/login2.srf?lc=1033";
 		
-		delete send;
-		send = new HTTPFormatter(loginHost.String(), loginDocument.String());
-		BString authStr = "Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=";
-		authStr << fManager->Passport() << ",pwd=" << fManager->Password();
-		authStr << "," << command->Param(2);
-		authStr.ReplaceAll("@", "%40");
+	delete send;
+	send = new HTTPFormatter(loginHost.String(), loginDocument.String());
+	BString authStr = "Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=";
+	authStr << fManager->Passport() << ",pwd=" << fManager->Password();
+	authStr << "," << command->Param(2);
+	authStr.ReplaceAll("@", "%40");
 
-		send->AddHeader("Authorization", authStr.String());
-		delete recv;
+	send->AddHeader("Authorization", authStr.String());
+	delete recv;
 		
-		LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
-			fServer, fPort, SSLSend(loginHost.String(), send, &recv),
-			loginHost.String());
+	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
+		fServer, fPort, SSLSend(loginHost.String(), send, &recv),
+		loginHost.String());
 //
 ////		We got redirected.
 //		if (recv->Status() == 302) {
@@ -745,31 +770,29 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 //				loginHost.String());
 //		};
 ////	We get the ticket!
-		if (recv->Status() == 200) {
-			BString authInfo = recv->HeaderContents("Authentication-Info");
-			begin = authInfo.FindFirst("from-PP='");
-			BString ticket = "";
-			if (begin != B_ERROR) {
-				int32 end = authInfo.FindFirst("'", begin + strlen("from-PP='") + 1);
-				authInfo.CopyInto(ticket, begin + strlen("from-PP='"),
-					end - (begin + strlen("from-PP='")));
-			} else {
-				return B_ERROR;
-			};
-				
-			Command *reply = new Command("USR");
-			reply->AddParam("TWN");
-			reply->AddParam("S");
-			reply->AddParam(ticket.String());
-			Send(reply);
-			
-			delete command;
+	if (recv->Status() == 200) {
+		BString authInfo = recv->HeaderContents("Authentication-Info");
+		begin = authInfo.FindFirst("from-PP='");
+		BString ticket = "";
+		if (begin != B_ERROR) {
+			int32 end = authInfo.FindFirst("'", begin + strlen("from-PP='") + 1);
+			authInfo.CopyInto(ticket, begin + strlen("from-PP='"),
+				end - (begin + strlen("from-PP='")));
+		} else {
+			return B_ERROR;
 		};
-		
-		return B_OK;
+				
+		Command *reply = new Command("USR");
+		reply->AddParam("TWN");
+		reply->AddParam("S");
+		reply->AddParam(ticket.String());
+		Send(reply);
 	};
-	
-	if (command->Type() == "MSG") {
+		
+	return B_OK;
+}
+
+status_t MSNConnection::handleMSG( Command * command ) {
 /*		LOG(kProtocolName, liDebug, "Processing MSG: command->Payload(0), [%s]");
 	
 		BString sender = command->Param(0);
@@ -785,37 +808,26 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 		delete command;
 		return B_OK;*/
 		
-		HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
+	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
 		
-		const char * type = http.HeaderContents("Content-Type");
+	const char * type = http.HeaderContents("Content-Type");
 		
-		if ( type )
-		{ // we have a type, handle it.
-			if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
-				LOG("MSN", liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
-				BMessage immsg(IM::MESSAGE);
-				immsg.AddString("protocol", "MSN");
-				immsg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
-				immsg.AddString("id", command->Param(0) );
-				immsg.AddString("message", http.Content());
-				fManMsgr.SendMessage(&immsg);
-			} else {
-				LOG("MSN", liDebug, "Got message of unknown type <%s>\n", type );
-			}
+	if ( type )
+	{ // we have a type, handle it.
+		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
+			LOG("MSN", liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
+			BMessage immsg(IM::MESSAGE);
+			immsg.AddString("protocol", "MSN");
+			immsg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
+			immsg.AddString("id", command->Param(0) );
+			immsg.AddString("message", http.Content());
+			fManMsgr.SendMessage(&immsg);
 		} else {
-			LOG("ICQ", liDebug, "No Content-Type in message!\n");
+			LOG("MSN", liDebug, "Got message of unknown type <%s>\n", type );
 		}
+	} else {
+		LOG("ICQ", liDebug, "No Content-Type in message!\n");
+	}
 		
-		delete command;
-		return B_OK;
-	};
-	
-//	Unsupported
-
-	LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
-		fPort, command->Type().String());
-	PrintHex((uchar *)command->Flatten(0), command->FlattenedSize());
-	
-	delete command;
-	return B_ERROR;
-};
+	return B_OK;
+}

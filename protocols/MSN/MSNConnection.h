@@ -41,7 +41,17 @@ class MSNConnection : public BLooper {
 		inline uint16	Port(void) const { return fPort; };
 
 		bool			QuitRequested();
-		
+	
+	protected:
+		virtual status_t handleVER( Command * );
+		virtual status_t handleNLN( Command * );
+		virtual status_t handleCVR( Command * );
+		virtual status_t handleRNG( Command * );
+		virtual status_t handleXFR( Command * );
+		virtual status_t handleCHL( Command * );
+		virtual status_t handleUSR( Command * );
+		virtual status_t handleMSG( Command * );
+	
 	private:
 		int32			NetworkSend(Command *command);
 		int32			ConnectTo(const char *hostname, uint16 port);
@@ -53,7 +63,7 @@ class MSNConnection : public BLooper {
 			HTTPFormatter **recv);
 		void			GoOnline(void);
 		void			ClearQueues(void);
-			
+		
 		char			*fServer;
 		uint16			fPort;
 		
