@@ -265,7 +265,7 @@ MyApp::NoFlash( BMessenger msgr )
 
 ChatWindow::ChatWindow( entry_ref & ref )
 :	BWindow( 
-		BRect(100,100,400,300), 
+		BRect(100,100,400,400), 
 		"unknown contact - unknown status", 
 		B_TITLED_WINDOW,
 		B_ASYNCHRONOUS_CONTROLS | B_AVOID_FOCUS
@@ -280,31 +280,53 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	BRect inputRect = Bounds();
 
 	textRect.InsetBy(2,2);
-	textRect.bottom -= 20;
+	textRect.bottom -= 105;
 	textRect.right -= B_V_SCROLL_BAR_WIDTH;
 	
 	text2Rect = textRect;
 	text2Rect.OffsetTo(0,0);
 	
-	inputRect.top = inputRect.bottom - 20;
-	
-	fInput = new BTextControl(
-		inputRect, "input", "Say", "",
-		new BMessage(SEND_MESSAGE),
-		B_FOLLOW_LEFT_RIGHT|B_FOLLOW_BOTTOM
+	inputRect.InsetBy(2.0, 2.0);
+	inputRect.top = inputRect.bottom - 100;
+	inputRect.right -= B_V_SCROLL_BAR_WIDTH;
+
+	BRect inputTextRect = inputRect;
+	inputTextRect.OffsetTo(0, 0);
+
+	fInput = new BTextView(
+		inputRect, "input", inputTextRect,
+		B_FOLLOW_ALL,
+		B_WILL_DRAW
 	);
-	fInput->SetDivider(30);
-	fInput->SetViewColor( 215,215,215 );
-	
-	AddChild( fInput );
+	fInput->SetWordWrap(true);
+	fInput->SetStylable(true);
+
+	BScrollView *inputScroll = new BScrollView(
+		"input_scroller", fInput,
+		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM, 0,
+//		B_FOLLOW_ALL, 0,
+		false,
+		true
+	);
+
+	fInput->SetViewColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
+	fInput->SetLowColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
+	fInput->SetHighColor(ui_color(B_CONTROL_TEXT_COLOR));
+
+	AddChild(inputScroll);	
 	
 	fText = new URLTextView(
 		textRect, "text", text2Rect,
-		B_FOLLOW_ALL,B_WILL_DRAW
+		B_FOLLOW_ALL, B_WILL_DRAW
 	);
-	fText->SetWordWrap(true);
+ 	fText->SetWordWrap(true);
 	fText->MakeEditable(false);
 	fText->SetStylable(true);
+
+	fText->SetViewColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
+	fText->SetLowColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
+	fText->SetHighColor(ui_color(B_CONTROL_TEXT_COLOR));
+	
 	BScrollView * scroll = new BScrollView(
 		"scroller", fText,
 		B_FOLLOW_ALL, 0,
@@ -314,6 +336,8 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	AddChild( scroll );
 
 	fInput->MakeFocus();
+	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE));
+	fInput->AddFilter((BMessageFilter *)fFilter);
 	
 	// monitor node so we get updates to status etc
 	BEntry entry(&ref);
@@ -481,7 +505,8 @@ ChatWindow::MessageReceived( BMessage * msg )
 				case B_ENTRY_REMOVED:
 					// oops. should we close down this window now?
 					// Nah, we'll just disable everything.
-					fInput->SetEnabled(false);
+//					fInput->SetEnabled(false);
+					fInput->MakeEditable(false);
 					break;
 				case B_ENTRY_MOVED:
 				{

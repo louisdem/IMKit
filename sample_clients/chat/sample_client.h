@@ -12,6 +12,9 @@
 #include <Rect.h>
 #include <BeBuild.h>
 
+#include "InputFilter.h"
+
+class InputFilter;
 class ChatWindow;
 
 class MyApp : public BApplication
@@ -71,9 +74,10 @@ class ChatWindow : public BWindow
 		entry_ref	fEntry;
 		char		fName[512];
 		
-		BTextControl	* fInput;
+		BTextView		* fInput;
 		BTextView		* fText;
 		
+		InputFilter		*fFilter;
 		IM::Manager		* fMan;
 		bool			fChangedNotActivated;
 		char			fTitleCache[512];
