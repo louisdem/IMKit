@@ -32,6 +32,8 @@ void InfoWindow::WorkspaceActivated(int32 workspace, bool active) {
 void InfoWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case InfoPopper::AddMessage: {
+			msg->PrintToStream();
+			
 			int8 type;
 			const char *message;
 			const char *title;
@@ -59,7 +61,7 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			
 			BString msgText = title;
 			msgText << ":\n" << message;
-			msgText.ReplaceAll("\n", "\n  ");
+			//msgText.ReplaceAll("\n", "\n  ");
 			
 			InfoView *view = new InfoView(
 				(InfoPopper::info_type)type, 

@@ -23,6 +23,10 @@ IMInfoApp::IMInfoApp(void)
 		fMessageText = "$nickname$ says:\n$shortmsg$";
 		settings.AddString("msg_text", fMessageText);
 	};
+	if (settings.FindInt32("icon_size", &fIconSize) != B_OK) {
+		fIconSize = 16;
+		settings.AddInt32("icon_size", fIconSize);
+	};
 	
 	im_save_client_settings("IM-InfoPopper", &settings);
 	
@@ -33,8 +37,8 @@ IMInfoApp::IMInfoApp(void)
 	
 	while (dir.GetNextRef(&ref) == B_OK) {
 		BPath path(&ref);
-		BBitmap *icon = ReadNodeIcon(path.Path(), 32);
-	
+		BBitmap *icon = ReadNodeIcon(path.Path(), fIconSize);
+		
 		fProtocolIcons[path.Leaf()] = icon;
 	};	
 };
@@ -126,7 +130,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					
 					text.ReplaceAll("$shortmsg$", shortMessage.String());
 					text.ReplaceAll("$message$", message.String());
-				
+					
 					type = InfoPopper::Important;
 				}	break;
 				

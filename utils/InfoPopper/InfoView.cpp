@@ -17,20 +17,20 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details )
 	if (fDetails->FindMessage("icon", &iconMsg) == B_OK) {
 		fBitmap = new BBitmap(&iconMsg);
 	} else {
-		fBitmap = new BBitmap(BRect(0, 0, 15, 15), B_RGBA32);
+		/*fBitmap = new BBitmap(BRect(0, 0, 15, 15), B_RGBA32);
 		int32 *bits = (int32 *)fBitmap->Bits();
 		
 		for (int32 i = 0; i < fBitmap->BitsLength()/4; i++) {
-			bits[i] = B_TRANSPARENT_MAGIC_RGBA32;
+			bits[i] = 0xff8888ff;//B_TRANSPARENT_MAGIC_RGBA32;
 		};
+		*/
+		fBitmap = NULL;
 	};
 	
 	const char * messageID = NULL;
-	if (fDetails->FindString("messageID", &messageID) != B_OK) 
-	{
+	if (fDetails->FindString("messageID", &messageID) != B_OK) {
 		fMessageID = ""; 
-	} else 
-	{
+	} else {
 		fMessageID = messageID;
 	}
 	if (fDetails->FindFloat("progress", &fProgress) != B_OK) fProgress = 0.0;
@@ -64,6 +64,7 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details )
 InfoView::~InfoView(void) {
 	if (fRunner) delete fRunner;
 	if (fDetails) delete fDetails;
+	if (fBitmap) delete fBitmap;
 }
 
 void
@@ -99,6 +100,8 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 	*h = kEdgePadding;
 	*w = 0;
 	
+	float first_line_height = 0.0;
+	
 	for (list<pair<BString,const BFont*> >::iterator i = fLines.begin(); i !=fLines.end(); i++) {
 		// height
 		SetFont(i->second);
@@ -108,7 +111,10 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 		font.GetHeight( &fh );
 		
 		float line_height = fh.ascent + fh.descent + fh.leading;
-	
+		
+		if ( i == fLines.begin() )
+			first_line_height = line_height;
+		
 		*h += line_height;
 		
 		// width
@@ -117,13 +123,17 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 		if ( width > *w ) *w = width + kEdgePadding;
 	};
 	
-	if (*h < fBitmap->Bounds().Height()) *h = fBitmap->Bounds().Height() + (kEdgePadding * 2);
-	*w += fBitmap->Bounds().Width() + (kEdgePadding * 2);
+	if ( fBitmap )
+	{
+		if (*h < fBitmap->Bounds().Height() + first_line_height) 
+			*h = fBitmap->Bounds().Height() + (kEdgePadding * 2) + first_line_height;
+		*w += fBitmap->Bounds().Width() + (kEdgePadding * 2) + 3;
+	}
 };
 
 void InfoView::Draw(BRect drawBounds) {
 	BRect bound = Bounds();
-
+	
 	if (fProgress > 0.0) {
 		bound.right *= fProgress;
 		
@@ -134,12 +144,28 @@ void InfoView::Draw(BRect drawBounds) {
 	
 	SetDrawingMode( B_OP_ALPHA );
 	
-	DrawBitmap(fBitmap,
-		BPoint(
-			kEdgePadding,
-			(bound.Height() / 2) - (fBitmap->Bounds().Height() / 2)
-		)
-	);
+	if ( fBitmap )
+	{
+		// figure out height of top line
+		list<pair<BString,const BFont*> >::iterator i = fLines.begin();
+		
+		SetFont( i->second );
+		
+		BFont font;
+		GetFont(&font);
+		
+		font_height fh;
+		font.GetHeight( &fh );
+		float line_height = fh.ascent + fh.leading + fh.descent;
+		
+		//
+		DrawBitmap(fBitmap,
+			BPoint(
+				kEdgePadding,
+				kEdgePadding + line_height + (Bounds().Height() - kEdgePadding - line_height - fBitmap->Bounds().Height()) / 2
+			)
+		);
+	}
 	
 	BFont font;
 	
@@ -156,13 +182,12 @@ void InfoView::Draw(BRect drawBounds) {
 		
 		y += line_height;
 		
+		// figure out text position
+		float tx = (kEdgePadding * 2) + (fBitmap != NULL && i != fLines.begin() ? fBitmap->Bounds().Width() + 3: 0);
+		float ty = kEdgePadding + y;
+		
 		// draw the text
-		DrawString(i->first.String(),
-			BPoint(
-				(kEdgePadding * 2) + fBitmap->Bounds().Width(),
-				kEdgePadding + y 
-			)
-		);
+		DrawString(i->first.String(),BPoint(tx,ty));
 		
 		y += fh.leading + fh.descent;
 	}
@@ -171,7 +196,7 @@ void InfoView::Draw(BRect drawBounds) {
 void InfoView::MouseDown(BPoint point) {
 	int32 buttons;
 	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
-
+	
 	switch (buttons) {
 		case B_PRIMARY_MOUSE_BUTTON: {
 			entry_ref launchRef;
@@ -182,14 +207,14 @@ void InfoView::MouseDown(BPoint point) {
 			bool useArgv = false;
 			BList messages;
 			entry_ref ref;
-
+			
 			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
 				if (be_roster->FindApp(launchString.String(), &appRef) == B_OK) useArgv = true;
 			};
 			if (fDetails->FindRef("onClickFile", &launchRef) == B_OK) {
 				if (be_roster->FindApp(&launchRef, &appRef) == B_OK) useArgv = true;
 			};
-
+			
 			if (fDetails->FindRef("onClickRef", &ref) == B_OK) {			
 				for (int32 i = 0; fDetails->FindRef("onClickRef", i, &ref) == B_OK; i++) {
 					refMsg.AddRef("refs", &ref);
@@ -197,18 +222,18 @@ void InfoView::MouseDown(BPoint point) {
 				
 				messages.AddItem((void *)&refMsg);
 			};
-
+			
 			if (useArgv == true) {
 				type_code type;
 				int32 argc = 0;
 				BString arg;
-
+				
 				BPath p(&appRef);
 				argMsg.AddString("argv", p.Path());
 				
 				fDetails->GetInfo("onClickArgv", &type, &argc);
 				argMsg.AddInt32("argc", argc + 1);
-	
+				
 				for (int32 i = 0; fDetails->FindString("onClickArgv", i, &arg) == B_OK;
 					i++) {
 	
@@ -222,7 +247,7 @@ void InfoView::MouseDown(BPoint point) {
 			for (int32 i = 0; fDetails->FindMessage("onClickMsg", i, tmp) == B_OK; i++) {
 				messages.AddItem((void *)tmp);
 			};
-							
+			
 			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
 				be_roster->Launch(launchString.String(), &messages);
 			} else {
@@ -251,13 +276,16 @@ InfoView::SetText(const char * _text)
 	while ( text.Length() > 0 )
 	{
 		int32 nl;
-		if ( (nl = text.FindFirst("\n")) >= 0 )
+		if ( (nl = text.FindFirst("\n")) >= 0 || (nl = text.FindFirst("\\n")) >= 0 )
 		{ // found a newline
 			BString line;
 			text.CopyInto(line, 0, nl);
 			fLines.push_back( pair<BString,const BFont*>(line,font) );
 			
-			text.Remove(0,nl+1);
+			if ( text[nl] == '\n' )
+				text.Remove(0,nl+1);
+			else
+				text.Remove(0,nl+2);
 			
 			font = be_plain_font;
 		} else

@@ -36,11 +36,18 @@ int main(int argc, char *argv[]) {
 	msg.AddInt32("type", B_STRING_TYPE);
 	msg.AddString("default", "$nickname$ says $shortmsg$");
 	
+	BMessage iconSize;
+	iconSize.AddString("name", "icon_size");
+	iconSize.AddString("description", "Icon size");
+	iconSize.AddInt32("type", B_INT32_TYPE);
+	iconSize.AddInt32("default", 16);
+	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
 	tmplate.AddMessage("setting", &status);
 	tmplate.AddMessage("setting", &msg);
+	tmplate.AddMessage("setting", &iconSize);
 	
 	im_save_client_template("IM-InfoPopper", &tmplate);
 	
