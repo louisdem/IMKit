@@ -13,6 +13,7 @@
 #include <MenuItem.h>
 #include <PopUpMenu.h>
 #include <Beep.h>
+#include <String.h>
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
@@ -348,12 +349,22 @@ ChatWindow::MessageReceived( BMessage * msg )
 					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_nick_color);
 					strftime(timestr,sizeof(timestr),"[%H:%M] ",  localtime(&now) );
 					fText->Insert(timestr);
-					fText->Insert(fName);
-					fText->Insert(": ");
-					fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_text_color);
-					fText->Insert(msg->FindString("message"));
+					BString message;
+					msg->FindString("message", &message);
+					if (message.Compare("/me ", 4) == 0) {
+						fText->Insert("*");
+						fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_text_color);
+						message.Remove(0, 4);
+						fText->Insert(message.String());
+					} else {
+						fText->Insert(fName);
+						fText->Insert(": ");
+						fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_text_color);
+						fText->Insert(msg->FindString("message"));
+					}
 					fText->Insert("\n");
 					fText->ScrollToSelection();
+
 
 					if (!IsActive()) {
 						fChangedNotActivated = true;
