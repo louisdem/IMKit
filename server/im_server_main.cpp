@@ -4,6 +4,12 @@
 #include <stdio.h>
 #include <Messenger.h>
 
+#include <Alert.h>
+#include <Volume.h>
+#include <VolumeRoster.h>
+#include <be/kernel/fs_index.h>
+
+
 #include <libim/Helpers.h>
 
 void handle_ctrl_c( int sig )
@@ -91,6 +97,63 @@ int main( int numarg, const char ** argv )
 		
 		curr++;
 	}
+
+	BVolumeRoster roster;
+	BVolume volume;
+	int madeIndex = false;
+	roster.Rewind();
+
+	while (roster.GetNextVolume(&volume) == B_NO_ERROR) {
+		char volName[B_OS_NAME_LENGTH];
+		volume.GetName(volName);
+
+		if ((volume.KnowsAttr()) && (volume.KnowsQuery()) && (volume.KnowsMime())) {
+			DIR *indexes;
+			struct dirent *ent;
+						
+			LOG("im_server", liDebug, "%s is suitable for indexing", volName);
+			
+			indexes = fs_open_index_dir(volume.Device());
+			if (indexes == NULL) {
+				LOG("im_server", liLow, "Error opening indexes on %s", volName);
+				continue;
+			};
+
+			bool isConnIndexed = false;
+			bool isStatusIndexed = false;
+		
+			while (ent = fs_read_index_dir(indexes)) {
+				if (strcmp(ent->d_name, "IM:connections") == 0) isConnIndexed = true;
+				if (strcmp(ent->d_name, "IM:status") == 0) isStatusIndexed = true;
+			}
+			
+			if (isConnIndexed == false) {
+				int res = fs_create_index(volume.Device(), "IM:connections", B_STRING_TYPE, 0);
+				LOG("im_server", liMedium, "Added IM:connections to %s: %s (%i)",
+					volName, strerror(res), res);
+				madeIndex = true;
+			};
+			if (isStatusIndexed == false) {
+				int res = fs_create_index(volume.Device(), "IM:status", B_STRING_TYPE, 0);
+				LOG("im_server", liMedium, "Added IM:status to %s: %s (%i)",
+					volName, strerror(res), res);
+				madeIndex = true;
+			};
+			fs_close_index_dir(indexes);
+		};
+	};
+	
+	if (madeIndex) {
+		BAlert *alert = new BAlert("The IM Kit", "The IM Kit had to add indexes for "
+			" IM:connections or IM:status to one or more of your drives. Please be "
+			"sure to re-index any People files on these drives. You should obtain "
+			"reindex from http://www.bebits.com/app/2033 Failure to do so may cause"
+			" duplicate People files to be created", "Yessir!", NULL, NULL,
+			B_WIDTH_AS_USUAL, B_OFFSET_SPACING, B_IDEA_ALERT);
+		alert->SetShortcut(0, B_ESCAPE);
+		alert->Go();
+		return -1;
+	};
 	
 	IM::Server server;
 }

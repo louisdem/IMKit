@@ -43,7 +43,7 @@ else
 endif
 
 #	the target goes in the TARGET_DIR
-TARGET		:= $(TARGET_DIR)/$(NAME)
+TARGET		:= "$(TARGET_DIR)/$(NAME)"
 
 #	specify the mimeset tool
 MIMESET		:= mimeset
@@ -286,9 +286,9 @@ endif
 
 #	create the resource instruction
 ifeq ($(RSRCS), )
-	DO_RSRCS := if [ -f "$(NAME).svg" ]; then if [ -f "/bin/IconTool" ] ; then IconTool "$(INSTALL_DIR)/$(NAME)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; fi; fi
+	DO_RSRCS := if [ -f "$(NAME).svg" ]; then if [ -f "/bin/IconTool" ] ; then IconTool "$(INSTALL_DIR)/$(NAME)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; fi; if [ -f "/boot/home/config/bin/loadicon" ]; then loadicon "$(NAME).svg" "$(TARGET_DIR)/$(NAME)"; fi; fi
 else
-	DO_RSRCS := $(XRES) -o $(TARGET) $(RSRCS) ; if [ -f "$(NAME).svg" ] ; then if [ -f "/bin/IconTool" ] ; then IconTool "$(INSTALL_DIR)/$(NAME)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; fi; fi
+	DO_RSRCS := $(XRES) -o $(TARGET) $(RSRCS) ; if [ -f "$(NAME).svg" ] ; then if [ -f "/bin/IconTool" ] ; then IconTool "$(INSTALL_DIR)/$(NAME)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; fi; if [ -f "/boot/home/config/bin/loadicon" ]; then loadicon "$(NAME).svg" "$(TARGET_DIR)/$(NAME)"; fi;fi
 endif
 
 # Install target helper
@@ -353,8 +353,7 @@ default: build
 
 build: $(TARGET)
 
-#$(TARGET):	$(OBJ_DIR) $(OBJS) $(RSRCS)
-$(TARGET):	$(OBJS)
+$(TARGET):	$(OBJ_DIR) $(OBJS) $(RSRCS)
 		@rm -f $(TEMPDEPFILE)
 		$(BUILD_LINE)
 		$(DO_RSRCS)
