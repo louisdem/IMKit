@@ -38,8 +38,9 @@ Yahoo::Shutdown()
 {
 	if ( fYahoo )
 	{
-		delete fYahoo;
+		YahooConnection * oldYahoo = fYahoo;
 		fYahoo = NULL;
+		delete oldYahoo;
 	}
 	
 	return B_OK;
@@ -288,8 +289,9 @@ Yahoo::LoggedOut()
 	
 	if ( fYahoo )
 	{
-		delete fYahoo;
+		YahooConnection * oldYahoo = fYahoo;
 		fYahoo = NULL;
+		delete oldYahoo;
 	}
 }
 
