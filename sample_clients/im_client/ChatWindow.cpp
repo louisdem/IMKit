@@ -1,6 +1,15 @@
 #include "ChatWindow.h"
 
+#include "ImageButton.h"
+
+#include <libim/Contact.h>
+#include <libim/Helpers.h>
+
 const char *kImNewMessageSound = "IM Message Received";
+
+#define kButtonWidth	50
+#define kButtonHeight	50
+#define kButtonDockHeight (kButtonHeight+4)
 
 ChatWindow::ChatWindow( entry_ref & ref )
 :	BWindow( 
@@ -54,37 +63,59 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	BRect inputRect = Bounds();
 	BRect dockRect = Bounds();
 
-/*	
-	dockRect.bottom = 20;
+	dockRect.bottom = kButtonDockHeight;
 	fDock = new BView(dockRect, "Dock", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetHighUIColor(B_UI_PANEL_TEXT_COLOR);
 #else
-	fDock->SetViewColor(B_PANEL_BACKGROUND_COLOR);
-	fDock->SetLowColor(B_PANEL_BACKGROUND_COLOR);
-	fDock->SetHighColor(B_PANEL_TEXT_COLOR);
+	fDock->SetViewColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
+//	fDock->SetLowColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
+//	fDock->SetHighColor( ui_color(B_PANEL_TEXT_COLOR) );
 #endif
 	AddChild(fDock);
 
-	BBitmap *infoIcon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/GetStatusInfo", "BEOS:M:STD_ICON");
-	printf("Info icon: %p\n", infoIcon);
-	fDock->MovePenTo(5.0, 1.0);
-	fDock->DrawBitmap(infoIcon);
-	fDock->DrawString("Hi?");
-	fDock->Flush();
-*/
+	// add buttons
+	ImageButton * btn;
+	BBitmap * icon;
+	
+	icon = GetBitmapFromAttribute("/boot/beos/apps"
+		"/People", "BEOS:L:STD_ICON");
+	btn = new ImageButton(
+		BRect(2,2,2+kButtonWidth,2+kButtonHeight),
+		"open in people button",
+		new BMessage(SHOW_INFO),
+		B_FOLLOW_NONE,
+		B_WILL_DRAW,
+		icon,
+		"Show info"
+	);
+	fDock->AddChild(btn);
+	
+	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
+		"/Block", "BEOS:L:STD_ICON");
+	btn = new ImageButton(
+		BRect(53,2,53+kButtonWidth,2+kButtonHeight),
+		"block button",
+		new BMessage(BLOCK),
+		B_FOLLOW_NONE,
+		B_WILL_DRAW,
+		icon,
+		"Block"
+	);
+	fDock->AddChild(btn);
+	// done adding buttons
+	
+	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
-//	textRect.top = 20;
 	textRect.bottom = inputDivider.y;
 	textRect.right -= B_V_SCROLL_BAR_WIDTH;
-
+	
 	inputRect.InsetBy(2.0, 2.0);
 	inputRect.top = inputDivider.y + 5;
 	inputRect.right -= B_V_SCROLL_BAR_WIDTH;
-
+	
 	BRect inputTextRect = inputRect;
 	inputTextRect.OffsetTo(0, 0);
 	
@@ -192,7 +223,6 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fText->SetHighColor(0, 0, 0, 0);
 #endif
 
-
 	fTextScroll = new BScrollView(
 		"scroller", fText,
 		B_FOLLOW_ALL, 0,
@@ -200,7 +230,8 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		true // vert
 	);
 	AddChild(fTextScroll);
-
+	fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
+	
 	fText->Show();
 	fText->ScrollToBottom();
 
@@ -456,6 +487,40 @@ ChatWindow::MessageReceived( BMessage * msg )
 			};
 		}	break;
 		
+		case SHOW_INFO:
+		{
+			BMessage open_msg(B_REFS_RECEIVED);
+			open_msg.AddRef("refs", &fEntry);
+			
+			be_roster->Launch( "application/x-vnd.Be-PEPL", &open_msg );
+		}	break;
+		
+		case BLOCK:
+		{
+			IM::Contact contact(fEntry);
+			
+			char status[256];
+			
+			if ( contact.GetStatus( status, sizeof(status) ) != B_OK )
+				status[0] = 0;
+			
+			if ( strcmp(status, "Blocked") == 0 )
+			{ // already blocked, unblocked
+				contact.SetStatus(OFFLINE_TEXT);
+				
+				BMessage update_msg(IM::UPDATE_CONTACT_STATUS);
+				update_msg.AddRef("contact", &fEntry);
+				
+				fMan->SendMessage( &update_msg );
+			} else
+			{
+				if ( contact.SetStatus("Blocked") != B_OK )
+				{
+					LOG("im_client", LOW, "Error setting contact status");
+				}
+			}
+		}	break;
+		
 		case B_NODE_MONITOR:
 		{
 			int32 opcode=0;
@@ -502,13 +567,13 @@ ChatWindow::MessageReceived( BMessage * msg )
 				//point.PrintToStream();
 				//int rows = ceil((fTextScroll->Frame().Height() - point.y) / fFontHeight);
 				//printf("Can have %i rows\n", rows);
-
+				
 				fResize->MoveTo(fResize->Frame().left, point.y);
-				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1);
-
+				fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
+				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1 - kButtonDockHeight - 1);
+				
 				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 1);
 				fInputScroll->ResizeTo(fInputScroll->Frame().Width(), Bounds().bottom - point.y);
-
 			};
 		} break;
 		

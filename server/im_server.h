@@ -55,6 +55,7 @@ class Server : public BApplication
 		void	UpdateStatus(BMessage*,Contact &);
 		void	SetAllOffline();
 		void	handle_STATUS_SET( BMessage * );
+		void	UpdateContactStatusAttribute( Contact & );
 		
 		void	GetContactsForProtocol( const char * protocol, BMessage * msg );
 		

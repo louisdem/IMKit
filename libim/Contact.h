@@ -40,6 +40,7 @@ class Contact
 		status_t	GetName( char * buf, int size );
 		status_t	GetNickname( char * buf, int size );
 		status_t	GetEmail( char * buf, int size );
+		status_t	GetStatus( char * bug, int size );
 		
 		// comparison, both with Contacts and entry_refs and node_refs
 		// representing Contacts

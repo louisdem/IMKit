@@ -77,7 +77,12 @@ class ChatWindow : public BWindow
 		BBitmap			*GetBitmapFromAttribute(const char *name, const char *attribute,
 							type_code type = 'BBMP');
 	
-		enum { SEND_MESSAGE = 1 };
+		enum { 
+			SEND_MESSAGE	= 1,
+			
+			SHOW_INFO		= 100,
+			BLOCK
+		 };
 		
 		entry_ref	fEntry;
 		char		fName[512];
@@ -98,7 +103,7 @@ class ChatWindow : public BWindow
 		Theme			*fTheme;
 		
 		float			fFontHeight;		
-//		BView			*fDock;
+		BView			*fDock;
 };
 
 #endif

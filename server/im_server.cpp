@@ -1284,6 +1284,15 @@ Server::MessageFromProtocols( BMessage * msg )
 		
 		if ( im_what == MESSAGE_RECEIVED )
 		{ // message received from contact, store the protocol in fPreferredProtocol
+			char status[256];
+			contact.GetStatus(status,sizeof(status));
+			
+			if ( strcmp(status,"Blocked") == 0 )
+			{ // contact blocked, dropping message!
+				LOG("im_server", LOW, "Dropping message from blocked contact [%s:%s]", protocol, id);
+				return;
+			}
+			
 			fPreferredProtocol[contact] = protocol;
 			LOG("im_server", DEBUG, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
 		}
@@ -1332,6 +1341,16 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	// calculate total status for contact
 	new_status = OFFLINE_TEXT;
 	
+	UpdateContactStatusAttribute(contact);
+}
+
+
+void
+Server::UpdateContactStatusAttribute( Contact & contact )
+{
+	// calculate total status for contact
+	string new_status = OFFLINE_TEXT;
+	
 	for ( int i=0; i<contact.CountConnections(); i++ )
 	{
 		char connection[512];
@@ -1357,17 +1376,17 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	if ( node.InitCheck() != B_OK )
 	{
-		_ERROR("ERROR: Invalid node when setting new status", msg);
+		_ERROR("ERROR: Invalid node when setting new status");
 	} else
 	{ // node exists, write status
-		status = new_status.c_str();
+		const char * status = new_status.c_str();
 		
 		if ( node.WriteAttr(
 			"IM:status", B_STRING_TYPE, 0,
 			status, strlen(status)+1
 		) != (int32)strlen(status)+1 )
 		{
-			_ERROR("Error writing status attribute",msg);
+			_ERROR("Error writing status attribute");
 		}
 		
 		BBitmap *large = NULL;
@@ -1398,6 +1417,7 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 		};
 	}
 }
+
 
 /**
 	Query for all files with a IM:status and set it to OFFLINE_TEXT
@@ -1443,6 +1463,15 @@ Server::SetAllOffline()
 		if ( e.GetName(filename) != B_OK )
 			strcpy(filename,"<no filename?!>");
 			
+		if ( c.GetStatus(status, sizeof(status)) == B_OK )
+		{
+			if ( strcmp(status, "Blocked") == 0 )
+			{
+				LOG("im_server", DEBUG, "Skipping contact %s (%s), filename: %s", name, nickname, filename);
+				continue;
+			}
+		}
+		
 		LOG("im_server", DEBUG, "Setting %s (%s) offline, filename: %s", name, nickname, filename);
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )

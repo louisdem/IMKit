@@ -333,3 +333,9 @@ Contact::GetEmail( char * buffer, int size )
 {
 	return ReadAttribute("META:name",buffer,size);
 }
+
+status_t
+Contact::GetStatus( char * buffer, int size )
+{
+	return ReadAttribute("IM:status",buffer,size);
+}
