@@ -9,6 +9,7 @@
 #include <libim/Helpers.h>
 #include <Mime.h>
 #include <Path.h>
+#include <MenuBar.h>
 
 const char *kImNewMessageSound = "IM Message Received";
 const float kPadding = 2.0;
@@ -31,22 +32,31 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	fChangedNotActivated(false),
 	fStatusBar(NULL)
 {
+	// Set window size limits
+	SetSizeLimits(
+		220, 8000, // width,
+		150, 8000  // height
+	);
+	
+	// get the size of various things
 	font_height height;
 	be_plain_font->GetHeight(&height);
 	fFontHeight = height.ascent + height.descent + height.leading;
-
+	
 	kButtonWidth = iconBarSize;
 	float temp = be_plain_font->StringWidth(kWidestButtonText);
-
+	
 	if (temp > kButtonWidth) kButtonWidth = temp;
 	kButtonWidth += kPadding * 2;
-
+	
 	kButtonHeight = iconBarSize + fFontHeight + (kPadding * 3);
 	kButtonDockHeight = kButtonHeight + (kPadding * 3);
-
+	
+	// default window size
 	BRect windowRect(100, 100, 400, 300);
 	BPoint inputDivider(0, 150);
-
+	
+	// load window size if possible
 	if (LoadSettings() == B_OK) {
 		bool was_ok = true;
 		
@@ -64,15 +74,17 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 		}
 	}
 	
+	// sanity check for divider location
 	if ( inputDivider.y > windowRect.Height() - 50 )
 	{
 		LOG("im_client", liLow, "Insane divider, fixed.");
 		inputDivider.y = windowRect.Height() - 50;
 	}
 	
+	// set size and position
 	MoveTo(windowRect.left, windowRect.top);
 	ResizeTo(windowRect.Width(), windowRect.Height());
-
+	
 	// create views
 	BRect textRect = Bounds();
 	BRect inputRect = Bounds();
@@ -182,14 +194,14 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	inputRect.top = inputDivider.y + 5;
 	inputRect.right -= B_V_SCROLL_BAR_WIDTH;
 	inputRect.bottom -= fFontHeight + (kPadding * 4);
-		
+	
 	BRect inputTextRect = inputRect;
 	inputTextRect.OffsetTo(kPadding, kPadding);
 	inputTextRect.InsetBy(kPadding * 2, kPadding * 2);
 	
 	fInput = new BTextView(inputRect, "input", inputTextRect, B_FOLLOW_ALL,
 		B_WILL_DRAW);
-
+	
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fInput->SetViewUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
 	fInput->SetLowUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
@@ -208,16 +220,16 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	);
 
 	AddChild(fInputScroll);	
-
+	
 	fInput->SetWordWrap(true);
 	fInput->SetStylable(false);
 	fInput->MakeSelectable(true);
 	
 	BRect statusRect = Bounds();
 	statusRect.top = inputRect.bottom + kPadding;
-
+	
 	fStatusBar = new StatusBar(statusRect);
-
+	
 	AddChild(fStatusBar);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fStatusBar->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -228,29 +240,40 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	fStatusBar->SetLowColor(245, 245, 245, 0);
 	fStatusBar->SetHighColor(0, 0, 0, 0);
 #endif
-
+	
 	BPopUpMenu *pop = new BPopUpMenu("Templates", true, true);
 	fProtocolMenu = new BMenuField(
 		BRect(kPadding, kPadding, Bounds().bottom - kPadding, 100),
 		"Field", NULL, pop);
 	fStatusBar->AddItem(fProtocolMenu);
+	
+	fInfoView = new BStringView(BRect(fProtocolMenu->Frame().right+5, 2,
+		fStatusBar->Bounds().right - kPadding,
+		fStatusBar->Bounds().bottom - kPadding), "infoView",
+		"", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM, B_WILL_DRAW);
+	fStatusBar->AddItem(fInfoView);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+	fInfoView->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
+	fInfoView->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
+	fInfoView->SetHighUIColor(B_UI_PANEL_TEXT_COLOR);
+#else
+	fInfoView->SetViewColor(245, 245, 245, 0);
+	fInfoView->SetLowColor(245, 245, 245, 0);
+	fInfoView->SetHighColor(0, 0, 0, 0);
+#endif
+	
+	// need to build the menu here since it fiddles with fInfoView
 	BuildProtocolMenu();
 	pop->ItemAt(0)->SetMarked(true);
 
-	fTypingView = new BStringView(BRect(200, 2,
-		fStatusBar->Bounds().right - kPadding,
-		fStatusBar->Bounds().bottom - kPadding), "adf",
-		"", B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM, B_WILL_DRAW);
-	fStatusBar->AddItem(fTypingView);
-	
 	BRect resizeRect = Bounds();
 	resizeRect.top = inputDivider.y + 1;
 	resizeRect.bottom = inputDivider.y + 4;
-
+	
 	fResize = new ResizeView(fInputScroll, resizeRect, "resizer",
 		B_FOLLOW_BOTTOM | B_FOLLOW_LEFT | B_FOLLOW_RIGHT);
 	AddChild(fResize);
-
+	
 	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command);
 	fInput->AddFilter((BMessageFilter *)fFilter);
 	
@@ -498,6 +521,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 				return;
 				
 			if ( contact != fEntry )
+				// message not for us, skip it.
 				return;
 			
 			int32 im_what=IM::ERROR;
@@ -548,8 +572,6 @@ ChatWindow::MessageReceived( BMessage * msg )
 						fText->Append(msg->FindString("error"), C_TEXT, C_TEXT, F_TEXT);
 						fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
 					
-						fText->ScrollToSelection();
-
 						if (!IsActive()) startNotify();
 					}
 				}	break;
@@ -594,20 +616,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 				}	break;
 				
 				case IM::CONTACT_STARTED_TYPING: {	
-					IM::Contact c(&fEntry);
-	
-/*					char nick[512];
-					c.GetNickname(nick, sizeof(nick));
-					
-					BString text = nick;
-					text << " is typing!";
-					fTypingView->SetText(text.String());
-					*/
 					startTypingTimer();
 				} break;
 				
 				case IM::CONTACT_STOPPED_TYPING: {
-				//	fTypingView->SetText("");
 					stopTypingTimer();
 				} break;
 				
@@ -639,6 +651,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 				fInput->SetText("");
 			} else {
 				LOG("im_client", liHigh, "Error sending message to im_server");
+
+				fText->Append("Error: im_server not running, can't send message\n", C_TEXT, C_TEXT, F_TEXT);
+					
+				fText->ScrollToSelection();
 			};
 		}	break;
 		
@@ -730,47 +746,25 @@ ChatWindow::MessageReceived( BMessage * msg )
 					break;
 			}
 		}	break;
+		
 		case kResizeMessage: {
 			BView *view = NULL;
 			msg->FindPointer("view", reinterpret_cast<void**>(&view));
 			if (dynamic_cast<BScrollView *>(view)) {
 				BPoint point;
 				msg->FindPoint("loc", &point);
-				//printf("Point:\n");
-				point.PrintToStream();
-				//int rows = ceil((fTextScroll->Frame().Height() - point.y) / fFontHeight);
-				//printf("Can have %i rows\n", rows);
 				
 				fResize->MoveTo(fResize->Frame().left, point.y);
-//				fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
+				
 				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1 - kButtonDockHeight - 1);
-
+				
 				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 1);
-
-//LOG("im_client", liLow, "%.2f - %.2f = %.2f", fInputScroll->Frame().top,
-//	fStatusBar->Frame().top, fInputScroll->Frame().top - fStatusBar->Frame().top);
-//				fInputScroll->ResizeTo(fInputScroll->Bounds().right,
-//					fInputScroll->Frame().top - fStatusBar->Frame().top);
-									
-//					(point.y + fResize->Frame().bottom + 1) - fStatusBar->Frame().top);
-
-//				fInputScroll->ResizeTo(fInputScroll->Bounds().right,
-//					(point.y + fResize->Frame().bottom + 1) - fStatusBar->Frame().top);
-//LOG("im_client", liLow, "(%.2f + 1) - %.2f = %.2f", point.y, fStatusBar->Frame().top,
-//	(point.y + 1) - fStatusBar->Frame().top);
-
-//
-				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 1);
-				fInputScroll->ResizeTo(fInputScroll->Frame().Width(),
-//					point.y  - fStatusBar->Frame().top);
-					Bounds().bottom - point.y  - fStatusBar->Frame().top);
-
-//				printf("status bar top: %.2f / %.2f\n", fStatusBar->Bounds().top, fStatusBar->Frame().top);
-//				printf("Point: %.2f\n", point.y);
-//				printf("Window: %2.f / %.2f\n", Bounds().bottom, Frame().bottom);
-//				fInputScroll->ResizeTo(fInputScroll->Frame().Width(), Bounds().bottom - point.y);// - fStatusBar->Frame().top);
-//				printf("Input: (%.2f, %.2f)\n", fInputScroll->Frame().top, fInputScroll->Frame().bottom);
-//				printf("Input: (%.2f, %.2f)\n", fInputScroll->Bounds().top, fInputScroll->Bounds().bottom);
+				fInputScroll->ResizeTo( 
+					fInputScroll->Bounds().Width(),
+					fStatusBar->Frame().top - fInputScroll->Frame().top
+				);
+				fInput->SetTextRect(fInput->Bounds());
+				fInput->ScrollToSelection();
 			};
 		} break;
 		
@@ -819,7 +813,6 @@ ChatWindow::MessageReceived( BMessage * msg )
 		} break;
 		
 		case CLEAR_TYPING:
-			//fTypingView->SetText("");
 			stopTypingTimer();
 			break;
 		
@@ -941,17 +934,17 @@ void ChatWindow::BuildProtocolMenu(void) {
 	BPath iconDir;
 	find_directory(B_USER_ADDONS_DIRECTORY, &iconDir, true);
 	iconDir.Append("im_kit/protocols");
-
+	
 	BMenu *menu = fProtocolMenu->Menu();
 	if (menu == NULL) return;
 	
 //	You have to do this twice... buggered if I know why...
 	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
 	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
-
+	
 	menu->AddItem(new IconMenuItem(NULL, "Any Protocol", NULL, NULL));
 	menu->AddSeparatorItem();
-
+	
 	for (int32 i = 0; statusMsg.FindString("connection", i); i++) {
 		BString connection = statusMsg.FindString("connection", i);
 		BString status = statusMsg.FindString("status", i);
@@ -973,6 +966,20 @@ void ChatWindow::BuildProtocolMenu(void) {
 	};
 	
 	menu->SetFont(be_plain_font);
+	
+	fProtocolMenu->Invalidate();
+	
+	// resize fInfoView
+	printf("fProtocolMenu: "); fProtocolMenu->Frame().PrintToStream();
+	printf("fStatusBar: "); fStatusBar->Frame().PrintToStream();
+//	fInfoView->MoveTo( fProtocolMenu->MenuBar()->Frame().right + 5, 2 );
+	fInfoView->MoveTo( 200, 2 );
+	fInfoView->ResizeTo(
+//		fStatusBar->Bounds().Width() - fInfoView->Bounds().Width() - 2,
+		fStatusBar->Bounds().Width() - 200 - 2,
+		fStatusBar->Bounds().Height() - 4
+	);
+	printf("fInfoView: "); fInfoView->Frame().PrintToStream();
 };
 
 void
@@ -986,13 +993,13 @@ ChatWindow::startTypingTimer()
 	if ( fTypingTimer->InitCheck() != B_OK )
 		LOG("im_client", liHigh, "InitCheck fail on typing timer");
 	
-	fTypingView->SetText("User is typing..");
+	fInfoView->SetText("User is typing..");
 }
 
 void
 ChatWindow::stopTypingTimer()
 {
-	fTypingView->SetText("");
+	fInfoView->SetText("");
 	
 	if ( fTypingTimer )
 		delete fTypingTimer;

@@ -112,7 +112,7 @@ class ChatWindow : public BWindow
 		IM::Manager		* fMan;
 		bool			fChangedNotActivated;
 		char			fTitleCache[512];
-
+		
 		BMessage		fWindowSettings;
 		Theme			*fTheme;
 		
@@ -121,7 +121,7 @@ class ChatWindow : public BWindow
 		
 		BMenuField		*fProtocolMenu;
 		StatusBar		*fStatusBar;
-		BStringView		*fTypingView;
+		BStringView		*fInfoView;
 		
 		BMessageRunner	*fTypingTimer;
 };
