@@ -1687,8 +1687,10 @@ Server::GenerateSettingsTemplate()
 	Update im_server settings from message
 */
 status_t
-Server::UpdateOwnSettings( BMessage settings )
+Server::UpdateOwnSettings( BMessage & settings )
 {
+	LOG("im_server", liDebug, "Server::UpdateOwnSettings");
+	
 	bool auto_start=false;
 	
 	if ( settings.FindBool("auto_start", &auto_start ) == B_OK )
@@ -2077,6 +2079,12 @@ Server::handle_SETTINGS_UPDATED( BMessage * msg )
 	} else
 	if ( sig = msg->FindString("client") )
 	{ // notify client of change in settings
+		if ( strcmp("im_server", sig) == 0 )
+		{
+			if ( im_load_client_settings(sig, &settings) == B_OK )
+				UpdateOwnSettings(settings);
+		}
+		
 		Broadcast(msg);
 	} else
 	{ // malformed

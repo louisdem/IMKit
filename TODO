@@ -18,10 +18,11 @@ ___ Things to fix
 * Change 'command sends message' option to a one-of-two menu
 * Info popper: the title should have a say when deciding the window size
 * Make the clients handle the new 'multiple contacts per message' thing
+* Remove charset setting from MSN, it's not used anyway.
 
 ___ New features
 
-More sound events, for example when connected, disconnected, contact log in etc.
+Add B_MS_WINDOWS_1251_CONVERSION to protocols
 
 Support for wide char encodings (utf-16 etc)?
 

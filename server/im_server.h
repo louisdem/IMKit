@@ -90,7 +90,7 @@ class Server : public BApplication
 		status_t	GetSettings(const char * protocol, BMessage*);
 		status_t	SetSettings(const char * protocol, BMessage*);
 		BMessage	GenerateSettingsTemplate();
-		status_t	UpdateOwnSettings( BMessage );
+		status_t	UpdateOwnSettings( BMessage & );
 		void		InitSettings();
 		
 		void	handleDeskbarMessage( BMessage * );
