@@ -113,6 +113,9 @@ class Server : public BApplication
 		void	StartAutostartApps();
 		void	StopAutostartApps();
 		
+		// Adds "userfriendly" protocol strings, then sends reply
+		void	sendReply(BMessage* msg, BMessage* reply);
+		
 		void	reply_GET_LOADED_PROTOCOLS(BMessage*);
 		void	reply_SERVER_BASED_CONTACT_LIST(BMessage*);
 		void	reply_GET_CONTACT_STATUS( BMessage * );

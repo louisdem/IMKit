@@ -698,6 +698,20 @@ Server::Process( BMessage * msg )
 void
 Server::Broadcast( BMessage * msg )
 {
+	// add friendly protocol name if applicable
+	const char * protocol;
+	for ( int i=0; msg->FindString("protocol",i,&protocol)==B_OK; i++ )
+	{
+		map<string,Protocol*>::iterator proto;
+		proto = fProtocols.find( protocol );
+		
+		if ( proto != fProtocols.end() )
+			msg->AddString( "userfriendly", proto->second->GetFriendlySignature() );
+		else
+			msg->AddString("userfriendly", "<invalid protocol>");
+	}
+	// done adding fancy names
+	
 	list<BMessenger>::iterator i;
 	
 	for ( i=fMessengers.begin(); i != fMessengers.end(); i++ )
@@ -2284,7 +2298,7 @@ Server::reply_GET_CONTACT_STATUS( BMessage * msg )
 			reply.AddString("status", fStatus[connection].c_str() );
 	}
 	
-	msg->SendReply(&reply);
+	sendReply(msg,&reply);
 }
 
 /**
@@ -2302,7 +2316,7 @@ void Server::reply_GET_OWN_STATUSES(BMessage *msg) {
 		reply.AddString("status", fStatus[p->GetSignature()].c_str());
 	};
 
-	msg->SendReply(&reply);
+	sendReply(msg,&reply);
 };
 
 /**
@@ -2318,13 +2332,12 @@ Server::reply_GET_LOADED_PROTOCOLS( BMessage * msg )
 	for ( i = fProtocols.begin(); i != fProtocols.end(); i++ )
 	{
 		reply.AddString("protocol", i->second->GetSignature() );
-		reply.AddString("userfriendly", i->second->GetFriendlySignature() );
 		entry_ref ref;
 		get_ref_for_path(fAddOnInfo[i->second].path.String(), &ref);
 		reply.AddRef("ref", &ref);
 	}
 	
-	msg->SendReply( &reply );
+	sendReply(msg,&reply);
 }
 
 /**
@@ -2386,7 +2399,7 @@ void Server::reply_GET_ALL_CONTACTS(BMessage *msg) {
 		reply.AddRef("contact", &i->first.entry);
 	};
 	
-	msg->SendReply(&reply);
+	sendReply(msg,&reply);
 };
 
 /**
@@ -2470,7 +2483,7 @@ Server::reply_GET_CONTACTS_FOR_PROTOCOL( BMessage * msg )
 	
 	GetContactsForProtocol( msg->FindString("protocol"), &reply );
 	
-	msg->SendReply( &reply );
+	sendReply(msg,&reply);
 }
 
 void
@@ -2750,4 +2763,24 @@ Server::ReadyToRun()
 	SetAllOffline();
 	StartAutostartApps();
 
+}
+
+void
+Server::sendReply( BMessage * msg, BMessage * reply )
+{
+	// add friendly protocol name if applicable
+	const char * protocol;
+	for ( int i=0; reply->FindString("protocol",i,&protocol)==B_OK; i++ )
+	{
+		map<string,Protocol*>::iterator proto;
+		proto = fProtocols.find( protocol );
+		
+		if ( proto != fProtocols.end() )
+			reply->AddString( "userfriendly", proto->second->GetFriendlySignature() );
+		else
+			reply->AddString("userfriendly", "<invalid protocol>");
+	}
+	// done adding fancy names
+	
+	msg->SendReply(reply);
 }
