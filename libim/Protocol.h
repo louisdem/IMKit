@@ -71,7 +71,8 @@ class Protocol
 			OFFLINE_MESSAGES	= 1 << 1,
 			EXTENDED_AWAY		= 1 << 2,
 			BUDDY_ICON			= 1 << 3,
-			SERVER_BUDDY_LIST	= 1 << 4
+			SERVER_BUDDY_LIST	= 1 << 4,
+			AWAY_MESSAGES		= 1 << 5,
 		};
 		
 		/**

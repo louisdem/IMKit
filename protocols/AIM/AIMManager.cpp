@@ -39,8 +39,8 @@ const char *kErrors[] = {
 };
 
 
-void PrintHex(const unsigned char* buf, size_t size) {
-	if ( g_verbosity_level != liDebug ) {
+void PrintHex(const unsigned char* buf, size_t size, bool override = false) {
+	if ((g_verbosity_level != liDebug) && (override == false)){
 		// only print this stuff in debug mode
 		return;
 	}
@@ -846,6 +846,7 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 };
 
 
+//#pragma mark -
 // -- Interface
 
 status_t AIMManager::MessageUser(const char *screenname, const char *message) {
@@ -861,12 +862,29 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	uint8 screenLen = strlen(screenname);
 	msg->AddRawData((uchar *)&screenLen, sizeof(screenLen));
 	msg->AddRawData((uchar *)screenname, screenLen);
-
-	//TLV *msgData = new TLV(0x0002);
-	//msgData->AddTLV(new TLV(0x0501, "", 0));
-	msg->AddRawData((uchar []){0x00, 0x02}, 2);
 	
-	BString msg_encode(message);
+	TLV *msgData = new TLV(0x0002);
+	msgData->AddTLV(new TLV(0x0501, (char []){0x01}, 1));	// Text capability
+	
+	BString html = message;
+	encode_html(html);
+	char *msgFragment = (char *)calloc(html.Length() + 5, sizeof(char));
+	msgFragment[0] = 0x00; // UTF-8. Maybe... who knows?
+	msgFragment[1] = 0x00;
+	msgFragment[2] = 0xff;
+	msgFragment[3] = 0xff;
+	strlcpy(msgFragment + 4, html.String(), html.Length() + 1);
+	
+	msgData->AddTLV(new TLV(0x0101, msgFragment, html.Length() + 5));
+	
+	free(msgFragment);
+	msg->AddTLV(msgData);
+	Send(msg);
+	return B_OK;
+
+//	Below kept for posterity.
+
+/*	BString msg_encode(message);
 	encode_html(msg_encode);
 	
 	int32 utf16_size = msg_encode.Length()*2+2;
@@ -895,22 +913,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	buffer[3] = 0xff;
 	
 	int16 utf16_size_be = htons(utf16_size + 0x0d);
-	msg->AddRawData((uchar [])&utf16_size_be, 2);
-	msg->AddRawData((uchar []){0x05, 0x01, 0x00, 0x01, 0x01}, 5);
-	
-	memcpy((void *)(buffer + 4), utf16_data, utf16_size);
-	msg->AddTLV(new TLV(0x0101, buffer, utf16_size + 4));
-	
-	free(utf16_data );
-	free(buffer);
-	
-	//msg->AddTLV(msgData);
-	//msg->AddTLV(0x0006, "", 0);
-	//msg->AddTLV(0x0009, "", 0);
-	
-	Send(msg);
-
-	return B_OK;
+*/
 };
 
 status_t AIMManager::AddBuddy(const char *buddy) {

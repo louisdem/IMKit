@@ -13,18 +13,20 @@
 
 #include <UTF8.h>
 
-extern "C"
-IM::Protocol * load_protocol() {
-	return new AIMProtocol();
-}
+extern "C" {
+	IM::Protocol * load_protocol() {
+		return new AIMProtocol();
+	}
+};
 
 AIMProtocol::AIMProtocol()
-	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST ),
+	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST
+	| Protocol::AWAY_MESSAGES),
 	  fThread(0) {
 	
 	fPassword = NULL;
 	fScreenName = NULL;
-	fEncoding = 0xffff; // No converstion == UTF-8
+	fEncoding = 0xffff; // No conversion == UTF-8
 	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 };
 
@@ -76,12 +78,12 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						list<char *> buddies;
 						for ( int i=0; msg->FindString("id",i); i++ )
 						{
-							const char * id = msg->FindString("id",i);//NormalizeNick(msg->FindString("id",i)).String();
+							const char * id = msg->FindString("id",i);
 							buddies.push_back(strdup(id));
 						};
 						fManager->AddBuddies(buddies);
 					} else {
-						fManager->AddBuddy(msg->FindString("id")); //NormalizeNick(msg->FindString("id")).String());
+						fManager->AddBuddy(msg->FindString("id"));
 					};
 				}	break;
 				
@@ -179,31 +181,15 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					
 //					fManager->TypingNotification(id, FINISHED_TYPING);
 				} break;
-/*				case IM::SEND_AUTH_ACK:
-				{
-					bool authreply;
+				
+				case IM::GET_AWAY_MESSAGE: {
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
 					
-					if ( !fClient.icqclient.isConnected() )
-						return B_ERROR;
-					
-					const char * id = msg->FindString("id");
-					int32 button = msg->FindInt32("which");
-					
-					if (button == 0) {
-						LOG("icq", DEBUG, "Authorization granted to %s", id);
-						authreply = true;
-					} else {
-						LOG("icq", DEBUG, "Authorization rejected to %s", id);
-						authreply = false;					
-					}
-						
-					ICQ2000::ContactRef c = new ICQ2000::Contact( atoi(id) );
-					
-					AuthAckEvent * ev = new AuthAckEvent(c, authreply);
-
-					fClient.icqclient.SendEvent( ev );									
-				}
-*/				default:
+//					fManager->
+				};
+				
+				default:
 					break;
 			}
 			
@@ -218,10 +204,6 @@ status_t AIMProtocol::Process(BMessage * msg) {
 const char * AIMProtocol::GetSignature() {
 	return "AIM";
 }
-
-//uint32 AIMProtocol::Capabilities() {
-//	return PROT_AWAY_MESSAGES | PROT_TYPING_NOTIFICATIONS;
-//};
 
 BMessage AIMProtocol::GetSettingsTemplate() {
 	BMessage main_msg(IM::SETTINGS_TEMPLATE);

@@ -4,7 +4,7 @@
 #include <libim/Helpers.h>
 
 uint8 kFLAPHeader = 6;
-extern void PrintHex(unsigned char* buf, size_t size);
+extern void PrintHex(unsigned char* buf, size_t size, bool override = false);
 
 Flap::Flap(uint8 channel) {
 	fChannelID = channel;

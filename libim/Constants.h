@@ -45,7 +45,10 @@ enum im_what_code {
 	// Stop listening to status changes from these contacts
 	UNREGISTER_CONTACTS = 20,
 	// Progress message received, could be login sequence, file transfer etc
-	PROGRESS			= 21
+	PROGRESS			= 21,
+	
+	GET_AWAY_MESSAGE =  22,
+	AWAY_MESSAGE = 23
 };
 
 /**

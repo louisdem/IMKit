@@ -47,7 +47,8 @@ enum {
 class AIMConnection;
 class AIMHandler;
 
-const char kEncoding[] = "text/aolrtf; charset=\"us-ascii\"";
+//const char kEncoding[] = "text/aolrtf; charset=\"us-ascii\"";
+const char kEncoding[] = "text/aolrtf; charset=\"utf-8\"";
 const char kBuddyIconCap [] = {
 	0x09, 0x46, 0x13, 0x46,
 	0x4c, 0x7f, 0x11, 0xd1,

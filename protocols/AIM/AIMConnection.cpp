@@ -4,7 +4,7 @@
 #include <sys/select.h>
 
 void remove_html(char *msg);
-void PrintHex(const unsigned char* buf, size_t size);
+void PrintHex(const unsigned char* buf, size_t size, bool override = false);
 const char *kProtocolName = "AIM";
 const char *kThreadName = "IM Kit: AIM Connection";
 
