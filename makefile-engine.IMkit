@@ -288,9 +288,9 @@ endif
 ifeq ($(RSRCS), )
 	DO_RSRCS :=
 else
-	DO_RSRCS := $(XRES) -o $(TARGET) $(RSRCS)
+	DO_RSRCS := $(XRES) -o $(TARGET) $(RSRCS) ; if [ -f "$(NAME).svg" ]; then IconTool "$(INSTALL_DIR)/$(NAME)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; fi
 endif
-		
+
 # Install target helper
 ifeq ($(INSTALL_DIR), )
 	ifeq ($(TYPE), SHARED)
