@@ -17,6 +17,8 @@
 #include <libim/Contact.h>
 #include <libim/Helpers.h>
 
+const char *kImNewMessageSound = "IM Message Received";
+
 int main(void)
 {
 	MyApp app;
@@ -65,6 +67,8 @@ MyApp::MyApp()
 	fMan( new IM::Manager(BMessenger(this)) ),
 	fIsQuiting(false)
 {
+	add_system_beep(kImNewMessageSound, 0);
+
 	fMan->StartListening();
 	
 	SettingsWindow * settings = new SettingsWindow("ICQ");
@@ -355,6 +359,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 						char str[256];
 						sprintf(str, "√ %s", fTitleCache);
 						SetTitle(str);
+						system_beep(kImNewMessageSound);
 					}
 				}	break;
 			}
