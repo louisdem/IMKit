@@ -139,7 +139,8 @@ status_t MSNProtocol::Process(BMessage * msg) {
 							fManager->SetAway(false);
 						} else {
 							LOG(kProtocolName, liDebug, "Calling fManager.Login()");
-							fManager->Login("gateway.messenger.hotmail.com", kDefaultPort,
+//							fManager->Login("gateway.messenger.hotmail.com", kDefaultPort,
+							fManager->Login("messenger.hotmail.com", kDefaultPort,
 								fPassport.String(), fPassword.String(),
 								fDisplayName.String());
 						};

@@ -444,11 +444,11 @@ int32 MSNConnection::NetworkSend(Command *command) {
 		int32 sent_data = 0;
 		
 		// uncomment following to see exactly what's sent
-/*		char * blah = (char*)malloc(data_size+1);
+		char * blah = (char*)malloc(data_size+1);
 		memcpy(blah, data, data_size);
 		blah[data_size] = 0;
 		printf("MSN sending command: [%s]\n", blah);
-		free(blah);*/
+		free(blah);
 		
 		while (sent_data < data_size) {
 			int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
@@ -626,6 +626,7 @@ void MSNConnection::ClearQueues(void) {
 };
 
 status_t MSNConnection::ProcessCommand(Command *command) {
+	command->Debug();
 	if (command->Type() == "VER") {
 		return handleVER( command );
 	} else
