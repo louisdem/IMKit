@@ -57,10 +57,12 @@ IM_DeskbarIcon::~IM_DeskbarIcon() {
 	delete fOfflineIcon;
 	delete fFlashIcon;
 	printf("Deleting fMenu (%p)...", fMenu);
-	delete fMenu;
+	if ( fMenu )
+		delete fMenu;
 	printf("... Done!\n");
 	printf("Deleting fQueryMenu (%p)...", fQueryMenu);
-	delete fQueryMenu;
+	if ( fQueryMenu )
+		delete fQueryMenu;
 	printf("... Done!\n");
 }
 
@@ -236,7 +238,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			if ( fFlashCount == 0 )
 			{
-				delete fMsgRunner;
+				if ( fMsgRunner ) delete fMsgRunner;
 				fMsgRunner = NULL;
 				fCurrIcon = fModeIcon;
 				Invalidate();

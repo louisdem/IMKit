@@ -20,16 +20,15 @@ ___ Things to fix
 * Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
 * MSN: Don't create connections for blocked contacts.
 * MSN: Crashes if trying to log in with no net connection
+* Crashes when chatting on ICQ - typing notifcations?
 
 ___ New features
 
+Setting something so ICQ displays as online with it's webfeatures
+
 Connect on startup, per protocol setting
 
-Progress indicator when logging in
-
 Show im_client on all workspaces option
-
-Add B_MS_WINDOWS_1251_CONVERSION to protocols
 
 Support for wide char encodings (utf-16 etc)?
 
@@ -48,7 +47,7 @@ Protocol icons in Info Popper status updates
 
 Invisibility
 
-New setting: Play sound on -every- message receive
+New setting: Play sound on -every- message received
 
 More attributes for info like timezone, location, etc?
 
