@@ -291,6 +291,7 @@ SettingsWindow::rebuildUI()
 					is_free_text = false;
 					
 					menu = new BPopUpMenu(name);
+//					menu->SetDivider(be_plain_font->StringWidth(name) + 10);
 					
 					for ( int x=0; curr.FindString("valid_value",x); x++ )
 					{

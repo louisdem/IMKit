@@ -101,23 +101,23 @@ Server::Server()
 	iconPath << "/Online";
 	
 	fIcons.AddPointer(ONLINE_TEXT "_small", (const void *)GetBitmapFromAttribute(
-		iconPath.String(), BEOS_SMALL_ICON));
+		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
 	fIcons.AddPointer(ONLINE_TEXT "_large", (const void *)GetBitmapFromAttribute(
-		iconPath.String(), BEOS_LARGE_ICON));
+		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 		
 	iconPath = prefsPath.Path();
 	iconPath << "/Away";
 	fIcons.AddPointer(AWAY_TEXT "_small", (const void *)GetBitmapFromAttribute(
-		iconPath.String(), BEOS_SMALL_ICON));
+		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
 	fIcons.AddPointer(AWAY_TEXT "_large", (const void *)GetBitmapFromAttribute(
-		iconPath.String(), BEOS_LARGE_ICON));
+		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 
 	iconPath = prefsPath.Path();
 	iconPath << "/Offline";
 	fIcons.AddPointer(OFFLINE_TEXT "_small", (const void *)GetBitmapFromAttribute(
-		iconPath.String(), BEOS_SMALL_ICON));
+		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
 	fIcons.AddPointer(OFFLINE_TEXT "_large", (const void *)GetBitmapFromAttribute(
-		iconPath.String(), BEOS_LARGE_ICON));
+		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 
 	SetAllOffline();
 
@@ -1246,6 +1246,7 @@ Server::MessageFromProtocols( BMessage * msg )
 			
 			p->Process( &connections );
 		}
+		handleDeskbarMessage(msg);
 	}
 	
 	// send it
@@ -1328,17 +1329,17 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 		fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&large));
 		
 		if (large != NULL) {
-			node.WriteAttr(BEOS_LARGE_ICON, 'ICON', 0, large->Bits(), 
+			node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
 				large->BitsLength());
 		} else {
-			node.RemoveAttr(BEOS_LARGE_ICON);
+			node.RemoveAttr(BEOS_LARGE_ICON_ATTRIBUTE);
 		};	
 
 		if (small != NULL) {
-			node.WriteAttr(BEOS_SMALL_ICON, 'MICN', 0, small->Bits(), 
+			node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
 				small->BitsLength());
 		} else {
-			node.RemoveAttr(BEOS_SMALL_ICON);
+			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
 	}
 }
@@ -1401,17 +1402,17 @@ Server::SetAllOffline()
 		fIcons.FindPointer(OFFLINE_TEXT "_large", reinterpret_cast<void **>(&large));
 		
 		if (large != NULL) {
-			node.WriteAttr(BEOS_LARGE_ICON, 'ICON', 0, large->Bits(), 
+			node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
 				large->BitsLength());
 		} else {
-			node.RemoveAttr(BEOS_LARGE_ICON);
+			node.RemoveAttr(BEOS_LARGE_ICON_ATTRIBUTE);
 		};	
 
 		if (small != NULL) {
-			node.WriteAttr(BEOS_SMALL_ICON, 'MICN', 0, small->Bits(), 
+			node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
 				small->BitsLength());
 		} else {
-			node.RemoveAttr(BEOS_SMALL_ICON);
+			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
 	}
 }
@@ -1677,5 +1678,7 @@ Server::handleDeskbarMessage( BMessage * msg )
 			LOG("im_server", DEBUG, "Got Deskbar messenger");
 			msg->FindMessenger("msgr", &fDeskbarMsgr);
 			break;
+		default:
+			fDeskbarMsgr.SendMessage(msg);
 	}
 }

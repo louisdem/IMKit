@@ -15,8 +15,8 @@ default .DEFAULT :
 	# copy the engine to a known location
 	-cp -u makefile-engine.IMkit $(BUILDHOME)/etc/makefile-engine.IMkit
 
-	# Unpack the status icons. 
-	-unzip -n server/StatusIcons.zip -d /boot/home/config/settings/im_kit/icons
+	# Unpack the Server icons.
+	-unzip -n server/Icons.zip -d /boot/home/config/settings/im_kit/icons
 
 	# Create the _APP_ link needed by the ICQ protocol. Note you must do make install
 	# for this to work.

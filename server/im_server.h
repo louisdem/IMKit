@@ -8,6 +8,8 @@
 #include <Messenger.h>
 #include <Query.h>
 
+#include "Utilities.h"
+
 #include <libim/Contact.h>
 #include <libim/Protocol.h>
 #include "AddOnInfo.h"
@@ -86,7 +88,5 @@ class Server : public BApplication
 };
 
 #define LOG_PREFIX "im_server"
-#define BEOS_SMALL_ICON "BEOS:M:STD_ICON"
-#define BEOS_LARGE_ICON "BEOS:L:STD_ICON"
 
 #endif

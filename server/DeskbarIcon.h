@@ -8,6 +8,11 @@
 #include <Messenger.h>
 #include <MessageRunner.h>
 
+#include "Utilities.h"
+
+#include <libim/Manager.h>
+#include <be/kernel/fs_attr.h>
+
 class _EXPORT IM_DeskbarIcon : public BView
 {
 	public:
@@ -36,18 +41,23 @@ class _EXPORT IM_DeskbarIcon : public BView
 			OPEN_SETTINGS	= 'opse',
 			RELOAD_SETTINGS = 'upse',
 			
+			CLOSE_IM_SERVER = 'imqu',
+			
 			SETTINGS_WINDOW_CLOSED = 'swcl'
 		};
+			
+		void				_init();
+//		BBitmap 			*GetBitmap( const char * name );
+		void				reloadSettings();
 		
-		void			_init();
-		BBitmap *		GetBitmap( const char * name );
-		void			reloadSettings();
-		
-		BResources		fResource;
-		BBitmap *		fCurrIcon;
-		
-		BBitmap *		fStdIcon;
-		BBitmap *		fFlashIcon;
+		BResources			fResource;
+
+		BBitmap				*fCurrIcon;
+		BBitmap				*fModeIcon;
+		BBitmap				*fOnlineIcon;
+		BBitmap				*fOfflineIcon;
+		BBitmap				*fAwayIcon;
+		BBitmap 			*fFlashIcon;
 		
 		// for flashing
 		int					fFlashCount, fBlink;
@@ -57,7 +67,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BWindow *			fSettingsWindow;
 		
 		// settings
-		bool		fShouldBlink;
+		bool				fShouldBlink;
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

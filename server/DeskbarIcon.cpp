@@ -13,6 +13,9 @@
 #include <Application.h>
 #include <Window.h>
 
+#include <Path.h>
+#include <FindDirectory.h>
+
 //#include "SettingsWindow.h"
 
 BView *
@@ -54,30 +57,43 @@ IM_DeskbarIcon::IM_DeskbarIcon( BMessage * archive )
 
 IM_DeskbarIcon::~IM_DeskbarIcon()
 {
+	delete fAwayIcon;
+	delete fOnlineIcon;
+	delete fOfflineIcon;
+	delete fFlashIcon;
 }
 
 void
 IM_DeskbarIcon::_init()
 {
-//	printf("IM: _init\n");
+	BPath iconDir;
+	find_directory(B_USER_SETTINGS_DIRECTORY, &iconDir, true);
+	iconDir.Append("im_kit/icons");
 	
-	// load resources
-	entry_ref ref;
-	BFile file;
-	
-	if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
-	{
-		file.SetTo( &ref, B_READ_ONLY );
+//	Load the Offline, Away, Online and Flash icons from disk
+	BString iconPath = iconDir.Path();
+	iconPath << "/DeskbarAway";
+	fAwayIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
+		'ICON');
+
+	iconPath = iconDir.Path();
+	iconPath << "/DeskbarOnline";
+	fOnlineIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
+		'ICON');
 		
-		fResource.SetTo(&file);
-	}
-	// ~load resources
-	
-	fStdIcon = GetBitmap("IM db icon");
-	fFlashIcon = GetBitmap("IM db icon flash");
-	
-	fCurrIcon = fStdIcon;
-	
+	iconPath = iconDir.Path();
+	iconPath << "/DeskbarOffline";
+	fOfflineIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
+		'ICON');
+
+	iconPath = iconDir.Path();
+	iconPath << "/DeskbarFlash";
+	fFlashIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
+		'ICON');
+
+//	Initial icon is the Offline icon
+	fCurrIcon = fModeIcon = fOfflineIcon;
+
 	fFlashCount = 0;
 	fBlink = 0;
 	fMsgRunner = NULL;
@@ -97,7 +113,7 @@ IM_DeskbarIcon::Draw( BRect rect )
 	{
 		SetDrawingMode(B_OP_OVER);
 		DrawBitmap( fCurrIcon, BPoint(0,0) );
-		SetDrawingMode(B_OP_COPY);
+//		SetDrawingMode(B_OP_COPY);
 	} else
 	{
 		SetHighColor(255,0,0);
@@ -108,7 +124,6 @@ IM_DeskbarIcon::Draw( BRect rect )
 status_t
 IM_DeskbarIcon::Archive( BMessage * msg, bool deep )
 {
-//	printf("IM_DeskbarIcon::Archive()\n");
 	status_t res = BView::Archive(msg,deep);
 	
 	msg->AddString("add_on", IM_SERVER_SIG );
@@ -116,14 +131,12 @@ IM_DeskbarIcon::Archive( BMessage * msg, bool deep )
 	
 	msg->AddString("class", "IM_DeskbarIcon");
 	
-//	printf("~IM_DeskbarIcon::Archive() returns %ld\n", res);
-	
 	return res;
 }
 
 void
 IM_DeskbarIcon::MessageReceived( BMessage * msg )
-{
+{	
 	switch ( msg->what )
 	{
 		case SETTINGS_WINDOW_CLOSED:
@@ -145,7 +158,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				fCurrIcon = fFlashIcon;
 			} else
 			{
-				fCurrIcon = fStdIcon;
+				fCurrIcon = fModeIcon;
 			}
 			
 			if ( oldIcon != fCurrIcon )
@@ -171,6 +184,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		}	break;
 		case IM::STOP_FLASHING:
 		{	
+			LOG("deskbar", HIGH, "Stopping teh flash\n");
 			BMessenger msgr;
 			if ( msg->FindMessenger("messenger", &msgr) == B_OK )
 			{
@@ -184,7 +198,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			{
 				delete fMsgRunner;
 				fMsgRunner = NULL;
-				fCurrIcon = fStdIcon;
+				fCurrIcon = fModeIcon;
 				Invalidate();
 			}
 			
@@ -204,14 +218,23 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			switch ( msg->what )
 			{
-				case SET_ONLINE:  newmsg.AddString("status",ONLINE_TEXT); break;
-				case SET_AWAY:    newmsg.AddString("status",AWAY_TEXT); break;
+				case SET_ONLINE: newmsg.AddString("status",ONLINE_TEXT); break;
+				case SET_AWAY: newmsg.AddString("status",AWAY_TEXT); break;
 				case SET_OFFLINE: newmsg.AddString("status",OFFLINE_TEXT); break;
 			}
+			
+			fCurrIcon = fModeIcon; 
+			Invalidate();
 			
 			IM::Manager man;
 			man.SendMessage(&newmsg);
 		}	break;
+		
+		case CLOSE_IM_SERVER: {
+			LOG("deskbar", LOW, "Got Quit message");
+			BMessenger msgr(IM_SERVER_SIG);
+			msgr.SendMessage(B_QUIT_REQUESTED);
+		} break;
 		
 		case OPEN_SETTINGS:
 		{
@@ -233,6 +256,25 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			LOG("deskbar", MEDIUM, "IM: Settings applied");
 		}	break;
 		
+		case IM::MESSAGE: {
+			int32 im_what;
+			msg->FindInt32("im_what", &im_what);
+			
+			switch (im_what) {
+				case IM::STATUS_SET: {
+					const char *status = msg->FindString("status");
+					
+					LOG("deskbar", LOW, "Status set to %s", status);
+					if (strcmp(status, ONLINE_TEXT) == 0) fModeIcon = fOnlineIcon;
+					if (strcmp(status, AWAY_TEXT) == 0) fModeIcon = fAwayIcon;
+					if (strcmp(status, OFFLINE_TEXT) == 0) fModeIcon = fOfflineIcon;
+					
+					fCurrIcon = fModeIcon;
+					Invalidate();
+				} break; 
+			};
+		} break;
+
 		default:
 			BView::MessageReceived(msg);
 	}
@@ -256,12 +298,15 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 		status->SetTargetForItems( this );
 		
 		menu->AddItem(status);
-		
 		menu->AddSeparatorItem();
-		
-		// settings
+
+//		settings
 		menu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
-		
+	
+//		Quit
+		menu->AddSeparatorItem();
+		menu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
+
 		menu->SetTargetForItems( this );
 		
 		menu->Go(
@@ -281,14 +326,26 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			(*i).SendMessage( IM::DESKBAR_ICON_CLICKED );
 		}
 	}
+	
+	if (buttons & B_TERTIARY_MOUSE_BUTTON) {
+		entry_ref ref;
+		if (get_ref_for_path("/boot/home/people/", &ref) != B_OK) return;
+		
+		BMessage openPeople(B_REFS_RECEIVED);
+		openPeople.AddRef("refs", &ref);
+		
+		BMessenger tracker("application/x-vnd.Be-TRAK");
+		tracker.SendMessage(&openPeople);
+	};
+
+		
 }
 
 void
 IM_DeskbarIcon::AttachedToWindow()
 {
 	// give im_server a chance to start up
-	snooze(500*1000);
-	
+	snooze(500*1000);	
 	reloadSettings();
 	
 	// register with im_server
@@ -311,6 +368,7 @@ IM_DeskbarIcon::DetachedFromWindow()
 
 // Some code borrowed from CKJ <cedric-vincent@wanadoo.fr>
 // originally in USB Deskbar View <http://www.bebits.com/app/3497>
+/*
 BBitmap *
 IM_DeskbarIcon::GetBitmap( const char * name )
 {
@@ -344,6 +402,7 @@ IM_DeskbarIcon::GetBitmap( const char * name )
 	// done!
 	return bitmap;
 }
+*/
 
 void
 IM_DeskbarIcon::reloadSettings()
