@@ -1,6 +1,9 @@
 #include "AwayMessageWindow.h"
 
+#include <String.h>
+
 #include <stdio.h>
+#include <string.h>
 
 const float kPadding = 5.0;
 
@@ -32,7 +35,9 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 #else
 	fView->SetViewColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
 	fView->SetLowColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
-	fView->SetHighColor( ui_color(B_PANEL_TEXT_COLOR) );
+	// XXX bga : R5 has no B_PANEL_TEXT_COLOR, I am guessing it is supposed
+	// to be black as default so I am setting this to black. 
+	fView->SetHighColor(0, 0, 0, 255);
 #endif	
 	AddChild(fView);
 
