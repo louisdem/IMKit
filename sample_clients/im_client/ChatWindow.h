@@ -95,7 +95,9 @@ class ChatWindow : public BWindow
 			EMAIL,
 			AUTH,
 			
-			CLEAR_TYPING	= 1000
+			CLEAR_TYPING	= 1000,
+			PROTOCOL_SELECTED,
+			PROTOCOL_SELECTED2
 		 };
 		
 		entry_ref	fEntry;
@@ -124,6 +126,7 @@ class ChatWindow : public BWindow
 		BStringView		*fInfoView;
 		
 		BMessageRunner	*fTypingTimer;
+		BMessageRunner	*fProtocolHack; // used to circumvent a BMenuField bug. m_eiman knows.
 };
 
 #endif

@@ -42,7 +42,7 @@ void StatusBar::Draw(BRect update) {
 	SetDrawingMode(B_OP_OVER);
 	SetHighColor(0, 0, 0, 255);
 	
-	for (int32 i = 0; i < fViews.CountItems(); ++i) {
+/*	for (int32 i = 0; i < fViews.CountItems(); ++i) {
 		if (i) {
 			DrawSplitter(width += 3);
 			width += 5;
@@ -54,7 +54,10 @@ void StatusBar::Draw(BRect update) {
 			view->GetPreferredSize(&w, &h);
 			width = w;
 	    }
-	};
+	};*/
+	for ( int32 i=0; i<fViews.CountItems()-1; i++ ) {
+		DrawSplitter( ViewAt(i)->Frame().right + 3 );
+	}
 }
 
 void StatusBar::DrawSplitter(float x) {
@@ -73,3 +76,17 @@ void StatusBar::DrawSplitter(float x) {
 	PopState();
 };
 
+void StatusBar::PositionViews() {
+	float currw = 0;
+	
+	for ( int32 i=0; i<fViews.CountItems(); i++ ) {
+		BView * view = ViewAt(i);
+		
+		view->MoveTo( currw, view->Frame().top );
+		view->Invalidate();
+		
+		currw = view->Frame().right + 6;
+	}
+	
+	Invalidate();
+}

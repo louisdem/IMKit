@@ -10,6 +10,7 @@
 #include <Mime.h>
 #include <Path.h>
 #include <MenuBar.h>
+#include <MessageRunner.h>
 
 const char *kImNewMessageSound = "IM Message Received";
 const float kPadding = 2.0;
@@ -30,7 +31,8 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	fEntry(ref),
 	fMan( new IM::Manager(BMessenger(this))),
 	fChangedNotActivated(false),
-	fStatusBar(NULL)
+	fStatusBar(NULL),
+	fProtocolHack(NULL)
 {
 	// Set window size limits
 	SetSizeLimits(
@@ -247,6 +249,8 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 		"Field", NULL, pop);
 	fStatusBar->AddItem(fProtocolMenu);
 	
+	// fInfoView must be the LAST thing added to fStatusBar, otherwise the
+	// resizing of it will be all bonkers.
 	fInfoView = new BStringView(BRect(fProtocolMenu->Frame().right+5, 2,
 		fStatusBar->Bounds().right - kPadding,
 		fStatusBar->Bounds().bottom - kPadding), "infoView",
@@ -368,7 +372,10 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 
 	// set up timer for clearing typing view
 	fTypingTimer = NULL;
-//	startTypingTimer();
+	
+	// this message runner needed to fix a BMenuField bug.
+	BMessage protoHack(PROTOCOL_SELECTED2);
+	fProtocolHack = new BMessageRunner( BMessenger(this), &protoHack, 1000, 1 );
 }
 
 ChatWindow::~ChatWindow()
@@ -398,6 +405,9 @@ ChatWindow::~ChatWindow()
 	if (fStatusBar) fStatusBar->RemoveSelf();
 	delete fStatusBar;
 
+	if ( fProtocolHack )
+		delete fProtocolHack;
+	
 	fMan->Lock();
 	fMan->Quit();
 }
@@ -816,6 +826,24 @@ ChatWindow::MessageReceived( BMessage * msg )
 			stopTypingTimer();
 			break;
 		
+		case PROTOCOL_SELECTED: {
+			// a protocol has been selected. Since BMenuField doesn't resize until later,
+			// we have to wait 1000us before actually responding to the change, see below
+			if ( fProtocolHack )
+				delete fProtocolHack;
+			BMessage protoHack(PROTOCOL_SELECTED2);
+			fProtocolHack = new BMessageRunner( BMessenger(this), &protoHack, 1000, 1 );
+		}	break;
+		
+		case PROTOCOL_SELECTED2:
+			// do what should be done on protocol change
+			fStatusBar->PositionViews();
+			fInfoView->ResizeTo(
+				fStatusBar->Bounds().Width() - fInfoView->Frame().left,
+				fInfoView->Bounds().Height()
+			);
+			break;
+		
 		default:
 			BWindow::MessageReceived(msg);
 	}
@@ -942,7 +970,15 @@ void ChatWindow::BuildProtocolMenu(void) {
 	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
 	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
 	
-	menu->AddItem(new IconMenuItem(NULL, "Any Protocol", NULL, NULL));
+	menu->AddItem(
+		new IconMenuItem(
+			NULL, 
+			"Any Protocol", 
+			NULL, 
+//			NULL,
+			new BMessage(PROTOCOL_SELECTED)
+		)
+	);
 	menu->AddSeparatorItem();
 	
 	for (int32 i = 0; statusMsg.FindString("connection", i); i++) {
@@ -961,21 +997,30 @@ void ChatWindow::BuildProtocolMenu(void) {
 			BString label = connection;
 			label << " (" << status << ")";
 			
-			menu->AddItem(new IconMenuItem(icon, label.String(), protocol.String()));
+			menu->AddItem(
+				new IconMenuItem(
+					icon, 
+					label.String(), 
+					protocol.String(), 
+					new BMessage(PROTOCOL_SELECTED)
+				)
+			);
 		};
 	};
 	
 	menu->SetFont(be_plain_font);
 	
-	fProtocolMenu->Invalidate();
+	fStatusBar->PositionViews();
 	
-	// resize fInfoView
+/*	// resize fInfoView
 //	fInfoView->MoveTo( fProtocolMenu->MenuBar()->Frame().right + 5, 2 );
 	fInfoView->MoveTo( 200, 2 );
+*/
 	fInfoView->ResizeTo(
 //		fStatusBar->Bounds().Width() - fInfoView->Bounds().Width() - 2,
-		fStatusBar->Bounds().Width() - 200 - 2,
-		fStatusBar->Bounds().Height() - 4
+//		fStatusBar->Bounds().Width() - 200 - 2,
+		fStatusBar->Bounds().Width() - fInfoView->Frame().left,
+		fInfoView->Bounds().Height()
 	);
 };
 

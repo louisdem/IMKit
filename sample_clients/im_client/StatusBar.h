@@ -19,6 +19,7 @@ class StatusBar : public BView {
 			
 		virtual void	Draw(BRect rect);
 		
+				void	PositionViews();
 	private:
 				void	DrawSplitter(float x);
 				BList	fViews;
