@@ -11,6 +11,15 @@ const char *kImNewMessageSound = "IM Message Received";
 #define kButtonHeight	50
 #define kButtonDockHeight (kButtonHeight+4)
 
+
+#if  B_BEOS_VERSION > B_BEOS_VERSION_5
+	#ifdef GET_NODE_ICON
+		BBitmap* GetNodeIcon(BNode& Node, uint32, status_t *);
+	#else
+		BBitmap *GetTrackerIcon(BNode &, unsigned long, long *);
+	#endif
+#endif
+
 ChatWindow::ChatWindow( entry_ref & ref )
 :	BWindow( 
 		BRect(100,100,400,300), 
@@ -79,9 +88,25 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	// add buttons
 	ImageButton * btn;
 	BBitmap * icon;
-	
+/*	
 	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
 		"/People", "BEOS:L:STD_ICON");
+*/
+
+#if  B_BEOS_VERSION > B_BEOS_VERSION_5
+	BNode peopleApp("/boot/beos/apps/People");
+	long err = 0;
+
+	#ifdef GET_NODE_ICON
+		icon = GetNodeIcon(peopleApp, 32, &err);
+	#else
+		icon = GetTrackerIcon(peopleApp, 32, &err);
+	#endif
+#else
+	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
+		"/People", "BEOS:L:STD_ICON");
+#endif
+	
 	btn = new ImageButton(
 		BRect(2,2,2+kButtonWidth,2+kButtonHeight),
 		"open in people button",
