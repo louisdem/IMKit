@@ -13,6 +13,7 @@ ChatApp::ChatApp()
 	msg.AddString("app_sig", "application/x-vnd.m_eiman.sample_im_client");
 	
 	fMan->SendMessage( &msg );
+		
 }
 
 ChatApp::~ChatApp()
@@ -24,6 +25,32 @@ ChatApp::~ChatApp()
 bool
 ChatApp::QuitRequested()
 {
+	RunMap::const_iterator it = fRunViews.begin();
+	
+	for (; it != fRunViews.end(); ++it) {
+		BString key = it->first;
+		RunView *rv = it->second;
+
+		if (rv != NULL) {
+			BWindow *win = rv->Window();
+
+			if (win != NULL) {
+				LOG("im_client", LOW, "RunView for %s has a Parent(), Lock()ing and "
+					"RemoveSelf()ing.", key.String());
+				win->Lock();
+				rv->RemoveSelf();
+				win->Unlock();
+			} else {
+				LOG("im_client", LOW, "RunView for %s doesn't have a Parent()", key.String());
+				rv->RemoveSelf();
+			};
+			
+			delete rv;
+		} else {
+			LOG("im_client", LOW, "RunView for %s was already NULL", key.String());
+		};
+	};
+
 	fIsQuiting = true;
 	
 	fMan->StopListening();
@@ -125,7 +152,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
-				LOG("sample_client", MEDIUM, "Creating new window to handle message");
+				LOG("im_client", MEDIUM, "Creating new window to handle message");
 				win = new ChatWindow(ref);
 				if ( win->Lock() )
 				{
@@ -145,7 +172,7 @@ ChatApp::MessageReceived( BMessage * msg )
 					};
 				} else
 				{
-					LOG("sample_client", LOW, "This is a fatal error that should never occur. Lock fail on new win.");
+					LOG("im_client", LOW, "This is a fatal error that should never occur. Lock fail on new win.");
 				}
 				
 			} else
@@ -163,7 +190,7 @@ ChatApp::MessageReceived( BMessage * msg )
 					win->Unlock();
 				} else
 				{
-					LOG("sample_client", LOW, "This is a fatal error that should never occur. Lock fail on old win.");
+					LOG("im_client", LOW, "This is a fatal error that should never occur. Lock fail on old win.");
 				}
 			}
 		}	break;
@@ -196,4 +223,23 @@ void
 ChatApp::NoFlash( BMessenger msgr )
 {
 	fMan->StopFlashingDeskbar(msgr);
+}
+
+status_t
+ChatApp::StoreRunView(const char *id, RunView *rv) {
+	LOG("im_client", LOW, "Setting RunView for %s to %p", id, rv);
+	
+	BString nick = id;
+	fRunViews[nick] = rv;
+
+	return B_OK;
+}
+
+RunView *
+ChatApp::GetRunView(const char *id) {
+	BString nick = id;
+	
+	LOG("im_client", LOW, "RunView for %s is %p", id, fRunViews[nick]);
+	
+	return fRunViews[nick];
 }

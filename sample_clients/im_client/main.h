@@ -14,10 +14,14 @@
 #include <BeBuild.h>
 #include <Window.h>
 #include <Beep.h>
+#include <ObjectList.h>
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
 #include <libim/Helpers.h>
+
+#include <iterator>
+#include <map>
 
 
 void

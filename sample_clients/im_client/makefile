@@ -30,7 +30,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp ChatApp.cpp ChatWindow.cpp InputFilter.cpp ResizeView.cpp Theme.cpp Utilities.cpp URLCrunch.cpp RunView.cpp URLTextView.cpp
+SRCS= main.cpp ChatApp.cpp ChatWindow.cpp InputFilter.cpp ResizeView.cpp Theme.cpp Utilities.cpp URLCrunch.cpp RunView.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -73,7 +73,7 @@ LOCAL_INCLUDE_PATHS =
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
-OPTIMIZE= SOME
+OPTIMIZE= NONE
 
 #	specify any preprocessor symbols to be defined.  The symbols will not
 #	have their values set automatically; you must supply the value (if any)
@@ -96,7 +96,7 @@ SYMBOLS = TRUE
 #	specify debug settings
 #	if TRUE will allow application to be run from a source-level
 #	debugger.  Note that this will disable all optimzation.
-DEBUGGER = 
+DEBUGGER =
 
 #	specify additional compiler flags for all files
 COMPILER_FLAGS =

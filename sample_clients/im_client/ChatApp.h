@@ -5,6 +5,9 @@
 
 class BApplication;
 class ChatWindow;
+class RunView;
+
+typedef map<BString, RunView *> RunMap;
 
 class ChatApp : public BApplication
 {
@@ -21,12 +24,16 @@ class ChatApp : public BApplication
 		
 				void	Flash( BMessenger );
 				void	NoFlash( BMessenger );
+			
+			status_t	StoreRunView(const char *id, RunView *rv);
+			RunView		*GetRunView(const char *id);
 		
 	private:
 		ChatWindow		*findWindow( entry_ref & );
 		
 		IM::Manager		*fMan;
 		bool			fIsQuiting;
+		RunMap			fRunViews;
 };
 
 #endif

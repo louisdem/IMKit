@@ -40,13 +40,14 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	if ( inputDivider.y > windowRect.Height() - 50 )
 	{
-		LOG("sample_client", LOW, "Insane divider, fixed.");
+		LOG("im_client", LOW, "Insane divider, fixed.");
 		inputDivider.y = windowRect.Height() - 50;
 	}
 	
+/*
 	windowRect.PrintToStream();
 	inputDivider.PrintToStream();
-	
+*/	
 	MoveTo(windowRect.left, windowRect.top);
 	ResizeTo(windowRect.Width(), windowRect.Height());
 
@@ -149,12 +150,18 @@ ChatWindow::ChatWindow( entry_ref & ref )
 
 	fTheme->WriteUnlock();
 	
-	fText = new RunView(
-		textRect, "text", fTheme,
-		B_FOLLOW_ALL, B_WILL_DRAW
-	);
+	IM::Contact con(&fEntry);
+	char id[256];
+	con.ConnectionAt(0, id);
+
+	fText = ((ChatApp *)be_app)->GetRunView(id);
+	if (fText == NULL) {
+		fText = new RunView(
+			textRect, "text", fTheme,
+			B_FOLLOW_ALL, B_WILL_DRAW
+		);
+	};
 	
-//	fText->SetTimeStampFormat("[%H:%M]");
 	fText->SetTimeStampFormat(NULL);
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
@@ -166,6 +173,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fText->SetLowColor(245, 245, 245, 0);
 	fText->SetHighColor(0, 0, 0, 0);
 #endif
+
 
 	fTextScroll = new BScrollView(
 		"scroller", fText,
@@ -188,6 +196,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	// get contact info
 	reloadContact();
+
 }
 
 ChatWindow::~ChatWindow()
@@ -202,10 +211,6 @@ ChatWindow::~ChatWindow()
 		
 		delete fInput;
 	};
-	if (fText) {
-		fText->RemoveSelf();
-		delete fText;
-	};
 
 	if (fResize) {
 		fResize->RemoveSelf();
@@ -219,14 +224,21 @@ ChatWindow::~ChatWindow()
 bool
 ChatWindow::QuitRequested()
 {
-/*
-	if ( ((ChatApp*)be_app)->IsQuiting() )
-		return true;
-	
-	Minimize(true);
-	
-	return false;
-*/
+	if (fTextScroll != NULL) {
+		fTextScroll->RemoveSelf();
+//		Deleting the fTextScroll here causes a crash when you re open the window.
+//		This makes Baby Mikey cry
+//		delete fTextScroll;
+	};
+
+	fText->RemoveSelf();
+
+	IM::Contact con(&fEntry);
+	char id[256];
+	con.ConnectionAt(0, id);
+	((ChatApp *)be_app)->StoreRunView(id, fText);
+
+
 	return true;
 }
 
@@ -247,20 +259,20 @@ ChatWindow::SaveSettings(void) {
 	char *buffer = (char *)calloc(size, sizeof(char));
 
 	if (fWindowSettings.Flatten(buffer, size) != B_OK) {
-		LOG("sample_client", LOW, "Could not flatten window settings");
+		LOG("im_client", LOW, "Could not flatten window settings");
 	} else {
-		LOG("sample_client", LOW, "Window settings flattened");
+		LOG("im_client", LOW, "Window settings flattened");
 		BNode peopleNode(&fEntry);
 		
 		if (peopleNode.WriteAttr("IM:ChatSettings", B_MESSAGE_TYPE, 0, buffer, 
 			(size_t)size) == size) {
-			LOG("sample_client", LOW, "Window Settings saved to disk");
+			LOG("im_client", LOW, "Window Settings saved to disk");
 		} else {
-			LOG("sample_client", LOW, "WIndow settings could not be written to disk");
+			LOG("im_client", LOW, "WIndow settings could not be written to disk");
 		};	
 	};
 
-	fWindowSettings.PrintToStream();
+//	fWindowSettings.PrintToStream();
 
 	free(buffer);
 }
@@ -279,24 +291,24 @@ ChatWindow::LoadSettings(void) {
 			buffer, (size_t)info.size) == info.size) {
 			
 			if (fWindowSettings.Unflatten(buffer) == B_OK) {
-				fWindowSettings.PrintToStream();
+//				fWindowSettings.PrintToStream();
 				return B_OK;
 			} else {
-				LOG("sample_client", LOW, "Could not unflatten settings messsage");
+				LOG("im_client", LOW, "Could not unflatten settings messsage");
 				return B_ERROR;
 			};
 
 			free(buffer);
 		} else {
-			LOG("sample_client", LOW, "Could not read chat attribute");
+			LOG("im_client", LOW, "Could not read chat attribute");
 			return B_ERROR;
 		};
 	} else {
-		LOG("sample_client", LOW, "Could not load chat settings");
+		LOG("im_client", LOW, "Could not load chat settings");
 		return B_ERROR;
 	};
 	
-	fWindowSettings.PrintToStream();
+//	fWindowSettings.PrintToStream();
 	
 	return B_OK;
 }
@@ -339,8 +351,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			char timestr[10];
 			time_t now = time(NULL);
 			strftime(timestr, sizeof(timestr),"[%H:%M]: ", localtime(&now) );
-
-			
+				
 			switch ( im_what )
 			{
 				case IM::MESSAGE_SENT:
@@ -413,7 +424,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( fMan->SendMessage(&im_msg) == B_OK ) {
 				fInput->SetText("");
 			} else {
-				LOG("sample_client", LOW, "Error sending message to im_server");
+				LOG("im_client", LOW, "Error sending message to im_server");
 			};
 		}	break;
 		
@@ -444,7 +455,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BEntry entry(&fEntry);
 					if ( !entry.Exists() )
 					{
-						LOG("sample_client", LOW, "Error: New entry invalid");
+						LOG("im_client", LOW, "Error: New entry invalid");
 					}
 				}	break;
 				case B_STAT_CHANGED:

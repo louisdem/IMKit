@@ -18,6 +18,7 @@
 #include <Beep.h>
 #include <String.h>
 #include <Roster.h>
+#include <ObjectList.h>
 
 #include <be/kernel/fs_attr.h>
 
