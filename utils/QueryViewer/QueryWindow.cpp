@@ -123,20 +123,6 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 			};
 		} break;
 		
-		case mscActionTaken: {
-			BPopUpMenu *source = NULL;
-			BRow *row = NULL;
-
-			entry_ref actionRef;
-			entry_ref targetRef;
-			msg->FindRef("actionRef", &actionRef);
-			msg->FindRef("targetRef", &targetRef);
-			
-			BMessage open(B_REFS_RECEIVED);
-			open.AddRef("refs", &targetRef);
-			be_roster->Launch(&actionRef, &open);
-		} break;
-		
 		case qwQueryUpdated: {
 			int32 count = -1;
 			IconCountItem *item = NULL;

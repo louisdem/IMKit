@@ -17,7 +17,7 @@ const char *kAttrMIMEType = "BEOS:TYPE";
 
 const char *kFolderState = "_trk/columns_le";
 const char *kViewState = "_trk/viewstate_le";
-const int32 kSnoozePeriod = 1000 * 1000 * 0.5;
+const float kSnoozePeriod = 1000 * 1000 * 0.5;
 const int32 kIconSize = 16;
 const int32 kPathIndex = 6;
 const int32 kNameIndex = 1;
@@ -223,24 +223,53 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 			BRow *row = NULL;
 			
 			while ((row = CurrentSelection(row)) != NULL) {
-				BStringField *pathField = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
-				BStringField *nameField = reinterpret_cast<BStringField *>(row->GetField(kNameIndex));
-				
-				if ((pathField != NULL) && (nameField != NULL)) {
-					BPath path = pathField->String();
-					path.Append(nameField->String());
-
-					entry_ref ref;
-					if (get_ref_for_path(path.Path(), &ref) == B_OK) {
-						entry_ref actionRef = ActionFor(&ref);
-						BMessage open(B_REFS_RECEIVED);
-						open.AddRef("refs", &ref);
-			
-						be_roster->Launch(&actionRef, &open);	
-					};
+				entry_ref ref;
+				if (RefForRow(row, &ref) == B_OK) {
+					entry_ref actionRef = ActionFor(&ref);
+					BMessage open(B_REFS_RECEIVED);
+					open.AddRef("refs", &ref);
+		
+					be_roster->Launch(&actionRef, &open);	
 				};
 			};
 			
+		} break;
+		
+		case mscActionTaken: {
+			char *type = NULL;
+			int32 length = 0;
+			BMessage open(B_REFS_RECEIVED);
+
+			entry_ref actionRef;
+			entry_ref targetRef;
+			msg->FindRef("actionRef", &actionRef);
+			msg->FindRef("targetRef", &targetRef);
+
+			type = ReadAttribute(BNode(&targetRef), "BEOS:TYPE", &length);
+			type = (char *)realloc(type, (length + 1) * sizeof(char));
+			type[length + 1] = '\0';
+			
+			BRow *selected = NULL;
+			while ((selected = CurrentSelection(selected)) != NULL) {
+				entry_ref currentRef;
+				if (RefForRow(selected, &currentRef) == B_OK) {
+					BNode currNode(&currentRef);
+					char *currType = NULL;
+					int32 currLength = -1;
+
+					currType = ReadAttribute(currNode, "BEOS:TYPE", &currLength);
+					currType = (char *)realloc(currType, (currLength + 1) * sizeof(char));
+					currType[length + 1] = '\0';
+					
+					if (strcmp(type, currType) == 0) open.AddRef("refs", &currentRef);
+					
+					free(currType);
+				};
+			};
+			
+			free(type);
+			
+			be_roster->Launch(&actionRef, &open);
 		} break;
 		
 		default: {
@@ -527,6 +556,21 @@ status_t QueryColumnListView::RemoveRowByRef(entry_ref *ref) {
 	};
 	
 	return B_OK;
+};
+
+status_t QueryColumnListView::RefForRow(BRow *row, entry_ref *ref) {
+	BStringField *pathField = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
+	BStringField *nameField = reinterpret_cast<BStringField *>(row->GetField(kNameIndex));
+	status_t status = B_ERROR;
+	
+	if ((pathField != NULL) && (nameField != NULL)) {
+		BPath path = pathField->String();
+		path.Append(nameField->String());
+
+		status = get_ref_for_path(path.Path(), ref);
+	};
+	
+	return status;
 };
 
 const char *QueryColumnListView::MIMEType(void) {

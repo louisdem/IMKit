@@ -103,6 +103,7 @@ class QueryColumnListView : public BColumnListView {
 							
 		virtual status_t	AddRowByRef(entry_ref *ref);
 		virtual status_t	RemoveRowByRef(entry_ref *ref);
+		virtual status_t	RefForRow(BRow *row, entry_ref *ref);
 				
 			virtual void	MessageReceived(BMessage *msg);
 			virtual void 	KeyDown(const char *bytes, int32 numBytes);
