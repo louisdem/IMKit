@@ -706,8 +706,6 @@ Server::GetSettings( const char * protocol_sig, BMessage * settings )
 		);
 	}
 	
-	LOG("im_server", DEBUG, "Settings path: %s", settings_path);
-
 	char data[1024*1024];
 	
 	BNode node( settings_path );
@@ -942,8 +940,12 @@ Server::MessageToProtocols( BMessage * msg )
 			type_code _type;
 			char * name;
 			int32 count;
-			
+
+#if B_BEOS_VERSION > B_BEOS_VERSION_5			
+			for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, (const char **)&name, &_type, &count) == B_OK; i++ )
+#else
 			for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, &name, &_type, &count) == B_OK; i++ )
+#endif
 			{ // get string names
 				for ( int x=0; x<count; x++ )
 				{ // replace all matching strings
@@ -997,7 +999,11 @@ Server::MessageFromProtocols( BMessage * msg )
 	
 	if ( msg->FindInt32("charset",&charset) == B_OK )
 	{ // charset present, convert all strings
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+		for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, (const char **)&name, &_type, &count) == B_OK; i++ )
+#else
 		for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, &name, &_type, &count) == B_OK; i++ )
+#endif
 		{ // get string names
 			for ( int x=0; x<count; x++ )
 			{ // replace all matching strings
