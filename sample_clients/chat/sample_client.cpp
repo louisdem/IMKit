@@ -190,6 +190,7 @@ MyApp::MessageReceived( BMessage * msg )
 				if ( win->Lock() )
 				{
 					win->Show();
+					win->SetFlags(win->Flags() ^ B_AVOID_FOCUS);
 					win->PostMessage(msg);
 					win->Unlock();
 					
@@ -212,7 +213,9 @@ MyApp::MessageReceived( BMessage * msg )
 					if ( win->IsMinimized() )
 					{ // window is hidden, move to this workspace and show it
 						win->SetWorkspaces( B_CURRENT_WORKSPACE );
+						win->SetFlags(win->Flags() | B_AVOID_FOCUS);
 						win->Minimize(false);
+						win->SetFlags(win->Flags() ^ B_AVOID_FOCUS);
 					}
 					win->Unlock();
 				} else
@@ -260,7 +263,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		BRect(100,100,400,300), 
 		"unknown contact - unknown status", 
 		B_TITLED_WINDOW,
-		B_ASYNCHRONOUS_CONTROLS
+		B_ASYNCHRONOUS_CONTROLS | B_AVOID_FOCUS
 	),
 	fEntry(ref),
 	fMan( new IM::Manager(BMessenger(this))),
