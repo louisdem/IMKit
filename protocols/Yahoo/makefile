@@ -6,11 +6,19 @@
 
 ## Application Specific Settings ---------------------------------------------
 
-ifeq ($(wildcard ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)),)
+ifeq ($(wildcard /boot/home/config/include/libyahoo2/yahoo2.h),)
 
 .PHONY: default
 default:
 	@echo Yahoo require libyahoo2. Yahoo add-on ignored.
+
+else
+
+ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
+
+.PHONY: default
+default:
+	@echo Yahoo require bone. Yahoo add-on ignored.
 
 else
 
@@ -165,5 +173,7 @@ $(TARGET): _APP_
 
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
+
+endif #bone sanity check.
 
 endif #yahoo2 sanity check.
