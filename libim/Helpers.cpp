@@ -121,6 +121,12 @@ im_load_attribute( const char * path, const char * attribute, BMessage * msg )
 	
 	BNode node( path );
 	
+	if ( node.InitCheck() != B_OK )
+	{
+		LOG("helpers", liLow, "load_attribute: Error opening file (%s)", attribute, path);
+		return B_ERROR;
+	}
+	
 	int32 num_read = node.ReadAttr(
 		attribute, B_RAW_TYPE, 0,
 		data, sizeof(data)
