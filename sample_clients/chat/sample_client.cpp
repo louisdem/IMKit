@@ -360,7 +360,11 @@ ChatWindow::MessageReceived( BMessage * msg )
 						char str[256];
 						sprintf(str, "√ %s", fTitleCache);
 						SetTitle(str);
-						system_beep(kImNewMessageSound);
+						if ( (Workspaces() & (1 << current_workspace())) == 0)
+						{
+							// beep if on other workspace
+							system_beep(kImNewMessageSound);
+						}
 					}
 				}	break;
 			}
