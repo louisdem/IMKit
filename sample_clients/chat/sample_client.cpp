@@ -492,7 +492,7 @@ ChatWindow::FrameResized( float w, float h )
 void
 ChatWindow::WindowActivated(bool active)
 {
-	if (active) 
+	if (active && fChangedNotActivated) 
 		stopNotify();
 	
 	BWindow::WindowActivated(active);
@@ -540,7 +540,7 @@ ChatWindow::reloadContact()
 	// rename window
 	sprintf(fTitleCache,"%s - %s", fName, status);
 	
-	if ( fChangedNotActivated )
+	if ( !fChangedNotActivated )
 	{
 		SetTitle(fTitleCache);
 	} else

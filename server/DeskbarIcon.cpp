@@ -135,6 +135,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			fFlashCount++;
 			fBlink = 0;
+			printf("IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
 		case 'stop':
 		{	
@@ -145,6 +146,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 			
 			fFlashCount--;
+			printf("IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
 		
 		case SET_ONLINE:
