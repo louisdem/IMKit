@@ -6,8 +6,10 @@
 #include <Directory.h>
 #include <Node.h>
 #include <Entry.h>
+#include <string.h>
+#include <stdlib.h>
 
-log_importance g_verbosity_level = liHigh;
+log_importance g_verbosity_level = liDebug;
 
 #if 0
 // Use this to add unlimited buffer size to LOG()
@@ -76,7 +78,7 @@ load_log_level()
 	BMessage settings;
 	if ( im_load_client_settings("im_server", &settings) != B_OK )
 	{
-		printf("load_log_level: im_server settings nog found\n");
+		printf("load_log_level: im_server settings not found\n");
 		return;
 	}
 	
@@ -160,32 +162,39 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 status_t
 im_load_attribute( const char * path, const char * attribute, BMessage * msg )
 {
-	char data[1024*1024];
+	const int32 kDataChunkSize = 128*1024;
+	char * data = (char*)malloc(kDataChunkSize);
 	
 	BNode node( path );
 	
 	if ( node.InitCheck() != B_OK )
 	{
 		LOG("helpers", liLow, "load_attribute: Error opening file (%s)", attribute, path);
+		free(data);
 		return B_ERROR;
 	}
 	
 	int32 num_read = node.ReadAttr(
 		attribute, B_RAW_TYPE, 0,
-		data, sizeof(data)
+		data, kDataChunkSize
 	);
 	
 	if ( num_read <= 0 )
 	{
-		LOG("helpers", liLow, "load_attribute: Error reading (%s) from (%s)", attribute, path);
+		LOG("helpers", liLow, "load_attribute: Error reading (%s) from (%s) [%lX: %s]", 
+			attribute, path, num_read, strerror(num_read) );
 		node.Unset();
+		free(data);
 		return B_ERROR;
 	}
+	
+	LOG("helpers", liLow, "load_attribute: Read %ld bytes of data", num_read );
 	
 	if ( msg->Unflatten(data) != B_OK )
 	{
 		LOG("helpers", liHigh, "ERROR: load_attribute: Error unflattening (%s) from (%s)", attribute, path);
 		node.Unset();
+		free(data);
 		return B_ERROR;
 	}
 	
@@ -193,6 +202,7 @@ im_load_attribute( const char * path, const char * attribute, BMessage * msg )
 	
 	node.Unset();
 	
+	free(data);
 	return B_OK;
 }
 
