@@ -270,46 +270,46 @@ BMessage AIMProtocol::GetSettingsTemplate() {
 status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	const char * screenname = NULL;
 	const char * password = NULL;
-	const char * encoding = NULL;
+//	const char * encoding = NULL;
 	const char *profile = NULL;
 	
 	msg.FindString("screenname", &screenname);
 	password = msg.FindString("password");
-	encoding = msg.FindString("encoding");
+//	encoding = msg.FindString("encoding");
 	profile = msg.FindString("profile");
 	
-	if ( screenname == NULL || password == NULL || encoding == NULL || profile == NULL)
+	if ( screenname == NULL || password == NULL || profile == NULL)
 		// invalid settings, fail
 		return B_ERROR;
 	
-	if ( strcmp(encoding,"ISO 8859-1") == 0 )
-	{
-//		fEncoding = B_ISO1_CONVERSION;
-	} else
-	if ( strcmp(encoding,"UTF-8") == 0 )
-	{
-//		fEncoding = 0xffff;
-	} else
-	if ( strcmp(encoding,"JIS") == 0 )
-	{
-//		fEncoding = B_JIS_CONVERSION;
-	} else
-	if ( strcmp(encoding,"Shift-JIS") == 0 )
-	{
-//		fEncoding = B_SJIS_CONVERSION;
-	} else
-	if ( strcmp(encoding,"EUC") == 0 )
-	{
-//		fEncoding = B_EUC_CONVERSION;
-	} else
-	if ( strcmp(encoding,"Windows 1251") == 0 )
-	{
-//		fEncoding = B_MS_WINDOWS_1251_CONVERSION;
-	} else
-	{ // invalid encoding value
-		return B_ERROR;
-	}
-	
+//	if ( strcmp(encoding,"ISO 8859-1") == 0 )
+//	{
+////		fEncoding = B_ISO1_CONVERSION;
+//	} else
+//	if ( strcmp(encoding,"UTF-8") == 0 )
+//	{
+////		fEncoding = 0xffff;
+//	} else
+//	if ( strcmp(encoding,"JIS") == 0 )
+//	{
+////		fEncoding = B_JIS_CONVERSION;
+//	} else
+//	if ( strcmp(encoding,"Shift-JIS") == 0 )
+//	{
+////		fEncoding = B_SJIS_CONVERSION;
+//	} else
+//	if ( strcmp(encoding,"EUC") == 0 )
+//	{
+////		fEncoding = B_EUC_CONVERSION;
+//	} else
+//	if ( strcmp(encoding,"Windows 1251") == 0 )
+//	{
+////		fEncoding = B_MS_WINDOWS_1251_CONVERSION;
+//	} else
+//	{ // invalid encoding value
+//		return B_ERROR;
+//	}
+//	
 	if ( fThread )
 	{
 		// we really should disconnect here if we're connected :/

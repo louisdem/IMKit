@@ -101,7 +101,7 @@ class AIMManager : public BLooper {
 						fConnections;	
 		list<Flap *>	fWaitingSupport;
 
-			uint16		fSSILimits[14];
+			uint16		fSSILimits[kSSILimitCount];
 		
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
