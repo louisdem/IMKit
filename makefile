@@ -19,9 +19,10 @@ default .DEFAULT :
 	-mkdir -p /boot/home/config/settings/im_kit	# Yes, it won't work if it does not exist.
 	-unzip -n server/Icons.zip -d /boot/home/config/settings/im_kit/icons
 
-	# Create the _APP_ link needed by the ICQ protocol. Note you must do make install
+	# Create the _APP_ link needed by all protocols. Note you must do make install
 	# for this to work.
 	-ln -sf /boot/home/config/servers/im_server protocols/ICQ/_APP_
+	-ln -sf /boot/home/config/servers/im_server protocols/AIM/_APP_
 
 	# must install lib to make the rest.
 	$(MAKE) -C libim install
