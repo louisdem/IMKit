@@ -56,4 +56,7 @@ extern void im_get_protocol_list( BMessage * list );
 */
 extern void im_get_client_list( BMessage * list );
 
+extern void crlf2nl( const char * orig, BString & conv );
+extern void nl2crlf( const char * orig, BString & conv );
+
 #endif

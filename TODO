@@ -21,6 +21,9 @@ ___ Things to fix
 
 ___ New features
 
+Auto-send a user defined message to blocked contacts if they send a message (don't send again
+if already sent the last ten seconds, to prevent ping pong flood)
+
 Auto-reconnect if disconnected by server - should this be in im_server or in protocol?
 
 Change Merge contacts, or make a new one, so it can be used from the Terminal

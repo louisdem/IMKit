@@ -2025,6 +2025,8 @@ Server::ContactMonitor_Added( ContactHandle handle )
 	watch_node( &nref, B_WATCH_ALL, BMessenger(this) );
 	
 	fContacts.push_back( pair<ContactHandle,list<string>* >(handle, connections) );
+
+	LOG("im_server", liDebug, "Contact added (%s)", handle.entry.name);
 }
 
 void
@@ -2138,6 +2140,8 @@ Server::ContactMonitor_Removed( ContactHandle handle )
 	{
 		if ( (*i).first == handle )
 		{
+			LOG("im_server", liDebug, "Contact removed (%s)", (*i).first.entry.name);
+			
 			for ( list<string>::iterator j = i->second->begin(); j != i->second->end(); j++ )
 			{ // unregister connections
 				Connection conn( j->c_str() );
@@ -2163,4 +2167,5 @@ Server::ContactMonitor_Removed( ContactHandle handle )
 			return;
 		}
 	}
+
 }

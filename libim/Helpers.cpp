@@ -367,3 +367,30 @@ im_get_client_list( BMessage * list )
 {
 	return im_get_file_list("/boot/home/config/settings/im_kit/clients", "client", list);
 }
+
+void
+crlf2nl( const char * orig, BString & conv )
+{
+	conv = "";
+	
+	for ( int i=0; orig[i]; i++ )
+	{
+		if ( orig[i] != '\r' )
+			conv.Append( orig[i], 1 );
+	}
+}
+
+void
+nl2crlf( const char * orig, BString & conv )
+{
+	conv = "";
+	
+	for ( int i=0; orig[i]; i++ )
+	{
+		if ( orig[i] == '\n' )
+			conv.Append( '\r', 1 );
+		
+		conv.Append( orig[i], 1 );
+	}
+}
+
