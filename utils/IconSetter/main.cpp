@@ -2,6 +2,8 @@
 #include <Entry.h>
 #include <TranslationUtils.h>
 
+#include <stdio.h>
+
 #include "IMKitUtilities.h"
 #include <libim/Contact.h>
 
