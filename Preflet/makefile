@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= InstantMessaging
+SVG_ICON=Preflet.svg
 TOPDIR=..
 TARGET_DIR=$(TOPDIR)/build/settings
 
