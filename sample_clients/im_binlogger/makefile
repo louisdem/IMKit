@@ -55,6 +55,11 @@ RSRCS= logger.rsrc
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
 LIBS= be im tracker
 
+#	Detect Zeta and add icon to LIBS if so
+ifeq ($(shell ls 2>/dev/null -1 /boot/beos/system/lib/libzeta.so), /boot/beos/system/lib/libzeta.so)
+	LIBS += icon
+endif
+
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
 #	or paths relative to the makefile.  The paths included may not

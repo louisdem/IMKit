@@ -4,7 +4,9 @@ SUBDIRS = \
 	im_client \
 	logger \
 	tracker_addons \
-	infopopper
+	infopopper \
+	im_binlogger \
+	im_binlog_viewer
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \
