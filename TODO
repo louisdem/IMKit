@@ -1,44 +1,44 @@
-Things to fix
+This is a list of bugs that need to be fixed, features that have been requested and such. If you
+feel like coding something and don't know what to do, this is the place to go! :)
+
+
+___ Things to fix
 
 * Protocol doc needs to be updated and extended to describe Deskbar add-on and probably more.
-* Strangeness when getting the server based contact list. Contact info messages duplicated? Not indexed?
-* Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
-* Add status changes to im_logger?
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
-* im_server: Monitor People files and remove from interest list if a connection attribute is removed
-* long message bug in LOG(), make buffer dunamic somehow?
+* long message bug in LOG(), make buffer dynamic somehow?
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
 * Add "Send" button to client
-* Add option to client - multi/single line edit
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
-* Change Merge contacts, or make a new one, so it can be used from the Terminal
-* Client: not scrolling correctly in conversation when opening a conversation with a history
-* When running Zeta: reused message from sending message is corrupted somewhere along the line. Fixed?
-* Crash in BubbleHelper, ...( FindView( WindowAt() ) ). Does this still happen?
-* Add check for Blocked everywhere we change status: status update, connect, disconnect, etc. Fixed?
 * Alt-C in client doesn't work
-* Option to disable logging (im_logger and LOG() output)
 * Extract Deskbar icon from im_server, let it live it's own life
 * Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to ICQ/BMessage bug?
 * Fix Preflet so it reads SVG icons(?)
-* Setting for im_server, log level
 * im_client: when settings are changed, make them apply to existing windows too
 * "Command sends message" settings description needs improvement
-* Scrollable settings are in preflet
-* MSN: Doesn't handle login+pass not set, crashes
 
-New features
 
-Icons in Info Popper status updates
+___ New features
+
+Auto-reconnect if disconnected by server - should this be in im_server or in protocol?
+
+Change Merge contacts, or make a new one, so it can be used from the Terminal
+
+Option to disable logging (im_logger and LOG() output)
+
+Setting for im_server: default log level
+
+Scrollable settings in preflet
+
+im_server: Monitor People files and remove from interest list if a connection attribute is removed
+
+Protocol icons in Info Popper status updates
 
 Invisibility
 
 Connect/disconnect sounds
 
-Play sound on -every- message receive?
-
-Add a new attribute, IM Specific Status, for network-specific status (well, d'uh.)
-For things like "out to lunch" or whatever messages you can set on e.g. MSN.
+New setting: Play sound on -every- message receive
 
 More attributes for info like timezone, location, etc?
 
@@ -46,11 +46,13 @@ Option for im_server - Don't fetch serverside contact lists
 
 Message filters - For implementing things like transparent encryption etc (key as attribute?)
 
-More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
+* More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
+* Add a new attribute, IM Specific Status, for network-specific status (well, d'uh.)
+For things like "out to lunch" or whatever messages you can set on e.g. MSN.
 
 Log in invisible for ICQ
 
-File transfers - need new icqlib?
+File transfers
 
 Serverside contact list manager:
 	Search for contacts
