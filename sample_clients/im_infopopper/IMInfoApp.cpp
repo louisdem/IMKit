@@ -205,7 +205,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			
 //			Message to display
 			if ( text != "" ) {
-				printf("Displaying message <%s>\n", text.String() );
+				LOG("im_infopopper", liDebug, "Displaying message <%s>\n", text.String() );
 				
 				BMessage pop_msg(InfoPopper::AddMessage);
 				pop_msg.AddString("appTitle", "IM Kit");
@@ -217,7 +217,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					BMessage image;
 					icon->Archive(&image);
 					pop_msg.AddMessage("icon", &image);
-					printf("Icon size: %.2f\n", icon->Bounds().Width());
+					LOG("im_infopopper", liDebug, "Icon size: %.2f\n", icon->Bounds().Width());
 					
 					pop_msg.AddRef("overlayIconRef", &protoRef);
 					pop_msg.AddInt32("overlayIconType", InfoPopper::Attribute);
