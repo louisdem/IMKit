@@ -167,11 +167,12 @@ IM_DeskbarIcon::getProtocolStates()
 	
 	for ( int i=0; protStatus.FindString("protocol",i); i++ ) {
 		const char *protocol = protStatus.FindString("protocol",i);
+		const char *userfriendly = protStatus.FindString("userfriendly",i);
 		const char *status = protStatus.FindString("status", i);
-
+		
 		fStatuses[protocol] = status;
-
-		fTipText << "\n  " << protocol << ": " << status << "";
+		
+		fTipText << "\n  " << userfriendly << ": " << status << "";
 		
 		if ((fStatus > 0) && (strcmp(status, ONLINE_TEXT) == 0)) fStatus = 0;
 		if ((fStatus > 1) && (strcmp(status, AWAY_TEXT) == 0)) fStatus = 1;
