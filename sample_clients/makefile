@@ -1,6 +1,7 @@
 # makefile for all sample code
 
 SUBDIRS = \
+	im_emoclient\
 	im_client \
 	logger \
 	tracker_addons \
