@@ -150,6 +150,6 @@ else
   LIBS += zeta tracker
 endif
 
-INSTALL_DIR= $(TOPDIR)/build/clients
+INSTALL_DIR= $(TOPDIR)/build/utils
 
 include $(TOPDIR)/makefile-engine.IMkit
