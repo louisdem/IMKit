@@ -3,7 +3,7 @@
 #include <Message.h>
 #include <String.h>
 #include <be/support/SupportDefs.h>
-
+#include <stdlib.h>
 #include <stdio.h>
 
 typedef struct value_type_t {
@@ -30,8 +30,10 @@ void print_usage()
 	printf("   --public <public name, e.g. 'IM Connections'>\n");
 	printf("   --type <attr type, one of [string, bool, int32, float]>\n");
 	printf("Not required options:\n");
+	printf("   --width <width in pixels>, sets the width of the attribute column in Tracker, default 60\n");
 	printf("   --editable, --not-editable, sets attribute as user editable or not, editable by default.\n");
 	printf("   --public, --private, sets attribute as public or private, public by default.\n");
+	printf("   --viewable, --non-viewable, sets attribute as viewable or non-viewable, viewable by default.\n");
 }
 
 int main( int numarg, const char * argv[] )
@@ -43,7 +45,9 @@ int main( int numarg, const char * argv[] )
 	BString attributeType;
 	bool isEditable = true;
 	bool isPublic = true;
-
+	bool isViewable = true;
+	int displayWidth=60;
+	
 	// decode arguments
 	for (int i = 1; i<numarg; i++) {
 		if (strcasecmp(argv[i], "--mime") == 0) {
@@ -60,7 +64,7 @@ int main( int numarg, const char * argv[] )
 				attributeInternal = argv[++i];
 			}
 		}
-
+		
 		if ( strcasecmp(argv[i], "--public") == 0 ) {
 			// public name
 			if ( i != numarg - 1 )
@@ -76,13 +80,23 @@ int main( int numarg, const char * argv[] )
 			}
 		}
 
+		if (strcasecmp(argv[i], "--width") == 0) {
+			// width
+			if (i != numarg - 1) {
+				displayWidth = atoi(argv[++i]);
+			}
+		}
+		
 		if (strcasecmp(argv[i], "--not-editable") == 0) isEditable = false;
 		if (strcasecmp(argv[i], "--editable") == 0) isEditable = true;
-	
+		
 		if (strcasecmp(argv[i], "--public") == 0) isPublic = true;
 		if (strcasecmp(argv[i], "--private") == 0) isPublic = false;
+		
+		if (strcasecmp(argv[i], "--viewable") == 0) isViewable = true;
+		if (strcasecmp(argv[i], "--non-viewable") == 0) isViewable = false;
 	}
-
+	
 	// check arguments
 	if ( mimeType == "" || attributeInternal == "" || attributePublic == ""	) {
 		print_usage();
@@ -131,8 +145,10 @@ int main( int numarg, const char * argv[] )
 	msg.AddString("attr:name", attributeInternal.String() );
 	msg.AddString("attr:public_name", attributePublic.String() );
 	msg.AddInt32("attr:type", attributeTypeConst );
-	msg.AddBool("attr:public", isPublic );
+	msg.AddInt32("attr:width", displayWidth );
 	msg.AddBool("attr:editable", isEditable );
+	msg.AddBool("attr:public", isPublic );
+	msg.AddBool("attr:viewable", isViewable );
 	
 	status_t setStatus = mime.SetAttrInfo(&msg);
 	if (setStatus != B_OK) {
