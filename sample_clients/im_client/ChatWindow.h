@@ -2,6 +2,7 @@
 #define CHATWINDOW_H
 
 #include "main.h"
+#include "../../common/IMKitUtilities.h"
 
 #include <ScrollView.h>
 #include <NodeMonitor.h>
@@ -96,6 +97,7 @@ class ChatWindow : public BWindow
 		BMessage		fWindowSettings;
 		Theme			*fTheme;
 		
+		float			fFontHeight;		
 //		BView			*fDock;
 };
 

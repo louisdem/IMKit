@@ -8,7 +8,7 @@
 #include <Messenger.h>
 #include <MessageRunner.h>
 
-#include "Utilities.h"
+#include "../common/IMKitUtilities.h"
 
 #include <libim/Manager.h>
 #include <be/kernel/fs_attr.h>

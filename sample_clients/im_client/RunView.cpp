@@ -2565,9 +2565,11 @@ void RunView::LoadURL(const char *url) {
 }
 
 void RunView::ScrollToBottom(void) {
-	if (fLine_count == 0) return;
-
-	ScrollTo(0.0, fLines[fLine_count - 1]->fBottom);
+	if (fLine_count != 0) {
+		BScrollBar *scroll = fScroller->ScrollBar(B_VERTICAL);
+		if (scroll != NULL) scroll->SetValue(fLines[fLine_count - 1]->fBottom);
+		ScrollTo(0.0, fLines[fLine_count - 1]->fBottom);
+	};
 };
 
 void RunView::ScrollToSelection(void) {

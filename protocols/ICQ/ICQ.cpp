@@ -578,6 +578,7 @@ ICQProtocol::Process( BMessage * msg )
 		
 				case IM::GET_CONTACT_INFO:
 				{
+					printf("Getting contact info\n");
 					const char * id = msg->FindString("id");
 					
 					if ( !id )

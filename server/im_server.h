@@ -8,7 +8,7 @@
 #include <Messenger.h>
 #include <Query.h>
 
-#include "Utilities.h"
+#include "../common/IMKitUtilities.h"
 
 #include <libim/Contact.h>
 #include <libim/Protocol.h>

@@ -74,23 +74,16 @@ ChatApp::RefsReceived( BMessage * msg )
 	
 	for ( int i=0; msg->FindRef("refs", i, &ref ) == B_OK; i++ ) {
 		node = BNode(&ref);
-		if (node.GetAttrInfo("BEOS:TYPE", &info) == B_OK) {
-			char *type = (char *)calloc(info.size, sizeof(char));
-			if (node.ReadAttr("BEOS:TYPE", info.type, 0, (void *)type, info.size) ==
-				info.size) {
-
-				if (strcmp(type, "application/x-person") == 0) {	
-					if (node.GetAttrInfo("IM:connections", &info) == B_OK) {
-						msg->AddRef("contact", &ref);
-						hasValidRefs = true;
-					};
-				} else {
-					LOG("im_client", LOW, "Got a ref that wasn't a People file");
-				};
-			};
-			
-			free(type);
+		char *type = ReadAttribute(node, "BEOS:TYPE");
+		if (strcmp(type, "application/x-person") == 0) {
+			if (node.GetAttrInfo("IM:connections", &info) == B_OK) {
+				msg->AddRef("contact", &ref);
+				hasValidRefs = true;
+			}
+		} else {
+			LOG("im_client", LOW, "Got a ref that wasn't a People file");
 		};
+		free(type);
 	};
 	
 	if (hasValidRefs == false) return;
@@ -240,6 +233,7 @@ ChatApp::findWindow( entry_ref & ref )
 void
 ChatApp::Flash( BMessenger msgr )
 {
+	printf("We should be teh flasher!\n");
 	fMan->FlashDeskbar(msgr);
 }
 

@@ -215,11 +215,16 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	// get contact info
 	reloadContact();
-
+	
+	font_height height;
+	be_plain_font->GetHeight(&height);
+	fFontHeight = height.ascent + height.descent + height.leading;
+	printf("Font Height: %.2f\n", fFontHeight);
 }
 
 ChatWindow::~ChatWindow()
 {
+	stopNotify();
 	SaveSettings();
 	
 	stop_watching( BMessenger(this) );
@@ -331,8 +336,6 @@ ChatWindow::LoadSettings(void) {
 		LOG("im_client", LOW, "Could not load chat settings");
 		return B_ERROR;
 	};
-	
-//	fWindowSettings.PrintToStream();
 	
 	return B_OK;
 }
@@ -495,6 +498,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if (dynamic_cast<BScrollView *>(view)) {
 				BPoint point;
 				msg->FindPoint("loc", &point);
+				//printf("Point:\n");
+				//point.PrintToStream();
+				//int rows = ceil((fTextScroll->Frame().Height() - point.y) / fFontHeight);
+				//printf("Can have %i rows\n", rows);
 
 				fResize->MoveTo(fResize->Frame().left, point.y);
 				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1);
@@ -508,6 +515,39 @@ ChatWindow::MessageReceived( BMessage * msg )
 		case B_MOUSE_WHEEL_CHANGED: {
 			fText->MessageReceived(msg);
 		} break;
+		
+		case B_SIMPLE_DATA: {
+			entry_ref ref;
+			BNode node;
+			attr_info info;
+			
+			for (int i = 0; msg->FindRef("refs", i, &ref) == B_OK; i++) {
+				node = BNode(&ref);
+				
+				char *type = ReadAttribute(node, "BEOS:TYPE");
+				if (strcmp(type, "application/x-person") == 0) {
+					char *name = ReadAttribute(node, "META:name");
+					char *nickname = ReadAttribute(node, "META:nickname");
+					char connection[100];
+					IM::Contact con(ref);
+					con.ConnectionAt(0, connection);
+
+					if (fInput->TextLength() > 0) fInput->Insert("\n");
+					fInput->Insert(name);
+					fInput->Insert(" (");
+					fInput->Insert(nickname);
+					fInput->Insert("): ");
+					fInput->Insert(connection);
+
+					free(name);
+					free(nickname);
+				};
+				free(type);
+			};
+			fInput->ScrollToOffset(fInput->TextLength());
+		} break;
+		
+		
 		default:
 			BWindow::MessageReceived(msg);
 	}

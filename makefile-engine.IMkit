@@ -322,7 +322,7 @@ DEP_DIR := dep
 # create the dep dir.
 MAKEDEP		:= $(shell mkdir -p $(DEP_DIR))
 
-DEPENDS		:= $(addprefix $(DEP_DIR)/,$(addsuffix .d,$(basename $(SRCS))))
+DEPENDS		:= $(addprefix $(DEP_DIR)/,$(addsuffix .d,$(foreach file, $(SRCS),$(basename $(notdir $(file))))))
 DEP			:= gcc -MM $(INCLUDES) $(CFLAGS)
 TEMPDEPFILE	:= /tmp/makefile-enine_temp_deps
 

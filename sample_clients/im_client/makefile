@@ -30,7 +30,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp ChatApp.cpp ChatWindow.cpp InputFilter.cpp ResizeView.cpp Theme.cpp Utilities.cpp URLCrunch.cpp RunView.cpp
+SRCS= main.cpp ChatApp.cpp ChatWindow.cpp InputFilter.cpp ResizeView.cpp Theme.cpp Utilities.cpp URLCrunch.cpp RunView.cpp ../../common/IMKitUtilities.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -69,7 +69,7 @@ SYSTEM_INCLUDE_PATHS = /boot/home/config/include
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS =
+LOCAL_INCLUDE_PATHS = ../../libim
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
