@@ -4,6 +4,7 @@
 #include <libim/Constants.h>
 #include <libim/Helpers.h>
 #include <UTF8.h>
+#include <algorithm>
 
 #include "MSNConnection.h"
 #include "MSNSBConnection.h"
@@ -168,7 +169,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			const char *type = NULL;
 
 			printf("Got a new connection, request was TrID: %i\n", msg->FindInt32("trid"));
-
+			
 			if (msg->FindString("host", (const char **)&host) != B_OK) {
 				LOG(kProtocolName, liLow, "Got a malformed new connection message"
 					" (Host)");
@@ -188,7 +189,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			if (strcmp(type, "SB") != 0) {
 				MSNConnection *con = new MSNConnection(host, port, this);
 				con->Run();
-
+				
 				if (strcmp(type, "NS") == 0) {
 					Command *command = new Command("VER");
 					command->AddParam(kProtocolsVers);
@@ -199,59 +200,74 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					
 					return;
 				};
-				if (strcmp(type, "RNG") == 0) {
-					const char *auth = msg->FindString("authString");
-					const char *sessionID = msg->FindString("sessionID");
-					const char *inviter = msg->FindString("inviterPassport");
-	
-					Command *command = new Command("ANS");
-					command->AddParam(fPassport.String());
-					command->AddParam(auth);
-					command->AddParam(sessionID);
-					
-					con->Send(command);
-					
-					fSwitchBoard[inviter] = con;
-					
-					return;
-				};
+			}
+			
+			if (strcmp(type, "RNG") == 0) {
+				MSNSBConnection *con = new MSNSBConnection(host, port, this);
+				con->Run();
+				
+				const char *auth = msg->FindString("authString");
+				const char *sessionID = msg->FindString("sessionID");
+				const char *inviter = msg->FindString("inviterPassport");
+				
+				Command *command = new Command("ANS");
+				command->AddParam(fPassport.String());
+				command->AddParam(auth);
+				command->AddParam(sessionID);
+				
+				con->Send(command);
+				
+				fSwitchBoard[inviter] = con;
+				fConnections.push_back( con );
+				
+				return;
 			};
 			
 			if (strcmp(type, "SB") == 0) {
 				MSNSBConnection *con = new MSNSBConnection(host, port, this);
+				con->Run();
+				
 				tridmap::iterator origCommand = fTrIDs.find(msg->FindInt32("trid"));
-				if (origCommand != fTrIDs.end()) {
-
+				
+//				if (origCommand == fTrIDs.end()) {
+//					LOG( kProtocolName, liDebug, "No waiting commands for TrID");
+//				} else {
 					const char *authString = msg->FindString("authString");
-	
+					
 					Command *command = new Command("USR");
 					command->AddParam(Passport());
 					command->AddParam(authString);
 					
 					con->Send(command);
-
-					waitingmsgmap::iterator it = fWaitingSBs.find(msg->FindInt32("trid"));
+					
+//					waitingmsgmap::iterator it = fWaitingSBs.find(msg->FindInt32("trid"));
+					waitingmsgmap::iterator it = fWaitingSBs.begin();
 					
 					if (it != fWaitingSBs.end()) {
 						BString passport = (*it).second.first;
 						Command *message = (*it).second.second;
-
+						
 						Command *cal = new Command("CAL");
 						cal->AddParam(passport.String());
 						
 						con->Send(cal, qsOnline);
 						con->Send(message, qsOnline);
 						
-						fWaitingSBs.erase(msg->FindInt32("trid"));
+						// assume it's a MSG here..
+						fSwitchBoard[ message->Param(0) ] = con;
+						fConnections.push_back( con );
+						
+//						fWaitingSBs.erase(msg->FindInt32("trid"));
+						fWaitingSBs.erase( (*it).first );
 					};
-				};
+//				};
 			};
 		} break;
 
 		case msnmsgCloseConnection: {
 			MSNConnection *con = NULL;
 			msg->FindPointer("connection", (void **)&con);
-
+			
 			if (con != NULL) {
 				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
 
@@ -266,6 +282,11 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				};
 				fHandler->StatusChanged(Passport(), otOffline);
 				BMessenger(con).SendMessage(B_QUIT_REQUESTED);
+				
+				connectionlist::iterator i = find(fConnections.begin(), fConnections.end(), con);
+				
+				if ( i != fConnections.end() )
+					fConnections.erase( i );
 			};
 		} break;
 		
@@ -292,21 +313,31 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 		if (fNoticeCon == NULL) return B_ERROR;
 		
 		bool needSB = false;
-		switchboardmap::iterator it = fSwitchBoard.find(passport);
+		connectionlist::iterator it;
+		//switchboardmap::iterator it = fSwitchBoard.find(passport);
+		for ( it=fConnections.begin(); it != fConnections.end(); it++ )
+		{
+			MSNSBConnection * c = dynamic_cast<MSNSBConnection*>( *it );
+			
+			if ( c != NULL  && c->IsSingleChatWith( passport ) )
+				break;
+		}
+		
 		Command *sbReq = NULL;
 		
-
-		if (it == fSwitchBoard.end()) {
+		//if (it == fSwitchBoard.end()) {
+		if (it == fConnections.end()) {
 			LOG(kProtocolName, liHigh, "Could not message \"%s\" - no connection established",
 				passport);
-
+			
+			sbReq =  new Command("XFR");
 			sbReq->AddParam("SB");	// Request a SB connection;
-
+			
 			fNoticeCon->Send(sbReq, qsImmediate);	
-
+			
 			needSB = true;
-
-			return 1;
+			
+//			return 1;
 		};
 		
 		Command *msg = new Command("MSG");
@@ -321,7 +352,8 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 		if (needSB) {
 			fWaitingSBs[sbReq->TransactionID()] = pair<BString,Command*>(passport, msg);
 		} else {
-			it->second->Send(msg);
+			//it->second->Send(msg);
+			(*it)->Send(msg);
 		};
 		
 		return B_OK;

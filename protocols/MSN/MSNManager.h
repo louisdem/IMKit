@@ -56,6 +56,8 @@ typedef map<int32, pair<BString, Command *> > waitingmsgmap;
 
 typedef map<BString, int8> waitingauth;
 
+typedef list<MSNConnection*> connectionlist;
+
 class MSNManager : public BLooper {
 	public:
 						MSNManager(MSNHandler *handler);
@@ -99,6 +101,7 @@ class MSNManager : public BLooper {
 		list<BString>	fBuddy;
 		MSNConnection	*fNoticeCon;
 		switchboardmap	fSwitchBoard;
+		connectionlist	fConnections;	
 		
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;

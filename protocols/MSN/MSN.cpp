@@ -336,10 +336,15 @@ status_t MSNProtocol::StatusChanged(const char *nick, online_types status) {
 	};
 
 	switch (status) {
-		case otOnline: {
+		case otOnline:
+		case otIdle: {
 			msg.AddString("status", ONLINE_TEXT);
 		} break;
 		case otAway:
+		case otBusy:
+		case otBRB:
+		case otPhone:
+		case otLunch:
 		case otInvisible:
 		case otBlocked: {
 			msg.AddString("status", AWAY_TEXT);

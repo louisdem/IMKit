@@ -461,8 +461,6 @@ void MSNConnection::ClearQueues(void) {
 };
 
 status_t MSNConnection::ProcessCommand(Command *command) {
-	command->Debug();
-	
 	if (command->Type() == "VER") {
 		return handleVER( command );
 	} else
@@ -514,6 +512,21 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	} else
 	if (command->Type() == "FLN") {
 		return handleFLN(command);
+	} else
+	if (command->Type() == "SYN") {
+		return handleSYN(command);
+	} else
+	if (command->Type() == "JOI") {
+		return handleJOI(command);
+	} else
+	if (command->Type() == "CAL") {
+		return handleCAL(command);
+	} else
+	if (command->Type() == "IRO") {
+		return handleIRO(command);
+	} else
+	if (command->Type() == "BYE") {
+		return handleBYE(command);
 	} else {
 		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
 			fPort, command->Type().String());
@@ -539,9 +552,9 @@ status_t MSNConnection::handleNLN( Command * command ) {
 	BString passport = command->Param(1);
 	BString friendly = command->Param(2);
 	BString caps = command->Param(3);
-				
+	
 	online_types status = otOffline;
-		
+	
 	if (statusStr == "NLN") status = otOnline;
 	if (statusStr == "BSY") status = otBusy;
 	if (statusStr == "IDL") status = otIdle;
@@ -549,11 +562,11 @@ status_t MSNConnection::handleNLN( Command * command ) {
 	if (statusStr == "AWY") status = otAway;
 	if (statusStr == "PHN") status = otPhone;
 	if (statusStr == "LUN") status = otLunch;
-		
+	
 	BMessage statusChange(msnmsgStatusChanged);
 	statusChange.AddString("passport", passport);
 	statusChange.AddInt8("status", (int8)status);
-		
+	
 	fManMsgr.SendMessage(&statusChange);
 	return B_OK;
 }
@@ -659,14 +672,14 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		statusChange.AddInt8("status", fState);
 		fManMsgr.SendMessage(&statusChange);
 
-		Command *reply = new Command("CHG");
+/*		Command *reply = new Command("CHG");
 		reply->AddParam("NLN");
 		BString caps = "";
 		caps << kOurCaps;
 
 		reply->AddParam(caps.String());
 		Send(reply);
-			
+*/			
 		Command *rea = new Command("PRP");
 		rea->AddParam("MFN");
 		rea->AddParam(fManager->DisplayName(), true);
@@ -952,3 +965,44 @@ status_t MSNConnection::handleFLN(Command *command) {
 	return B_OK;
 }
 
+
+status_t MSNConnection::handleSYN( Command * command ) {
+	LOG(kProtocolName, liDebug, "Processing SYN");
+	
+	// process SYN here as needed
+	// ...
+	
+	// send CHG to set our status
+	Command *reply = new Command("CHG");
+	reply->AddParam("NLN");
+	BString caps = "";
+	caps << kOurCaps;
+	reply->AddParam( caps.String() );
+	Send(reply);
+	
+	return B_OK;
+}
+
+status_t MSNConnection::handleJOI(Command *command) {
+	// Someone joining conversation
+	LOG(kProtocolName, liDebug, "Processing JOI");
+	return B_OK;
+}
+
+status_t MSNConnection::handleCAL(Command *command) {
+	// Inititation response
+	LOG(kProtocolName, liDebug, "Processing CAL");
+	return B_OK;
+}
+
+status_t MSNConnection::handleIRO(Command *command) {
+	// people already in conversation
+	LOG(kProtocolName, liDebug, "Processing IRO");
+	return B_OK;
+}
+
+status_t MSNConnection::handleBYE(Command *command) {
+	// someone left conversation
+	LOG(kProtocolName, liDebug, "Processing BYE");
+	return B_OK;
+}

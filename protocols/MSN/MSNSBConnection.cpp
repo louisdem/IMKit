@@ -1,5 +1,7 @@
 #include "MSNSBConnection.h"
 
+#include <algorithm>
+
 MSNSBConnection::MSNSBConnection(const char *server, uint16 port, MSNManager *man)
 :	MSNConnection(server,port,man)
 {
@@ -9,62 +11,89 @@ MSNSBConnection::~MSNSBConnection()
 {
 }
 
-status_t
-MSNSBConnection::handleVER( Command * cmd )
+bool
+MSNSBConnection::IsGroupChat() const
 {
-	MSNConnection::handleVER(cmd);
+	return fParticipants.size() > 1;
+}
+
+bool
+MSNSBConnection::IsSingleChatWith( const char * who ) const
+{
+	return fParticipants.size() == 1 && *fParticipants.begin() == who;
+}
+
+bool
+MSNSBConnection::InChat( const char * who ) const
+{
+	list<string>::const_iterator i;
+	
+	for ( i = fParticipants.begin(); i != fParticipants.end(); i++ )
+	{
+		if ( *i == who )
+		{
+			break;
+		}
+	}
+	
+	return i != fParticipants.end();
 }
 
 status_t
-MSNSBConnection::handleNLN( Command * cmd )
+MSNSBConnection::handleCAL( Command * cmd )
 {
-	MSNConnection::handleNLN(cmd);
+	// Invite someone (response)
+	LOG(kProtocolName, liDebug, "Processing CAL (SB)");
+	return B_OK;
 }
 
 status_t
-MSNSBConnection::handleCVR( Command * cmd )
+MSNSBConnection::handleJOI( Command * cmd )
 {
-	MSNConnection::handleCVR(cmd);
+	// someone new in chat
+	LOG(kProtocolName, liDebug, "Processing JOI (SB)");
+	
+	fParticipants.push_back( cmd->Param(0) );
+	
+	return B_OK;
 }
 
 status_t
-MSNSBConnection::handleRNG( Command * cmd )
+MSNSBConnection::handleIRO( Command * cmd )
 {
-	MSNConnection::handleRNG(cmd);
+	// List of those already in chat
+	LOG(kProtocolName, liDebug, "Processing IRO (SB)");
+
+	fParticipants.push_back( cmd->Param(2) );
+	
+	return B_OK;
 }
 
 status_t
-MSNSBConnection::handleXFR( Command * cmd )
+MSNSBConnection::handleBYE( Command * cmd )
 {
-	MSNConnection::handleXFR(cmd);
+	// List of those already in chat
+	LOG(kProtocolName, liDebug, "Processing BYE (SB)");
+	
+	fParticipants.remove( cmd->Param(0) );
+	
+	if ( fParticipants.size() == 0 )
+	{ // last one left, leave too.
+		Command * reply = new Command("OUT");
+		reply->UseTrID(false);
+		
+		Send( reply );
+	}
+	
+	return B_OK;
 }
 
 status_t
-MSNSBConnection::handleCHL( Command * cmd )
+MSNSBConnection::handleUSR( Command * cmd  )
 {
-	MSNConnection::handleCHL(cmd);
-}
-
-status_t
-MSNSBConnection::handleUSR( Command * cmd )
-{
-	MSNConnection::handleUSR(cmd);
-}
-
-status_t
-MSNSBConnection::handleMSG( Command * cmd )
-{
-	MSNConnection::handleMSG(cmd);
-}
-
-status_t
-MSNSBConnection::handleADC( Command * cmd )
-{
-	MSNConnection::handleADC(cmd);
-}
-
-status_t
-MSNSBConnection::handleLST( Command * cmd )
-{
-	MSNConnection::handleLST(cmd);
+	LOG(kProtocolName, liDebug, "Processing USR (SB)");
+	
+	GoOnline();
+	
+	return B_OK;
 }
