@@ -152,7 +152,7 @@ else
     DEFINES += GET_NODE_ICON
   endif
   LIBS += zeta tracker
-  SRCS += SVGCache.cpp
+  SRCS+= SVGCache.cpp
 endif
 
 INSTALL_DIR= $(TOPDIR)/build/utils

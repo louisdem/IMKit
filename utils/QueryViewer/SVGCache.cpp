@@ -1,3 +1,5 @@
+#include "SVGCache.h"
+
 #ifdef B_ZETA_VERSION
 
 #include <sys_apps/Tracker/Icons.h>
@@ -13,7 +15,6 @@
 
 #include "Hash.h"
 #include "IMKitUtilities.h"
-#include "SVGCache.h"
 
 //-------------------------------------------------------------
 

@@ -1,9 +1,9 @@
-#ifdef B_ZETA_VERSION
-
 #ifndef SVG_CACHE_H
 #define SVG_CACHE_H
 
 #include <OS.h>
+
+#ifdef B_ZETA_VERSION
 
 class BBitmap;
 
@@ -56,10 +56,8 @@ class CacheTimer
 		}
 };
 
-#endif
-
 #else
-
 #define getBitmap ReadNodeIcon
+#endif
 
 #endif
