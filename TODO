@@ -17,9 +17,10 @@ Things to fix
 * When running Zeta: reused message from sending message is corrupted somewhere along the line. Fixed?
 * Crash in BubbleHelper, ...( FindView( WindowAt() ) ). Remove Bubblehelper on quit?
 * Only warn about not being able to read settingsfiles when there's cause for concern
-* Add check for Blocked everywhere we change status: status update, connect, disconnect, etc
+* Add check for Blocked everywhere we change status: status update, connect, disconnect, etc. Fixed?
 * Add Capabilities to IM::Protocol in some way
 * Alt-C in client doesn't work
+* Option to disable logging (im_logger and LOG() output)
 
 New features
 

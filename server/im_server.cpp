@@ -1450,6 +1450,8 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
 	}
+	
+	node.Unset();
 }
 
 
@@ -1522,9 +1524,9 @@ Server::SetAllOffline()
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
 			LOG("im_server", DEBUG, "  error.");
-
+		
 		BNode node(&entry);
-
+		
 		BBitmap *large = NULL;
 		BBitmap *small = NULL;
 		
@@ -1544,6 +1546,8 @@ Server::SetAllOffline()
 		} else {
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
+		
+		node.Unset();
 	}
 }
 
