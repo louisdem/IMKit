@@ -64,7 +64,7 @@ LIBPATHS= /boot/home/config/lib ../../build
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = /boot/home/config/include
+SYSTEM_INCLUDE_PATHS = /boot/home/config/include /boot/home/config/include/sigc++-1.0 /boot/home/config/include/libicq2000
 
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
