@@ -48,6 +48,8 @@ class Server : public BApplication
 		void	reply_GET_SETTINGS( BMessage * );
 		void	reply_SET_SETTINGS( BMessage * );
 		
+		void	handleDeskbarMessage( BMessage * );
+		
 		BMessage	GenerateSettingsTemplate();
 		status_t	UpdateOwnSettings( BMessage );
 		
@@ -77,6 +79,8 @@ class Server : public BApplication
 		map<node_ref,list<pair<string,string> > >	contacts_protocols_ids;
 
 		BMessage					fIcons;
+		
+		BMessenger					fDeskbarMsgr;
 };
 
 };

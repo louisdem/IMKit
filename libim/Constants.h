@@ -66,6 +66,9 @@ enum message_what_codes {
 		Deskbar icon related messages
 	*/
 	DESKBAR_ICON_CLICKED	= 'DBcl',
+	REGISTER_DESKBAR_MESSENGER = 'DBrg',
+	FLASH_DESKBAR			= 'DBfl',
+	STOP_FLASHING			= 'DBst',
 	
 	/*
 		Client autostart management

@@ -193,29 +193,35 @@ Manager::SendMessage( BMessage * msg, BMessage * reply = NULL )
 void
 Manager::FlashDeskbar( BMessenger msgr )
 {
-	BMessage msg('flsh'), reply;
+	BMessage msg(FLASH_DESKBAR), reply;
 	msg.AddMessenger("messenger",msgr);
 	
-	msg.AddSpecifier("View", "IM_DeskbarIcon");
+	SendMessage(&msg);
+	
+/*	msg.AddSpecifier("View", "IM_DeskbarIcon");
 	msg.AddSpecifier("View", "Status");
 	msg.AddSpecifier("View", "");
 	msg.AddSpecifier("View", "BarView");
 	msg.AddSpecifier("Window", "Deskbar");
 	
 	BMessenger("application/x-vnd.Be-TSKB").SendMessage(&msg, &reply);
+*/
 }
 
 void
 Manager::StopFlashingDeskbar( BMessenger msgr )
 {
-	BMessage msg('stop'), reply;
+	BMessage msg(STOP_FLASHING), reply;
 	msg.AddMessenger("messenger",msgr);
 	
-	msg.AddSpecifier("View", "IM_DeskbarIcon");
+	SendMessage(&msg);
+	
+/*	msg.AddSpecifier("View", "IM_DeskbarIcon");
 	msg.AddSpecifier("View", "Status");
 	msg.AddSpecifier("View", "");
 	msg.AddSpecifier("View", "BarView");
 	msg.AddSpecifier("Window", "Deskbar");
 	
 	BMessenger("application/x-vnd.Be-TSKB").SendMessage(&msg, &reply);
+*/
 }

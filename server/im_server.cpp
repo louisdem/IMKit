@@ -252,6 +252,12 @@ Server::MessageReceived( BMessage * msg )
 
 		// IM-Kit specified messages:
 		
+		case FLASH_DESKBAR:
+		case STOP_FLASHING:
+		case REGISTER_DESKBAR_MESSENGER:
+			handleDeskbarMessage(msg);
+			break;
+		
 		case ADD_AUTOSTART_APPSIG:
 			reply_ADD_AUTOSTART_APPSIG(msg);
 			break;
@@ -1650,4 +1656,26 @@ Server::reply_SET_SETTINGS( BMessage * msg )
 	}
 	
 	msg->SendReply(ACTION_PERFORMED);
+}
+
+void
+Server::handleDeskbarMessage( BMessage * msg )
+{
+	switch ( msg->what )
+	{
+		case FLASH_DESKBAR:
+		case STOP_FLASHING:
+		{ // forward to deskbar icon
+			LOG("im_server", DEBUG, "Forwarding message to Deskbar");
+			if ( fDeskbarMsgr.SendMessage(msg) != B_OK )
+			{
+				LOG("im_server", LOW, "Error send message to Deskbar");
+			}
+		}	break;
+		
+		case REGISTER_DESKBAR_MESSENGER:
+			LOG("im_server", DEBUG, "Got Deskbar messenger");
+			msg->FindMessenger("msgr", &fDeskbarMsgr);
+			break;
+	}
 }

@@ -152,7 +152,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				Invalidate();
 		}	break;
 		
-		case 'flsh':
+		case IM::FLASH_DESKBAR:
 		{
 			BMessenger msgr;
 			if ( msg->FindMessenger("messenger", &msgr) == B_OK )
@@ -169,7 +169,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 			LOG("deskbar", HIGH, "IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
-		case 'stop':
+		case IM::STOP_FLASHING:
 		{	
 			BMessenger msgr;
 			if ( msg->FindMessenger("messenger", &msgr) == B_OK )
@@ -290,6 +290,13 @@ IM_DeskbarIcon::AttachedToWindow()
 	snooze(500*1000);
 	
 	reloadSettings();
+	
+	// register with im_server
+	LOG("deskbar", DEBUG, "Registering with im_server");
+	BMessage msg(IM::REGISTER_DESKBAR_MESSENGER);
+	msg.AddMessenger( "msgr", BMessenger(this) );
+	
+	BMessenger(IM_SERVER_SIG).SendMessage(&msg);
 }
 
 void
