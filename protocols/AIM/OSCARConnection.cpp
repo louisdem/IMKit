@@ -448,14 +448,6 @@ void OSCARConnection::StartReceiver(void) {
 };
 
 void OSCARConnection::StopReceiver(void) {
-	if (fSockMsgr) {
-		BMessenger * old_msgr = fSockMsgr;
-		fSockMsgr = new BMessenger((BHandler *)NULL);
-		// deleting the messenger will cause the thread to exit cleanly
-		delete old_msgr;
-		fThread = 0;
-	}
-	
 	if ( fSock > B_ERROR )
 	{
 		#ifdef closesocket
@@ -465,6 +457,17 @@ void OSCARConnection::StopReceiver(void) {
 		#endif
 	
 //		fSock = B_ERROR;
+	}
+	
+	if (fSockMsgr) {
+		BMessenger * old_msgr = fSockMsgr;
+		fSockMsgr = new BMessenger((BHandler *)NULL);
+		// deleting the messenger will cause the thread to exit cleanly
+		delete old_msgr;
+		
+		int32 res;
+		wait_for_thread( fThread, &res);
+		fThread = 0;
 	}
 };
 
