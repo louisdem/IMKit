@@ -204,6 +204,8 @@ void InfoView::Draw(BRect drawBounds) {
 	// draw progress background
 	
 	if (fType == InfoPopper::Progress) {
+		PushState();
+		
 		font_height fh;
 		be_plain_font->GetHeight(&fh);
 		float fontHeight = fh.ascent + fh.descent + fh.leading;
@@ -228,8 +230,11 @@ void InfoView::Draw(BRect drawBounds) {
 		float labelWidth = be_plain_font->StringWidth(label.String());
 		float labelX = progRect.left + (progRect.IntegerWidth() / 2) - (labelWidth / 2);
 
-//		SetLowColor(0x88, 0xff, 0x88);
+		SetLowColor(B_TRANSPARENT_COLOR);
+		SetDrawingMode(B_OP_ALPHA);
 		DrawString(label.String(), label.Length(), BPoint(labelX, progRect.top + fontHeight));
+
+		PopState();
 	};
 		
 	SetDrawingMode( B_OP_ALPHA );
