@@ -20,6 +20,10 @@ InfoWindow::InfoWindow()
 	
 	SetWorkspaces( 0xffffffff );
 	
+	fBorder = new BorderView( Bounds(), "IM info" );
+	
+	AddChild( fBorder );
+	
 	Show();
 	Hide();
 	
@@ -59,7 +63,8 @@ InfoWindow::MessageReceived( BMessage * msg )
 		{
 			int32 im_what=IM::ERROR;
 			
-			msg->FindInt32( "im_what", &im_what );
+			if ( msg->FindInt32( "im_what", &im_what ) != B_OK )
+				im_what = IM::ERROR;
 			
 			BString text("");
 			
@@ -82,13 +87,32 @@ InfoWindow::MessageReceived( BMessage * msg )
 			{
 				case IM::ERROR:
 				{
-					text << "Error: " << msg->FindString("error");
-					type = InfoView::Error;
+					BMessage error;
+					int32 error_what = -1;
+					if ( msg->FindMessage("message", &error ) == B_OK )
+					{
+						error.FindInt32("im_what", &error_what);
+					}
+					
+					if ( error_what != IM::USER_STARTED_TYPING && 
+						error_what != IM::USER_STOPPED_TYPING )
+					{ // we ignore errors due to typing notifications.
+						text << "Error: " << msg->FindString("error");
+						type = InfoView::Error;
+					}
 				}	break;
 				
 				case IM::MESSAGE_RECEIVED:
 				{
-					text << "Message received from " << contact_name;
+					BString message = msg->FindString("message");
+					if ( message.Length() > 30 )
+					{
+						message.Truncate(27);
+						message.Append("...");
+					}
+					
+					text << contact_name << " says:\n    " << message;
+					
 					type = InfoView::Important;
 				}	break;
 				
@@ -106,7 +130,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 				
 				fInfoViews.push_back(view);
 				
-				AddChild( view );
+				fBorder->AddChild( view );
 				
 				ResizeAll();
 			}
@@ -119,7 +143,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 			
 			InfoView * info = reinterpret_cast<InfoView*>(_ptr);
 			
-			RemoveChild(info);
+			fBorder->RemoveChild(info);
 			
 			fInfoViews.remove(info);
 			
@@ -141,14 +165,17 @@ InfoWindow::ResizeAll()
 		return;
 	}
 	
-	float curry=0, maxw=0;
+	float borderw, borderh;
+	fBorder->GetPreferredSize(&borderw, &borderh);
+	
+	float curry=borderh-borderw/2, maxw=0;
 	BView * view = NULL;
 	
 	for ( list<InfoView*>::iterator i=fInfoViews.begin(); i != fInfoViews.end(); i++ )
 	{
 		float pw,ph;
 		
-		(*i)->MoveTo(0, curry);
+		(*i)->MoveTo(borderw/2, curry);
 		(*i)->GetPreferredSize(&pw,&ph);
 		
 		curry += (*i)->Bounds().Height()+1;
@@ -156,12 +183,12 @@ InfoWindow::ResizeAll()
 		if ( pw > maxw )
 			maxw = pw;
 		
-		(*i)->ResizeTo( Bounds().Width(), (*i)->Bounds().Height() );
+		(*i)->ResizeTo( Bounds().Width() - borderw, (*i)->Bounds().Height() );
 	}
 	
-	ResizeTo( maxw, curry-1 );
+	ResizeTo( maxw + borderw, curry-1+borderw/2);
 	
-	PopupAnimation(maxw, curry-1);
+	PopupAnimation( Bounds().Width(), Bounds().Height() );
 }
 
 void

@@ -6,6 +6,7 @@
 #include <list>
 #include "InfoView.h"
 #include <libim/Manager.h>
+#include "BorderView.h"
 
 // -------------- INFO WINDOW -----------------
 
@@ -26,6 +27,7 @@ class InfoWindow : public BWindow
 		IM::Manager 		* fMan;
 		list<InfoView*>		fInfoViews;
 		deskbar_location 	fDeskbarLocation;
+		BorderView			* fBorder;
 };
 
 #endif

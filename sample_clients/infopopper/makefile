@@ -32,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp InfoView.cpp InfoWindow.cpp InputFilter.cpp
+SRCS= main.cpp InfoView.cpp InfoWindow.cpp InputFilter.cpp BorderView.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.

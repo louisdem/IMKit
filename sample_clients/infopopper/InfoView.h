@@ -3,8 +3,10 @@
 
 #include <View.h>
 #include <MessageRunner.h>
-#include <StringView.h>
+#include <TextView.h>
 #include "InputFilter.h"
+#include <String.h>
+#include <list>
 
 enum {
 	REMOVE_VIEW = 'ReVi'
@@ -29,10 +31,15 @@ class InfoView : public BView
 		
 		void GetPreferredSize( float *, float * );
 		
+		void Draw( BRect );
+		
+		void SetText( const char * );
+		
 	private:
 		BMessageRunner	* fRunner;
 		InputFilter		* fFilter;
-		BStringView 	* fView;
+//		BTextView 		* fView;
+		list<BString>	fLines;
 };
 
 

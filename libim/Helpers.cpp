@@ -89,7 +89,7 @@ void LOG(const char * module, log_importance level, const char *message, const B
 		msg->PrintToStream();
 	}
 	
-	fsync(STDOUT_FILENO);
+	fflush(stdout);
 }
 
 void LOG(const char * module, log_importance level, const char *message, ...) {
@@ -109,7 +109,7 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 	
 	printf("%s %s: %s\n", module, timestr, buffer);
 	
-	fsync(STDOUT_FILENO);
+	fflush(stdout);
 }
 
 // READ / WRITE ATTRIBUTES
