@@ -191,3 +191,20 @@ void Flap::Clear(void) {
 	fFlat = NULL;
 	fDirty = true;
 };
+
+SNAC *Flap::SNACAt(uint8 index = 0) {
+	uint8 snacCount = 0;
+	
+	list <TypeDataPair>::iterator i;
+	
+	for (i = fData.begin(); i != fData.end(); i++) {
+		TypeDataPair p = (*i);
+		
+		if (p.second == DATA_TYPE_SNAC) {
+			if (snacCount == index) return (SNAC *)p.first;
+			snacCount++;
+		};
+	};
+	
+	return NULL;
+};

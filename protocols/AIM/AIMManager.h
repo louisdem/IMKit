@@ -17,6 +17,7 @@
 
 #include <list>
 
+#include "AIMConnection.h"
 #include "FLAP.h"
 #include "TLV.h"
 
@@ -27,7 +28,11 @@ enum {
 	AMAN_FLAP_OPEN_CON = 'amoc',
 	AMAN_FLAP_SNAC_DATA = 'amsd',
 	AMAN_FLAP_ERROR = 'amfe',
-	AMAN_FLAP_CLOSE_CON = 'amcc'
+	AMAN_FLAP_CLOSE_CON = 'amcc',
+	AMAN_NEW_CONNECTION = 'amnc',
+
+	AMAN_STATUS_CHANGED = 'amsc',
+	AMAN_NEW_CAPABILITIES = 'amna'
 };
 
 enum {
@@ -37,9 +42,12 @@ enum {
 	AMAN_ONLINE
 };
 
+class AIMConnection;
+class AIMHandler;
+
 class AIMManager : public BLooper {
 	public:
-						AIMManager(BMessenger im_kit);
+						AIMManager(AIMHandler *handler);
 						~AIMManager(void);
 						
 			status_t	Send(Flap *f);
@@ -48,6 +56,7 @@ class AIMManager : public BLooper {
 			
 			status_t	MessageUser(const char *screenname, const char *message);
 			status_t	AddBuddy(const char *buddy);
+			status_t	AddBuddies(list<char *>buddies);
 			int32		Buddies(void) const;
 
 			status_t	Login(const char *server, uint16 port,
@@ -56,30 +65,22 @@ class AIMManager : public BLooper {
 			status_t	LogOff(void);
 			status_t	RequestBuddyIcon(const char *buddy);
 			
-	private:
-			void		StartMonitor(void);
-			void		StopMonitor(void);
+			status_t	TypingNotification(const char *buddy, uint16 typing);
 			
-		static int32	MonitorSocket(void *messenger);
-			int32		ConnectTo(const char *hostname, uint16 port);
-		
-	
+	private:	
 			char		*EncodePassword(const char *pass);
-		list<Flap *>	fOutgoing;
-		list<Flap>		fIncoming;
 		list<BString>	fBuddy;
-			uint16		fOutgoingSeqNum;
-			uint16		fIncomingSeqNum;
-			uint32		fRequestID;			
-			int32		fSock;
-		
-			thread_id	fSockThread;
-			BMessenger	*fSockMsgr;
+		list<AIMConnection *>
+						fConnections;	
+		list<Flap *>	fWaitingSupport;
 		
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
-		BMessenger		fIMKit;
-		uchar			fConnectionState;
+			uchar		fConnectionState;
+
+			char		*fOurNick;
+
+		AIMHandler		*fHandler;
 };
 
 #endif

@@ -34,9 +34,16 @@ status_t AIMProtocol::Init(BMessenger msgr) {
 	fMsgr = msgr;
 	LOG("AIM", MEDIUM, "AIMProtocol::Init() start");
 	
-	fManager = new AIMManager(msgr);
+	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 	fManager->Run();
 
+
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what",IM::STATUS_SET);
+	msg.AddString("protocol","AIM");
+	msg.AddString("status",ONLINE_TEXT);
+//	fMsgr.SendMessage( &msg );
+	
 	return B_OK;
 }
 
@@ -50,8 +57,6 @@ status_t AIMProtocol::Shutdown() {
 }
 
 status_t AIMProtocol::Process(BMessage * msg) {
-	printf("AIMProtocol::Process()\n");
-	
 	switch (msg->what) {
 		case IM::MESSAGE: {
 			int32 im_what=0;
@@ -61,11 +66,23 @@ status_t AIMProtocol::Process(BMessage * msg) {
 			switch (im_what) {
 				case IM::REGISTER_CONTACTS:
 				{
-					for ( int i=0; msg->FindString("id",i); i++ )
-					{
-						const char * id = msg->FindString("id",i);
-						fManager->AddBuddy(id);
-					}
+					int32 count = 0;
+					msg->GetInfo("id", NULL, &count);
+								
+					if (count > 0) {
+						list<char *> buddies;
+						printf("%i buddies\n", count);
+						for ( int i=0; msg->FindString("id",i); i++ )
+						{
+							const char * id = msg->FindString("id",i);
+						printf("\t%i: %s\n", i, id);
+							buddies.push_back(strdup(id));
+						};
+						fManager->AddBuddies(buddies);
+					} else {
+						printf("One buddy: %s\n", msg->FindString("id"));
+						fManager->AddBuddy(msg->FindString("id"));
+					};
 				}	break;
 				
 				case IM::SET_STATUS: {
@@ -120,8 +137,22 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					
 					fMsgr.SendMessage(msg);
 					
-//					fManager->RequestBuddyIcon(id);
+					fManager->RequestBuddyIcon(id);
 				}	break;
+				case IM::USER_STARTED_TYPING: {
+//					const char *id = msg->FindString("id");
+//					if (!id) return B_ERROR;
+				
+//					fManager->TypingNotification(id, STARTED_TYPING);
+//					snooze(1000 * 1);
+//					fManager->TypingNotification(id, STILL_TYPING);
+				} break;
+				case IM::USER_STOPPED_TYPING: {
+//					const char *id = msg->FindString("id");
+//					if (!id) return B_ERROR;
+					
+//					fManager->TypingNotification(id, FINISHED_TYPING);
+				} break;
 /*				case IM::SEND_AUTH_ACK:
 				{
 					bool authreply;
@@ -252,3 +283,73 @@ uint32 AIMProtocol::GetEncoding()
 //	return fClient.fEncoding;
 	return B_ISO1_CONVERSION;
 }
+
+status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
+	BMessage msg(IM::MESSAGE);
+	msg.AddString("protocol", "AIM");
+
+printf("Nick for status change: \"%s\" vs \"%s\"\n", nick, fScreenName);
+	if (strcmp(nick, fScreenName) == 0) {
+		msg.AddInt32("im_what", IM::STATUS_SET);
+	} else {
+		msg.AddInt32("im_what", IM::STATUS_CHANGED);
+		msg.AddString("id", nick);
+	};
+
+	switch (status) {
+		case ONLINE: {
+			msg.AddString("status", ONLINE_TEXT);
+		} break;
+		case AWAY:
+		case IDLE: {
+			msg.AddString("status", AWAY_TEXT);
+		} break;
+		case OFFLINE: {
+			msg.AddString("status", OFFLINE_TEXT);
+		} break;
+		
+		default: {
+			return B_ERROR;
+		};
+	};
+
+	fMsgr.SendMessage(&msg);
+	
+	return B_OK;
+};
+
+status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
+	printf("AIMProt: Msg from %s content: \"%s\"\n", nick, msg);
+	BMessage im_msg(IM::MESSAGE);
+	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
+	im_msg.AddString("protocol", "AIM");
+	im_msg.AddString("id", nick);
+	im_msg.AddString("message", msg);
+	im_msg.AddInt32("charset",B_ISO1_CONVERSION);
+	
+	fMsgr.SendMessage(&im_msg);											
+
+	return B_OK;
+};
+
+status_t AIMProtocol::UserIsTyping(const char *nick, typing_notification type) {
+	BMessage im_msg(IM::MESSAGE);
+	im_msg.AddString("protocol", "AIM");
+	im_msg.AddString("id", nick);
+
+	switch (type) {
+		case STILL_TYPING:
+		case STARTED_TYPING: {
+			im_msg.AddInt32("im_what", IM::CONTACT_STARTED_TYPING);
+		} break;
+		case FINISHED_TYPING:
+		default: {
+			im_msg.AddInt32("im_what", IM::CONTACT_STOPPED_TYPING);
+		} break;
+	};
+	
+	fMsgr.SendMessage(&im_msg);
+	
+	return B_OK;
+};
+

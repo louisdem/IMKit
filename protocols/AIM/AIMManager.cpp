@@ -4,6 +4,8 @@
 #include <libim/Constants.h>
 #include <UTF8.h>
 
+#include "AIMHandler.h"
+
 const char kThreadName[] = "IMKit: AIM Protocol";
 const char kProtocolName[] = "AIM";
 
@@ -54,8 +56,6 @@ void PrintHex(const unsigned char* buf, size_t size) {
 
 void remove_html( char * msg )
 {
-	printf("removing html from: [%s]\n", msg);
-	
 	bool is_in_tag = false;
 	int copy_pos = 0;
 	
@@ -84,142 +84,97 @@ void remove_html( char * msg )
 	strcpy(msg, copy);
 }
 
-AIMManager::AIMManager(BMessenger im_kit) {	
-	fSock = -1;
-	fOutgoingSeqNum = 10;
-	fIncomingSeqNum = 0;
-	fRequestID = 0;
+AIMManager::AIMManager(AIMHandler *handler) {	
 	fConnectionState = AMAN_OFFLINE;
-	fSockThread = 0;
 	
-	fIMKit = im_kit;
-	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
-//		new BMessage(AMAN_PULSE), 500000, -1);
-		new BMessage(AMAN_PULSE), 1000000, -1);	
-
-	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
-		new BMessage(AMAN_KEEP_ALIVE), 30000000, -1);
+	fHandler = handler;
+	fOurNick = NULL;
 };
 
 AIMManager::~AIMManager(void) {
-	StopMonitor();
-	
-	delete fRunner;
-	delete fKeepAliveRunner;
-	
-	if ( fSockThread )
-	{
-		status_t tr;
-	
-		wait_for_thread( fSockThread, &tr );
-	}
-}
-
-void AIMManager::StartMonitor(void) {
-	fSockMsgr = new BMessenger(NULL, (BLooper *)this);
-	fSockThread = spawn_thread(MonitorSocket, kThreadName, B_NORMAL_PRIORITY,
-		(void *)this);
-	if (fSockThread > B_ERROR) 
-		resume_thread(fSockThread);
-
-};
-
-void AIMManager::StopMonitor(void) {
-	if (fSockMsgr) 
-	{
-		BMessenger * old_msgr = fSockMsgr;
-		fSockMsgr = new BMessenger((BHandler *)NULL);
-		delete old_msgr;
-	}
-	
-	fSockThread = 0;
 }
 
 status_t AIMManager::Send(Flap *f) {
-	fOutgoing.push_back(f);
+	if (f->Channel() == SNAC_DATA) {
+printf("Need to send SNAC\n");
+		SNAC *s = f->SNACAt(0);
+		
+		if (s != NULL) {
+			uint16 family = s->Family();
+printf("\t0x%04x\n", family);
+			
+			list <AIMConnection *>::iterator i;
+			
+			for (i = fConnections.begin(); i != fConnections.end(); i++) {
+				AIMConnection *con = (*i);
+				if (con->Supports(family) == true) {
+					printf("Connection %s:%i supports family\n", con->Server(),
+						con->Port());
+					con->Send(f);
+					return B_OK;
+				};
+			}
+			
+			printf("Need to make a new request\n");
+			AIMConnection *con = fConnections.front();
+			
+			Flap *newService = new Flap(SNAC_DATA);
+			newService->AddSNAC(new SNAC(SERVICE_CONTROL, REQUEST_NEW_SERVICE,
+				0x00, 0x00, 0x00000000));
+				
+			uchar highF = (family & 0xff00) >> 8;
+			uchar lowF = (family & 0x00ff);
+			newService->AddRawData((uchar *)&highF, sizeof(highF));
+			newService->AddRawData((uchar *)&lowF, sizeof(lowF));
+			con->Send(newService);
+			
+			fWaitingSupport.push_back(f);
+		};
+	} else {
+		AIMConnection *con = fConnections.front();
+		con->Send(f);
+	};
 }
-
-int32 AIMManager::ConnectTo(const char *hostname, uint16 port) {
-	if (hostname == NULL) {
-		LOG(kProtocolName, LOW, "ConnectTo() called with NULL hostname - probably"
-			" not authorised to login at this time");
-		return B_ERROR;
-	};
-
-	struct hostent *he;
-	struct sockaddr_in their_addr;
-	int32 sock = 0;
-
-	LOG("AIM", LOW, "AIMManager::ConnectTo(%s, %i)", hostname, port);
-
-	if ((he = gethostbyname(hostname)) == NULL) {
-		LOG("AIM", LOW, "AIMManager::ConnectTo: Couldn't get Server name (%s)", hostname);
-		return B_ERROR;
-	};
-
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG("AIM", LOW, "AIMManager::ConnectTo: Couldn't create socket");	
-		return B_ERROR;
-	};
-
-	their_addr.sin_family = AF_INET;
-	their_addr.sin_port = htons(port);
-	their_addr.sin_addr = *((struct in_addr *)he->h_addr);
-	memset(&(their_addr.sin_zero), 0, 8);
-
-	if (connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1) {
-		LOG("AIM", LOW, "AIMManager::ConnectTo: Couldn't connect to %s:%i", hostname, port);
-		return B_ERROR;
-	};
-	
-	return sock;
-};
 
 status_t AIMManager::Login(const char *server, uint16 port, const char *username,
 	const char *password) {
 	
-	fConnectionState = AMAN_CONNECTING;
+	if (fConnectionState == AMAN_OFFLINE) {
+		uint8 nickLen = strlen(username);
 	
-	fSock = ConnectTo(server, port);
-	StartMonitor();
-/*
-	Flap *flap = new Flap(OPEN_CONNECTION);
-	flap->AddRawData((uchar []){0x00, 0x00}, 2);
-	flap->AddRawData((uchar []){0x00, 0x01}, 2);
-	flap->AddTLV(0x0001, username, strlen(username));
-	flap->AddTLV(0x0002, EncodePassword(password), strlen(password));
-	flap->AddTLV(0x0003, "BeOS IM Kit by slaad", strlen("BeOS IM Kit by slaad"));
-	flap->AddTLV(0x0016, (char []){0x00, 0x01}, 2);
-	flap->AddTLV(0x0017, (char []){0x00, 0x00}, 2);
-	flap->AddTLV(0x0018, (char []){0x00, 0x00}, 2);
-	flap->AddTLV(0x0019, (char []){0x00, 0x00}, 2);
-//	flap->AddTLV(0x001a, (char []){0x00, 0x00}, 2);
-//	flap->AddTLV(0x0014, (char []){0x20, 0x04, 0x02, 0x16}, 4);
-	flap->AddTLV(0x000e, "us", 2);
-	flap->AddTLV(0x000f, "en", 2);	
-//	flap->AddTLV(0x0009, (char []){0x00, 0x15}, 2);
-*/
+		fOurNick = (char *)realloc(fOurNick, (nickLen + 1) * sizeof(char));
+		strncpy(fOurNick, username, nickLen);
+		fOurNick[nickLen] = '\0';
 
-	Flap *flap = new Flap(OPEN_CONNECTION);
-	flap->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4);
-	flap->AddTLV(0x0001, username, strlen(username));
+		fConnectionState = AMAN_CONNECTING;
 
-	char *encPass = EncodePassword(password);
-	flap->AddTLV(0x0002, encPass, strlen(encPass));
-	free(encPass);
+		Flap *flap = new Flap(OPEN_CONNECTION);
+
+		flap->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4);
+		flap->AddTLV(0x0001, username, nickLen);
+
+		char *encPass = EncodePassword(password);
+		flap->AddTLV(0x0002, encPass, strlen(encPass));
+		free(encPass);
+
+		flap->AddTLV(0x0003, "BeOS IM Kit: AIM Addon", strlen("BeOS IM Kit: AIM Addon"));
+		flap->AddTLV(0x0016, (char []){0x00, 0x01}, 2);
+		flap->AddTLV(0x0017, (char []){0x00, 0x04}, 2);
+		flap->AddTLV(0x0018, (char []){0x00, 0x02}, 2);
+		flap->AddTLV(0x001a, (char []){0x00, 0x00}, 2);
+		flap->AddTLV(0x000e, "us", 2);
+		flap->AddTLV(0x000f, "en", 2);
+		flap->AddTLV(0x0009, (char []){0x00, 0x15}, 2);
 	
-	flap->AddTLV(0x0003, "BeOS IM Kit: AIM Addon", strlen("BeOS IM Kit: AIM Addon"));
-	flap->AddTLV(0x0016, (char []){0x00, 0x01}, 2);
-	flap->AddTLV(0x0017, (char []){0x00, 0x04}, 2);
-	flap->AddTLV(0x0018, (char []){0x00, 0x02}, 2);
-	flap->AddTLV(0x001a, (char []){0x00, 0x00}, 2);
-	flap->AddTLV(0x000e, "us", 2);
-	flap->AddTLV(0x000f, "en", 2);
-	flap->AddTLV(0x0009, (char []){0x00, 0x15}, 2);
+		AIMConnection *c = new AIMConnection(server, port, BMessenger(this));
+		c->Run();
+		fConnections.push_back(c);
+		c->Send(flap);
 
-	Send(flap);
-	
-	return B_OK;
+		return B_OK;
+	} else {
+		return B_ERROR;
+	};
 };
 
 char *AIMManager::EncodePassword(const char *pass) {
@@ -243,60 +198,44 @@ char *AIMManager::EncodePassword(const char *pass) {
 
 void AIMManager::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
-		case AMAN_PULSE: {
-			if (fSock > 0) {
-				if (fOutgoing.size() == 0) return;
-				Flap *f = fOutgoing.front();
-				
-				const char * data = f->Flatten(++fOutgoingSeqNum);
-				int32 data_size = f->FlattenedSize();
-				int32 sent_data = 0;
-				
-				LOG("AIM", DEBUG, "Sending %ld bytes of data", data_size);
-				
-				while ( sent_data < data_size )
-				{
-					int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
-					
-					if ( sent < 0 ) 
-					{
-						delete f;
-						LOG("AIM", LOW, "AIMManager::MessageReceived: Couldn't send packet");
-						return;
-					}
-					
-					if ( sent == 0 )
-					{
-						LOG("AIM", HIGH, "send() returned 0, is this bad?");
-						snooze(1*1000*1000);
-					}
-					
-					sent_data += sent;
-				}
-				
-				LOG("AIM", DEBUG, "Sent %ld bytes of data", data_size);
-				
-				fOutgoing.pop_front();
-				delete f;
-				
-			};
-		} break;
-		
-		case AMAN_KEEP_ALIVE: {
-			if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
-				Flap *keepAlive = new Flap(KEEP_ALIVE);
-				Send(keepAlive);
-			};
-		} break;
-		
-		case AMAN_GET_SOCKET: {
-			printf("Socket requested\n");
+		case AMAN_NEW_CAPABILITIES: {
+			list <Flap *>::iterator i;
 			
-			BMessage reply(B_REPLY);
-			reply.AddInt32("socket", fSock);
-			msg->SendReply(&reply);
+//			We can cheat here. Just try resending all the items, Send() will
+//			take care of finding a connection for it
+			for (i = fWaitingSupport.begin(); i != fWaitingSupport.end(); i++) {
+printf("Wanting to send %p\n", (*i));
+				fWaitingSupport.pop_front();
+				Send((*i));
+			};
 		} break;
-		
+	
+		case AMAN_STATUS_CHANGED: {
+			uint8 status = msg->FindInt8("status");
+			fHandler->StatusChanged(fOurNick, (online_types)status);
+			fConnectionState = status;
+		} break;
+	
+		case AMAN_NEW_CONNECTION: {
+			const char *cookie;
+			int32 bytes = 0;
+			int16 port = 0;
+			char *host = NULL;
+			
+			if (msg->FindData("cookie", B_RAW_TYPE, (const void **)&cookie, &bytes) != B_OK) return;
+			if (msg->FindString("host", (const char **)&host) != B_OK) return;
+			if (msg->FindInt16("port", &port) != B_OK) return;
+			
+			Flap *srvCookie = new Flap(OPEN_CONNECTION);
+			srvCookie->AddTLV(new TLV(0x0006, cookie, bytes));
+			
+			AIMConnection *con = new AIMConnection(host, port, BMessenger(this));
+			con->Run();
+			fConnections.push_back(con);
+			
+			con->Send(srvCookie);
+		} break;
+	
 		case AMAN_FLAP_OPEN_CON: {
 //			We don't do anything with this currently
 			const uchar *data;
@@ -322,147 +261,15 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			
 			switch(family) {
 				case 0x0010: {
-					printf("Buddy icon!\n");
 					PrintHex((uchar *)data, bytes);
 //					switch(subtype) {
 //						case 0x0005: {
 //							printf("Buddy icon repl!
 				} break;
 				case SERVICE_CONTROL: {
-					switch (subtype) {
-						case VERIFICATION_REQUEST: {
-							LOG("AIM", LOW, "AIMManager: AOL sent us a client verification");
-							PrintHex((uchar *)data, bytes);
-						} break;
-							
-						case SERVER_SUPPORTED_SNACS: {
-//							This is a list of Server supported SNACs
-//							We should, in a perfect happy world, parse this
-//							and make a note. We aren't going to, we'll just
-//							carry on.
-
-							LOG(kProtocolName, LOW, "Got server supported SNACs");
-							offset++;
-							while (offset < bytes) {
-								LOG(kProtocolName, LOW, "Server supports: 0x%0x "
-									"0x%0x", data[++offset], data[++offset]);
-							};
-
-							
-							Flap *f = new Flap(SNAC_DATA);
-							f->AddSNAC(new SNAC(SERVICE_CONTROL,
-								REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
-							Send(f);
-						} break;
-						
-						case RATE_LIMIT_RESPONSE: {
-							Flap *f = new Flap(SNAC_DATA);
-							f->AddSNAC(new SNAC(SERVICE_CONTROL, RATE_LIMIT_ACK,
-								0x00, 0x00, ++fRequestID));
-							f->AddRawData((uchar []){0x00, 0x01}, 2);
-							f->AddRawData((uchar []){0x00, 0x02}, 2);
-							f->AddRawData((uchar []){0x00, 0x03}, 2);
-							f->AddRawData((uchar []){0x00, 0x04}, 2);						
-							Send(f);
-							
-							if (fConnectionState != AMAN_CONNECTING) return;
-							
-//							Server won't respond to the Rate ACK above
-//							Carry on with login (Send Privacy bits)
-							Flap *SPF = new Flap(SNAC_DATA);
-							SPF->AddSNAC(new SNAC(SERVICE_CONTROL,
-								SET_PRIVACY_FLAGS, 0x00, 0x00, ++fRequestID));
-							SPF->AddRawData((uchar []){0x00, 0x00, 0x00, 0x03}, 4); // View everything
-							Send(SPF);
-							
-//							And again... all these messages will be
-//							replied to as the server sees fit
-							Flap *OIR = new Flap(SNAC_DATA);
-							OIR->AddSNAC(new SNAC(SERVICE_CONTROL, UPDATE_STATUS,
-								0x00, 0x00, ++fRequestID));
-							Send(OIR);
-
-							Flap *buddy = new Flap(SNAC_DATA);
-							buddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT,
-								ADD_BUDDY_TO_LIST, 0x00, 0x00, ++fRequestID));
-							buddy->AddRawData((uchar []){0x00}, 1);
-
-							Flap *cap = new Flap(SNAC_DATA);
-							cap->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION,
-								0x00, 0x00, ++fRequestID));
-//							cap->AddTLV(0x0005, "", 0);
-							cap->AddTLV(0x0005, (char []) { 0x09, 0x46, 0x13, 0x46,
-								0x4c, 0x7f, 0x11, 0xd1, 0x82, 0x22, 0x44, 0x45, 0x53,
-								0x54, 0x00, 0x00}, 16);							
-							Send(cap);
-							
-							
-							Flap *icbm = new Flap(SNAC_DATA);
-							icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS, 0x00,
-								0x00, ++fRequestID));
-							icbm->AddRawData((uchar []){0x00, 0x01}, 2); // Plain text?
-//							Capabilities - (LSB) Typing Notifications, Missed Calls,
-//								Unknown, Messages allowed
-							icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
-							icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
-							icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
-							icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
-							icbm->AddRawData((uchar []){0x00, 0x00}, 2);// Min Message interval (sec);
-							icbm->AddRawData((uchar []){0x00, 0x64}, 2); //??
-
-							Send(icbm);
-							
-							Flap *cready = new Flap(SNAC_DATA);
-							cready->AddSNAC(new SNAC(SERVICE_CONTROL, CLIENT_READY,
-								0x00, 0x00, ++fRequestID));
-							cready->AddRawData((uchar []){0x00, 0x01, 0x00, 0x03,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x02, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x03, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x04, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x06, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x08, 0x00, 0x01,
-								0x01, 0x04, 0x00, 0x01}, 8);
-							cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-//							Possibly remove.
-							cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
-								0x01, 0x10, 0x07, 0x39}, 8);
-							cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
-								0x01, 0x10, 0x07, 0x39}, 8);
-
-
-							Send(cready);
-
-							BMessage msg(IM::MESSAGE);
-							msg.AddInt32("im_what", IM::STATUS_SET);
-							msg.AddString("protocol", kProtocolName);
-							msg.AddString("status", ONLINE_TEXT);
-						
-							fIMKit.SendMessage(&msg);
-							fConnectionState = AMAN_ONLINE;
-						
-						} break;
-						case SERVER_FAMILY_VERSIONS: {
-							LOG(kProtocolName, LOW, "Supported SNAC families for "
-								"this server");
-							while (offset < bytes) {
-								LOG(kProtocolName, LOW, "\tSupported family: 0x%x "
-									" 0x%x, Version: 0x%x 0x%x", data[++offset],
-									data[++offset], data[++offset], data[++offset]);
-							};
-						} break;
-						
-						default: {
-							LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
-								"family 0x0001 (Service Control). Subtype 0x%04x",
-								subtype);						
-						}
-					};
+					LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
+						"family 0x0001 (Service Control). Subtype 0x%04x",
+						subtype);						
 				} break;
 				
 				case BUDDY_LIST_MANAGEMENT: {
@@ -470,6 +277,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 						case USER_ONLINE: {
 //							This message contains lots of stuff, most of which we
 //							ignore. We're good like that :)
+							PrintHex(data, bytes);
 							uint8 nickLen = data[16];
 							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
 							memcpy(nick, (void *)(data + 17), nickLen);
@@ -477,11 +285,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 						
 							offset += nickLen + 3;
 							uint16 tlvs = (data[++offset] << 8) + data[++offset];
-						
-							BMessage *msg = new BMessage(IM::MESSAGE);
-							msg->AddInt32("im_what", IM::STATUS_CHANGED);
-							msg->AddString("protocol", kProtocolName);
-							msg->AddString("id", nick);
 
 							while (offset < bytes) {
 								uint16 tlvtype = (data[++offset] << 8) + data[++offset];
@@ -492,20 +295,14 @@ void AIMManager::MessageReceived(BMessage *msg) {
 										data[++offset];
 
 									if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
-										LOG(kProtocolName, LOW, "\"%s\" is AWAY ("
-											"0x%04x)", nick, userclass);
-										msg->AddString("status", AWAY_TEXT);
+										fHandler->StatusChanged(nick, AWAY);
 									} else {
-										LOG(kProtocolName, LOW, "\"%s\" is ONLINE"
-											" (0x%04x)", nick, userclass);
-										msg->AddString("status", ONLINE_TEXT);
+										fHandler->StatusChanged(nick, ONLINE);
 									};
 								} else {
 									offset += tlvlen;
 								};
 							};
-
-							fIMKit.SendMessage(msg);
 
 							free(nick);
 
@@ -518,12 +315,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 												
 							LOG("AIM", LOW, "AIMManager: \"%s\" went offline", nick);
 							
-							BMessage *msg = new BMessage(IM::MESSAGE);
-							msg->AddInt32("im_what", IM::STATUS_CHANGED);
-							msg->AddString("protocol", kProtocolName);
-							msg->AddString("id", nick);
-							msg->AddString("status", OFFLINE_TEXT);
-							
+							fHandler->StatusChanged(nick, OFFLINE);							
 							free(nick);
 							
 						} break;
@@ -613,7 +405,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 													printf("zero size message, new size: %ld\n", tlvlen);
 												}
 												
-												//PrintHex((uchar *)(data + offset + 5), tlvlen);
 												char *msg = (char *)calloc(tlvlen - 2, sizeof(char));
 												memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
 												msg[tlvlen - 3] = '\0';
@@ -622,16 +413,8 @@ void AIMManager::MessageReceived(BMessage *msg) {
 												
 												LOG("AIM", LOW, "AIMManager: Got message from %s: \"%s\"",
 													nick, msg);
-												
-											
-												BMessage im_msg(IM::MESSAGE);
-												im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
-												im_msg.AddString("protocol", kProtocolName);
-												im_msg.AddString("id", nick);
-												im_msg.AddString("message", msg);
-												im_msg.AddInt32("charset",B_ISO1_CONVERSION);
-												
-												fIMKit.SendMessage(&im_msg);	  
+								
+												fHandler->MessageFromUser(nick, msg);
 												
 												free(msg);
 											} break;
@@ -650,7 +433,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 						} break;
 						
 						case TYPING_NOTIFICATION: {
-							PrintHex((uchar *)data, bytes);
 							offset += 8;
 							uint16 channel = (data[++offset] << 8) + data[++offset];
 							uint8 nickLen = data[++offset];
@@ -663,26 +445,9 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							LOG(kProtocolName, LOW, "Got typing notification "
 								"(0x%04x) for \"%s\"", typingType, nick);
 								
-							BMessage im_msg(IM::MESSAGE);
-							im_msg.AddString("protocol", kProtocolName);
-							im_msg.AddString("id", nick);
-							
+							fHandler->UserIsTyping(nick, (typing_notification)typingType);
 							free(nick);
 							
-							switch (typingType) {
-								case STILL_TYPING:
-								case STARTED_TYPING: {
-									im_msg.AddInt32("im_what",
-										IM::CONTACT_STARTED_TYPING);
-								} break;
-								case FINISHED_TYPING:
-								default: {
-									im_msg.AddInt32("im_what",
-										IM::CONTACT_STOPPED_TYPING);
-								} break;
-							};
-							
-							fIMKit.SendMessage(&im_msg);						
 						} break;
 						default: {
 							LOG(kProtocolName, LOW, "Got unhandled SNAC of family "
@@ -703,8 +468,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 		} break;
 				
 		case AMAN_FLAP_CLOSE_CON: {
-//			The only CLOSE_CONNECTION event I know of is the redirect with
-//			the BOS cookie, let's just assume that's the only one :)
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
@@ -758,15 +521,15 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				};
 				
 	
-				StopMonitor();
+//				StopMonitor();
 				
 	//			Nuke the old packet queue
-				fOutgoing.empty();
+//				fOutgoing.empty();
 				
-				fSock = ConnectTo(server, port);
+//				fSock = ConnectTo(server, port);
 				free(server);
 				
-				StartMonitor();
+//				StartMonitor();
 				
 				Flap *f = new Flap(OPEN_CONNECTION);
 				f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
@@ -774,16 +537,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				
 				Send(f);
 			} else {
-				BMessage msg(IM::MESSAGE);
-				msg.AddInt32("im_what", IM::STATUS_SET);
-				msg.AddString("protocol", kProtocolName);
-				msg.AddString("status", OFFLINE_TEXT);
-			
-				fIMKit.SendMessage(&msg);
-				fConnectionState = AMAN_OFFLINE;
-
-				StopMonitor();
-				fSock = -1;
+				fHandler->StatusChanged(fOurNick, OFFLINE);
 			};
 
 			
@@ -800,7 +554,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
-	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, ++fRequestID));
+//	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, ++fRequestID));
 	msg->AddRawData((uchar []){0x00, 0x00, 0xff, 0x00, 0x00, 0x0f, 0x08, 0x03}, 8); // MSG-ID Cookie
 	msg->AddRawData((uchar []){0x00, 0x01}, 2); // Channel: Plain Text
 
@@ -829,127 +583,16 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	return B_OK;
 };
 
-int32 AIMManager::MonitorSocket(void * manager) {
-	AIMManager *mgr = reinterpret_cast<AIMManager *>(manager);
-	int32 socket = 0;
-
-	if ( !mgr->fSockMsgr->IsValid() )
-	{
-		LOG("AIM", LOW, "AIMManager::MonitorSocket: Messenger wasn't valid!\n");
-		return B_ERROR;
-	}
-
-	BMessage reply;
-
-	status_t ret = 0;
-	if ((ret = mgr->fSockMsgr->SendMessage(AMAN_GET_SOCKET, &reply)) == B_OK) 
-	{
-		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
-		{
-			LOG("AIM", LOW, "AIMManager::MonitorSocket: Couldn't get socket: %i", ret);
-			return B_ERROR;
-		}
-	} else 
-	{
-		LOG("AIM", LOW, "AIMManager::MonitorSocket: Couldn't obtain socket: %i", ret);
-		return B_ERROR;
-	}
-
-	struct fd_set read;
-	struct fd_set error;
-	char buffer[2048];
-	int32 bytes = 0;
-	int32 processed = 0;
-	
-	while (mgr->fSockMsgr->IsValid()) 
-	{
-		//bytes = 0;
-		
-		FD_ZERO(&read);
-		FD_ZERO(&error);
-		
-		FD_SET(socket, &read);
-		FD_SET(socket, &error);
-		
-		if (select(socket + 1, &read, NULL, &error, NULL) > 0) 
-		{
-			if (FD_ISSET(socket, &error)) 
-			{
-				LOG("AIM", LOW, "AIMManager::MonitorSocket: Error reading socket");
-			}
-				
-			if (FD_ISSET(socket, &read)) 
-			{
-				if ((bytes = recv(socket, buffer, sizeof(buffer), 0)) > 0) 
-				{
-					LOG("AIM", LOW, "AIMManager::MonitorSocket: Got data (%i bytes)", bytes);
-											
-					if (buffer[0] == COMMAND_START) 
-					{
-						BMessage dataReady;
-						printf("FLAP channel: 0x%x\n", buffer[1]);
-						switch (buffer[1]) 
-						{
-							case OPEN_CONNECTION: {
-								dataReady.what = AMAN_FLAP_OPEN_CON;
-							} break;
-							case SNAC_DATA: {
-								dataReady.what = AMAN_FLAP_SNAC_DATA;
-							} break;
-							case FLAP_ERROR: {
-								dataReady.what = AMAN_FLAP_ERROR;
-							} break;
-							case CLOSE_CONNECTION: {
-								dataReady.what = AMAN_FLAP_CLOSE_CON;
-							} break;
-							default:
-								LOG(kProtocolName, LOW, "Got unknown FLAP channel");
-								PrintHex((uchar *)buffer, bytes);
-								// unkown message
-								break;
-						}
-							
-						dataReady.AddInt32("bytes", bytes);
-						dataReady.AddData("data", B_RAW_TYPE, buffer, bytes);
-								
-						mgr->fSockMsgr->SendMessage(&dataReady);
-					} else {
-						LOG("AIM", LOW, "Got packet without COMMAND_START");
-					};
-						
-					memset(buffer, 0, bytes);
-				} else 
-				{ // recv return zero or less
-					if ( bytes == 0 )
-					{ // no error, just no data. this shouldn't happen though.
-						snooze(2000000);
-					} else
-					{
-						LOG("AIM", LOW, "Got socket error:");
-						perror("SOCKET ERROR");
-						return B_ERROR;
-//						We seem to get here somehow :/
-//						LOG("AIMMananager::MonitorSocket", LOW, "Socket error");
-					}
-				}
-			}
-		}
-	}
-
-//	delete msgr;
-
-	return B_OK;
-};
-
 status_t AIMManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
-	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
+	if (buddy == NULL) return B_ERROR;
+//	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
 		LOG("AIM", LOW, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
 		fBuddy.push_back(BString(buddy));
 	
 		Flap *addBuddy = new Flap(SNAC_DATA);
 		addBuddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, ADD_BUDDY_TO_LIST, 0x00,
-			0x00, ++fRequestID));
+			0x00, 0x00000000));
 		
 		uint8 buddyLen = strlen(buddy);
 		addBuddy->AddRawData((uchar [])&buddyLen, sizeof(buddyLen));
@@ -958,9 +601,32 @@ status_t AIMManager::AddBuddy(const char *buddy) {
 		Send(addBuddy);
 		
 		ret = B_OK;
-	};
+//	};
 
 	return ret;
+};
+
+status_t AIMManager::AddBuddies(list <char *>buddies) {
+	Flap *addBuds = new Flap(SNAC_DATA);
+	addBuds->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, ADD_BUDDY_TO_LIST, 0x00,
+		0x00, 0x00000000));
+	
+	list <char *>::iterator i;
+	uint8 buddyLen = 0;
+	
+	for (i = buddies.begin(); i != buddies.end(); i++) {
+		char *buddy = (*i);
+		buddyLen = strlen(buddy);
+
+		addBuds->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
+		addBuds->AddRawData((uchar *)buddy, buddyLen);
+		
+		free(buddy);
+	};
+	
+	Send(addBuds);
+	
+	return B_OK;	
 };
 
 int32 AIMManager::Buddies(void) const {
@@ -974,23 +640,16 @@ uchar AIMManager::IsConnected(void) const {
 status_t AIMManager::LogOff(void) {
 	status_t ret = B_ERROR;
 	if (fConnectionState != AMAN_OFFLINE) {
-		StopMonitor();
-		
-		snooze(10000);
-		close(fSock);
-		fSock = -1;
-		fSockThread = -1;
-		
-		fSockMsgr = NULL;
-		
-		BMessage msg(IM::MESSAGE);
-		msg.AddInt32("im_what",IM::STATUS_SET);
-		msg.AddString("protocol", kProtocolName);
-		msg.AddString("status", OFFLINE_TEXT);
-	
-		fIMKit.SendMessage(&msg);
-		fConnectionState = AMAN_OFFLINE;
-
+//		StopMonitor();
+//		
+//		snooze(10000);
+//		close(fSock);
+//		fSock = -1;
+//		fSockThread = -1;
+//		
+//		fSockMsgr = NULL;
+//
+		fHandler->StatusChanged(fOurNick, OFFLINE);
 		ret = B_OK;
 	};
 
@@ -1000,7 +659,7 @@ status_t AIMManager::LogOff(void) {
 status_t AIMManager::RequestBuddyIcon(const char *buddy) {
 	LOG(kProtocolName, DEBUG, "Requesting buddy icon for \"%s\"", buddy);
 	Flap *icon = new Flap(SNAC_DATA);
-	icon->AddSNAC(new SNAC(0x0010, 0x0004, 0x00, 0x00, ++fRequestID));
+//	icon->AddSNAC(new SNAC(0x0010, 0x0004, 0x00, 0x00, ++fRequestID));
 	uchar slen = strlen(buddy);
 	icon->AddRawData((uchar *)&slen, 1);
 	icon->AddRawData((uchar *)buddy, slen);
@@ -1011,5 +670,25 @@ status_t AIMManager::RequestBuddyIcon(const char *buddy) {
 
 	Send(icon);
 
+	return B_OK;
+};
+
+status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
+	LOG(kProtocolName, LOW, "Sending typing notification (0x%04x) to \"%s\"",
+		typing, buddy);
+	
+	Flap *notify = new Flap(SNAC_DATA);
+//	notify->AddSNAC(new SNAC(ICBM, TYPING_NOTIFICATION, 0x00, 0x00, ++fRequestID));
+	notify->AddRawData((uchar []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		8); // Notification Cookie
+	notify->AddRawData((uchar []){0x00, 0x01}, 2); // Notification channel - Plain Text
+
+	uint8 buddyLen = strlen(buddy);
+	notify->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
+	notify->AddRawData((uchar *)buddy, buddyLen);
+	notify->AddRawData((uchar *)&typing, sizeof(typing));
+	
+	Send(notify);
+	
 	return B_OK;
 };

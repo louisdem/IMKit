@@ -11,10 +11,13 @@
 #include <OS.h>
 
 #include "AIMManager.h"
+#include "AIMHandler.h"
 
 using namespace IM;
 
-class AIMProtocol : public IM::Protocol
+class AIMHandler;
+
+class AIMProtocol : public IM::Protocol, public AIMHandler
 {
 	public:
 				AIMProtocol();
@@ -33,6 +36,10 @@ class AIMProtocol : public IM::Protocol
 		
 		virtual uint32 GetEncoding();
 		
+			status_t	StatusChanged(const char *nick, online_types status);
+			status_t	MessageFromUser(const char *nick, const char *msg);
+			status_t	UserIsTyping(const char *nick, typing_notification type);
+
 	private:
 		#define ICQ_THREAD_NAME "AIM Protocol"
 		
