@@ -12,13 +12,6 @@ const int32 kIconSize = 16;
 
 mime_map QueryColumnListView::fMimeTypes;
 
-int64 IntValue(char *buffer, int16 size) {
-	int64 value = 0;
-	for (int i = 0; i < size; i++) value += (uint8)buffer[i] << (i * 8);
-	
-	return value;
-};
-
 QueryColumnListView::QueryColumnListView(BRect rect, const char *name,
 	uint32 resizingMode, uint32 drawFlags, entry_ref ref, BMessage *msg = NULL,
 	BMessenger *notify = NULL, border_style border = B_NO_BORDER,
@@ -175,13 +168,20 @@ void QueryColumnListView::AttachedToWindow(void) {
 	
 	int32 length = -1;
 	char *value = ReadAttribute(queryPath.String(), kFolderState, &length);
-	
-	BMallocIO buffer;
-	buffer.WriteAt(0, value, length);
-	buffer.Seek(0, SEEK_SET);
-	ExtractColumnState(&buffer);
+	if (length > 1) {		
+		BMallocIO buffer;
+		buffer.WriteAt(0, value, length);
+		buffer.Seek(0, SEEK_SET);
+		ExtractColumnState(&buffer);
+	};
 
 	free(value);
+	
+//	printf("_trk/viewstate_le\n");
+//	value = ReadAttribute(queryPath.String(), "_trk/viewstate_le", &length);
+//	PrintHex((uchar *)value, length);
+//	free(value);
+
 
 	fSelfMsgr = new BMessenger(this);
 	
@@ -196,11 +196,9 @@ void QueryColumnListView::AttachedToWindow(void) {
 
 status_t QueryColumnListView::AddRowByRef(entry_ref *ref) {
 	ref_map::iterator rIt = fRefRows.find(*ref);
-	if (rIt != fRefRows.end()) {
-		return B_ERROR;
-	};
+	if (rIt != fRefRows.end()) return B_ERROR;
 	
-	index_map::iterator iIt;
+	ia_map::iterator iIt;
 	BPath path(ref);
 	BNode node(ref);
 	BFile file(ref, B_READ_ONLY);
@@ -219,55 +217,96 @@ status_t QueryColumnListView::AddRowByRef(entry_ref *ref) {
 	row->SetField(new BSizeField(size), 3);
 	row->SetField(new BDateField(&s.st_mtime), 4);
 	
-	for (iIt = fAttrIndex.begin(); iIt != fAttrIndex.end(); iIt++) {
+	for (iIt = fIndexAttr.begin(); iIt != fIndexAttr.end(); iIt++) {
 		attr_info info;
-		node.GetAttrInfo(iIt->first.String(), &info);
+		info.size = 0;
+		info.type = 0;
+		node.GetAttrInfo(iIt->second.String(), &info);
 		char *value = (char *)calloc(info.size, sizeof(char));
-		node.ReadAttr(iIt->first.String(), info.type, 0, value, info.size);
+		int32 read = node.ReadAttr(iIt->second.String(), info.type, 0, value, info.size);
+			
+		BField *field = NULL;
 		
-		switch (info.type) {
-			case B_CHAR_TYPE: {
-				row->SetField(new BStringField(value), iIt->second);
-			} break;
-			case B_STRING_TYPE: {
-				row->SetField(new BStringField((char *)value), iIt->second);
-			} break;
-
-			case B_INT8_TYPE: {
-				int8 *intValue = (int8 *)&value;
-				row->SetField(new BIntegerField(*intValue), iIt->second);
-			} break;
-			case B_INT16_TYPE: {
-				int16 *intValue = (int16 *)&value;
-				row->SetField(new BIntegerField(*intValue), iIt->second);
-			} break;
-			case B_INT32_TYPE: {
-				int32 *intValue = (int32 *)&value;
-				row->SetField(new BIntegerField(*intValue), iIt->second);
-			} break;
-			case B_INT64_TYPE: {
-				int64 *intValue = (int64 *)&value;
-				row->SetField(new BIntegerField(*intValue), iIt->second);
-			} break;
-			
-			case B_SIZE_T_TYPE: {
-				size_t *sizeValue = (size_t *)&value;
-				row->SetField(new BSizeField(*sizeValue), iIt->second);
-			} break;
-			
-			case B_TIME_TYPE: {
-				time_t *timeValue = (time_t *)&value;
-				row->SetField(new BDateField(timeValue), iIt->second);
-			} break;
-			
-			default: {
-				printf("%s (%4.4s) was unhandled!\n", iIt->first.String(), &info.type);
+		if (read < 0) {
+			type_map::iterator aIt = fAttrTypes.find(iIt->second);
+			if (aIt == fAttrTypes.end()) {
+				printf("%s doesn't exist in our typemap\n", iIt->second.String());
+				continue;
 			};
-
+			
+			switch (aIt->second) {
+				case B_CHAR_TYPE:
+				case B_STRING_TYPE: {
+					field = new BStringField("");
+				} break;
+				
+				case B_INT8_TYPE:
+				case B_INT16_TYPE:
+				case B_INT32_TYPE:
+				case B_INT64_TYPE: {
+					field = new BIntegerField(-1);
+				} break;
+				
+				case B_SIZE_T_TYPE: {
+					field = new BSizeField(0);
+				} break;
+				
+				case B_TIME_TYPE: {
+					field = new BDateField(0);
+				} break;
+				
+				default: {
+					printf("%s (%4.4s) was unhandled!\n", iIt->second.String(),
+						&aIt->second);
+				} break;
+			};
+			
+		} else {
+			switch (info.type) {
+				case B_CHAR_TYPE: {
+					field = new BStringField(value);
+				} break;
+				case B_STRING_TYPE: {
+					field = new BStringField((char *)value);
+				} break;
+	
+				case B_INT8_TYPE: {
+					int8 *intValue = (int8 *)&value;
+					field = new BIntegerField(*intValue);
+				} break;
+				case B_INT16_TYPE: {
+					int16 *intValue = (int16 *)&value;
+					field = new BIntegerField(*intValue);
+				} break;
+				case B_INT32_TYPE: {
+					int32 *intValue = (int32 *)&value;
+					field = new BIntegerField(*intValue);
+				} break;
+				case B_INT64_TYPE: {
+					int64 *intValue = (int64 *)&value;
+					field = new BIntegerField(*intValue);
+				} break;
+				
+				case B_SIZE_T_TYPE: {
+					size_t *sizeValue = (size_t *)&value;
+					field = new BSizeField(*sizeValue);
+				} break;
+				
+				case B_TIME_TYPE: {
+					time_t *timeValue = (time_t *)&value;
+					field = new BDateField(timeValue);
+				} break;
+				
+				default: {
+					printf("%s (%4.4s) was unhandled!\n", iIt->second.String(), &info.type);
+				};
+			};
 		};
 
-		free(value);		
+		if (field != NULL) row->SetField(field, iIt->first);
+		free(value);
 	};
+
 
 	AddRow(row);
 	fRefRows[*ref] = row;
@@ -370,7 +409,7 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 		source->Seek(sizeof(bool), SEEK_CUR); // statField
 		source->Seek(sizeof(bool), SEEK_CUR); // editable
 	
-		index_map::iterator iIt = fAttrIndex.find(internalName);
+		ai_map::iterator iIt = fAttrIndex.find(internalName);
 		if (iIt != fAttrIndex.end()) SetColumnVisible(iIt->second, true);
 	};
 
@@ -405,6 +444,7 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 		if (msg->FindBool("attr:viewable", i, &viewable) != B_OK) continue;
 		if (viewable == false) continue;
 		
+		bool doAdd = false;
 		const char *publicName;
 		const char *internalName;
 		alignment align = B_ALIGN_LEFT;
@@ -422,16 +462,16 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 		width = widthTemp;
 		maxWidth = width * maxWidthMulti;
 		minWidth = be_plain_font->StringWidth(publicName);
-				
+					
 		fAttributes[internalName] = publicName;
 		fAttrTypes[internalName] = type;
-		fAttrIndex[internalName] = index;
 		
 		switch (type) {
 			case B_CHAR_TYPE:
 			case B_STRING_TYPE: {
+				doAdd = true;
 				AddColumn(new MenuStringColumn(publicName, width, minWidth,
-					maxWidth, align), index++);
+					maxWidth, align), index);
 			} break;
 			
 			case B_UINT8_TYPE:
@@ -442,24 +482,33 @@ status_t QueryColumnListView::AddMIMEColumns(BMessage *msg) {
 			case B_INT32_TYPE:
 			case B_UINT64_TYPE:
 			case B_INT64_TYPE: {
+				doAdd = true;
 				AddColumn(new MenuIntegerColumn(publicName, width, minWidth,
-					maxWidth, align), index++);
+					maxWidth, align), index);
 			} break;
 			
 			case B_SIZE_T_TYPE: {
+				doAdd = true;
 				AddColumn(new MenuSizeColumn(publicName, width, minWidth,
-					maxWidth, align), index++);
+					maxWidth, align), index);
 			} break;
 			
 			case B_TIME_TYPE: {
+				doAdd = true;
 				AddColumn(new MenuDateColumn(publicName, width, minWidth,
-					maxWidth, align), index++);
+					maxWidth, align), index);
 			} break;
 			
 			default: {
 				printf("%s (%s) is of an unhandled type: %4.4s\n", publicName,
 					internalName, &type);
 			};
+		};
+		
+		if (doAdd) {
+				fAttrIndex[internalName] = index;
+				fIndexAttr[index] = internalName;
+				index++;
 		};
 	};
 	

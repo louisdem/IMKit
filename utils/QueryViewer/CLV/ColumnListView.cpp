@@ -37,7 +37,7 @@
 #endif
 */
 #define DOUBLE_BUFFERED_COLUMN_RESIZE 1
-#define SMART_REDRAW 1
+#define SMART_REDRAW 0
 #define DRAG_TITLE_OUTLINE 1
 #define CONSTRAIN_CLIPPING_REGION 1
 #define LOWER_SCROLLBAR 1
@@ -2061,6 +2061,7 @@ void TitleView::MessageReceived(BMessage *message)
 				if (!column) continue;
 				if (column->LogicalFieldNum() == num) {
 					column->SetVisible(!column->IsVisible());
+					FixScrollBar(false);
 				}
 			}
 		}

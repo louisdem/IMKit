@@ -52,15 +52,12 @@ QueryWindow::QueryWindow(BRect rect)
 	
 		Show();
 	
+		
 		fQueryList->Select(1);
 		fCurrentQView = NULL;
 		BMessage msg(qwQuerySelected);
 		msg.AddInt32("index", 1);
-#ifdef B_BEOS_VERSION > B_BEOS_VERSION_5
 		BMessenger(this).SendMessage(msg);
-#else
-		BMessenger(this).SendMessage(&msg);
-#endif
 	};
 };
 
@@ -77,6 +74,7 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 			if (msg->FindInt32("index", &index) != B_OK) return;
 			
 			IconCountItem *item = reinterpret_cast<IconCountItem *>(fQueryList->ItemAt(index));
+			if (item == NULL) return;
 			item->IsNew(false);
 			fQueryList->Invalidate();
 			

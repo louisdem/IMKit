@@ -34,7 +34,8 @@ extern const char *kTrackerQueryInitMime;
 
 typedef map<BString, BString> attr_map;
 typedef map<BString, uint32> type_map;
-typedef map<BString, int32> index_map;
+typedef map<BString, int32> ai_map;
+typedef map<int32, BString> ia_map;
 typedef map<entry_ref, BRow *> ref_map;
 typedef vector<entry_ref> pending_stack;
 
@@ -96,7 +97,8 @@ class QueryColumnListView : public BColumnListView {
 				BString		fMIMEString;
 				attr_map	fAttributes;
 				type_map	fAttrTypes;
-				index_map	fAttrIndex;
+				ai_map		fAttrIndex;
+				ia_map		fIndexAttr;
 				
 				ref_map		fRefRows;
 				
