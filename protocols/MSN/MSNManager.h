@@ -55,7 +55,6 @@ typedef map<BString, MSNConnection *> switchboardmap;
 typedef map<int32, Command *> tridmap;
 // Confusing data structures, Ahoy! This is a map of TrIDs to the user the Command is targetted.
 typedef map<int32, pair<BString, Command *> > waitingmsgmap;
-typedef map<BString, int8> waitingauth;
 typedef list<MSNConnection*> connectionlist;
 typedef map<BString, Buddy *> buddymap;
 
@@ -72,6 +71,7 @@ class MSNManager : public BLooper {
 			int32		Buddies(void) const;
 			buddymap	*BuddyList(void) { return &fBuddy; };
 			Buddy		*BuddyDetails(const char *passport);
+			buddymap	*WantingBuddies(void);
 
 			status_t	Login(const char *server, uint16 port,
 							const char *passport, const char *password,
@@ -100,8 +100,8 @@ class MSNManager : public BLooper {
 		
 		waitingmsgmap	fWaitingSBs;
 		
-		waitingauth		fWaitingAuth;	// For people requesting OUR auth
-		waitingauth		fWantsAuth;		// For people whose auth WE want
+			buddymap	fWaitingAuth;	// For people requesting OUR auth
+			buddymap	fWantsAuth;		// For people whose auth WE want
 		
 			buddymap	fBuddy;
 		MSNConnection	*fNoticeCon;

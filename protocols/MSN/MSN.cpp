@@ -81,22 +81,21 @@ status_t MSNProtocol::Process(BMessage * msg) {
 				case IM::REGISTER_CONTACTS: {
 					msg->PrintToStream();
 				
-//				{
-//					type_code garbage;
-//					int32 count = 0;
-//					msg->GetInfo("id", &garbage, &count);
-//								
-//					if (count > 0) {
-//						list<char *> buddies;
-//						for ( int i=0; msg->FindString("id",i); i++ )
-//						{
-//							const char * id = msg->FindString("id",i);//NormalizeNick(msg->FindString("id",i)).String();
-//							buddies.push_back(strdup(id));
-//						};
-//						fManager->AddBuddies(buddies);
-//					} else {
-//						fManager->AddBuddy(msg->FindString("id")); //NormalizeNick(msg->FindString("id")).String());
-//					};
+					type_code garbage;
+					int32 count = 0;
+					msg->GetInfo("id", &garbage, &count);
+								
+					if (count > 0) {
+						list<char *> buddies;
+						for ( int i=0; msg->FindString("id",i); i++ )
+						{
+							const char * id = msg->FindString("id",i);
+							buddies.push_back(strdup(id));
+						};
+						fManager->AddBuddies(buddies);
+					} else {
+						fManager->AddBuddy(msg->FindString("id"));
+					};
 				}	break;
 
 				case IM::SEND_AUTH_ACK: {

@@ -359,7 +359,9 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			BString passport = msg->FindString("passport");
 			list_types listType = (list_types)msg->FindInt8("list");
 			
-			fWaitingAuth[passport] = 1;
+			Buddy *bud = new Buddy(passport.String());
+			bud->Lists(listType);
+			fWaitingAuth[passport] = bud;
 			
 			fHandler->AuthRequest(listType, passport.String(), display.String());
 		} break;
@@ -645,7 +647,7 @@ status_t MSNManager::AuthUser(const char *passport) {
 	status_t ret = B_ERROR;
 
 	if (fNoticeCon) {
-		waitingauth::iterator i = fWaitingAuth.find(passport);
+		buddymap::iterator i = fWaitingAuth.find(passport);
 		if (i != fWaitingAuth.end()) fWaitingAuth.erase(i);
 	
 		Command *com = new Command("ADC");
@@ -665,7 +667,7 @@ status_t MSNManager::BlockUser(const char *passport) {
 	status_t ret = B_ERROR;
 
 	if (fNoticeCon) {
-		waitingauth::iterator i = fWaitingAuth.find(passport);
+		buddymap::iterator i = fWaitingAuth.find(passport);
 		if (i != fWaitingAuth.end()) fWaitingAuth.erase(i);
 	
 		Command *com = new Command("ADC");

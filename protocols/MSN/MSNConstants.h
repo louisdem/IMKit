@@ -28,6 +28,7 @@ enum online_types {
 };
 
 enum list_types {
+	ltNone = 0,
 	ltForwardList = 1,
 	ltAllowList = 2,
 	ltBlockList	= 4,
