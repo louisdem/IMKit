@@ -71,6 +71,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 			RELOAD_SETTINGS = 'upse',
 			
 			CLOSE_IM_SERVER = 'imqu',
+			START_IM_SERVER = 'imst',
 			
 			SETTINGS_WINDOW_CLOSED = 'swcl',
 			
@@ -89,7 +90,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 		void				reloadSettings();
 		
 		BResources			fResource;
-
+		
 		BBitmap				*fCurrIcon;
 		BBitmap				*fModeIcon;
 		BBitmap				*fOnlineIcon;
@@ -98,7 +99,8 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BBitmap 			*fFlashIcon;
 		
 		int					fStatus;
-		
+		BubbleHelper		*fTip;
+				
 //		Flashing stuff
 		int					fFlashCount, fBlink;
 		list<BMessenger>	fMsgrs;
@@ -108,7 +110,6 @@ class _EXPORT IM_DeskbarIcon : public BView
 		bool				fShouldBlink;
 		const char			*fPeopleApp;
 
-		BubbleHelper 		*fTip;
 		BString				fTipText;
 		BPopUpMenu			*fMenu;	
 

@@ -79,7 +79,7 @@ status_t MSNProtocol::Process(BMessage * msg) {
 		
 			switch (im_what) {
 				case IM::REGISTER_CONTACTS: {
-					msg->PrintToStream();
+					//msg->PrintToStream();
 				
 					type_code garbage;
 					int32 count = 0;

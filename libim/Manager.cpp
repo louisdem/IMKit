@@ -32,7 +32,7 @@ Manager::~Manager()
 	
 	StopListening();
 	
-	Lock();
+//	Lock(); // ????
 }
 
 void
@@ -118,19 +118,19 @@ Manager::AddEndpoint( BMessenger msgr )
 		case B_OK:
 			break;
 		case B_TIMED_OUT:
-			LOG("Manager", liHigh, "Manager::AddEndpoint: B_TIMED_OUT\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_TIMED_OUT");
 			break;
 		case B_WOULD_BLOCK:
-			LOG("Manager", liHigh, "Manager::AddEndpoint: B_WOULD_BLOCK\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_WOULD_BLOCK");
 			break;
 		case B_BAD_PORT_ID:
-			LOG("Manager", liHigh, "Manager::AddEndpoint: B_BAD_PORT_ID\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_BAD_PORT_ID");
 			break;
 		case B_NO_MORE_PORTS:
-			LOG("Manager", liHigh, "Manager::AddEndpoint: B_NO_MORE_PORTS\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_NO_MORE_PORTS");
 			break;
 		default:
-			LOG("Manager", liHigh, "Manager::AddEndpoint: Other error\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: Other error");
 	}
 }
 
@@ -158,7 +158,7 @@ Manager::OneShotMessage( BMessage * msg )
 	
 	if ( !msgr.IsValid() )
 	{
-		LOG("Manager", liHigh, "Manager::SendMessage: fMsgr invalid\n");
+		LOG("Manager", liHigh, "Manager::SendMessage: fMsgr invalid");
 		return B_ERROR;
 	}
 	
@@ -173,7 +173,7 @@ Manager::SendMessage( BMessage * msg, BMessage * reply = NULL )
 {
 	if ( !fMsgr.IsValid() )
 	{
-		LOG("Manager", liHigh, "Manager::SendMessage: fMsgr invalid\n");
+		LOG("Manager", liHigh, "Manager::SendMessage: fMsgr invalid");
 		return B_ERROR;
 	}
 	

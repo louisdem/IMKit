@@ -4,20 +4,26 @@
 
 QueryLooper::QueryLooper(const char *predicate, vollist vols, const char *name = NULL,
 	BHandler *notify = NULL, BMessage *msg = NULL)
-	: BLooper(name) {
+	: BLooper(name),
+		fMsg(NULL) {
 	
 	fName = name;
-	fNotify = notify;
+	if ( notify )
+		fNotify = BMessenger(notify);
 	fPredicate = predicate;
 	fVolumes = vols;
-	fMsg = msg;
+	if ( msg )
+		fMsg = new BMessage(*msg);
 	
 	Run();
-
+	
 	BMessenger(this).SendMessage(msgInitialFetch);
 };
 
 QueryLooper::~QueryLooper(void) {
+	if ( fMsg )
+		delete fMsg;
+	
 	querylist::iterator vIt;
 	for (vIt = fQueries.begin(); vIt != fQueries.end(); vIt++) {
 		(*vIt)->Clear();
@@ -65,14 +71,14 @@ void QueryLooper::MessageReceived(BMessage *msg) {
 				} break;
 			};
 		
-			if ((fNotify) && (fMsg)) {
+			if ((fNotify.IsValid()) && (fMsg != NULL)) {
 				BMessage notify(*fMsg);
 				notify.AddString("qlName", fName);
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5				
-				BMessenger(fNotify).SendMessage(notify);
+				fNotify.SendMessage(notify);
 #else
-				BMessenger(fNotify).SendMessage(&notify);
+				fNotify.SendMessage(&notify);
 #endif
 			};
 		} break;

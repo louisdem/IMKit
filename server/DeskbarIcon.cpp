@@ -56,14 +56,8 @@ IM_DeskbarIcon::~IM_DeskbarIcon() {
 	delete fOnlineIcon;
 	delete fOfflineIcon;
 	delete fFlashIcon;
-	printf("Deleting fMenu (%p)...", fMenu);
-	if ( fMenu )
-		delete fMenu;
-	printf("... Done!\n");
-	printf("Deleting fQueryMenu (%p)...", fQueryMenu);
-	if ( fQueryMenu )
-		delete fQueryMenu;
-	printf("... Done!\n");
+	if ( fMsgRunner )
+		delete fMsgRunner;
 }
 
 void
@@ -74,26 +68,39 @@ IM_DeskbarIcon::_init() {
 	BPath iconDir = userDir;
 	iconDir.Append("im_kit/icons");
 	
+	LOG("deskbar", liDebug, "Icon dir path: %s", iconDir.Path() );
+	
 //	Load the Offline, Away, Online and Flash icons from disk
 	BString iconPath = iconDir.Path();
 	iconPath << "/DeskbarAway";
 	fAwayIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
 		'ICON');
-
+	if ( !fAwayIcon )
+		LOG("deskbar", liHigh, "Error loading fAwayIcon");
+	
 	iconPath = iconDir.Path();
 	iconPath << "/DeskbarOnline";
 	fOnlineIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
 		'ICON');
+	if ( !fOnlineIcon )
+		LOG("deskbar", liHigh, "Error loading fOnlineIcon");
+	
 		
 	iconPath = iconDir.Path();
 	iconPath << "/DeskbarOffline";
 	fOfflineIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
 		'ICON');
+	if ( !fOfflineIcon )
+		LOG("deskbar", liHigh, "Error loading fOfflineIcon");
+	
 
 	iconPath = iconDir.Path();
 	iconPath << "/DeskbarFlash";
 	fFlashIcon = GetBitmapFromAttribute(iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE,
 		'ICON');
+	if ( !fFlashIcon )
+		LOG("deskbar", liHigh, "Error loading fFlashIcon");
+	
 
 //	Initial icon is the Offline icon
 	fCurrIcon = fModeIcon = fOfflineIcon;
@@ -286,6 +293,10 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			msgr.SendMessage(B_QUIT_REQUESTED);
 		} break;
 		
+		case START_IM_SERVER: {
+			be_roster->Launch(IM_SERVER_SIG);
+		} break;
+		
 		case OPEN_SETTINGS:
 		{
 			be_roster->Launch("application/x-vnd.beclan-IMKitPrefs");
@@ -362,14 +373,10 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 						RemoveQueryRef(msg);
 					} break;
 				};
-
-				BuildQueryMenu();
-
 			};
 		} break;
 		
 		case QUERY_UPDATED: {
-			BuildQueryMenu();
 		} break;
 		
 		case LAUNCH_FILE: {
@@ -425,45 +432,46 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 }
 
 void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *msg) {
-	// make sure that the im_server is still running
-	if ( ( transit == B_ENTERED_VIEW ) && !BMessenger(IM_SERVER_SIG).IsValid() )
-	{
-		BDeskbar db;
+	if ( transit == B_ENTERED_VIEW )
+//	if ( (transit != B_OUTSIDE_VIEW) && (transit != B_EXITED_VIEW) )
+	{ // update bubblehelper text and fetch statuses if needed
+		if ( !BMessenger(IM_SERVER_SIG).IsValid() )
+		{
+			fTipText = "im_server not running";
+		} else 
+		{
+			IM::Manager man;
+			
+			if ((fDirtyStatus == true) || (fStatuses.size() == 0)) {
+				fStatuses.clear();
+				
+				BMessage protStatus;
+				man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
+				
+				fTipText = "Online Status:";
+				for (int i = 0; protStatus.FindString("protocol",i); i++ ) {
+					const char *protocol = protStatus.FindString("protocol",i);
+					const char *status = protStatus.FindString("status", i);
+	
+					fStatuses[protocol] = status;
+	
+					fTipText << "\n  " << protocol << ": " << status << "";
+					
+					LOG("deskbar", liDebug, "Protocol status: %s is %s", protocol, status );
+				}
+				
+				fDirtyStatus = false;
+			}
+		}
 		
-		db.RemoveItem( DESKBAR_ICON_NAME );
+		fTip->SetHelp(Parent(), (char *)fTipText.String());
+		fTip->EnableHelp();
 	}
-
-	fTip->SetHelp(Parent(), NULL);
 
 	if ((transit == B_OUTSIDE_VIEW) || (transit == B_EXITED_VIEW)) {
 		fTip->SetHelp(Parent(), NULL);
-	} else {
-		IM::Manager man;
-
-		if ((fDirtyStatus == true) || (fStatuses.size() == 0)) {
-			fStatuses.clear();
-			
-			BMessage protStatus;
-			man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
-	
-			fTipText = "Online Status:";
-			for (int i = 0; protStatus.FindString("protocol",i); i++ ) {
-				const char *protocol = protStatus.FindString("protocol",i);
-				const char *status = protStatus.FindString("status", i);
-	
-				fStatuses[protocol] = status;
-	
-				fTipText << "\n  " << protocol << ": " << status << "";
-			}
-			
-			fDirtyStatus = false;
-		};
-
-		fTip->SetHelp(Parent(), (char *)fTipText.String());
-		fTip->EnableHelp();
-	};
-	
-};
+	}
+}
 
 
 void IM_DeskbarIcon::MouseDown(BPoint p) {
@@ -471,15 +479,34 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
 	
 	if (buttons & B_SECONDARY_MOUSE_BUTTON) {
-//		delete fMenu;
-
 		fMenu = new BPopUpMenu("im_db_menu", false, false);
 		fMenu->SetFont(be_plain_font);
 		
-		if (fDirtyStatusMenu) {
-			if (fStatusMenu) delete fStatusMenu;
-			fStatusMenu = new BMenu("Set Status");
+		if ( !BMessenger(IM_SERVER_SIG).IsValid() )
+		{ // im_server not running!
+			LOG("deskbar", liDebug, "Build menu: im_server not running");
+			fMenu->AddItem( new BMenuItem("Start im_server", new BMessage(START_IM_SERVER)) );
+			
+			fMenu->SetTargetForItems( this );
+
+			ConvertToScreen(&p);
+			BRect r(p, p);
+			r.InsetBySelf(-2, -2);
 		
+			fMenu->Go(p, true, true, r, true);
+			
+			delete fMenu;
+			
+			return;
+		}
+		
+		LOG("deskbar", liDebug, "Build menu: im_server running");
+		
+		if ( true || fDirtyStatusMenu || !fStatusMenu) {
+			LOG("deskbar", liDebug, "Rebuilding status menu");
+			fStatusMenu = new BMenu("Set status");
+			
+			LOG("deskbar", liDebug, "'All protocols'");
 			BMenu *total = new BMenu("All Protocols");
 			BMessage msg(SET_STATUS);
 			total->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(msg)) );	
@@ -487,17 +514,20 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			total->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(msg)) );	
 			total->ItemAt(fStatus)->SetMarked(true);
 			total->SetTargetForItems(this);
+			total->SetFont(be_plain_font);
+			
 			fStatusMenu->AddItem(total);
 			fStatusMenu->AddSeparatorItem();
 			
 			fStatusMenu->SetFont(be_plain_font);
-			total->SetFont(be_plain_font);
 			
 			map <string, string>::iterator it;
 			
+			LOG("deskbar", liDebug, "separate protocols");
+			
 			for (it = fStatuses.begin(); it != fStatuses.end(); it++) {
 				string name = (*it).first;
-				BMenu *protocol = new BMenu((*it).first.c_str());
+				BMenu *protocol = new BMenu(name.c_str());
 				BMessage protMsg(SET_STATUS);
 				protMsg.AddString("protocol", name.c_str());			
 				protocol->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(protMsg)));
@@ -514,17 +544,21 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 				
 				protocol->SetFont(be_plain_font);
 				
+				LOG("deskbar", liDebug, "+ %s (%s)", name.c_str(), (*it).second.c_str() );
+				
 				fStatusMenu->AddItem(protocol);
 			};
 			
 			fStatusMenu->SetTargetForItems(this);
 			
 			fDirtyStatusMenu = false;
+			LOG("deskbar", liDebug, "done rebuilding status menu");
 		};
 		
 		fMenu->AddItem(fStatusMenu);
 
 //		Queries
+		BuildQueryMenu();
 		fMenu->AddSeparatorItem();
 		fMenu->AddItem(fQueryMenu);
 
@@ -538,12 +572,15 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 	
 		fMenu->SetTargetForItems( this );
 
+		LOG("deskbar", liDebug, "Done building, show");
+		
 		ConvertToScreen(&p);
 		BRect r(p, p);
 		r.InsetBySelf(-2, -2);
 		
 		fMenu->Go(p, true, true, r, true);
 		
+		delete fMenu;
 	};
 	
 	if (buttons & B_PRIMARY_MOUSE_BUTTON) {
@@ -602,7 +639,6 @@ IM_DeskbarIcon::AttachedToWindow()
 		watch_node(&nref, B_WATCH_DIRECTORY, target);
 	};
 	
-	if (fQueryMenu) delete fQueryMenu;
 	fQueryMenu = new BMenu("Queries");
 	fQueryMenu->AddItem(new BMenuItem("Open Query directory", new BMessage(OPEN_QUERY_DIR)));
 	fQueryMenu->AddSeparatorItem();
@@ -680,7 +716,6 @@ IM_DeskbarIcon::reloadSettings()
 
 void IM_DeskbarIcon::BuildQueryMenu(void) {
 	querymap::iterator qIt;
-	if (fQueryMenu) delete fQueryMenu;
 	fQueryMenu = new BMenu("Queries");
 	
 	fQueryMenu->AddItem(new BMenuItem("Open Query directory", new BMessage(OPEN_QUERY_DIR)));

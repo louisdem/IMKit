@@ -87,14 +87,14 @@ Server::Server()
 			dir.CreateDirectory("im_kit/clients", NULL);
 		}
 	}
-
+	
 	InitSettings();
 	
 	LoadAddons();
 	
 	// add deskbar icon
-	BDeskbar db;
-
+/*	BDeskbar db;
+	
 	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
 		LOG("im_server", liDebug, "Error removing deskbar icon (this is ok..)");
 	
@@ -117,7 +117,7 @@ Server::Server()
 	}
 	
 	delete i;
-	
+*/	
 	prefsPath.Append("im_kit/icons");
 	
 	// load icons for "change icon depending on state"
@@ -159,14 +159,27 @@ Server::Server()
 */
 Server::~Server()
 {
+	LOG("im_server", liDebug, "~Server start");
+	
 	StopAutostartApps();
-
+	
 	UnloadAddons();
 	
 	SetAllOffline();
-
-	BDeskbar db;
-	db.RemoveItem( DESKBAR_ICON_NAME );
+	
+	LOG("im_server", liDebug, "%ld windows", CountWindows());
+	
+	for ( int i=0; i<CountWindows(); i++ ) {
+		LOG("im_server", liDebug, "Window %ld (%p) [%s]", i, WindowAt(i), WindowAt(i)->Title() );
+		BWindow * win = WindowAt(i);
+		win->Show();
+		win->Lock();
+		win->Quit();
+	}
+	
+//	BDeskbar db;
+//	db.RemoveItem( DESKBAR_ICON_NAME );
+	LOG("im_server", liDebug, "~Server end");
 }
 
 /**
@@ -1770,6 +1783,14 @@ Server::GenerateSettingsTemplate()
 	
 	main_msg.AddMessage("setting", &auto_start);
 	
+	BMessage deskbar_icon;
+	deskbar_icon.AddString("name", "deskbar_icon");
+	deskbar_icon.AddString("description", "Show icon in Deskbar");
+	deskbar_icon.AddInt32("type", B_BOOL_TYPE );
+	deskbar_icon.AddBool("default", true );
+	
+	main_msg.AddMessage("setting", &deskbar_icon);
+	
 	BMessage log_level;
 	log_level.AddString("name", "log_level");
 	log_level.AddString("description", "Debug log threshold");
@@ -1838,6 +1859,39 @@ Server::UpdateOwnSettings( BMessage & settings )
 				system("cp /tmp/im_kit_temp /boot/home/config/boot/UserBootscript");
 				system("rm /tmp/im_kit_temp");
 			}
+		}
+	}
+	
+	bool deskbar_icon = false;
+	
+	if ( settings.FindBool("deskbar_icon", &deskbar_icon) == B_OK )
+	{
+		BDeskbar db;
+
+		if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
+			LOG("im_server", liDebug, "Error removing deskbar icon (this is ok..)");
+		
+		if ( deskbar_icon )
+		{
+			IM_DeskbarIcon * i = new IM_DeskbarIcon();
+			
+			if ( db.AddItem( i ) != B_OK )
+			{ // couldn't add BView, try entry_ref
+				entry_ref ref;
+		
+				if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
+				{
+					BPath p(&ref);
+			
+					if ( db.AddItem( &ref ) != B_OK )
+						LOG("im_server", liHigh, "Error adding icon to deskbar!");
+				} else
+				{
+					LOG("im_server", liHigh, "be_roster->FindApp() failed");
+				}
+			}
+			
+			delete i;
 		}
 	}
 	

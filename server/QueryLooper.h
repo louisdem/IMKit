@@ -44,8 +44,9 @@ class QueryLooper : public BLooper {
 			};
 	
 			BMessage	*fMsg;	
-			BHandler	*fNotify;	
-
+			//BHandler	*fNotify;	
+			BMessenger	fNotify;
+			
 			resultmap	fResults;
 			
 			BString		fName;
