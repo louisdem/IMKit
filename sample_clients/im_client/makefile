@@ -145,13 +145,21 @@ ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot
 	DEFINES += BONE
 endif
 
-#Detect Zeta
+# Zeta needs find_directory_r() which is in libzeta, do a check
 ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
-# BeOS
+# Is a BeOS build
 else
-#Zeta
-  LIBS += zeta tracker icon
+# Zeta build
+LIBS += zeta tracker
 endif
+
+ifeq ($(wildcard /boot/beos/system/lib/libicon.so), )
+# BeOS or Zeta > RC2 build
+else
+# Zeta < RC3 build
+LIBS += icon
+endif
+
 
 INSTALL_DIR= $(TOPDIR)/build/clients
 

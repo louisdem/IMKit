@@ -60,7 +60,14 @@ ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
 # Is a BeOS build
 else
 # Zeta build
-LIBS += zeta icon
+LIBS += zeta tracker
+endif
+
+ifeq ($(wildcard /boot/beos/system/lib/libicon.so), )
+# BeOS or Zeta > RC2 build
+else
+# Zeta < RC3 build
+LIBS += icon
 endif
 
 #	specify additional paths to directories following the standard

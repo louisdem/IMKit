@@ -1390,6 +1390,11 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 			}
 			
 			contact.SetStatus( status );
+		} else {
+			// blocked, don't bother updating icons.
+			
+			// We SHOULD, on the other hand, bother with icons SOMEWHERE.
+			return;
 		}
 		
 		BBitmap *large = NULL;
