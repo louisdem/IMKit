@@ -210,7 +210,7 @@ Yahoo::GetEncoding()
 void
 Yahoo::Error( const char * message, const char * who )
 {
-	LOG("Yahoo", liDebug, "Yahoo::GotMessage()");
+	LOG("Yahoo", liDebug, "Yahoo::Error(%s,%s)", message, who);
 	
 	BMessage msg(IM::ERROR);
 	msg.AddString("protocol", kProtocolName);

@@ -9,7 +9,7 @@
 # specify the name of the binary
 NAME= mimetype_attribute
 TOPDIR=../..
-TARGET_DIR=.
+TARGET_DIR=../../build/utils
 
 # specify the type of binary
 #	APP:	Application

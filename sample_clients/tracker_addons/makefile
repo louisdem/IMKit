@@ -1,8 +1,7 @@
 # makefile for all sample code
 
 SUBDIRS = \
-	merge_contacts \
-	start_conversation
+	merge_contacts
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \

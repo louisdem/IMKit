@@ -260,6 +260,10 @@ Server::MessageReceived( BMessage * msg )
 			reply_GET_LOADED_PROTOCOLS(msg);
 			break;
 		
+		case ERROR:
+			Broadcast( msg );
+			break;
+			
 		case MESSAGE:
 			Process(msg);
 			break;

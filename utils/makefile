@@ -1,7 +1,8 @@
 # makefile for all sample code
 
 SUBDIRS = \
-	gimicq-import
+	gimicq-import \
+	mimetype
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \
