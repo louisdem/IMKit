@@ -19,7 +19,7 @@ enum im_what_code {
 	STATUS_CHANGED		= 5,
 	// Server-side contact list received
 	CONTACT_LIST		= 6,
-	// Changed own status
+	// Change own status
 	SET_STATUS			= 7,
 	// Retreive information on contact
 	GET_CONTACT_INFO	= 8,
@@ -99,10 +99,15 @@ enum message_what_codes {
 	STOP_FLASHING			= 'DBst',
 	
 	/*
-		Client autostart management
+		Client autostart management.
+		Replaced by per-client setting.
 	*/
-	ADD_AUTOSTART_APPSIG	= 'Aaas',
-	REMOVE_AUTOSTART_APPSIG	= 'Raas'
+//	ADD_AUTOSTART_APPSIG	= 'Aaas',
+//	REMOVE_AUTOSTART_APPSIG	= 'Raas'
+	/*
+		IM server status messages
+	*/
+	IS_IM_SERVER_SHUTTING_DOWN = 'IMsd'
 };
 
 /**

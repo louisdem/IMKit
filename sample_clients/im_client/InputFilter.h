@@ -11,12 +11,13 @@ class BMessageFilter;
 class InputFilter : public BMessageFilter {
 	public:
 								InputFilter(BTextView *owner, BMessage *msg,
-									bool commandSends);
+									bool commandSends, BView * forward_to);
 	    virtual filter_result	Filter (BMessage *, BHandler **);
     	filter_result			HandleKeys (BMessage *);
     
 	private:
 		BTextView	 			*fParent;
+		BView					*fForwardTo;
 		BMessage				*fMessage;
 		bigtime_t				fLastTyping;
 		bool					fCommandSends;

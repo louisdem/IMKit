@@ -350,9 +350,6 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		B_FOLLOW_BOTTOM | B_FOLLOW_LEFT_RIGHT);
 	AddChild(fResize);
 	
-	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command);
-	fInput->AddFilter((BMessageFilter *)fFilter);
-	
 	Theme::TimestampFore = C_TIMESTAMP_DUMMY;
 	Theme::TimestampBack = C_TIMESTAMP_DUMMY;
 	Theme::TimespaceFore = MAX_COLORS;
@@ -431,7 +428,11 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fText->ScrollToBottom();
 
 	fInput->MakeFocus();
-
+	
+	// add input filter that generates "user typing" messages and routes copy-commands
+	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command, fText );
+	fInput->AddFilter((BMessageFilter *)fFilter);
+	
 	// monitor node so we get updates to status etc
 	BEntry entry(&ref);
 	node_ref node;

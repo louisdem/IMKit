@@ -135,6 +135,8 @@ class Server : public BApplication
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
 		map<Protocol*,AddOnInfo>	fAddOnInfo;
+		bool						fIsQuiting;
+		
 		/**
 			entry_ref, list of connections.
 			Used to store connections for contacts, so we can notify the protocols

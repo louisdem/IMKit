@@ -67,7 +67,8 @@ _SEND_ERROR( const char * text, BMessage * msg )
 	Default constructor. (Starts People-query and ?) loads add-ons
 */
 Server::Server()
-:	BApplication(IM_SERVER_SIG)
+:	BApplication(IM_SERVER_SIG),
+	fIsQuiting(false)
 {
 	LOG("im_server", liHigh, "Starting im_server");
 	
@@ -173,6 +174,8 @@ Server::~Server()
 bool
 Server::QuitRequested()
 {
+	fIsQuiting = true;
+	
 	return true;
 }
 
@@ -272,6 +275,13 @@ Server::MessageReceived( BMessage * msg )
 		
 		case GET_ALL_CONTACTS: {
 			reply_GET_ALL_CONTACTS(msg);
+		} break;
+		
+		case IS_IM_SERVER_SHUTTING_DOWN: {
+			BMessage reply(IS_IM_SERVER_SHUTTING_DOWN);
+			reply.AddBool("isShuttingDown", fIsQuiting);
+			
+			msg->SendReply( &reply );
 		} break;
 		
 		case ERROR:
@@ -1868,13 +1878,6 @@ Server::StartAutostartApps()
 			}
 		}
 	}
-	
-/*	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
-	{
-		LOG("im_server", liLow, "Starting app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
-		be_roster->Launch( settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
-	}
-*/
 }
 
 /**
@@ -1912,18 +1915,6 @@ Server::StopAutostartApps()
 			}
 		}
 	}
-	
-/*	BMessage settings;
-	
-	GetSettings( NULL, &settings );
-	
-	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
-	{
-		LOG("im_server", liLow, "Stopping app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
-		BMessenger msgr( settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
-		msgr.SendMessage( B_QUIT_REQUESTED );
-	}
-*/
 }
 
 /**

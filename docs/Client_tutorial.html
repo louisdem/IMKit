@@ -126,10 +126,10 @@ a new looper/handler just for IM messages.</p>
 </code></pre>
 
 <p>Phew, that got a bit more involed, didn't it? Well, that's what you get for using C++, it's pretty chatty with all
-those curly bracers all over the place. Let's go through the important steps one by one:</p>
+those curly braces all over the place. Let's go through the important steps one by one:</p>
 
 <ol>
-	<li><code>&lt;libim/Constants.h&gt;</code>: Include this header to get the definitions of all those IM constants.</li>
+	<li><code>#include &lt;libim/Constants.h&gt;</code>: Include this header to get the definitions of all those IM constants.</li>
 
 	<li><code>case IM::MESSAGE:</code>: in MessageReceived, check for IM::MESSAGE.</li>
 

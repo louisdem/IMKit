@@ -2,10 +2,12 @@
 
 #include <libim/Constants.h>
 #include <Messenger.h>
+#include <stdio.h>
 
-InputFilter::InputFilter (BTextView *owner, BMessage *msg, bool commandSends) 
+InputFilter::InputFilter (BTextView *owner, BMessage *msg, bool commandSends, BView * forward_to) 
 	: BMessageFilter (B_ANY_DELIVERY, B_ANY_SOURCE),
 	fParent(owner),
+	fForwardTo(forward_to),
 	fMessage(new BMessage(*msg)),
 	fLastTyping(0),
 	fCommandSends(commandSends) {
@@ -24,8 +26,22 @@ filter_result InputFilter::Filter (BMessage *msg, BHandler **target) {
 			return B_SKIP_MESSAGE;
 		} break;
 		
-		case B_KEY_DOWN: {
+		case B_KEY_DOWN: 
+		case B_KEY_UP: {
 			result = HandleKeys (msg);
+		} break;
+
+		case B_COPY: {
+			// copy requested
+			int32 start, finish;
+			
+			fParent->GetSelection(&start,&finish);
+			
+			if ( start == finish )
+			{ // nothing selected, forward message to history view
+				BMessenger(fForwardTo).SendMessage(msg);
+				return B_SKIP_MESSAGE;
+			}
 		} break;
 
 		default: {
@@ -69,12 +85,11 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 //					TextLength()
 				};
 			};
-				
 		} break;
 	
 		case B_ESCAPE: {
 		} break;
-	
+		
 		default: {
 			if ( system_time() - fLastTyping > 10*1000*1000 )
 			{ // only send typing messages every 10 sec

@@ -1,5 +1,7 @@
 #include "ChatApp.h"
 
+#include <Alert.h>
+
 ChatApp::ChatApp()
 :	BApplication("application/x-vnd.m_eiman.sample_im_client"),
 	fMan( new IM::Manager(BMessenger(this)) ),
@@ -91,6 +93,31 @@ ChatApp::~ChatApp()
 bool
 ChatApp::QuitRequested()
 {
+	// First check if im_server is shutting down, and if it isn't ask
+	// user if (s)he really wants to quit
+	BMessage msg(IM::IS_IM_SERVER_SHUTTING_DOWN), reply;
+	if ( fMan->SendMessage(&msg,&reply) == B_OK )
+	{
+		bool isShuttingDown=true;
+		if ( reply.FindBool("isShuttingDown", &isShuttingDown) == B_OK )
+		{
+			if ( !isShuttingDown )
+			{
+				BAlert * alert = new BAlert(
+					"Really quit?", 
+					"Do you really want to quit im_client and stop getting messages?",
+					"Yes",
+					"No"
+				);
+				
+				int32 choice = alert->Go();
+				
+				if ( choice == 1 )
+					return false;
+			}
+		}
+	}
+	
 	RunMap::const_iterator it = fRunViews.begin();
 	
 	for (; it != fRunViews.end(); ++it) {
