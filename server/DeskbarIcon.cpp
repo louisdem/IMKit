@@ -161,18 +161,26 @@ IM_DeskbarIcon::getProtocolStates()
 	BMessage protStatus;
 	fStatuses.clear();
 	IM::Manager man;
-	man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
+	if ( man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus) != B_OK )
+	{
+		LOG("deskbar", liHigh, "Error getting statuses");
+	}
 
 	fTipText = "Online Status:";
+	
+	LOG("deskbar", liHigh, "status message", &protStatus);
 	
 	for ( int i=0; protStatus.FindString("protocol",i); i++ ) {
 		const char *protocol = protStatus.FindString("protocol",i);
 		const char *userfriendly = protStatus.FindString("userfriendly",i);
 		const char *status = protStatus.FindString("status", i);
 		
-		fStatuses[protocol] = status;
+		LOG("deskbar", liHigh, "protocol: %s, friendly: %s", protocol, userfriendly);
 		
-		fTipText << "\n  " << userfriendly << ": " << status << "";
+		fStatuses[protocol] = status;
+		fFriendlyNames[protocol] = userfriendly;
+		
+		fTipText << "\n  " << userfriendly << ": " << _T(status) << "";
 		
 		if ((fStatus > 0) && (strcmp(status, ONLINE_TEXT) == 0)) fStatus = 0;
 		if ((fStatus > 1) && (strcmp(status, AWAY_TEXT) == 0)) fStatus = 1;
@@ -487,7 +495,9 @@ void IM_DeskbarIcon::MouseMoved(BPoint /*point*/, uint32 transit, const BMessage
 			if ((fDirtyStatus == true) || (fStatuses.size() == 0)) {
 				fStatuses.clear();
 				
-				BMessage protStatus;
+				getProtocolStates(); // updates tip text
+				
+/*				BMessage protStatus;
 				man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
 				
 				fTipText = _T("Online Status:");
@@ -501,7 +511,7 @@ void IM_DeskbarIcon::MouseMoved(BPoint /*point*/, uint32 transit, const BMessage
 					
 					LOG("deskbar", liDebug, "Protocol status: %s is %s", protocol, status );
 				}
-				
+*/				
 				fDirtyStatus = false;
 			}
 		}
@@ -577,7 +587,7 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			
 			for (it = fStatuses.begin(); it != fStatuses.end(); it++) {
 				string name = (*it).first;
-				BMenu *protocol = new BMenu(name.c_str());
+				BMenu *protocol = new BMenu(fFriendlyNames[name].c_str());
 				
 				BMessage protMsg(SET_STATUS);
 				protMsg.AddString("protocol", name.c_str());

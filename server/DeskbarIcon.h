@@ -122,7 +122,8 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BMenu				*fStatusMenu;
 		map<string, string>	fStatuses;
 		bool				fDirtyStatus;		// Are our statuses out of date?
-
+		map<string, string>	fFriendlyNames;
+		
 //		Query Menu stuff
 		querymap			fQueries;
 		BMenu				*fQueryMenu;
