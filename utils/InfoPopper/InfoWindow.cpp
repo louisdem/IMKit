@@ -359,6 +359,19 @@ void InfoWindow::LoadSettings( bool start_monitor )
 			fDisplayTime = kDefaultDisplayTime;
 			
 			WriteDefaultSettings(reinterpret_cast<BNode *>(&file));
+			
+			if ( start_monitor )
+			{
+				node_ref nref;
+				file.GetNodeRef(&nref);
+				
+				if ( watch_node(&nref, B_WATCH_ATTR, BMessenger(this)) != B_OK )
+				{
+					BAlert *alert = new BAlert("InfoPopper", "Couldn't start settings "
+						" monitor. Live settings changes disabled.", "Darn.");
+					alert->Go();
+				}
+			}
 		};
 	} else {
 		BAlert *alert = new BAlert("InfoPopper", "Couldn't find the settings "
