@@ -1,6 +1,7 @@
 #include "InputFilter.h"
 
 #include <libim/Constants.h>
+#include <Messenger.h>
 
 InputFilter::InputFilter (BTextView *owner, BMessage *msg) 
 	: BMessageFilter (B_ANY_DELIVERY, B_ANY_SOURCE),
