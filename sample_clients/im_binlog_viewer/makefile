@@ -159,6 +159,7 @@ ifeq ($(wildcard /boot/develop/headers/be/locale/Locale.h), )
 else
 #Zeta
   LIBS += zeta tracker
+  DEFINES += ZETA
 endif
 
 INSTALL_DIR= $(TOPDIR)/build/clients

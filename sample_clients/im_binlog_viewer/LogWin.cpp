@@ -2,10 +2,16 @@
 
 #include <stdio.h>
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 float kPadding = 10.0;
 
 LogWin::LogWin(entry_ref contact, BRect size) 
-	: BWindow(size, "IM Kit - Log Viewer", B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS),
+	: BWindow(size, _T("IM Kit - Log Viewer"), B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS),
 	fThreadID(0),
 	fEntryRef(contact),
 	fContact(&contact) {
@@ -33,31 +39,31 @@ LogWin::LogWin(entry_ref contact, BRect size)
 		B_WILL_DRAW, B_PLAIN_BORDER);
 	fView->AddChild(fCLV);
 
-	fDate = new BDateColumn("Date",
+	fDate = new BDateColumn(_T("Date"),
 		be_plain_font->StringWidth("Xxx, Xxx 00 0000, 00:00 AM") + kPadding,
 		be_plain_font->StringWidth("00/00/00") + kPadding,
 		be_plain_font->StringWidth("Xxxxxxx, Xxxxxxxx XX XXXX, XX:XX:XX XX") + kPadding,
 		B_ALIGN_RIGHT);
 	fCLV->AddColumn(fDate, coDate);
 	
-	fProtocol = new BBitmapColumn("Protocol",
-		be_plain_font->StringWidth("Protocol") + (kPadding * 2),
-		kSmallIcon, be_plain_font->StringWidth("Protocol") + (kPadding * 3), B_ALIGN_CENTER);
+	fProtocol = new BBitmapColumn(_T("Protocol"),
+		be_plain_font->StringWidth(_T("Protocol")) + (kPadding * 2),
+		kSmallIcon, be_plain_font->StringWidth(_T("Protocol")) + (kPadding * 3), B_ALIGN_CENTER);
 	fCLV->AddColumn(fProtocol, coProtocol);
 
-	fSender = new BStringColumn("Sender",
-		be_plain_font->StringWidth("Sender") + (kPadding * 2),
-		be_plain_font->StringWidth("Sender") + (kPadding * 2),
+	fSender = new BStringColumn(_T("Sender"),
+		be_plain_font->StringWidth(_T("Sender")) + (kPadding * 2),
+		be_plain_font->StringWidth(_T("Sender")) + (kPadding * 2),
 		150, B_ALIGN_LEFT);
 	fCLV->AddColumn(fSender, coSender);
 	
-	fContents = new BStringColumn("Contents",
-		be_plain_font->StringWidth("Contents") + (kPadding * 2) + 100,
-		be_plain_font->StringWidth("Contents") + (kPadding * 2),
+	fContents = new BStringColumn(_T("Contents"),
+		be_plain_font->StringWidth(_T("Contents")) + (kPadding * 2) + 100,
+		be_plain_font->StringWidth(_T("Contents")) + (kPadding * 2),
 		300, B_ALIGN_LEFT);
 	fCLV->AddColumn(fContents, coContents);
 	
-	fType = new BStringColumn("Type",
+	fType = new BStringColumn(_T("Type"),
 		be_plain_font->StringWidth("STATUS") + (kPadding * 2),
 		be_plain_font->StringWidth("STATUS") + (kPadding * 2),
 		100, B_ALIGN_LEFT);
@@ -88,17 +94,17 @@ LogWin::LogWin(entry_ref contact, BRect size)
 		fIcons[protName] = icon;
 	};
 	
-	BString title = "IM Kit - Log Viewer";
+	BString title = _T("IM Kit - Log Viewer");
 	char name[512];
 	char nick[512];
 	
 	if (fContact.GetName(name, sizeof(name)) != B_OK) {
-		fName = "Unknown Name";
+		fName = _T("Unknown Name");
 	} else {
 		fName = name;
 	};
 	if (fContact.GetNickname(nick, sizeof(nick)) != B_OK) {
-		fNick = "Unknown Nick";
+		fNick = _T("Unknown Nick");
 	} else {
 		fNick = nick;
 	};
@@ -138,17 +144,17 @@ void LogWin::MessageReceived(BMessage *msg) {
 					if (msg->FindString("message", &message) == B_OK) {
 						row->SetField(new BStringField(message), coContents);
 					} else {
-						row->SetField(new BStringField("Error"), coContents);
+						row->SetField(new BStringField(_T("Error")), coContents);
 					};
 					row->SetField(new BStringField("MSG"), coType);
 				} break;
 				case IM::MESSAGE_SENT: {
-					row->SetField(new BStringField("You"), coSender);
+					row->SetField(new BStringField(_T("You")), coSender);
 					const char *message;
 					if (msg->FindString("message", &message) == B_OK) {
 						row->SetField(new BStringField(message), coContents);
 					} else {
-						row->SetField(new BStringField("Error"), coContents);
+						row->SetField(new BStringField(_T("Error")), coContents);
 					};
 					row->SetField(new BStringField("MSG"), coType);
 				} break;
@@ -158,7 +164,7 @@ void LogWin::MessageReceived(BMessage *msg) {
 					if (msg->FindString("status", &status) == B_OK) {
 						row->SetField(new BStringField(status), coContents);
 					} else {
-						row->SetField(new BStringField("Unknown"), coContents);
+						row->SetField(new BStringField(_T("Unknown")), coContents);
 					};
 					row->SetField(new BStringField("STATUS"), coType);
 				} break;
