@@ -149,8 +149,7 @@ Jabber::Process( BMessage * msg )
 					int32 count = 0;
 					msg->GetInfo("id", &garbage, &count);
 					
-					msg->PrintToStream();
-						
+										
 					if (count > 0 ) {
 						//list<char *> buddies;
 						for ( int i=0; msg->FindString("id",i); i++ )
@@ -164,21 +163,15 @@ Jabber::Process( BMessage * msg )
 							 
 								//Are we on-line?
 								// send auth req?
-								if(fFullLogged) debugger("REGISTER");
-								
-								Error(id,id);
-								
+								if(fFullLogged)
+								{ 			
+									AddContact(id,id,"");
+									BuddyStatusChanged(id,OFFLINE_TEXT);
+								}
 								
 								//else
 								// we add to a temp list.
-								
-								//Here is not easy to understand!
-								//msg->PrintToStream();
-								//if(fRostered){
-								// we need to send a new subscription?
-								//msg->PrintToStream();
-								//debugger("Register Unknown!");
-								//} 
+															 
 							} 
 						};
 						
