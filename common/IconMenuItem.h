@@ -53,7 +53,7 @@ class BRect;
 class IconMenuItem : public BMenuItem {
 	public:
 					IconMenuItem(BBitmap* icon, const char *label,
-						const char *extra, BMessage *msg = NULL);
+						const char *extra, BMessage *msg = NULL, bool ownIcon = true);
 	    virtual 	~IconMenuItem();
 
 		const char	*Extra(void) { return fExtra.String(); };
@@ -73,7 +73,8 @@ class IconMenuItem : public BMenuItem {
 		float		fFontHeightTotal;
 		font_height	fFontHeight;
 		
-//		float		fHeight;
+		bool		fOwnIcon;
+		bool		fCreatedIcon;
 };
 
 #endif

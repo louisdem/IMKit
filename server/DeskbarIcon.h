@@ -30,9 +30,17 @@
 #include <be/kernel/fs_attr.h>
 #include <be/kernel/fs_info.h>
 
-typedef map<entry_ref, QueryLooper *> querymap;
-typedef map<BString, BMenu *> querymenumap;
-typedef map<entry_ref, bool> querydirtymap;
+//typedef map<entry_ref, QueryLooper *> querymap;
+//typedef map<BString, BMenu *> querymenumap;
+//typedef map<entry_ref, bool> querydirtymap;
+
+typedef struct {
+	entry_ref ref;
+	node_ref nref;
+	BBitmap *icon;
+} queryinfo;
+
+typedef map<entry_ref, queryinfo> querymap;
 
 class _EXPORT IM_DeskbarIcon : public BView
 {
@@ -114,12 +122,11 @@ class _EXPORT IM_DeskbarIcon : public BView
 		bool				fDirtyStatus;		// Are our statuses out of date?
 
 //		Query Menu stuff
-		bool				fDirtyQueryMenu;
 		querymap			fQueries;
-		querymenumap		fQueryMenu;
-		querydirtymap		fDirtyQuery;
-		status_t			ExtractVolumes(BNode *node, vollist *volumes);
-
+		BMenu				*fQueryMenu;
+		void				RemoveQueryRef(BMessage *msg);
+		void				AddQueryRef(BMessage *msg);
+		void				BuildQueryMenu(void);
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

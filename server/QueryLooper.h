@@ -16,7 +16,7 @@
 #include <map>
 #include <vector>
 
-typedef vector<entry_ref> ereflist;
+typedef map<entry_ref, BBitmap *> ereflist;
 typedef vector<BVolume> vollist;
 typedef vector<BQuery *> querylist;
 

@@ -46,13 +46,16 @@ const float kTickSpacing = 16.0;
 //------------------------------------------------------------------------------
 
 IconMenuItem::IconMenuItem(BBitmap* icon, const char *label, const char *extra,
-	BMessage *msg = NULL) :
+	BMessage *msg = NULL, bool ownIcon = true) :
 	BMenuItem(label, msg),
 	fLabel(label),
 	fIcon(icon),
-	fExtra(extra) {
+	fExtra(extra),
+	fOwnIcon(ownIcon),
+	fCreatedIcon(false) {
 
 	if (fIcon == NULL) {
+		fCreatedIcon = true;
 		fIcon = new BBitmap(BRect(0, 0, 15, 15), B_COLOR_8_BIT, true);
 		char *bits = (char *)fIcon->Bits();
 		int32 length = fIcon->BitsLength();
@@ -66,7 +69,7 @@ IconMenuItem::IconMenuItem(BBitmap* icon, const char *label, const char *extra,
 };
 
 IconMenuItem::~IconMenuItem() {
-	delete fIcon;
+	if ((fOwnIcon == true) || (fCreatedIcon == true)) delete fIcon;
 };
 
 void IconMenuItem::_CalculateOffsets(void) {
