@@ -1,5 +1,5 @@
 #include "InfoView.h"
-#include "IconUtils.h"
+#include "../../common/IMKitUtilities.h"
 
 #include <TranslationUtils.h>
 #include <StringView.h>
