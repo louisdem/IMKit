@@ -14,6 +14,8 @@ class BorderView : public BView
 		
 		virtual void GetPreferredSize( float *, float * );
 		
+		virtual void FrameResized(float,float);
+		
 	private:
 		BString	fTitle;
 };

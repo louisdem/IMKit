@@ -1,9 +1,11 @@
 #include "BorderView.h"
 
+#include <stdio.h>
+
 #define BORDER_W 5.0
 
 BorderView::BorderView( BRect rect, const char * text )
-:	BView(rect, "borderView", B_FOLLOW_ALL, B_WILL_DRAW),
+:	BView(rect, "borderView", B_FOLLOW_ALL, B_WILL_DRAW|B_FRAME_EVENTS),
 	fTitle(text)
 {
 	SetViewColor( B_TRANSPARENT_COLOR );
@@ -11,6 +13,12 @@ BorderView::BorderView( BRect rect, const char * text )
 
 BorderView::~BorderView()
 {
+}
+
+void
+BorderView::FrameResized( float, float )
+{
+	Invalidate();
 }
 
 void
