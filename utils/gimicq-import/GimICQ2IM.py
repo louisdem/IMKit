@@ -1,12 +1,15 @@
 #!/bin/env python
 
-"""GimICQ2IM v2003-11-25 - Convert a Gim-ICQ user list file to people files w/ UINs. 
+"""GimICQ2IM v2003-12-05 - Convert a Gim-ICQ user list file to people files w/ UINs. 
  
 Usage: GimICQ2PIM.py ~/config/settings/GimICQ/user-UIN Folder
 Replace UIN for your UIN.
 
 Creates People files named after the nick names in the user list -
 attributes set for the IM Kit - in the directory Folder
+
+2003-12-05: Setting IM Status to offline upon creation.
+2003-11-25: Initial version
 
 Copyright (C) 2003 by Mikael Jansson <mikael at dundermusen dot net>"""
 
@@ -38,6 +41,7 @@ def writePerson(path, (uin, nick)):
 	connattr = "ICQ:"+uin
 	os.system("addattr -t mime 'BEOS:TYPE' '%s' '%s'" % ('application/x-person', fname))
 	os.system("addattr -t string 'IM:connections' '%s' '%s'" % (connattr, fname))
+	os.system("addattr -t string 'IM:status' '%s' '%s'" % ('offline', fname))
 
 from xreadlines import xreadlines
 
