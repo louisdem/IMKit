@@ -1445,7 +1445,7 @@ Server::SetAllOffline()
 		msg.AddRef("contact",&entry);
 	}
 	
-	char nickname[512], name[512], filename[512];
+	char nickname[512], name[512], filename[512], status[512];
 	
 	Contact c;
 	for ( int i=0; msg.FindRef("contact",i,&entry) == B_OK; i++ )

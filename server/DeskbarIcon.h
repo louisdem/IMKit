@@ -11,6 +11,7 @@
 #include <TextView.h>
 #include <string>
 #include <PopUpMenu.h>
+#include <String.h>
 
 #include "../common/IMKitUtilities.h"
 #include "../common/BubbleHelper.h"
@@ -79,9 +80,9 @@ class _EXPORT IM_DeskbarIcon : public BView
 		// settings
 		bool				fShouldBlink;
 
-		BubbleHelper		*fTip;	
 		bool				fDirtyStatus;	// Need to re-fetch the Statuses
 		bool				fDirtyMenu;		// Need to re-make the right click Menu
+		BubbleHelper *		fTip;
 		BString				fTipText;
 		map<string, string>	fStatuses;
 		BPopUpMenu			*fMenu;
