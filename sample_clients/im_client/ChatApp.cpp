@@ -8,6 +8,8 @@
 #define _T(str) (str)
 #endif
 
+const char *kDefaultPeopleHandler = "application/x-vnd.Be-PEPL";
+
 ChatApp::ChatApp()
 :	BApplication("application/x-vnd.m_eiman.sample_im_client"),
 	fMan( new IM::Manager(BMessenger(this)) ),
@@ -54,8 +56,7 @@ ChatApp::ChatApp()
 	iconSize.AddInt32("type", B_INT32_TYPE);
 	iconSize.AddInt32("default", kLargeIcon);
 
-#if B_BEOS_VERSION > B_BEOS_VERSION_5
-#else
+#ifndef B_ZETA_VERSION
 	iconSize.AddInt32("valid_value", kSmallIcon);
 	iconSize.AddInt32("valid_value", kLargeIcon);
 #endif
@@ -77,12 +78,19 @@ ChatApp::ChatApp()
 	useCommand.AddInt32("type", B_BOOL_TYPE);
 	useCommand.AddBool("default", true);
 	
+	BMessage peopleHandler;
+	peopleHandler.AddString("name", "people_handler");
+	peopleHandler.AddString("description", "MIME type for default People handler");
+	peopleHandler.AddInt32("type", B_STRING_TYPE);
+	peopleHandler.AddString("default", kDefaultPeopleHandler);
+	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
 	tmplate.AddMessage("setting", &iconSize);
 	tmplate.AddMessage("setting", &showsend);
 	tmplate.AddMessage("setting", &useCommand);
+	tmplate.AddMessage("setting", &peopleHandler);
 //	tmplate.AddMessage("setting", &userColor);
 	
 	im_save_client_template("im_client", &tmplate);
@@ -103,6 +111,10 @@ ChatApp::ChatApp()
 		settings.AddInt32("icon_size", kLargeIcon);
 	if (settings.FindBool("command_sends", &temp) != B_OK)
 		settings.AddBool("command_sends", true);
+	if (settings.FindString("people_handler", &fPeopleHandler) != B_OK) {
+		fPeopleHandler = kDefaultPeopleHandler;
+		settings.AddString("people_hanlder", kDefaultPeopleHandler);
+	};
 	
 	im_save_client_settings("im_client", &settings);
 	// done with template and settings.
@@ -193,6 +205,9 @@ ChatApp::RefsReceived( BMessage * msg )
 	BNode node;
 	attr_info info;
 	bool hasValidRefs = false;
+	bool hasInvalidRefs = false;
+	
+	BMessage passToDefault(B_REFS_RECEIVED);
 	
 	for ( int i=0; msg->FindRef("refs", i, &ref ) == B_OK; i++ ) {
 		node = BNode(&ref);
@@ -201,13 +216,21 @@ ChatApp::RefsReceived( BMessage * msg )
 			if (node.GetAttrInfo("IM:connections", &info) == B_OK) {
 				msg->AddRef("contact", &ref);
 				hasValidRefs = true;
-			}
+			} else {
+				passToDefault.AddRef("refs", &ref);
+				hasInvalidRefs = true;
+			};
 		} else {
 			LOG("im_client", liLow, "Got a ref that wasn't a People file");
 		};
 		free(type);
 	};
-	
+
+	if (hasInvalidRefs == true) {
+		be_roster->Launch(fPeopleHandler.String(), &passToDefault);
+	};
+
+
 	if (hasValidRefs == false) return;
 	
 	msg->what = IM::MESSAGE;
@@ -215,6 +238,7 @@ ChatApp::RefsReceived( BMessage * msg )
 	msg->AddBool("user_opened", true);
 	
 	BMessenger(this).SendMessage(msg);
+	
 }
 
 void
@@ -225,11 +249,17 @@ ChatApp::MessageReceived( BMessage * msg )
 		case IM::SETTINGS_UPDATED:
 		{	
 			// tell all windows that the settings have been updated
-			for ( int i=0; i<CountWindows(); i++ )
-			{
-				BMessenger msgr(WindowAt(i));
-				msgr.SendMessage(msg);
-			}
+			for (int i=0; i < CountWindows(); i++) {
+				BWindow *win = WindowAt(i);
+				if (win) {
+					BMessenger msgr(win);
+					msgr.SendMessage(msg);
+				};
+			};
+			
+			if (msg->FindString("people_handler", &fPeopleHandler) != B_OK) {
+				fPeopleHandler = kDefaultPeopleHandler;
+			};
 			
 		}	break;
 		

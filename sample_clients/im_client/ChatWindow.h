@@ -131,6 +131,8 @@ class ChatWindow : public BWindow {
 				StatusBar	*fStatusBar;
 			BStringView		*fInfoView;
 				BButton		*fSendButton;
+				
+			BString			fPeopleHandler;
 					
 			BMessageRunner	*fTypingTimerSelf;
 			BMessageRunner	*fTypingTimer;

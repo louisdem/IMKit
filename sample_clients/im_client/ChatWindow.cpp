@@ -111,6 +111,9 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		iconBarSize = kLargeIcon;
 	if ( iconBarSize <= 0 )
 		iconBarSize = kLargeIcon;
+	if (chatSettings.FindString("people_handler", &fPeopleHandler) != B_OK) {
+		fPeopleHandler = kDefaultPeopleHandler;
+	};
 	
 	// Set window size limits
 	SetSizeLimits(
@@ -603,7 +606,9 @@ ChatWindow::MessageReceived( BMessage * msg )
 	switch ( msg->what )
 	{
 		case IM::SETTINGS_UPDATED: {
-			printf("Settings!\n");
+			if (msg->FindString("people_handler", &fPeopleHandler) != B_OK) {
+				fPeopleHandler = kDefaultPeopleHandler;
+			};
 			
 			RebuildDisplay();
 		} break;
@@ -792,7 +797,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			BMessage open_msg(B_REFS_RECEIVED);
 			open_msg.AddRef("refs", &fEntry);
 			
-			be_roster->Launch( "application/x-vnd.Be-PEPL", &open_msg );
+			be_roster->Launch(fPeopleHandler.String(), &open_msg);
 		}	break;
 		
 		case VIEW_LOG: {

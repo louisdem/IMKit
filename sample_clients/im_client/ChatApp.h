@@ -8,6 +8,7 @@ class ChatWindow;
 class RunView;
 
 typedef map<BString, RunView *> RunMap;
+extern const char *kDefaultPeopleHandler;
 
 class ChatApp : public BApplication
 {
@@ -32,7 +33,7 @@ class ChatApp : public BApplication
 		
 	private:
 		ChatWindow		*findWindow( entry_ref & );
-		
+		BString			fPeopleHandler;
 		
 		IM::Manager		*fMan;
 		bool			fIsQuiting;
