@@ -1,0 +1,11 @@
+You need to fetch and install libyahoo2.
+
+http://libyahoo2.sf.net/
+
+To get it to build you need to fiddle a bit with the makefile:
+
+add -lbind where appropriate (right after -lsocket), and remove -ansi
+from the compiler flags if you want the sample client to compile (not
+sure if this is really needed or not)
+
+configure --prefix=/boot/home/config, as usual.
