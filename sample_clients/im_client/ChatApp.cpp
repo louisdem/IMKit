@@ -173,6 +173,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			
 		}	break;
 		
+		case IM::ERROR:
 		case IM::MESSAGE:
 		{
 			entry_ref ref;

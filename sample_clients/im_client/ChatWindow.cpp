@@ -489,6 +489,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			Activate();
 		}	break;
 		
+		case IM::ERROR:
 		case IM::MESSAGE:
 		{
 			entry_ref contact;
@@ -499,7 +500,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( contact != fEntry )
 				return;
 			
-			int32 im_what=0;
+			int32 im_what=IM::ERROR;
 			
 			msg->FindInt32("im_what",&im_what);
 				
@@ -527,6 +528,18 @@ ChatWindow::MessageReceived( BMessage * msg )
 					}
 					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
 					fText->ScrollToSelection();
+				}	break;
+				
+				case IM::ERROR:
+				{
+					fText->Append(timestr, C_TIMESTAMP, C_TIMESTAMP, F_TIMESTAMP);
+					fText->Append("Error: ", C_TEXT, C_TEXT, F_TEXT);
+					fText->Append(msg->FindString("message"), C_TEXT, C_TEXT, F_TEXT);
+					fText->Append("\n", C_TEXT, C_TEXT, F_TEXT);
+					
+					fText->ScrollToSelection();
+
+					if (!IsActive()) startNotify();
 				}	break;
 				
 				case IM::MESSAGE_RECEIVED:

@@ -736,16 +736,29 @@ Server::FindBestProtocol( Contact & contact )
 	
 	// first of all, check if source of last message is still online
 	// if it is, we use it.
+	
+/*	map<Contact,string>::iterator i = fPreferredProtocol.find( contact );
+	
+	if ( i != fPreferredProtocol.end() )
+		LOG("im_server", liDebug, "Preferred protocol is [%s]", (i->second).c_str() );
+*/	
 	if ( fPreferredProtocol[contact].length() > 0 )
 	{
 		protocol = fPreferredProtocol[contact];
 		
+//		LOG("im_server", liDebug, "Preferred protocol [%s]", protocol.c_str() );
+		
 		if ( contact.FindConnection(protocol.c_str(), connection) == B_OK )
 		{
+//			LOG("im_server", liDebug, "Preferred protocol connection [%s]", connection );
+			
 			if ( fStatus[connection] == AWAY_TEXT || fStatus[connection] == ONLINE_TEXT )
 			{
-				LOG("im_server", liDebug, "Using preferred protocol %s", protocol.c_str() );
-				return protocol;
+				if ( fStatus[protocol] != OFFLINE_TEXT )
+				{
+					LOG("im_server", liDebug, "Using preferred protocol %s", protocol.c_str() );
+					return protocol;
+				}
 			}
 		}
 	}
@@ -758,10 +771,12 @@ Server::FindBestProtocol( Contact & contact )
 		if ( fStatus[curr] == AWAY_TEXT || fStatus[curr] == ONLINE_TEXT )
 		{
 			int separator_pos = curr.find(":");
-		
+			
 			curr.erase(separator_pos, strlen(connection)-separator_pos);
-		
-			protocol = curr;
+			
+			if ( fStatus[curr] != OFFLINE_TEXT )
+				// make sure WE'RE online too. Shouldn't
+				protocol = curr;
 		}
 	}
 	
@@ -798,7 +813,25 @@ Server::MessageToProtocols( BMessage * msg )
 		if ( msg->FindString("protocol") == NULL )
 		{ // no protocol specified, figure one out
 			msg->AddString("protocol", FindBestProtocol(contact).c_str() );
-		} // done chosing protocol
+		}// done chosing protocol
+		
+		if ( fStatus[msg->FindString("protocol")] == OFFLINE_TEXT )
+		{ // selected protocol is offline, impossible to send message
+			BString error_str;
+			error_str << "Not connected to selected protocol [";
+			error_str << msg->FindString("protocol");
+			error_str << "], cannot send message";
+			
+			_ERROR(error_str.String(), msg);
+			
+			BMessage err( IM::ERROR );
+			err.AddRef("contact", contact );
+			err.AddString("error", error_str.String() );
+			
+			Broadcast( &err );
+			
+			return;
+		}
 		
 		if ( msg->FindString("id") == NULL )
 		{ // add protocol-specific ID from Contact if not present

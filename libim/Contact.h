@@ -47,6 +47,7 @@ class Contact
 		bool operator == ( const entry_ref & ) const;
 		bool operator == ( const BEntry & ) const;
 		bool operator == ( const Contact & ) const;
+		bool operator < ( const Contact & ) const;
 		
 		// for easy addition to BMessages
 		operator const entry_ref * () const;

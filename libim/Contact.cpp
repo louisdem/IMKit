@@ -3,6 +3,7 @@
 #include <string.h>
 #include <TypeConstants.h>
 #include <stdio.h>
+#include <Path.h>
 
 #include "Helpers.h"
 
@@ -273,6 +274,17 @@ bool
 Contact::operator == ( const Contact & contact ) const
 {
 	return fEntry == contact.fEntry;
+}
+
+bool
+Contact::operator < ( const Contact & contact ) const
+{
+	BEntry ea(&fEntry), eb(&contact.fEntry);
+	BPath a, b;
+	ea.GetPath(&a);
+	eb.GetPath(&b);
+	
+	return strcmp( a.Path(), b.Path() ) < 0;
 }
 
 Contact::operator const entry_ref * () const

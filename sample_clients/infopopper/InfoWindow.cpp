@@ -54,9 +54,10 @@ InfoWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case IM::ERROR:
 		case IM::MESSAGE:
 		{
-			int32 im_what=0;
+			int32 im_what=IM::ERROR;
 			
 			msg->FindInt32( "im_what", &im_what );
 			
@@ -79,6 +80,12 @@ InfoWindow::MessageReceived( BMessage * msg )
 			
 			switch ( im_what )
 			{
+				case IM::ERROR:
+				{
+					text << "Error: " << msg->FindString("error");
+					type = InfoView::Error;
+				}	break;
+				
 				case IM::MESSAGE_RECEIVED:
 				{
 					text << "Message received from " << contact_name;
