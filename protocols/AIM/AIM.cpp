@@ -19,7 +19,8 @@ IM::Protocol * load_protocol() {
 }
 
 AIMProtocol::AIMProtocol()
-	: fThread(0) {
+	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST ),
+	  fThread(0) {
 	
 	fPassword = NULL;
 	fScreenName = NULL;

@@ -9,7 +9,7 @@ namespace IM {
 class Protocol
 {
 	public:
-		Protocol();
+		Protocol( uint32 capabilities /* see below */ );
 		virtual ~Protocol();
 		
 		/**
@@ -60,6 +60,27 @@ class Protocol
 			B_xxx_CONVERSION constant as defined in <UTF8.h>
 		*/
 		virtual uint32 GetEncoding()=0;
+		
+		/**
+			Capabilities.
+			There should be a list of which messages are required for
+			each capbility, but there isn't one yet.
+		*/
+		enum capability_bitmask {
+			MESSAGES			= 1 << 0,
+			OFFLINE_MESSAGES	= 1 << 1,
+			EXTENDED_AWAY		= 1 << 2,
+			BUDDY_ICON			= 1 << 3,
+			SERVER_BUDDY_LIST	= 1 << 4
+		};
+		
+		/**
+			Check if protocol supports specified capability.
+		*/
+		bool HasCapability( capability_bitmask );
+	
+	private:
+		uint32	m_capabilities;
 };
 
 };

@@ -489,7 +489,8 @@ IM::Protocol * load_protocol()
 }
 
 ICQProtocol::ICQProtocol()
-:	fThread(0)
+:	Protocol( Protocol::MESSAGES | Protocol::OFFLINE_MESSAGES | Protocol::SERVER_BUDDY_LIST ),
+	fThread(0)
 {
 }
 
