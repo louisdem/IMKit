@@ -11,12 +11,15 @@ extern "C" IM::Protocol * load_protocol()
 	return new Yahoo();
 }
 
+extern "C" void register_callbacks();
+
 Yahoo::Yahoo()
 :	IM::Protocol( IM::Protocol::MESSAGES ),
 	fYahooID(""),
 	fPassword(""),
 	fYahoo(NULL)
 {
+	register_callbacks();
 }
 
 Yahoo::~Yahoo()
@@ -314,3 +317,4 @@ Yahoo::BuddyStatusChanged( const char * who, const char * status )
 	
 	fServerMsgr.SendMessage( &msg );
 }
+

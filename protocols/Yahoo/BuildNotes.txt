@@ -6,7 +6,7 @@ We've been using 0.7.4, not sure if other versions will work.
 
 To get it to build you need to fiddle a bit with the makefile:
 
-	configure --prefix=/boot/home/config, as usual.
+	configure --prefix=/boot/home/config  --with-struct-callbacks
 
 Then edit src/makefile:
 
@@ -14,7 +14,12 @@ Then edit src/makefile:
 
 	remove -ansi from the CFLAGS line
 
-edit src/sample_client.c, line 1020: 
+	change the line:
+		LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	to:
+		LINK = $(LIBTOOL) --mode=link $(CCLD) -no-undefined  $(AM_CFLAGS) $(CFLAGS) \
+
+Edit src/sample_client.c, line 1020: 
 
 	change (socklen_t*) to (int*)
 

@@ -24,6 +24,8 @@
  *
  */
 
+#define USE_STRUCT_CALLBACKS
+
 #include "YahooConnection.h"
 
 #if HAVE_CONFIG_H
@@ -362,6 +364,67 @@ extern "C" void ext_yahoo_error(int id, char *err, int fatal)
 	gYahooConnections[id]->cbYahooError(err,fatal);
 }
 
+fd_conn * gConnectConn=NULL;
+
+extern "C" int ext_yahoo_add_handler(int id, int fd, yahoo_input_condition cond, void *data)
+{
+//	LOG(kProtocolName, liDebug, "ext_yahoo_add_handler %d", id);
+	
+	if ( id < 0 )
+	{ // 'connect' connection
+		struct fd_conn *c = (struct fd_conn*)calloc(sizeof(fd_conn), 1);
+		c->tag = ++connection_tags;
+		c->id = id;
+		c->fd = fd;
+		c->cond = cond;
+		c->data = data;
+		
+		gConnectConn = c;
+		
+		return c->tag;
+	}
+	
+	assert( gYahooConnections[id] != NULL );
+
+	struct fd_conn *c = (struct fd_conn*)calloc(sizeof(fd_conn), 1);
+	c->tag = ++connection_tags;
+	c->id = id;
+	c->fd = fd;
+	c->cond = cond;
+	c->data = data;
+
+//	LOG(kProtocolName, liDebug, "  Add %d for %d, tag %d, cond %d", fd, id, c->tag, c->cond);
+	
+	gYahooConnections[id]->AddConnection( c );
+	
+	return c->tag;
+}
+
+extern "C" void ext_yahoo_remove_handler(int id, int tag)
+{
+//	LOG(kProtocolName, liDebug, "ext_yahoo_remove_handler %d", id);
+	
+	if ( id < 0 )
+	{
+		return;
+	}
+	
+	assert( gYahooConnections[id] != NULL );
+	
+	YahooConnection * conn = gYahooConnections[id];
+	
+	for (int i=0; i < conn->CountConnections(); i++) {
+		struct fd_conn *c = conn->ConnectionAt(i);
+		if(c->tag == tag) {
+			/* don't actually remove it, just mark it for removal */
+			/* we'll remove when we start the next poll cycle */
+//			LOG(kProtocolName, liDebug, "  Marking id:%d fd:%d tag:%d for removal", c->id, c->fd, c->tag);
+			c->remove = 1;
+			return;
+		}
+	}
+}
+
 extern "C" int ext_yahoo_connect(char *host, int port)
 {
 	struct sockaddr_in serv_addr;
@@ -462,67 +525,6 @@ extern "C" int ext_yahoo_connect_async(int id, char *host, int port,
 	}
 }
 
-fd_conn * gConnectConn=NULL;
-
-extern "C" int ext_yahoo_add_handler(int id, int fd, yahoo_input_condition cond, void *data)
-{
-//	LOG(kProtocolName, liDebug, "ext_yahoo_add_handler %d", id);
-	
-	if ( id < 0 )
-	{ // 'connect' connection
-		struct fd_conn *c = (struct fd_conn*)calloc(sizeof(fd_conn), 1);
-		c->tag = ++connection_tags;
-		c->id = id;
-		c->fd = fd;
-		c->cond = cond;
-		c->data = data;
-		
-		gConnectConn = c;
-		
-		return c->tag;
-	}
-	
-	assert( gYahooConnections[id] != NULL );
-
-	struct fd_conn *c = (struct fd_conn*)calloc(sizeof(fd_conn), 1);
-	c->tag = ++connection_tags;
-	c->id = id;
-	c->fd = fd;
-	c->cond = cond;
-	c->data = data;
-
-//	LOG(kProtocolName, liDebug, "  Add %d for %d, tag %d, cond %d", fd, id, c->tag, c->cond);
-	
-	gYahooConnections[id]->AddConnection( c );
-	
-	return c->tag;
-}
-
-extern "C" void ext_yahoo_remove_handler(int id, int tag)
-{
-//	LOG(kProtocolName, liDebug, "ext_yahoo_remove_handler %d", id);
-	
-	if ( id < 0 )
-	{
-		return;
-	}
-	
-	assert( gYahooConnections[id] != NULL );
-	
-	YahooConnection * conn = gYahooConnections[id];
-	
-	for (int i=0; i < conn->CountConnections(); i++) {
-		struct fd_conn *c = conn->ConnectionAt(i);
-		if(c->tag == tag) {
-			/* don't actually remove it, just mark it for removal */
-			/* we'll remove when we start the next poll cycle */
-//			LOG(kProtocolName, liDebug, "  Marking id:%d fd:%d tag:%d for removal", c->id, c->fd, c->tag);
-			c->remove = 1;
-			return;
-		}
-	}
-}
-
 /*************************************
  * Callback handling code starts here
  */
@@ -596,8 +598,8 @@ yahoo_io_thread( void * _data )
 		conn->fYahooID, conn->fPassword
 	);
 	
-	LOG(kProtocolName, liDebug, "yahoo_io_thread: id: %d, pass: %s", conn->fYahooID, conn->fPassword );
-
+	LOG(kProtocolName, liDebug, "yahoo_io_thread: id: %s, pass: %s", conn->fYahooID, conn->fPassword );
+	
 	gYahooConnections[conn->fID] = conn;
 	
 	yahoo_login( conn->fID, YAHOO_STATUS_AVAILABLE );
@@ -667,4 +669,51 @@ yahoo_io_thread( void * _data )
 	}
 	
 	return 0;
+}
+
+extern "C" void register_callbacks()
+{
+	static struct yahoo_callbacks yc;
+	
+	yc.ext_yahoo_login_response = ext_yahoo_login_response;
+	yc.ext_yahoo_got_buddies = ext_yahoo_got_buddies;
+	yc.ext_yahoo_got_ignore = ext_yahoo_got_ignore;
+	yc.ext_yahoo_got_identities = ext_yahoo_got_identities;
+	yc.ext_yahoo_got_cookies = ext_yahoo_got_cookies;
+	yc.ext_yahoo_status_changed = ext_yahoo_status_changed;
+	yc.ext_yahoo_got_im = ext_yahoo_got_im;
+	yc.ext_yahoo_got_conf_invite = ext_yahoo_got_conf_invite;
+	yc.ext_yahoo_conf_userdecline = ext_yahoo_conf_userdecline;
+	yc.ext_yahoo_conf_userjoin = ext_yahoo_conf_userjoin;
+	yc.ext_yahoo_conf_userleave = ext_yahoo_conf_userleave;
+	yc.ext_yahoo_conf_message = ext_yahoo_conf_message;
+	yc.ext_yahoo_chat_cat_xml = ext_yahoo_chat_cat_xml;
+	yc.ext_yahoo_chat_join = ext_yahoo_chat_join;
+	yc.ext_yahoo_chat_userjoin = ext_yahoo_chat_userjoin;
+	yc.ext_yahoo_chat_userleave = ext_yahoo_chat_userleave;
+	yc.ext_yahoo_chat_message = ext_yahoo_chat_message;
+	yc.ext_yahoo_chat_yahoologout = ext_yahoo_chat_yahoologout;
+	yc.ext_yahoo_chat_yahooerror = ext_yahoo_chat_yahooerror;
+	yc.ext_yahoo_got_webcam_image = ext_yahoo_got_webcam_image;
+	yc.ext_yahoo_webcam_invite = ext_yahoo_webcam_invite;
+	yc.ext_yahoo_webcam_invite_reply = ext_yahoo_webcam_invite_reply;
+	yc.ext_yahoo_webcam_closed = ext_yahoo_webcam_closed;
+	yc.ext_yahoo_webcam_viewer = ext_yahoo_webcam_viewer;
+	yc.ext_yahoo_webcam_data_request = ext_yahoo_webcam_data_request;
+	yc.ext_yahoo_got_file = ext_yahoo_got_file;
+	yc.ext_yahoo_contact_added = ext_yahoo_contact_added;
+	yc.ext_yahoo_rejected = ext_yahoo_rejected;
+	yc.ext_yahoo_typing_notify = ext_yahoo_typing_notify;
+	yc.ext_yahoo_game_notify = ext_yahoo_game_notify;
+	yc.ext_yahoo_mail_notify = ext_yahoo_mail_notify;
+	yc.ext_yahoo_got_search_result = ext_yahoo_got_search_result;
+	yc.ext_yahoo_system_message = ext_yahoo_system_message;
+	yc.ext_yahoo_error = ext_yahoo_error;
+	yc.ext_yahoo_log = ext_yahoo_log;
+	yc.ext_yahoo_add_handler = ext_yahoo_add_handler;
+	yc.ext_yahoo_remove_handler = ext_yahoo_remove_handler;
+	yc.ext_yahoo_connect = ext_yahoo_connect;
+	yc.ext_yahoo_connect_async = ext_yahoo_connect_async;
+	
+	yahoo_register_callbacks(&yc);
 }
