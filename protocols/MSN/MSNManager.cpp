@@ -186,20 +186,18 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			LOG(kProtocolName, liDebug, "Got a new connection to \"%s\":%i of type \"%s\"", host,
 				port, type);
 			
-			if (strcmp(type, "SB") != 0) {
+			if (strcmp(type, "NS") == 0) {
 				MSNConnection *con = new MSNConnection(host, port, this);
 				con->Run();
+					
+				Command *command = new Command("VER");
+				command->AddParam(kProtocolsVers);
+					
+				con->Send(command);
 				
-				if (strcmp(type, "NS") == 0) {
-					Command *command = new Command("VER");
-					command->AddParam(kProtocolsVers);
+				fNoticeCon = con;
 					
-					con->Send(command);
-					
-					fNoticeCon = con;
-					
-					return;
-				};
+				return;
 			}
 			
 			if (strcmp(type, "RNG") == 0) {
@@ -217,7 +215,6 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				
 				con->Send(command);
 				
-				fSwitchBoard[inviter] = con;
 				fConnections.push_back( con );
 				
 				return;
@@ -227,40 +224,31 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				MSNSBConnection *con = new MSNSBConnection(host, port, this);
 				con->Run();
 				
-				tridmap::iterator origCommand = fTrIDs.find(msg->FindInt32("trid"));
-				
-//				if (origCommand == fTrIDs.end()) {
-//					LOG( kProtocolName, liDebug, "No waiting commands for TrID");
-//				} else {
-					const char *authString = msg->FindString("authString");
+				const char *authString = msg->FindString("authString");
 					
-					Command *command = new Command("USR");
-					command->AddParam(Passport());
-					command->AddParam(authString);
+				Command *command = new Command("USR");
+				command->AddParam(Passport());
+				command->AddParam(authString);
 					
-					con->Send(command);
+				con->Send(command);
 					
-//					waitingmsgmap::iterator it = fWaitingSBs.find(msg->FindInt32("trid"));
-					waitingmsgmap::iterator it = fWaitingSBs.begin();
+				waitingmsgmap::iterator it = fWaitingSBs.begin();
 					
-					if (it != fWaitingSBs.end()) {
-						BString passport = (*it).second.first;
-						Command *message = (*it).second.second;
+				if (it != fWaitingSBs.end()) {
+					BString passport = (*it).second.first;
+					Command *message = (*it).second.second;
 						
-						Command *cal = new Command("CAL");
-						cal->AddParam(passport.String());
+					Command *cal = new Command("CAL");
+					cal->AddParam(passport.String());
 						
-						con->Send(cal, qsOnline);
-						con->Send(message, qsOnline);
+					con->Send(cal, qsOnline);
+					con->Send(message, qsOnline);
 						
-						// assume it's a MSG here..
-						fSwitchBoard[ message->Param(0) ] = con;
-						fConnections.push_back( con );
+					// assume it's a MSG here..
+					fConnections.push_back( con );
 						
-//						fWaitingSBs.erase(msg->FindInt32("trid"));
-						fWaitingSBs.erase( (*it).first );
-					};
-//				};
+					fWaitingSBs.erase( (*it).first );
+				};
 			};
 		} break;
 
@@ -272,12 +260,12 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
 
 				if (con == fNoticeCon) {
-					switchboardmap::iterator i;
-					for (i = fSwitchBoard.begin(); i != fSwitchBoard.end(); i++) {
-						Command bye("BYE");
-						bye.UseTrID(false);
-						i->second->Send(&bye, qsImmediate);
-						BMessenger(i->second).SendMessage(B_QUIT_REQUESTED);
+					connectionlist::iterator i;
+					for (i = fConnections.begin(); i != fConnections.end(); i++) {
+						Command * bye = new Command("OUT");
+						bye->UseTrID(false);
+						(*i)->Send(bye, qsImmediate);
+						BMessenger(*i).SendMessage(B_QUIT_REQUESTED);
 					};
 				};
 				fHandler->StatusChanged(Passport(), otOffline);
@@ -382,11 +370,11 @@ uchar MSNManager::IsConnected(void) const {
 status_t MSNManager::LogOff(void) {
 	status_t ret = B_ERROR;
 
-	LOG(kProtocolName, liLow, "%i connection(s) to kill", fSwitchBoard.size());
-	switchboardmap::iterator it;
+	LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
+	connectionlist::iterator it;
 	
-	for (it = fSwitchBoard.begin(); it != fSwitchBoard.end(); it++) {
-		MSNConnection *con = (it->second);
+	for (it = fConnections.begin(); it != fConnections.end(); it++) {
+		MSNConnection *con = (*it);
 		if (con == NULL) continue;
 		LOG(kProtocolName, liLow, "Killing switchboard connection to %s:%i",
 			con->Server(), con->Port());
@@ -397,7 +385,7 @@ status_t MSNManager::LogOff(void) {
 		BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 	};
 	
-	fSwitchBoard.clear();
+	fConnections.clear();
 	
 	fConnectionState = otOffline;
 	
@@ -405,7 +393,7 @@ status_t MSNManager::LogOff(void) {
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
 		fNoticeCon->Send(bye, qsImmediate);
-
+		
 		BMessenger(fNoticeCon).SendMessage(B_QUIT_REQUESTED);
 	};
 	

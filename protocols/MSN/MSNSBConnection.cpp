@@ -72,7 +72,7 @@ MSNSBConnection::handleIRO( Command * cmd )
 status_t
 MSNSBConnection::handleBYE( Command * cmd )
 {
-	// List of those already in chat
+	// Someone left the conversation
 	LOG(kProtocolName, liDebug, "Processing BYE (SB)");
 	
 	fParticipants.remove( cmd->Param(0) );
@@ -91,6 +91,7 @@ MSNSBConnection::handleBYE( Command * cmd )
 status_t
 MSNSBConnection::handleUSR( Command * cmd  )
 {
+	// Just send any pending messages here.
 	LOG(kProtocolName, liDebug, "Processing USR (SB)");
 	
 	GoOnline();

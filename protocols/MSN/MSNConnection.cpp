@@ -824,12 +824,15 @@ status_t MSNConnection::handleMSG( Command * command ) {
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else
 		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
+			LOG(kProtocolName, liHigh, "User typing from <%s>\n", command->Param(0) );
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
 		} else
 		if (strcmp(type, "text/x-msmsgsinitialemailnotification; charset=UTF-8") == 0) {
+			LOG(kProtocolName, liHigh, "HotMail number of message in Inbox\n" );
 			// Ignore this. It just tells us how many emails are in the Hotmail inbox.
 		} else
 		if (strcmp(type, "text/x-msmsgsprofile; charset=UTF-8") == 0) {
+			LOG(kProtocolName, liHigh, "Profile message\n" );
 			// Maybe we should process this, it's a profile message.
 		} else
 		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {

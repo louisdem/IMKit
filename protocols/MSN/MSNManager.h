@@ -92,7 +92,6 @@ class MSNManager : public BLooper {
 		
 		MSNHandler		*Handler(void) { return fHandler; };
 	private:
-		tridmap			fTrIDs;
 		waitingmsgmap	fWaitingSBs;
 		
 		waitingauth		fWaitingAuth;	// For people requesting OUR auth
@@ -100,7 +99,6 @@ class MSNManager : public BLooper {
 		
 		list<BString>	fBuddy;
 		MSNConnection	*fNoticeCon;
-		switchboardmap	fSwitchBoard;
 		connectionlist	fConnections;	
 		
 		BMessageRunner	*fRunner;
