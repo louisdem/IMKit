@@ -1,6 +1,7 @@
 #include "ImageButton.h"
 
 #include <string.h>
+#include <stdio.h>
 
 ImageButton::ImageButton( BRect rect, const char * name, BMessage * msg, uint32 resizing, uint32 flags, BBitmap * bitmap, const char * label )
 :	BControl(rect,name,label,msg,resizing,flags)
@@ -8,6 +9,9 @@ ImageButton::ImageButton( BRect rect, const char * name, BMessage * msg, uint32 
 	fBitmap = bitmap;
 	fMouseDown = false;
 	fMouseOver = false;
+	
+	if ( !fBitmap )
+		printf("ImageButton: fImage null\n");
 }
 
 ImageButton::~ImageButton()
@@ -108,7 +112,14 @@ ImageButton::Draw( BRect update_rect )
 		DrawBitmap( fBitmap, BPoint( center - image_width/2, 4.0 ) );
 	}
 	
-	float str_width = StringWidth( Label() );
-	
-	DrawString( Label(), BPoint( center - str_width/2, Bounds().bottom - 3) );
+	if ( Label() )
+	{
+		float str_width = StringWidth( Label() );
+		
+		DrawString( 
+			Label(), 
+			BPoint( center - str_width/2, 
+			Bounds().bottom - 3) 
+		);
+	}
 }

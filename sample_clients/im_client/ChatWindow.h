@@ -27,6 +27,7 @@
 
 #include "IconMenuItem.h"
 #include "StatusBar.h"
+#include "IconBar.h"
 
 #include <be/kernel/fs_attr.h>
 
@@ -65,7 +66,7 @@ class StatusBar;
 class ChatWindow : public BWindow
 {
 	public:
-		ChatWindow(entry_ref &, int32 iconBarSize = kLargeIcon, bool command = true);
+		ChatWindow(entry_ref &);//, int32 iconBarSize = kLargeIcon, bool command = true);
 		~ChatWindow();
 
 		void MessageReceived( BMessage * );
@@ -119,11 +120,12 @@ class ChatWindow : public BWindow
 		Theme			*fTheme;
 		
 		float			fFontHeight;
-		BView			*fDock;
+		IconBar			*fDock;
 		
 		BMenuField		*fProtocolMenu;
 		StatusBar		*fStatusBar;
 		BStringView		*fInfoView;
+		BButton			*fSendButton;
 		
 		BMessageRunner	*fTypingTimer;
 		BMessageRunner	*fProtocolHack; // used to circumvent a BMenuField bug. m_eiman knows.

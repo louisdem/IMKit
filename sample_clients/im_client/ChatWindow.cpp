@@ -12,16 +12,72 @@
 #include <MenuBar.h>
 #include <MessageRunner.h>
 
+#include "BubbleHelper.h"
+
+BubbleHelper gBubbles;
+
 const char *kImNewMessageSound = "IM Message Received";
 const float kPadding = 2.0;
 
-const char *kWidestButtonText = "Show Info";
+/*const char *kWidestButtonText = "Show Info";
 
 float kButtonWidth = 50;
 float kButtonHeight = 50;
-float  kButtonDockHeight = 50;
+float kButtonDockHeight = 50;
+*/
 
-ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool command = true)
+/*
+#include <libbsvg/SVGView.h>
+
+BBitmap *
+render_SVG( const char * path, float width, float height = -1.0 )
+{
+	if ( height < 0 )
+		height = width;
+	
+	BBitmap * bmp = new BBitmap(
+		BRect(0,0,width-1, height-1),
+		B_RGB32,
+		true
+	);
+	
+	BSVGView * view = new BSVGView(
+		BRect(0,0,width-1, height-1),
+		"SVG render view",
+		B_FOLLOW_NONE
+	);
+	
+	view->SetScaleToFit( true );
+	view->SetFitContent( true );
+	view->SetViewColor( B_TRANSPARENT_COLOR );
+	
+	bmp->AddChild( view );
+	
+	bmp->Lock();
+
+	if ( view->LoadFromFile( path ) != B_OK )
+	{
+		printf("Loading SVG failed\n");
+		delete view;
+		delete bmp;
+		
+		return NULL;
+	}
+	
+	view->Draw( view->Bounds() );
+	view->Sync();
+	bmp->Unlock();
+	
+	bmp->RemoveChild( view );
+	
+	delete view;
+	
+	return bmp;
+}
+*/
+
+
+ChatWindow::ChatWindow(entry_ref & ref)
 :	BWindow( 
 		BRect(100,100,400,300), 
 		"unknown contact - unknown status", 
@@ -32,8 +88,24 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	fMan( new IM::Manager(BMessenger(this))),
 	fChangedNotActivated(false),
 	fStatusBar(NULL),
+	fSendButton(NULL),
 	fProtocolHack(NULL)
 {
+	bool command, sendButton;
+	int32 iconBarSize;
+	
+	BMessage chatSettings;
+	im_load_client_settings("im_client", &chatSettings);
+	
+	if ( chatSettings.FindBool("command_sends", &command) != B_OK )
+		command = true;
+	if ( chatSettings.FindBool("show_send_button", &sendButton) != B_OK )
+		sendButton = true;
+	if ( chatSettings.FindInt32("icon_size", &iconBarSize) != B_OK )
+		iconBarSize = kLargeIcon;
+	if ( iconBarSize <= 0 )
+		iconBarSize = kLargeIcon;
+	
 	// Set window size limits
 	SetSizeLimits(
 		220, 8000, // width,
@@ -45,7 +117,7 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	be_plain_font->GetHeight(&height);
 	fFontHeight = height.ascent + height.descent + height.leading;
 	
-	kButtonWidth = iconBarSize;
+/*	kButtonWidth = iconBarSize;
 	float temp = be_plain_font->StringWidth(kWidestButtonText);
 	
 	if (temp > kButtonWidth) kButtonWidth = temp;
@@ -53,7 +125,7 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	
 	kButtonHeight = iconBarSize + fFontHeight + (kPadding * 3);
 	kButtonDockHeight = kButtonHeight + (kPadding * 3);
-	
+*/	
 	// default window size
 	BRect windowRect(100, 100, 400, 300);
 	BPoint inputDivider(0, 150);
@@ -92,8 +164,8 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	BRect inputRect = Bounds();
 	BRect dockRect = Bounds();
 
-	dockRect.bottom = kButtonDockHeight;
-	fDock = new BView(dockRect, "Dock", B_FOLLOW_LEFT_RIGHT, 0);
+	dockRect.bottom = iconBarSize+12;
+	fDock = new IconBar(dockRect);//, "Dock", B_FOLLOW_LEFT_RIGHT, 0);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -104,14 +176,14 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 //	fDock->SetHighColor( ui_color(B_PANEL_TEXT_COLOR) );
 #endif
 	AddChild(fDock);
-
+	
 	// add buttons
 	ImageButton * btn;
 	BBitmap * icon;
 	long err = 0;
 	BPath iconDir;
 	BPath iconPath;
-	
+	BRect buttonRect(0,0,iconBarSize+8,iconBarSize+8);
 	find_directory(B_USER_SETTINGS_DIRECTORY, &iconDir, true);
 	iconDir.Append("im_kit/icons");
 	
@@ -121,15 +193,16 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	icon = ReadNodeIcon(iconPath.Path(), iconBarSize);
 	
 	btn = new ImageButton(
-		BRect(2,2,2+kButtonWidth,2+kButtonHeight),
+		buttonRect,
 		"open in people button",
 		new BMessage(SHOW_INFO),
 		B_FOLLOW_NONE,
 		B_WILL_DRAW,
 		icon,
-		"Show info"
+		NULL
 	);
-	fDock->AddChild(btn);
+	fDock->AddItem(btn);
+	gBubbles.SetHelp(btn, "Show contact in People");
 	
 	// email icon
 	entry_ref emailAppRef;
@@ -141,50 +214,53 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	
 	BPath emailPath(&emailAppRef);
 	icon = ReadNodeIcon(emailPath.Path(), iconBarSize);
-
+	
 	btn = new ImageButton(
-		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
+		buttonRect,
 		"open in people button",
 		new BMessage(EMAIL),
 		B_FOLLOW_NONE,
 		B_WILL_DRAW,
 		icon,
-		"E-mail"
+		NULL
 	);
-	fDock->AddChild(btn);
+	fDock->AddItem(btn);
+	gBubbles.SetHelp(btn, "Send email to contact");
 	
 //	Block icon
 	iconPath = iconDir;
 	iconPath.Append("Block");
-
+	
 	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
 	btn = new ImageButton(
-		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
+		buttonRect,
 		"email button",
 		new BMessage(BLOCK),
 		B_FOLLOW_NONE,
 		B_WILL_DRAW,
 		icon,
-		"Block"
+		NULL
 	);
-	fDock->AddChild(btn);
+	fDock->AddItem(btn);
+	gBubbles.SetHelp(btn, "Block messages from contact");
 	
 	// Auth icon
-	iconPath = iconDir;
+/*	iconPath = iconDir;
 	iconPath.Append("GetAuth");
 	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
 	
 	btn = new ImageButton(
-		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
+		buttonRect,
 		"request_auth button",
 		new BMessage(AUTH),
 		B_FOLLOW_NONE,
 		B_WILL_DRAW,
 		icon,
-		"Get auth"
+		NULL
 	);
-	fDock->AddChild(btn);
-
+	fDock->AddItem(btn);
+	gBubbles.SetHelp(btn, "Request permission to add contact");
+*/
 //	Done adding buttons
 	
 	textRect.top = fDock->Bounds().bottom+1;
@@ -192,9 +268,11 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	textRect.bottom = inputDivider.y;
 	textRect.right -= B_V_SCROLL_BAR_WIDTH;
 	
+	float sendButtonWidth = sendButton ? 50 : 0;
+	
 	inputRect.InsetBy(2.0, 2.0);
-	inputRect.top = inputDivider.y + 5;
-	inputRect.right -= B_V_SCROLL_BAR_WIDTH;
+	inputRect.top = inputDivider.y + 7;
+	inputRect.right -= B_V_SCROLL_BAR_WIDTH + sendButtonWidth;
 	inputRect.bottom -= fFontHeight + (kPadding * 4);
 	
 	BRect inputTextRect = inputRect;
@@ -226,6 +304,20 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	fInput->SetWordWrap(true);
 	fInput->SetStylable(false);
 	fInput->MakeSelectable(true);
+	
+	if ( sendButton )
+	{
+		BRect sendRect = fInputScroll->Frame();
+		sendRect.left = sendRect.right+1;
+		sendRect.right = Bounds().right;
+		
+		fSendButton = new BButton(
+			sendRect, "sendButton", "Send", new BMessage(SEND_MESSAGE),
+			B_FOLLOW_RIGHT|B_FOLLOW_BOTTOM
+		);
+	
+		AddChild( fSendButton );
+	}
 	
 	BRect statusRect = Bounds();
 	statusRect.top = inputRect.bottom + kPadding;
@@ -275,7 +367,7 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon, bool com
 	resizeRect.bottom = inputDivider.y + 4;
 	
 	fResize = new ResizeView(fInputScroll, resizeRect, "resizer",
-		B_FOLLOW_BOTTOM | B_FOLLOW_LEFT | B_FOLLOW_RIGHT);
+		B_FOLLOW_BOTTOM | B_FOLLOW_LEFT_RIGHT);
 	AddChild(fResize);
 	
 	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command);
@@ -398,6 +490,11 @@ ChatWindow::~ChatWindow()
 	};
 
 	if (fDock) {
+		for ( int i=0; i<fDock->CountChildren(); i++ )
+		{
+			gBubbles.SetHelp( fDock->ChildAt(i), NULL );
+		}
+		
 		fDock->RemoveSelf();
 		delete fDock;
 	};
@@ -766,15 +863,24 @@ ChatWindow::MessageReceived( BMessage * msg )
 				
 				fResize->MoveTo(fResize->Frame().left, point.y);
 				
-				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1 - kButtonDockHeight - 1);
+				fTextScroll->ResizeTo(fTextScroll->Frame().Width(), point.y - 1 - fDock->Frame().Height() - 1);
 				
-				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 1);
+				fInputScroll->MoveTo(fInputScroll->Frame().left, point.y + 3);
 				fInputScroll->ResizeTo( 
 					fInputScroll->Bounds().Width(),
 					fStatusBar->Frame().top - fInputScroll->Frame().top
 				);
 				fInput->SetTextRect(fInput->Bounds());
 				fInput->ScrollToSelection();
+				
+				if ( fSendButton )
+				{
+					fSendButton->MoveTo(fSendButton->Frame().left, point.y + 3);
+					fSendButton->ResizeTo( 
+						fSendButton->Bounds().Width(),
+						fStatusBar->Frame().top - fSendButton->Frame().top
+					);
+				}
 			};
 		} break;
 		

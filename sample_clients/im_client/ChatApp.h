@@ -34,9 +34,6 @@ class ChatApp : public BApplication
 		IM::Manager		*fMan;
 		bool			fIsQuiting;
 		RunMap			fRunViews;
-		
-		int32			fIconBarSize;
-		bool			fCommandSends;
 };
 
 #endif

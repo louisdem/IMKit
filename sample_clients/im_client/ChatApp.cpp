@@ -34,14 +34,20 @@ ChatApp::ChatApp()
 	iconSize.AddInt32("valid_value", kLargeIcon);
 #endif
 
+	BMessage showsend;
+	showsend.AddString("name", "show_send_button");
+	showsend.AddString("description", "Show 'Send' button");
+	showsend.AddInt32("type", B_BOOL_TYPE);
+	showsend.AddBool("default", true);
+	
 //	BMessage userColor;
 //	userColor.AddString("name", "user_colour");
 //	userColor.AddString("description", "User text colour");
 //	userColor.AddInt32("type", B_RGB_COLOR_TYPE);
-
+	
 	BMessage useCommand;
 	useCommand.AddString("name", "command_sends");
-	useCommand.AddString("description", "Command key sends message");
+	useCommand.AddString("description", "Send messages with CMD-Enter instead of Enter");
 	useCommand.AddInt32("type", B_BOOL_TYPE);
 	useCommand.AddBool("default", true);
 	
@@ -49,6 +55,7 @@ ChatApp::ChatApp()
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
 	tmplate.AddMessage("setting", &iconSize);
+	tmplate.AddMessage("setting", &showsend);
 	tmplate.AddMessage("setting", &useCommand);
 //	tmplate.AddMessage("setting", &userColor);
 	
@@ -57,22 +64,19 @@ ChatApp::ChatApp()
 	// Make sure default settings are there
 	BMessage settings;
 	bool temp;
-
+	int32 tmp;
+	
 	im_load_client_settings("im_client", &settings);
 	if ( !settings.FindString("app_sig") )
 		settings.AddString("app_sig", "application/x-vnd.m_eiman.sample_im_client");
 	if ( settings.FindBool("auto_start", &temp) != B_OK )
 		settings.AddBool("auto_start", true );
-	if (settings.FindInt32("icon_size", &fIconBarSize) != B_OK) {
+	if ( settings.FindBool("show_send_button", &temp) != B_OK )
+		settings.AddBool("show_send_button", true );
+	if (settings.FindInt32("icon_size", &tmp) != B_OK)
 		settings.AddInt32("icon_size", kLargeIcon);
-		fIconBarSize = kLargeIcon;
-	};
-	if (settings.FindBool("command_sends", &fCommandSends) != B_OK) {
+	if (settings.FindBool("command_sends", &temp) != B_OK)
 		settings.AddBool("command_sends", true);
-		fCommandSends = true;
-	};
-	
-	if (fIconBarSize == 0) fIconBarSize = kLargeIcon;
 	
 	im_save_client_settings("im_client", &settings);
 	// done with template and settings.
@@ -164,17 +168,12 @@ ChatApp::MessageReceived( BMessage * msg )
 	{
 		case IM::SETTINGS_UPDATED:
 		{	
-			BMessage settings;
-			im_load_client_settings("im_client", &settings);
-
-			if (settings.FindInt32("icon_size", &fIconBarSize) != B_OK) {
-				fIconBarSize = kLargeIcon;
-			};
-			if (fIconBarSize == 0) fIconBarSize = kLargeIcon;
-			
-			if (settings.FindBool("command_sends", &fCommandSends) != B_OK) {
-				fCommandSends = true;
-			};
+			// tell all windows that the settings have been updated
+			for ( int i=0; i<CountWindows(); i++ )
+			{
+				BMessenger msgr(WindowAt(i));
+				msgr.SendMessage(msg);
+			}
 			
 		}	break;
 		
@@ -250,7 +249,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
 				LOG("im_client", liMedium, "Creating new window to handle message");
-				win = new ChatWindow(ref, fIconBarSize, fCommandSends);
+				win = new ChatWindow(ref);//, fIconBarSize, fCommandSends);
 				_msgr = BMessenger(win);
 				if ( _msgr.LockTarget() )
 				{
