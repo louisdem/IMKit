@@ -3,9 +3,6 @@
 #include <StringView.h>
 #include <Window.h>
 #include <Messenger.h>
-
-#include <libim/Constants.h>
-
 #include <stdio.h>
 
 const float kEdgePadding = 2.0;
@@ -15,7 +12,6 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details,
 :	BView( BRect(0,0,1,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW ),
 	fType(type),
 	fRunner(NULL),
-	fFilter(NULL),
 	fProgress(prog),
 	fDetails(details) {
 	
@@ -60,7 +56,6 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details,
 
 InfoView::~InfoView(void) {
 	if (fRunner) delete fRunner;
-	if (fFilter) delete fFilter;
 	if (fDetails) delete fDetails;
 }
 
@@ -80,51 +75,22 @@ InfoView::AttachedToWindow()
 	}
 	
 	fRunner = new BMessageRunner( BMessenger(Window()), &msg, 5*1000*1000, 1 );
-	fFilter = new InputFilter(this);
-	
-	AddFilter(fFilter);
 }
 
-void
-InfoView::MessageReceived( BMessage * msg )
-{
-	switch ( msg->what )
-	{
-		case IM::MESSAGE:
-		{
-			int32 im_what=0;
-			
-			if ( msg->FindInt32("im_what", &im_what) != B_OK )
-				break;
-			
-			if ( im_what != IM::PROGRESS )
-				break;
-			
-			float progress=0.0;
-			
-			if ( msg->FindFloat("progress", &progress) == B_OK && msg->FindString("message") != NULL )
-			{
-				fProgress = progress;
-				SetText( msg->FindString("message") );
-				
-				if ( fRunner )
-					fRunner->SetInterval( 15*1000*1000 );
-				
-				Invalidate();
-			}
-		}	break;
+void InfoView::MessageReceived(BMessage * msg) {
+	switch (msg->what) {
 		
-		case REMOVE_VIEW:
-		{
+		case REMOVE_VIEW: {
 			BMessage remove(REMOVE_VIEW);
 			remove.AddPointer("view", this);
 			BMessenger msgr(Window());
 			msgr.SendMessage( &remove );
-		}	break;
-		default:
+		} break;
+		default: {
 			BView::MessageReceived(msg);
-	}
-}
+		};
+	};
+};
 
 void InfoView::GetPreferredSize(float *w, float *h) {
 	BFont font;
@@ -248,7 +214,7 @@ void InfoView::MouseDown(BPoint point) {
 };
 
 void
-InfoView::SetText( const char * _text )
+InfoView::SetText(const char * _text)
 {
 	BString text(_text);
 	

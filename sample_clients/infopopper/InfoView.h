@@ -4,7 +4,6 @@
 #include <View.h>
 #include <MessageRunner.h>
 #include <TextView.h>
-#include "InputFilter.h"
 #include <String.h>
 #include <list>
 
@@ -46,8 +45,6 @@ class InfoView : public BView
 	private:
 		info_type		 fType;
 		BMessageRunner	* fRunner;
-		InputFilter		* fFilter;
-//		BTextView 		* fView;
 		list<BString>	fLines;
 		float			fProgress;
 		BString			fProgressID;

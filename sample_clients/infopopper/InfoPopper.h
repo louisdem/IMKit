@@ -27,7 +27,7 @@ namespace InfoPopper {
 
 
 //	const char *kInfoPopperSig = "application/x-vnd.beclan.IM_InfoPopper";
-#define InfoPopperAppSig "application/x-vnd.beclan.IM_InfoPopper"
+#define InfoPopperAppSig "application/x-vnd.beclan.InfoPopper"
 
 }
 

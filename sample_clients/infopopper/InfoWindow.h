@@ -3,16 +3,15 @@
 
 #include <Deskbar.h>
 #include <Window.h>
-#include <list>
 #include <String.h>
+#include <Entry.h>
+#include <Application.h>
 
-#include <libim/Manager.h>
-#include <libim/Helpers.h>
-#include <libim/Constants.h>
+#include <cmath>
+#include <list>
 
 #include "InfoView.h"
 #include "BorderView.h"
-
 #include "InfoPopper.h"
 
 // -------------- INFO WINDOW -----------------
@@ -31,7 +30,6 @@ class InfoWindow : public BWindow
 		void	ResizeAll();
 		void	PopupAnimation(float, float);
 		
-		IM::Manager 		* fMan;
 		list<InfoView*>		fInfoViews;
 		deskbar_location 	fDeskbarLocation;
 		BorderView			* fBorder;

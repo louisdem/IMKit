@@ -1,23 +1,9 @@
 #include "InfoWindow.h"
 
-#include <cmath>
-#include <String.h>
-#include <Entry.h>
-#include <Application.h>
-#include <libim/Constants.h>
-#include <libim/Contact.h>
-
 InfoWindow::InfoWindow()
-:	BWindow( 
-		BRect(10,10,20,20), 
-		"InfoWindow", 
-		B_BORDERED_WINDOW,
-		B_AVOID_FRONT|B_AVOID_FOCUS
-	)
-{
-	fMan = new IM::Manager( BMessenger(this) );
-	fMan->StartListening();
-	
+:	BWindow(BRect(10,10,20,20), "InfoWindow", B_BORDERED_WINDOW,
+	B_AVOID_FRONT|B_AVOID_FOCUS) {
+
 	SetWorkspaces( 0xffffffff );
 	
 	fBorder = new BorderView(Bounds(), "InfoPopper");
@@ -28,54 +14,23 @@ InfoWindow::InfoWindow()
 	Hide();
 	
 	fDeskbarLocation = BDeskbar().Location();
-	
-	BMessage settings;
-	bool temp;
-	im_load_client_settings("InfoPopper", &settings);
-	if ( !settings.FindString("app_sig") )
-		settings.AddString("app_sig", "application/x-vnd.beclan.IM_InfoPopper");
-	if ( settings.FindBool("auto_start", &temp) != B_OK )
-		settings.AddBool("auto_start", true );
-	if (settings.FindString("status_text", &fStatusText) != B_OK) {
-		fStatusText = "$nickname$ ($protocol$:$id$) is now $status$";
-		settings.AddString("status_text", fStatusText);
-	};
-	if (settings.FindString("msg_text", &fMessageText) != B_OK) {
-		fMessageText = "$nickname$ says:\n$shortmsg$";
-		settings.AddString("msg_text", fMessageText);
-	};
-	
-	im_save_client_settings("InfoPopper", &settings);
-}
+};
 
-InfoWindow::~InfoWindow()
-{
-	fMan->StopListening();
-	
-	BMessenger(fMan).SendMessage( B_QUIT_REQUESTED );
-}
+InfoWindow::~InfoWindow(void) {
+};
 
-bool
-InfoWindow::QuitRequested()
-{
+bool InfoWindow::QuitRequested(void) {
 	BMessenger(be_app).SendMessage( B_QUIT_REQUESTED );
-	return true;
+	return BWindow::QuitRequested();
 }
 
-void
-InfoWindow::WorkspaceActivated( int32, bool active )
-{
-	if ( active )
-	{ // move to correct position
-		ResizeAll();
-	}
-}
+void InfoWindow::WorkspaceActivated(int32 workspace, bool active) {
+//	Ensure window is in the correct position
+	if ( active ) ResizeAll();
+};
 
-void
-InfoWindow::MessageReceived( BMessage * msg )
-{
-	switch ( msg->what )
-	{
+void InfoWindow::MessageReceived(BMessage *msg) {
+	switch (msg->what) {
 		case InfoPopper::AddMessage: {
 			int8 type;
 			const char *message;
@@ -97,214 +52,39 @@ InfoWindow::MessageReceived( BMessage * msg )
 			
 			ResizeAll();
 		} break;
-		case IM::SETTINGS_UPDATED:
-		{	
-			BMessage settings;
-			im_load_client_settings("InfoPopper", &settings);
-			if (settings.FindString("status_text", &fStatusText) != B_OK) {
-				fStatusText = "$nickname$ is now $status$";
-			};
-			if (settings.FindString("msg_text", &fMessageText) != B_OK) {
-				fMessageText = "$nickname$ says:\n$shortmsg$";
-			};			
-		} break;	
-	
-		case IM::ERROR:
-		case IM::MESSAGE:
-		{
-			int32 im_what=IM::ERROR;
-			
-			if ( msg->FindInt32( "im_what", &im_what ) != B_OK )
-				im_what = IM::ERROR;
-			
-			BString text("");
-			
-			entry_ref ref;
-			
-			msg->FindRef("contact", &ref);
-			
-			char contactname[512];
-			char nickname[512];
-			char email[512];
-			char status[512];
-			
-			IM::Contact contact(&ref);
-			
-			if (contact.GetName(contactname, sizeof(contactname) ) != B_OK ) {
-				strcpy(contactname, "<unknown contact>");
-			};
-			if (contact.GetEmail(email, sizeof(email)) != B_OK) {
-				strcpy(email, "<unknown email>");
-			};
-			if (contact.GetNickname(nickname, sizeof(nickname)) != B_OK) {
-				strcpy(nickname, "<unknown nick>");
-			};
-			if (contact.GetNickname(status, sizeof(status)) != B_OK) {
-				strcpy(status, "<unknown status>");
-			};
-			
-			if ( strcasecmp(status, "blocked") == 0 ) {
-				// break here if status is BLOCKED
-				break;
-			}
-			
-			InfoPopper::info_type type = InfoPopper::Information;
-			
-			switch ( im_what )
-			{
-				case IM::ERROR:
-				{
-					BMessage error;
-					int32 error_what = -1;
-					if ( msg->FindMessage("message", &error ) == B_OK )
-					{
-						error.FindInt32("im_what", &error_what);
-					}
-					
-					if ( error_what != IM::USER_STARTED_TYPING && 
-						error_what != IM::USER_STOPPED_TYPING )
-					{ // we ignore errors due to typing notifications.
-						text << "Error: " << msg->FindString("error");
-						type = InfoPopper::Error;
-					}
-				}	break;
-				
-				case IM::MESSAGE_RECEIVED: {
-					text = fMessageText;
-					BString message = msg->FindString("message");
-					BString shortMessage = message;
-					
-					if ( shortMessage.FindFirst("\n") >= 0 )
-					{
-						shortMessage.Truncate( shortMessage.FindFirst("\n") );
-						shortMessage.Append("...");
-					}
-					
-					if ( shortMessage.Length() > 30 ) {
-						shortMessage.Truncate(27);
-						shortMessage.Append("...");
-					}
-					
-					text.ReplaceAll("$shortmsg$", shortMessage.String());
-					text.ReplaceAll("$message$", message.String());
-				
-					type = InfoPopper::Important;
-				}	break;
-				
-				case IM::STATUS_CHANGED: {
-					const char * new_status = msg->FindString("status");
-					const char * old_status = msg->FindString("old_status");
-					
-					if ( new_status && old_status && strcmp(new_status,old_status) )
-					{ // only show if total status has changed
-						text = fStatusText;
-						
-						text.ReplaceAll("$status$", msg->FindString("status"));
-					}
-				}	break;
-				
-				case IM::PROGRESS: {
-					const char * progID = msg->FindString("progressID");
-					
-					if ( !progID )
-						break;
-					
-					InfoView * view = NULL;
-					
-					for ( list<InfoView*>::iterator i=fInfoViews.begin(); i!=fInfoViews.end(); i++ )
-					{
-						if ( (*i)->HasProgressID(progID) )
-							view = *i;
-					}
-					
-					if ( view )
-					{
-						view->MessageReceived(msg);
-						
-						ResizeAll();
-					} else 
-					{
-						if ( !msg->FindString("message") )
-							break;
-						
-						float progress = 0.0;
-						
-						if ( msg->FindFloat("progress", &progress) != B_OK )
-							break;
-						
-//						view = new InfoView( 
-//							InfoPopper::Progress, 
-//							msg->FindString("message"),
-//							progID,
-//							progress
-//						);
-//						
-//						fInfoViews.push_back( view );
-//						
-//						fBorder->AddChild( view );
-//						
-//						ResizeAll();
-					}
-				}	return; // Yes, return here. Progress is a special case.
-			}
-			
-			text.ReplaceAll("\\n", "\n");
-			text.ReplaceAll("$nickname$", nickname);
-			text.ReplaceAll("$contactname$", contactname);
-			text.ReplaceAll("$email$", email);
-			text.ReplaceAll("$id$", msg->FindString("id"));
-			text.ReplaceAll("$protocol$", msg->FindString("protocol"));
-			
-			if ( text != "" )
-			{ // a message to display
-				//printf("Displaying message <%s>\n", text.String() );
-//				InfoView * view = new InfoView( type, text.String() );
-//				
-//				fInfoViews.push_back(view);
-//				
-//				fBorder->AddChild( view );
-//				
-//				ResizeAll();
-			}
-		}	break;
 		
-		case REMOVE_VIEW:
-		{
-			void * _ptr;
+		case REMOVE_VIEW: {
+			void *_ptr;
 			msg->FindPointer("view", &_ptr);
 			
-			InfoView * info = reinterpret_cast<InfoView*>(_ptr);
+			InfoView *info = reinterpret_cast<InfoView*>(_ptr);
 			
 			fBorder->RemoveChild(info);
 			
 			fInfoViews.remove(info);
 			
 			ResizeAll();
-		}	break;
+		} break;
 		
-		default:
+		default: {
 			BWindow::MessageReceived(msg);
-	}
-}
+		};
+	};
+};
 
-void
-InfoWindow::ResizeAll()
-{
-	if ( fInfoViews.size() == 0 )
-	{
-		if ( !IsHidden() )
-			Hide();
+void InfoWindow::ResizeAll(void) {
+	if (fInfoViews.size() == 0) {
+		if (!IsHidden()) Hide();
 		return;
-	}
+	};
 	
 	float borderw, borderh;
 	fBorder->GetPreferredSize(&borderw, &borderh);
 	
-	float curry=borderh-fBorder->BorderSize(), maxw=150;
-//	BView * view = NULL;
-	
-	for ( list<InfoView*>::iterator i=fInfoViews.begin(); i != fInfoViews.end(); i++ )
-	{
+	float curry = borderh - fBorder->BorderSize(), maxw = 150;
+
+	for (list<InfoView*>::iterator i = fInfoViews.begin(); i != fInfoViews.end();
+		i++) {
 		float pw,ph;
 		
 		(*i)->MoveTo(fBorder->BorderSize(), curry);
@@ -312,19 +92,18 @@ InfoWindow::ResizeAll()
 		
 		curry += (*i)->Bounds().Height()+1;
 		
-		if ( pw > maxw )
-			maxw = pw;
+		if (pw > maxw) maxw = pw;
 		
-		(*i)->ResizeTo( Bounds().Width() - fBorder->BorderSize()*2, (*i)->Bounds().Height() );
-	}
+		(*i)->ResizeTo(Bounds().Width() - fBorder->BorderSize() * 2,
+			(*i)->Bounds().Height());
+	};
 	
-	ResizeTo( maxw + fBorder->BorderSize()*2, curry-1+fBorder->BorderSize());
+	ResizeTo(maxw + fBorder->BorderSize() * 2, curry - 1 + fBorder->BorderSize());
 	
-	PopupAnimation( Bounds().Width(), Bounds().Height() );
-}
+	PopupAnimation(Bounds().Width(), Bounds().Height());
+};
 
-void
-InfoWindow::PopupAnimation(float width, float height) {
+void InfoWindow::PopupAnimation(float width, float height) {
 	float x,y,sx,sy;
 	float pad = 2;
 	BDeskbar deskbar;
@@ -380,5 +159,5 @@ InfoWindow::PopupAnimation(float width, float height) {
 	
 	if (IsHidden() && fInfoViews.size() != 0) {
 		Show();
-	}
-}
+	};
+};

@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= im_infopopper
+NAME= infopopper
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/clients
 
@@ -32,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp InfoView.cpp InfoWindow.cpp InputFilter.cpp BorderView.cpp
+SRCS= main.cpp InfoView.cpp InfoWindow.cpp BorderView.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -53,7 +53,7 @@ RSRCS= infopopper.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im stdc++.r4
+LIBS= be stdc++.r4
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -71,7 +71,7 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = ../../libim
+LOCAL_INCLUDE_PATHS =
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
@@ -136,14 +136,6 @@ ifeq ($(DEBUG_BUILD), true)
 
 endif
 
-
-
-#	Detect BONE
-ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
-	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
-	LIBS += socket bind
-	DEFINES += BONE
-endif
 
 #Detect Zeta
 ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
