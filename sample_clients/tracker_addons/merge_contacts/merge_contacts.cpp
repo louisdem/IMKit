@@ -91,7 +91,7 @@ merge_contacts( entry_ref _src, entry_ref _dst )
 }
 
 void
-process_refs(entry_ref dir, BMessage * msg, void * )
+process_refs(entry_ref /*dir*/, BMessage * msg, void * )
 {
 	type_code tc;
 	int32 count=0;

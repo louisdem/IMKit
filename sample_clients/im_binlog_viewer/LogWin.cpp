@@ -12,8 +12,8 @@ float kPadding = 10.0;
 
 LogWin::LogWin(entry_ref contact, BRect size) 
 	: BWindow(size, _T("IM Kit - Log Viewer"), B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS),
-	fThreadID(0),
 	fEntryRef(contact),
+	fThreadID(0),
 	fContact(&contact) {
 	
 	fView = new BView(Bounds(), "MainView", B_FOLLOW_ALL,

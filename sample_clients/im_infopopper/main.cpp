@@ -8,7 +8,7 @@
 
 // -------------- MAIN -----------------
 
-int main(int argc, char *argv[]) {
+int main(void) {
 	IMInfoApp app;
 
 	// Save settings template
