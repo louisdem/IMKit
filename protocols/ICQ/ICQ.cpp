@@ -615,6 +615,7 @@ ICQProtocol::Process( BMessage * msg )
 				{
 					const char * message_text = msg->FindString("message");
 					const char * id = msg->FindString("id");
+					const int32 charset = msg->FindInt32("charset");
 					
 					if ( !id )
 						return B_ERROR;
@@ -655,6 +656,7 @@ ICQProtocol::Process( BMessage * msg )
 					replyMsg.AddString("protocol", "ICQ");
 					replyMsg.AddString("id", id);
 					replyMsg.AddString("message", message_text);
+					replyMsg.AddInt32("charset", charset);
 					
 					fMsgr.SendMessage(replyMsg);
 				}	break;
