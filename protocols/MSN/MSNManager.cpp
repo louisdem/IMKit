@@ -165,6 +165,8 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			char *host = NULL;
 			const char *type = NULL;
 
+printf("\n\n\n\nGot a new connection, request was TrID: %i\n", msg->FindInt32("trid"));
+
 			if (msg->FindString("host", (const char **)&host) != B_OK) {
 				LOG(kProtocolName, liLow, "Got a malformed new connection message"
 					" (Host)");
@@ -267,7 +269,9 @@ printf("Connection state: %i\n", fConnectionState);
 
 			Command *sbReq = new Command("XFR");
 			sbReq->AddParam("SB");	// Request a SB connection;
-			fNoticeCon->Send(sbReq);
+
+			fNoticeCon->Send(sbReq, qsImmediate);	
+			fTrIDs[sbReq->TransactionID()] = sbReq;
 
 			return B_ERROR;
 		};

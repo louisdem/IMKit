@@ -346,14 +346,13 @@ status_t MSNProtocol::UserIsTyping(const char *nick, typing_notification type) {
 	im_msg.AddString("id", NormalizeNick(nick));
 
 	switch (type) {
-//		case STILL_TYPING:
-//		case STARTED_TYPING: {
-//			im_msg.AddInt32("im_what", IM::CONTACT_STARTED_TYPING);
-//		} break;
-//		case FINISHED_TYPING:
-//		default: {
-//			im_msg.AddInt32("im_what", IM::CONTACT_STOPPED_TYPING);
-//		} break;
+		case tnStartedTyping: {
+			im_msg.AddInt32("im_what", IM::CONTACT_STARTED_TYPING);
+		} break;
+		case tnStoppedTyping: 
+		default: {
+			im_msg.AddInt32("im_what", IM::CONTACT_STOPPED_TYPING);
+		} break;
 	};
 	
 	fMsgr.SendMessage(&im_msg);

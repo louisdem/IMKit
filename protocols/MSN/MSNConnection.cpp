@@ -313,13 +313,7 @@ int32 MSNConnection::NetworkSend(Command *command) {
 		const char * data = command->Flatten(++fTrID);
 		int32 data_size = command->FlattenedSize();
 		int32 sent_data = 0;
-		
-//		LOG(kProtocolName, liDebug, "%s:%i: Sending; ", Server(), Port());
-//		PrintHex((uchar *)data, data_size);
-		
-//		LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
-//			Port(), data_size);
-		
+			
 		while (sent_data < data_size) {
 			int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
 			
@@ -332,9 +326,6 @@ int32 MSNConnection::NetworkSend(Command *command) {
 			};
 			sent_data += sent;
 		};
-		
-//		LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
-//			data_size);
 		
 		delete command;
 		return sent_data;
@@ -508,7 +499,7 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	} else {
 		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
 			fPort, command->Type().String());
-		//PrintHex((uchar *)command->Flatten(command->TransactionID()), command->FlattenedSize());
+		PrintHex((uchar *)command->Flatten(command->TransactionID()), command->FlattenedSize());
 		
 		return B_ERROR;
 	}
@@ -679,7 +670,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 	LOG(kProtocolName, liHigh, "%s:%i got %i bytes from SSL connection to %s",
 		fServer, fPort, recvdBytes, "nexus.passport.com");
-//	printf("%s\n", recv->Flatten() );
+
 	if (recvdBytes < 0) {
 		BMessage closeCon(msnmsgCloseConnection);
 		closeCon.AddPointer("connection", this);
@@ -707,8 +698,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	begin = loginHost.FindFirst("/");
 	loginHost.MoveInto(loginDocument, begin, loginHost.Length() - begin);
 
-//		XXX - We should connect to the host above and get redired around a bit. But
-//		That's pissing me off!
+//	XXX - We should connect to the host above and get redired around a bit. But
+//	That's pissing me off!
 
 	loginHost = "login.passport.com";
 	loginDocument = "/login2.srf?lc=1033";
@@ -763,7 +754,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		}
 	}
 	
-////	We get the ticket!
+//	We get the ticket!
 	if (recv->Status() == 200) {
 		BString authInfo = recv->HeaderContents("Authentication-Info");
 		begin = authInfo.FindFirst("from-PP='");
@@ -795,15 +786,14 @@ status_t MSNConnection::handleMSG( Command * command ) {
 	{ // we have a type, handle it.
 		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
 			LOG("MSN", liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
-/*			BMessage immsg(IM::MESSAGE);
-			immsg.AddString("protocol", "MSN");
-			immsg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
-			immsg.AddString("id", command->Param(0) );
-			immsg.AddString("message", http.Content());
-			fManMsgr.SendMessage(&immsg);*/
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
+		} else
+		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
+			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),
+				tnStartedTyping);
 		} else {
 			LOG("MSN", liDebug, "Got message of unknown type <%s>", type );
+			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
 		}
 	} else {
 		LOG("ICQ", liDebug, "No Content-Type in message!\n");

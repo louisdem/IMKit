@@ -46,6 +46,7 @@ class MSNConnection;
 class MSNHandler;
 
 typedef map<BString, MSNConnection *> switchboardmap;
+typedef map<int32, Command *> tridmap;
 
 class MSNManager : public BLooper {
 	public:
@@ -77,7 +78,8 @@ class MSNManager : public BLooper {
 		inline const char *DisplayName(void) const { return fDisplayName.String(); };
 		inline const char *Password(void) const { return fPassword.String(); };
 			
-	private:			
+	private:
+		tridmap			fTrIDs;
 		list<BString>	fBuddy;
 		MSNConnection	*fNoticeCon;
 		switchboardmap	fSwitchBoard;
