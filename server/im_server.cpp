@@ -1877,7 +1877,7 @@ Server::GenerateSettingsTemplate()
 	log_level.AddString("valid_value", "Medium");
 	log_level.AddString("valid_value", "High");
 	log_level.AddString("valid_value", "Quiet");
-	log_level.AddString("default", "Debug" );
+	log_level.AddString("default", "Medium");
 	
 	main_msg.AddMessage("setting", &log_level);
 	
