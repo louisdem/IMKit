@@ -735,8 +735,14 @@ ChatWindow::MessageReceived( BMessage * msg )
 				IconMenuItem *item = dynamic_cast<IconMenuItem*>(menu->FindMarked());
 				if ( item )
 				{
-					BString protocol = item->Extra();
-					if (protocol.Length() > 0) im_msg.AddString("protocol", protocol);
+					BString connection = item->Extra();
+					if (connection.Length() > 0) 
+					{
+						IM::Connection conn(connection.String());
+						
+						im_msg.AddString("protocol", conn.Protocol());
+						im_msg.AddString("id", conn.ID());
+					}
 				}	
 			};
 			
@@ -1090,30 +1096,24 @@ void ChatWindow::BuildProtocolMenu(void) {
 	menu->AddSeparatorItem();
 	
 	for (int32 i = 0; statusMsg.FindString("connection", i); i++) {
-		BString connection = statusMsg.FindString("connection", i);
 		BString status = statusMsg.FindString("status", i);
-		BString protocol = "";
-		int32 seperator = connection.FindFirst(":");
-		if (seperator != B_ERROR) {
-			connection.MoveInto(protocol, 0, seperator + 1);
-			protocol.Truncate(seperator);
+		IM::Connection connection( statusMsg.FindString("connection", i) );
+
+		BString iconPath = iconDir.Path();
+		iconPath << "/" << connection.Protocol();
 			
-			BString iconPath = iconDir.Path();
-			iconPath << "/" << protocol.String();
+		BBitmap *icon = ReadNodeIcon(iconPath.String(), kSmallIcon, true);
+		BString label = connection.String();
+		label << " (" << status << ")";
 			
-			BBitmap *icon = ReadNodeIcon(iconPath.String(), kSmallIcon, true);
-			BString label = connection;
-			label << " (" << status << ")";
-			
-			menu->AddItem(
-				new IconMenuItem(
-					icon, 
-					label.String(), 
-					protocol.String(), 
-					new BMessage(PROTOCOL_SELECTED)
-				)
-			);
-		};
+		menu->AddItem(
+			new IconMenuItem(
+				icon, 
+				label.String(), 
+				connection.String(), 
+				new BMessage(PROTOCOL_SELECTED)
+			)
+		);
 	};
 	
 	menu->SetFont(be_plain_font);
