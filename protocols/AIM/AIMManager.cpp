@@ -2,6 +2,7 @@
 
 #include <libim/Protocol.h>
 #include <libim/Constants.h>
+#include <UTF8.h>
 
 const char kThreadName[] = "IMKit: AIM Protocol";
 const char kProtocolName[] = "AIM";
@@ -51,6 +52,36 @@ void PrintHex(const unsigned char* buf, size_t size) {
 	fprintf(stdout, "\n");
 }
 
+void remove_html( char * msg )
+{
+	bool is_in_tag = false;
+	int copy_pos = 0;
+	
+	char * copy = new char[strlen(msg)+1];
+	
+	for ( int i=0; msg[i]; i++ )
+	{
+		switch ( msg[i] )
+		{
+			case '<':
+				is_in_tag = true;
+				break;
+			case '>':
+				is_in_tag = false;
+				break;
+			default:
+				if ( !is_in_tag )
+				{
+					copy[copy_pos++] = msg[i];
+				}
+		}
+	}
+	
+	copy[copy_pos] = 0;
+	
+	strcpy(msg, copy);
+}
+
 
 AIMManager::AIMManager(BMessenger im_kit) {	
 	fSock = -1;
@@ -58,7 +89,8 @@ AIMManager::AIMManager(BMessenger im_kit) {
 	fIncomingSeqNum = 0;
 	fRequestID = 0;
 	fConnectionState = AMAN_OFFLINE;
-		
+	fSockThread = 0;
+	
 	fIMKit = im_kit;
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_PULSE), 1000000, -1);	
@@ -68,14 +100,23 @@ AIMManager::AIMManager(BMessenger im_kit) {
 };
 
 AIMManager::~AIMManager(void) {
+	StopMonitor();
+	
 	delete fRunner;
 	delete fKeepAliveRunner;
-};
+	
+	if ( fSockThread )
+	{
+		status_t tr;
+	
+		wait_for_thread( fSockThread, &tr );
+	}
+}
 
 void AIMManager::StartMonitor(void) {
 	fSockMsgr = new BMessenger(NULL, (BLooper *)this);
 	fSockThread = spawn_thread(MonitorSocket, kThreadName, B_NORMAL_PRIORITY,
-		(void *)fSockMsgr);
+		(void *)this);
 	if (fSockThread > B_ERROR) 
 		resume_thread(fSockThread);
 
@@ -88,6 +129,8 @@ void AIMManager::StopMonitor(void) {
 		fSockMsgr = new BMessenger((BHandler *)NULL);
 		delete old_msgr;
 	}
+	
+	fSockThread = 0;
 }
 
 status_t AIMManager::Send(Flap *f) {
@@ -458,28 +501,42 @@ void AIMManager::MessageReceived(BMessage *msg) {
 //							We only support plain text channels currently									
 							switch (channel) {
 								case PLAIN_TEXT: {
+									//offset--;
 									offset += 2; // hack, hack. slaad should look at this :9
-									uint32 contentLen = (data[++offset] << 8) + data[++offset];
-									LOG("AIM", HIGH, "AIMManager: PLAIN_TEXT message, content length: %i", contentLen);
+									uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
+									offset += 2;
+									LOG("AIM", HIGH, "AIMManager: PLAIN_TEXT message, content length: %i (0x%0.4X", contentLen-offset, contentLen-offset);
 									
-									//PrintHex(data, bytes );
+									PrintHex(data, bytes );
 									
-									for (uint32 i = 0; i < contentLen; i++) {
+									while ( offset < contentLen ) 
+									{
 										uint32 tlvlen = 0;
 										uint16 msgtype = (data[++offset] << 8) + data[++offset];
 										switch ( msgtype) 
 										{
 											case 0x0501: {	// Client Features, ignore
-												LOG("AIM", DEBUG, "Ignoring Client  Features");
 												tlvlen = (data[++offset] << 8) + data[++offset];
+												if ( tlvlen == 1 )
+													tlvlen = 0;
+												LOG("AIM", DEBUG, "Ignoring Client Features, %ld bytes", tlvlen);
 											} break;
 											case 0x0101: { // Message Len
 												tlvlen = (data[++offset] << 8) + data[++offset];
+												
+												if ( tlvlen == 0 )
+												{ // old-style message?
+													tlvlen = (data[offset] << 8) + data[offset+1];
+													offset++;
+													printf("zero size message, new size: %ld\n", tlvlen);
+												}
 												
 												//PrintHex((uchar *)(data + offset + 5), tlvlen);
 												char *msg = (char *)calloc(tlvlen - 2, sizeof(char));
 												memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
 												msg[tlvlen - 3] = '\0';
+												
+												remove_html( msg );
 												
 												LOG("AIM", LOW, "AIMManager: Got message from %s: \"%s\"",
 													nick, msg);
@@ -489,7 +546,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 												im_msg.AddString("protocol", kProtocolName);
 												im_msg.AddString("id", nick);
 												im_msg.AddString("message", msg);
-												//im_msg.AddInt32("charset",fEncoding);
+												im_msg.AddInt32("charset",B_ISO1_CONVERSION);
 												
 												fIMKit.SendMessage(&im_msg);	  
 												
@@ -498,11 +555,10 @@ void AIMManager::MessageReceived(BMessage *msg) {
 											
 											default:
 												LOG("AIM", DEBUG, "Unknown msgtype: %.04x", msgtype);
-										};
+										}
 										offset += tlvlen;
-										i += 4 + tlvlen;
-									};											
-
+										//i += 4 + tlvlen;
+									}
 								} break;
 							} // end switch(channel)
 							
@@ -648,11 +704,11 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	return B_OK;
 };
 
-int32 AIMManager::MonitorSocket(void *messenger) {
-	BMessenger *msgr = reinterpret_cast<BMessenger *>(messenger);
+int32 AIMManager::MonitorSocket(void * manager) {
+	AIMManager *mgr = reinterpret_cast<AIMManager *>(manager);
 	int32 socket = 0;
 
-	if ( !msgr->IsValid() )
+	if ( !mgr->fSockMsgr->IsValid() )
 	{
 		LOG("AIM", LOW, "AIMManager::MonitorSocket: Messenger wasn't valid!\n");
 		return B_ERROR;
@@ -661,7 +717,7 @@ int32 AIMManager::MonitorSocket(void *messenger) {
 	BMessage reply;
 
 	status_t ret = 0;
-	if ((ret = msgr->SendMessage(AMAN_GET_SOCKET, &reply)) == B_OK) 
+	if ((ret = mgr->fSockMsgr->SendMessage(AMAN_GET_SOCKET, &reply)) == B_OK) 
 	{
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
 		{
@@ -681,7 +737,7 @@ int32 AIMManager::MonitorSocket(void *messenger) {
 	int32 bytes;
 	int32 processed;
 	
-	while (msgr->IsValid()) 
+	while (mgr->fSockMsgr->IsValid()) 
 	{
 		//bytes = 0;
 		
@@ -732,7 +788,7 @@ int32 AIMManager::MonitorSocket(void *messenger) {
 						dataReady.AddInt32("bytes", bytes);
 						dataReady.AddData("data", B_RAW_TYPE, buffer, bytes);
 								
-						msgr->SendMessage(&dataReady);
+						mgr->fSockMsgr->SendMessage(&dataReady);
 					}
 						
 					memset(buffer, 0, bytes);
@@ -754,7 +810,7 @@ int32 AIMManager::MonitorSocket(void *messenger) {
 		}
 	}
 
-	delete msgr;
+//	delete msgr;
 
 	return B_OK;
 };
