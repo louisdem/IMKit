@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include "htmlparse.h"
 
 // We include this for the ONLINE_TEXT, AWAY_TEXT and OFFLINE_TEXT defines
 #include <libim/Constants.h>
@@ -194,6 +195,7 @@ YahooConnection::cbGotBuddies( YList * buds )
 void
 YahooConnection::cbGotIM(char *who, char *msg, long tm, int stat, int utf8)
 {
+	parse_html(msg);
 	fManager->GotMessage( who, msg );
 }
 

@@ -33,8 +33,8 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= AIM.cpp FLAP.cpp TLV.cpp AIMManager.cpp SNAC.cpp AIMConnection.cpp htmlparse.cpp
-SRCS+= Buddy.cpp
+SRCS= AIM.cpp FLAP.cpp TLV.cpp AIMManager.cpp SNAC.cpp AIMConnection.cpp
+SRCS+= Buddy.cpp $(TOPDIR)/common/htmlparse.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -73,7 +73,7 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS =
+LOCAL_INCLUDE_PATHS = $(TOPDIR)/common
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
