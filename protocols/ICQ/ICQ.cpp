@@ -77,6 +77,7 @@ SimpleClient::SimpleClient(unsigned int uin, const string& pass)
   icqclient.messaged.connect(slot(this,&SimpleClient::message_cb));
   icqclient.logger.connect(slot(this,&SimpleClient::logger_cb));
   icqclient.contact_status_change_signal.connect(slot(this,&SimpleClient::contact_status_change_cb));
+  icqclient.self_contact_status_change_signal.connect(slot(this,&SimpleClient::self_status_change_cb));
   icqclient.socket.connect(slot(this,&SimpleClient::socket_cb));
   icqclient.contact_userinfo_change_signal.connect(slot(this,&SimpleClient::contact_userinfo_change_cb));
   icqclient.server_based_contact_list.connect(slot(this,&SimpleClient::server_based_contact_list_cb));
@@ -96,6 +97,7 @@ SimpleClient::SimpleClient()
   icqclient.messaged.connect(slot(this,&SimpleClient::message_cb));
   icqclient.logger.connect(slot(this,&SimpleClient::logger_cb));
   icqclient.contact_status_change_signal.connect(slot(this,&SimpleClient::contact_status_change_cb));
+  icqclient.self_contact_status_change_signal.connect(slot(this,&SimpleClient::self_status_change_cb));
   icqclient.socket.connect(slot(this,&SimpleClient::socket_cb));
   icqclient.contact_userinfo_change_signal.connect(slot(this,&SimpleClient::contact_userinfo_change_cb));
   icqclient.server_based_contact_list.connect(slot(this,&SimpleClient::server_based_contact_list_cb));
@@ -372,6 +374,46 @@ void SimpleClient::contact_status_change_cb(StatusChangeEvent *ev)
 	msg.AddString("id",uin_string);
 	msg.AddString("status",status);
 	fMsgr.SendMessage( &msg );
+}
+
+/*
+ * this callback is called when your online status is changed
+ */
+void SimpleClient::self_status_change_cb(StatusChangeEvent *ev)
+{
+	char uin_string[256];
+	
+	sprintf( uin_string,"%d",ev->getUIN() );
+	
+	const char * status = NULL;
+	
+	switch(ev->getStatus()) 
+	{
+		case STATUS_ONLINE:
+		case STATUS_FREEFORCHAT:
+			status = ONLINE_TEXT;
+			break;
+		case STATUS_NA:
+		case STATUS_DND:
+		case STATUS_OCCUPIED:
+		case STATUS_AWAY:
+			status = AWAY_TEXT;
+			break;
+		case STATUS_OFFLINE:
+			status = OFFLINE_TEXT;
+			break;
+		default:
+			status = OFFLINE_TEXT;
+			break;
+	}
+	
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what",IM::STATUS_SET);
+	msg.AddString("protocol","ICQ");
+	msg.AddString("status",status);
+	fMsgr.SendMessage( &msg );
+	
+	LOG("icq", HIGH, "Self status changed to %s", status);
 }
 
 /**

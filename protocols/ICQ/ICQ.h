@@ -88,6 +88,7 @@ class SimpleClient : public SigC::Object {
   void socket_cb(SocketEvent *ev);
   void contact_userinfo_change_cb( UserInfoChangeEvent *ev );
   void server_based_contact_list_cb( ServerBasedContactEvent * ev );
+  void self_status_change_cb( StatusChangeEvent * ev );
   
   // -- Callbacks from our Select object --
   void select_socket_cb(int fd, Select::SocketInputCondition cond);

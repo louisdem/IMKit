@@ -9,8 +9,10 @@ Fixes
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * long message bug in LOG(), make buffer dunamic somehow?
-* Add link to im_server in Be menu or in Preferences
-* Add Deskbar monitor for im_server, so it restores the deskbar icon if needed
+* Add link to im_server in Be menu or in Preferences?
+* Add Deskbar monitor for im_server, so it restores the deskbar icon if needed. Not needed?
+* Add "Send" button to client, for those poor souls who don't know that cmd-enter == send
+* Add option to client - multi/single line edit
 
 New features
 

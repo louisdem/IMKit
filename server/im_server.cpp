@@ -1224,6 +1224,8 @@ Server::MessageFromProtocols( BMessage * msg )
 	
 	if ( im_what == STATUS_SET && protocol != NULL )
 	{ // own status set for protocol, register the id's we're interested in
+	  // THIS IS NOT CORRECT! We need to do this on a "connected" message, not on
+	  // status changed!
 		if ( !msg->FindString("status") )
 		{
 			_ERROR("ERROR: STATUS_SET: status not in message",msg);
@@ -1664,21 +1666,17 @@ Server::handleDeskbarMessage( BMessage * msg )
 {
 	switch ( msg->what )
 	{
-		case FLASH_DESKBAR:
-		case STOP_FLASHING:
-		{ // forward to deskbar icon
-			LOG("im_server", DEBUG, "Forwarding message to Deskbar");
-			if ( fDeskbarMsgr.SendMessage(msg) != B_OK )
-			{
-				LOG("im_server", LOW, "Error send message to Deskbar");
-			}
-		}	break;
-		
 		case REGISTER_DESKBAR_MESSENGER:
 			LOG("im_server", DEBUG, "Got Deskbar messenger");
 			msg->FindMessenger("msgr", &fDeskbarMsgr);
 			break;
+		
 		default:
-			fDeskbarMsgr.SendMessage(msg);
+			LOG("im_server", DEBUG, "Forwarding message to Deskbar");
+			if ( fDeskbarMsgr.SendMessage(msg) != B_OK )
+			{
+				LOG("im_server", LOW, "Error sending message to Deskbar");
+			}
+			break;
 	}
 }
