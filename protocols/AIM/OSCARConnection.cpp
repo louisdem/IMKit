@@ -37,7 +37,7 @@ OSCARConnection::~OSCARConnection(void) {
 	
 	if (fThread > 0) kill_thread(fThread);
 	
-	ClearQueue();	
+	ClearQueue();
 };
 
 //#pragma mark -
@@ -455,7 +455,13 @@ void OSCARConnection::StopReceiver(void) {
 	}
 	
 //	fThread = 0;
-
+	#ifdef closesocket
+	closesocket( fSock );
+	#else
+	close( fSock );
+	#endif
+	
+	fSock = B_ERROR;
 };
 
 int32 OSCARConnection::Receiver(void *con) {
