@@ -19,8 +19,12 @@ ___ Things to fix
 * Info popper: the title should have a say when deciding the window size
 * Make the clients handle the new 'multiple contacts per message' thing
 * Remove charset setting from MSN, it's not used anyway.
+* Add ~/people to Deskbar context menu
+* Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
 
 ___ New features
+
+Show im_client on all workspaces
 
 Add B_MS_WINDOWS_1251_CONVERSION to protocols
 

@@ -10,18 +10,18 @@
 using namespace IM;
 
 Connection::Connection( const char * str )
+:	fConn(str)
 {
-	BString text(str);
+	int32 colon = fConn.FindFirst(":");
 	
-	int32 colon = text.FindFirst(":");
+	fConn.CopyInto( fProtocol, 0, colon );
 	
-	text.CopyInto( fProtocol, 0, colon );
-	
-	text.CopyInto( fID, colon+1, text.Length()-colon-1 );
+	fConn.CopyInto( fID, colon+1, fConn.Length()-colon-1 );
 }
 
 Connection::Connection( const Connection & c )
-:	fProtocol( c.fProtocol ),
+:	fConn( c.fConn ),
+	fProtocol( c.fProtocol ),
 	fID( c.fID )
 {
 }

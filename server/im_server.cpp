@@ -121,7 +121,7 @@ Server::Server()
 	
 	// load icons for "change icon depending on state"
 	BString iconPath = prefsPath.Path();
-	iconPath << "/Online";
+	iconPath << "/" ONLINE_TEXT;
 	
 	fIcons.AddPointer(ONLINE_TEXT "_small", (const void *)GetBitmapFromAttribute(
 		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
@@ -129,14 +129,14 @@ Server::Server()
 		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 		
 	iconPath = prefsPath.Path();
-	iconPath << "/Away";
+	iconPath << "/" AWAY_TEXT;
 	fIcons.AddPointer(AWAY_TEXT "_small", (const void *)GetBitmapFromAttribute(
 		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
 	fIcons.AddPointer(AWAY_TEXT "_large", (const void *)GetBitmapFromAttribute(
 		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 
 	iconPath = prefsPath.Path();
-	iconPath << "/Offline";
+	iconPath << "/" OFFLINE_TEXT;
 	fIcons.AddPointer(OFFLINE_TEXT "_small", (const void *)GetBitmapFromAttribute(
 		iconPath.String(), BEOS_SMALL_ICON_ATTRIBUTE));
 	fIcons.AddPointer(OFFLINE_TEXT "_large", (const void *)GetBitmapFromAttribute(
@@ -1459,6 +1459,53 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		} else {
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
+		
+		// SVG icon is a bit special atm
+		BPath prefsPath;
+	
+		// Get and set SVG icon
+		if (find_directory(B_USER_SETTINGS_DIRECTORY,&prefsPath,true,NULL) == B_OK)
+		{
+			prefsPath.Append("im_kit/icons/");
+			
+			BString path( prefsPath.Path() );
+			
+			path.Append( "/" );
+			path.Append( status );
+			
+			BNode svgNode( path.String() );
+			
+			LOG("im_server", liDebug, "SVG icon path: %s", path.String() );
+			
+			int32 len=0;
+			
+			void * svg_icon = ReadAttribute( svgNode, BEOS_SVG_ICON_ATTRIBUTE, &len );
+			
+			if ( len > 0 )
+			{
+				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE); // This is BAD, we shouldn't need this!
+				WriteAttribute( node, BEOS_SVG_ICON_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_ICON_ATTRIBUTE_TYPE );
+				free( svg_icon );
+			} else
+			{
+				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_ICON_ATTRIBUTE);
+				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
+			}
+			
+			len = 0;
+			
+			svg_icon = ReadAttribute( svgNode, BEOS_SVG_EXTRA_ATTRIBUTE, &len );
+			
+			if ( len > 0 )
+			{
+				WriteAttribute( node, BEOS_SVG_EXTRA_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_EXTRA_ATTRIBUTE_TYPE );
+				free( svg_icon );
+			} else
+			{
+				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_EXTRA_ATTRIBUTE);
+				node.RemoveAttr(BEOS_SVG_EXTRA_ATTRIBUTE);
+			}
+		}
 	}
 	
 	node.Unset();
@@ -1556,6 +1603,52 @@ Server::SetAllOffline()
 		} else {
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
+		
+		// SVG icon is a bit special atm
+		BPath prefsPath;
+	
+		// Get and set SVG icon
+		if (find_directory(B_USER_SETTINGS_DIRECTORY,&prefsPath,true,NULL) == B_OK)
+		{
+			prefsPath.Append("im_kit/icons/");
+			
+			BString path( prefsPath.Path() );
+			
+			path.Append( "/" OFFLINE_TEXT );
+			
+			BNode svgNode( path.String() );
+			
+			LOG("im_server", liDebug, "SVG icon path: %s", path.String() );
+			
+			int32 len=0;
+			
+			void * svg_icon = ReadAttribute( svgNode, BEOS_SVG_ICON_ATTRIBUTE, &len );
+			
+			if ( len > 0 )
+			{
+				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
+				WriteAttribute( node, BEOS_SVG_ICON_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_ICON_ATTRIBUTE_TYPE );
+				free( svg_icon );
+			} else
+			{
+				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_ICON_ATTRIBUTE);
+				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
+			}
+			
+			len = 0;
+			
+			svg_icon = ReadAttribute( svgNode, BEOS_SVG_EXTRA_ATTRIBUTE, &len );
+			
+			if ( len > 0 )
+			{
+				WriteAttribute( node, BEOS_SVG_EXTRA_ATTRIBUTE, (char*)svg_icon, len, BEOS_SVG_EXTRA_ATTRIBUTE_TYPE );
+				free( svg_icon );
+			} else
+			{
+				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_EXTRA_ATTRIBUTE);
+				node.RemoveAttr(BEOS_SVG_EXTRA_ATTRIBUTE);
+			}
+		}
 		
 		node.Unset();
 	}

@@ -15,9 +15,10 @@ class Connection
 		
 		const char * Protocol() { return fProtocol.String(); };
 		const char * ID() { return fID.String(); };
+		const char * String() { return fConn.String(); };
 		
 	private:
-		BString	fProtocol, fID;
+		BString	fConn, fProtocol, fID;
 };
 
 class Contact
