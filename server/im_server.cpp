@@ -68,11 +68,11 @@ Server::Server()
 		BDirectory dir(prefsPath.Path());
 		if (dir.InitCheck() == B_OK)
 		{
-			dir.CreateDirectory("im_kit", &dir);
-			dir.CreateDirectory("im_kit/icons", &dir);
-			dir.CreateDirectory("im_kit/add-ons", &dir);
-			dir.CreateDirectory("im_kit/add-ons/protocols", &dir);
-			dir.CreateDirectory("im_kit/clients", &dir);
+			dir.CreateDirectory("im_kit", NULL);
+			dir.CreateDirectory("im_kit/icons", NULL);
+			dir.CreateDirectory("im_kit/add-ons", NULL);
+			dir.CreateDirectory("im_kit/add-ons/protocols", NULL);
+			dir.CreateDirectory("im_kit/clients", NULL);
 		}
 	}
 
