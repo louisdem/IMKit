@@ -47,7 +47,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 		IM_DeskbarIcon( BMessage * );
 		virtual ~IM_DeskbarIcon();
 		
-		virtual status_t Archive( BMessage * archive, bool deep = true );
+		virtual status_t Archive( BMessage * archive, bool deep = true ) const;
 		static BArchivable * Instantiate( BMessage * archive );
 		
 		virtual void Draw( BRect );

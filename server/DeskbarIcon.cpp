@@ -195,7 +195,7 @@ IM_DeskbarIcon::getProtocolStates()
 }
 
 void
-IM_DeskbarIcon::Draw( BRect rect )
+IM_DeskbarIcon::Draw( BRect /*rect*/ )
 {
 	SetHighColor( Parent()->ViewColor() );
 	FillRect( Bounds() );
@@ -211,7 +211,7 @@ IM_DeskbarIcon::Draw( BRect rect )
 }
 
 status_t
-IM_DeskbarIcon::Archive( BMessage * msg, bool deep )
+IM_DeskbarIcon::Archive( BMessage * msg, bool deep ) const
 {
 	status_t res = BView::Archive(msg,deep);
 	
@@ -294,7 +294,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		
 		case SET_STATUS:
 		{
-			BMenuItem *item = NULL;
+//			BMenuItem *item = NULL;
 
 			const char *protocol = msg->FindString("protocol");
 			const char *status = msg->FindString("status");
@@ -472,7 +472,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 	}
 }
 
-void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *msg) {
+void IM_DeskbarIcon::MouseMoved(BPoint /*point*/, uint32 transit, const BMessage */*msg*/) {
 	if ( transit == B_ENTERED_VIEW )
 //	if ( (transit != B_OUTSIDE_VIEW) && (transit != B_EXITED_VIEW) )
 	{ // update bubblehelper text and fetch statuses if needed
@@ -684,7 +684,7 @@ IM_DeskbarIcon::AttachedToWindow()
 	BVolumeRoster volRoster;
 	BVolume bootVol;
 	BMessenger target(this, NULL, NULL);
-	querymap::iterator qIt;
+//	querymap::iterator qIt;
 	BPath queryPath;
 	entry_ref queryRef;
 

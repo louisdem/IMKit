@@ -1417,11 +1417,11 @@ Server::MessageFromProtocols( BMessage * msg )
 			if ( !icon ) {
 				LOG("im_server", liHigh, "Unable to decode buddy icon.");
 			} else {
-				printf("Setting %s's icon to be %p\n", protocol, icon);
+				LOG("im_server", liDebug, "Setting %s's icon to be %p\n", protocol, icon);
 			
 				status_t ret = contact.SetBuddyIcon(protocol, icon);
-				printf("Gets: %s (%i)\n", strerror(ret), ret);
-			
+				LOG("im_server", liDebug, "Gets: %s (%ld)\n", strerror(ret), ret);
+				
 				BMessage update(MESSAGE);
 				update.AddInt32("im_what", BUDDY_ICON_UPDATED);
 				update.AddRef("contact", &ref);
@@ -2373,7 +2373,7 @@ Server::handle_SETTINGS_UPDATED( BMessage * msg )
 	
 	const char * sig;
 	
-	if ( sig = msg->FindString("protocol") )
+	if ( (sig = msg->FindString("protocol")) != NULL )
 	{ // notify protocol of change in settings
 		if ( fProtocols.find(sig) == fProtocols.end() )
 		{
@@ -2391,7 +2391,7 @@ Server::handle_SETTINGS_UPDATED( BMessage * msg )
 			_ERROR("Protocol settings invalid", msg);
 		}
 	} else
-	if ( sig = msg->FindString("client") )
+	if ( (sig = msg->FindString("client")) != NULL )
 	{ // notify client of change in settings
 		if ( strcmp("im_server", sig) == 0 )
 		{
@@ -2681,7 +2681,7 @@ Server::CheckIndexes()
 			bool isConnIndexed = false;
 			bool isStatusIndexed = false;
 		
-			while (ent = fs_read_index_dir(indexes)) {
+			while ( (ent = fs_read_index_dir(indexes)) != NULL ) {
 				if (strcmp(ent->d_name, "IM:connections") == 0) isConnIndexed = true;
 				if (strcmp(ent->d_name, "IM:status") == 0) isStatusIndexed = true;
 			}

@@ -11,7 +11,7 @@
 
 #include <libim/Helpers.h>
 
-void handle_ctrl_c( int sig )
+void handle_ctrl_c( int /*sig*/ )
 {
 	printf("Fatal signal received.\n");
 	static bool has_sent_quit = false;
