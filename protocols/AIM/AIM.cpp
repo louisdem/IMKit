@@ -69,22 +69,26 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				}	break;
 				
 				case IM::SET_STATUS: {
+					LOG("AIM", HIGH, "Set status");
 					const char *status = msg->FindString("status");
 					
 					if (strcmp(status, OFFLINE_TEXT) == 0) {
 						fManager->LogOff();
-					};
+					} else
 					if (strcmp(status, AWAY_TEXT) == 0) {
-					};
+					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {	
 						fManager->Login("login.oscar.aol.com", (uint16)5190,
 							fScreenName, fPassword);
-					};
+					} else
+					{
+						LOG("AIM", LOW, "Invalid status when setting status: '%s'", status);
+					}
 				} break;
 
 				case IM::GET_CONTACT_INFO:
 				{
-					printf("Getting contact info\n");
+					LOG("AIM", HIGH, "Getting contact info");
 					const char * id = msg->FindString("id");
 					
 					BMessage *msg = new BMessage(IM::MESSAGE);
@@ -93,7 +97,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					msg->AddString("id", id);
 					msg->AddString("nick", id);
 					msg->AddString("first name", id);
-					msg->AddString("last name", id);
+					//msg->AddString("last name", id);
 
 					fMsgr.SendMessage(msg);
 				}	break;
@@ -113,7 +117,6 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					
 					msg->RemoveName("contact");
 					msg->ReplaceInt32("im_what", IM::MESSAGE_SENT);
-					
 					
 					fMsgr.SendMessage(msg);
 				}	break;
@@ -242,6 +245,8 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	return B_OK;
 }
 
-uint32 AIMProtocol::GetEncoding() {
+uint32 AIMProtocol::GetEncoding() 
+{
 //	return fClient.fEncoding;
+	return B_ISO1_CONVERSION;
 }

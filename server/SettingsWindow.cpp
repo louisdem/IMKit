@@ -404,9 +404,9 @@ SettingsWindow::rebuildUI()
 	if ( strlen(fProtocol) > 0 )
 	{
 		BMenu * statusMenu = new BPopUpMenu("");
-		BMessage * onlineMsg = new BMessage(ALTER_STATUS);	onlineMsg->AddString("status","available");
-		BMessage * awayMsg = new BMessage(ALTER_STATUS);	awayMsg->AddString("status","away");
-		BMessage * offlineMsg = new BMessage(ALTER_STATUS);	offlineMsg->AddString("status","offline");
+		BMessage * onlineMsg = new BMessage(ALTER_STATUS);	onlineMsg->AddString("status",ONLINE_TEXT);
+		BMessage * awayMsg = new BMessage(ALTER_STATUS);	awayMsg->AddString("status",AWAY_TEXT);
+		BMessage * offlineMsg = new BMessage(ALTER_STATUS);	offlineMsg->AddString("status",OFFLINE_TEXT);
 	
 		statusMenu->AddItem( new BMenuItem("online", onlineMsg) );
 		statusMenu->AddItem( new BMenuItem("away", awayMsg) );

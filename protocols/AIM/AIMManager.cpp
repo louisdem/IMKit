@@ -6,7 +6,7 @@
 const char kThreadName[] = "IMKit: AIM Protocol";
 const char kProtocolName[] = "AIM";
 
-void PrintHex(unsigned char* buf, size_t size) {
+void PrintHex(const unsigned char* buf, size_t size) {
 	int i = 0;
 	int j = 0;
 	int breakpoint = 0;
@@ -76,16 +76,19 @@ void AIMManager::StartMonitor(void) {
 	fSockMsgr = new BMessenger(NULL, (BLooper *)this);
 	fSockThread = spawn_thread(MonitorSocket, kThreadName, B_NORMAL_PRIORITY,
 		(void *)fSockMsgr);
-	if (fSockThread > B_ERROR) resume_thread(fSockThread);
+	if (fSockThread > B_ERROR) 
+		resume_thread(fSockThread);
 
 };
 
 void AIMManager::StopMonitor(void) {
-	if (fSockMsgr) {
-//		delete fSockMsgr;
+	if (fSockMsgr) 
+	{
+		BMessenger * old_msgr = fSockMsgr;
 		fSockMsgr = new BMessenger((BHandler *)NULL);
-	};
-};
+		delete old_msgr;
+	}
+}
 
 status_t AIMManager::Send(Flap *f) {
 	fOutgoing.push_back(f);
@@ -96,15 +99,15 @@ int32 AIMManager::ConnectTo(const char *hostname, uint16 port) {
 	struct sockaddr_in their_addr;
 	int32 sock = 0;
 
-	LOG("AIMManager::ConnectTo", LOW, "(%s, %i)", hostname, port);
+	LOG("AIM", LOW, "AIMManager::ConnectTo(%s, %i)", hostname, port);
 
 	if ((he = gethostbyname(hostname)) == NULL) {
-		LOG("AIMManager::ConnectTo", LOW, "Couldn't get Server name (%s)", hostname);
+		LOG("AIM", LOW, "AIMManager::ConnectTo: Couldn't get Server name (%s)", hostname);
 		return B_ERROR;
 	};
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG("AIMManager::ConnectTo", LOW, "Couldn't create socket");	
+		LOG("AIM", LOW, "AIMManager::ConnectTo: Couldn't create socket");	
 		return B_ERROR;
 	};
 
@@ -114,7 +117,7 @@ int32 AIMManager::ConnectTo(const char *hostname, uint16 port) {
 	memset(&(their_addr.sin_zero), 0, 8);
 
 	if (connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1) {
-		LOG("AIMManager", LOW, "Couldn't connect to %s:%i", hostname, port);
+		LOG("AIM", LOW, "AIMManager::ConnectTo: Couldn't connect to %s:%i", hostname, port);
 		return B_ERROR;
 	};
 	
@@ -195,13 +198,35 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			if (fSock > 0) {
 				if (fOutgoing.size() == 0) return;
 				Flap *f = fOutgoing.front();
-			
-				if (send(fSock, f->Flatten(++fOutgoingSeqNum), f->FlattenedSize(), 0) == -1) {
-					delete f;
-					LOG("AIMManager::MessageReceived", LOW, "Couldn't send packet");
-					return;
-				};
-		
+				
+				const char * data = f->Flatten(++fOutgoingSeqNum);
+				int32 data_size = f->FlattenedSize();
+				int32 sent_data = 0;
+				
+				LOG("AIM", DEBUG, "Sending %ld bytes of data", data_size);
+				
+				while ( sent_data < data_size )
+				{
+					int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
+					
+					if ( sent < 0 ) 
+					{
+						delete f;
+						LOG("AIM", LOW, "AIMManager::MessageReceived: Couldn't send packet");
+						return;
+					}
+					
+					if ( sent == 0 )
+					{
+						LOG("AIM", HIGH, "send() returned 0, is this bad?");
+						snooze(1*1000*1000);
+					}
+					
+					sent_data += sent;
+				}
+				
+				LOG("AIM", DEBUG, "Sent %ld bytes of data", data_size);
+				
 //				PrintHex((uchar *)f->Flatten(fOutgoingSeqNum), f->FlattenedSize());
 				fOutgoing.pop_front();
 				delete f;
@@ -243,13 +268,13 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
 				(data[++offset] << 8) + data[++offset];
 
-			LOG("AIMManager", LOW, "Got SNAC (0x%04x, 0x%04x)", family, subtype);
+			LOG("AIM", LOW, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
 			
 			switch(family) {
 				case SERVICE_CONTROL: {
 					switch (subtype) {
 						case VERIFICATION_REQUEST: {
-							LOG("AIMMananger", LOW, "AOL sent us a client verification");
+							LOG("AIM", LOW, "AIMManager: AOL sent us a client verification");
 							PrintHex((uchar *)data, bytes);
 						} break;
 							
@@ -350,7 +375,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							msg.AddString("protocol", kProtocolName);
 							msg.AddString("status", ONLINE_TEXT);
 						
-							fIMKit.SendMessage(msg);
+							fIMKit.SendMessage(&msg);
 							fConnectionState = AMAN_ONLINE;
 						} break;
 					};
@@ -366,7 +391,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							memcpy(nick, (void *)(data + 17), nickLen);
 							nick[nickLen] = '\0';
 							
-							LOG("AIMManager", LOW, "\"%s\" is online", nick);
+							LOG("AIM", LOW, "AIMManager: \"%s\" is online", nick);
 							
 							BMessage *msg = new BMessage(IM::MESSAGE);
 							msg->AddInt32("im_what", IM::STATUS_CHANGED);
@@ -385,7 +410,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							memcpy(nick, (void *)(data + 17), nickLen);
 							nick[nickLen] = '\0';
 												
-							LOG("AIMManager", LOW, "\"%s\" went offline", nick);
+							LOG("AIM", LOW, "AIMManager: \"%s\" went offline", nick);
 							
 							BMessage *msg = new BMessage(IM::MESSAGE);
 							msg->AddInt32("im_what", IM::STATUS_CHANGED);
@@ -433,24 +458,30 @@ void AIMManager::MessageReceived(BMessage *msg) {
 //							We only support plain text channels currently									
 							switch (channel) {
 								case PLAIN_TEXT: {
+									offset += 2; // hack, hack. slaad should look at this :9
 									uint32 contentLen = (data[++offset] << 8) + data[++offset];
-									printf("\tLength: %i\n", contentLen);
-
+									LOG("AIM", HIGH, "AIMManager: PLAIN_TEXT message, content length: %i", contentLen);
+									
+									//PrintHex(data, bytes );
+									
 									for (uint32 i = 0; i < contentLen; i++) {
 										uint32 tlvlen = 0;
-										switch ((data[++offset] << 8) + data[++offset]) {
+										uint16 msgtype = (data[++offset] << 8) + data[++offset];
+										switch ( msgtype) 
+										{
 											case 0x0501: {	// Client Features, ignore
+												LOG("AIM", DEBUG, "Ignoring Client  Features");
 												tlvlen = (data[++offset] << 8) + data[++offset];
 											} break;
 											case 0x0101: { // Message Len
 												tlvlen = (data[++offset] << 8) + data[++offset];
-
-												PrintHex((uchar *)(data + offset + 5), tlvlen);
+												
+												//PrintHex((uchar *)(data + offset + 5), tlvlen);
 												char *msg = (char *)calloc(tlvlen - 2, sizeof(char));
 												memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
 												msg[tlvlen - 3] = '\0';
 												
-												LOG("AIMMananger", LOW, "Got message from %s: \"%s\"",
+												LOG("AIM", LOW, "AIMManager: Got message from %s: \"%s\"",
 													nick, msg);
 												
 												BMessage im_msg(IM::MESSAGE);
@@ -458,20 +489,22 @@ void AIMManager::MessageReceived(BMessage *msg) {
 												im_msg.AddString("protocol", kProtocolName);
 												im_msg.AddString("id", nick);
 												im_msg.AddString("message", msg);
-//												im_msg.AddInt32("charset",fEncoding);
+												//im_msg.AddInt32("charset",fEncoding);
 												
 												fIMKit.SendMessage(&im_msg);	  
 												
-												
 												free(msg);
 											} break;
+											
+											default:
+												LOG("AIM", DEBUG, "Unknown msgtype: %.04x", msgtype);
 										};
 										offset += tlvlen;
 										i += 4 + tlvlen;
 									};											
 
 								} break;
-							};
+							} // end switch(channel)
 							
 							free(nick);
 											
@@ -521,7 +554,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 						strncpy(server, value, colon - value);
 						server[(colon - value)] = '\0';
 						
-						printf("Need to reconnect to: %s:%i\n", server, port);
+						LOG("AIM", LOW, "Need to reconnect to: %s:%i", server, port);
 					} break;
 
 					case 0x0006: {
@@ -562,7 +595,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 };
 
 status_t AIMManager::MessageUser(const char *screenname, const char *message) {
-	LOG("AIMManager::MessageUser", LOW, "Sending \"%s\" (%i) to %s (%i)\n",
+	LOG("AIM", LOW, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *f = new Flap(SNAC_DATA);
@@ -619,87 +652,107 @@ int32 AIMManager::MonitorSocket(void *messenger) {
 	BMessenger *msgr = reinterpret_cast<BMessenger *>(messenger);
 	int32 socket = 0;
 
-	if (msgr->IsValid()) {
-		BMessage reply;
+	if ( !msgr->IsValid() )
+	{
+		LOG("AIM", LOW, "AIMManager::MonitorSocket: Messenger wasn't valid!\n");
+		return B_ERROR;
+	}
 
-		status_t ret = 0;
-		if ((ret = msgr->SendMessage(AMAN_GET_SOCKET, &reply)) == B_OK) {
-			if ((ret = reply.FindInt32("socket", &socket)) != B_OK) {
-				LOG("AIMManager::MonitorSocket", LOW, "Couldn't get socket: %i", ret);
-				return B_ERROR;
-			};
-		} else {
-			LOG("AIMManager::MonitorSocket", LOW, "Couldn't obtain socket: %i", ret);
+	BMessage reply;
+
+	status_t ret = 0;
+	if ((ret = msgr->SendMessage(AMAN_GET_SOCKET, &reply)) == B_OK) 
+	{
+		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
+		{
+			LOG("AIM", LOW, "AIMManager::MonitorSocket: Couldn't get socket: %i", ret);
 			return B_ERROR;
-		};
+		}
+	} else 
+	{
+		LOG("AIM", LOW, "AIMManager::MonitorSocket: Couldn't obtain socket: %i", ret);
+		return B_ERROR;
+	}
 
-		struct fd_set read;
-		struct fd_set error;
-		char buffer[2048];
-		uint16 bufferLen = 2048;
-		int32 bytes;
-		int32 processed;
+	struct fd_set read;
+	struct fd_set error;
+	char buffer[2048];
+	//uint16 bufferLen = 2048; using sizeof(buffer) instead
+	int32 bytes;
+	int32 processed;
+	
+	while (msgr->IsValid()) 
+	{
+		//bytes = 0;
 		
-		while (msgr->IsValid()) {
-			bytes = 0;
-
-			FD_ZERO(&read);
-			FD_ZERO(&error);
-
-			FD_SET(socket, &read);
-			FD_SET(socket, &error);
-
-			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
-				if (FD_ISSET(socket, &error)) {
-					LOG("AIMManager::MonitorSocket", LOW, "Error reading socket");
-				};
-				if (FD_ISSET(socket, &read)) {
-					if ((bytes = recv(socket, buffer, bufferLen, 0)) > 0) {
-
-						if (bytes > 0) {
-							LOG("AIMManager::MonitorSocket", LOW, "Got data (%i bytes)",
-								bytes);
-
-							uint32 fLen = (buffer[4] << 8) + buffer[5];
+		FD_ZERO(&read);
+		FD_ZERO(&error);
+		
+		FD_SET(socket, &read);
+		FD_SET(socket, &error);
+		
+		if (select(socket + 1, &read, NULL, &error, NULL) > 0) 
+		{
+			if (FD_ISSET(socket, &error)) 
+			{
+				LOG("AIM", LOW, "AIMManager::MonitorSocket: Error reading socket");
+			}
+				
+			if (FD_ISSET(socket, &read)) 
+			{
+				if ((bytes = recv(socket, buffer, sizeof(buffer), 0)) > 0) 
+				{
+					LOG("AIM", LOW, "AIMManager::MonitorSocket: Got data (%i bytes)", bytes);
+					
+					// what does fLen do?
+					//uint32 fLen = (buffer[4] << 8) + buffer[5];
 						
-							if (buffer[0] == COMMAND_START) {
-								BMessage dataReady;
-								switch (buffer[1]) {
-									case OPEN_CONNECTION: {
-										dataReady.what = AMAN_FLAP_OPEN_CON;
-									} break;
-									case SNAC_DATA: {
-										dataReady.what = AMAN_FLAP_SNAC_DATA;
-									} break;
-									case FLAP_ERROR: {
-										dataReady.what = AMAN_FLAP_ERROR;
-									} break;
-									case CLOSE_CONNECTION: {
-										dataReady.what = AMAN_FLAP_CLOSE_CON;
-									};
-								}
-									
-								dataReady.AddInt32("bytes", bytes);
-								dataReady.AddData("data", B_RAW_TYPE, buffer, bytes);
-									
-								msgr->SendMessage(dataReady);
-							};
+					if (buffer[0] == COMMAND_START) 
+					{
+						BMessage dataReady;
+						switch (buffer[1]) 
+						{
+							case OPEN_CONNECTION: {
+								dataReady.what = AMAN_FLAP_OPEN_CON;
+							} break;
+							case SNAC_DATA: {
+								dataReady.what = AMAN_FLAP_SNAC_DATA;
+							} break;
+							case FLAP_ERROR: {
+								dataReady.what = AMAN_FLAP_ERROR;
+							} break;
+							case CLOSE_CONNECTION: {
+								dataReady.what = AMAN_FLAP_CLOSE_CON;
+							} break;
+							default:
+								// unkown message
+								break;
+						}
 							
-							memset(buffer, 0, bytes);
-						};
-					} else {
+						dataReady.AddInt32("bytes", bytes);
+						dataReady.AddData("data", B_RAW_TYPE, buffer, bytes);
+								
+						msgr->SendMessage(&dataReady);
+					}
+						
+					memset(buffer, 0, bytes);
+				} else 
+				{ // recv return zero or less
+					if ( bytes == 0 )
+					{ // no error, just no data. this shouldn't happen though.
 						snooze(2000000);
+					} else
+					{
+						LOG("AIM", LOW, "Got socket error:");
 						perror("SOCKET ERROR");
+						return B_ERROR;
 //						We seem to get here somehow :/
 //						LOG("AIMMananager::MonitorSocket", LOW, "Socket error");
-					};
-				};
-			};
-		};
-	} else {
-		LOG("AIMManager::MonitorSocket", LOW, "Messenger wasn't valid!\n");
-		return B_ERROR;
-	};
+					}
+				}
+			}
+		}
+	}
 
 	delete msgr;
 
@@ -709,7 +762,7 @@ int32 AIMManager::MonitorSocket(void *messenger) {
 status_t AIMManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
 	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
-		LOG("AIMManager::AddBuddy", LOW, "Adding \"%s\" to list", buddy);
+		LOG("AIM", LOW, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
 		fBuddy.push_back(BString(buddy));
 	
 		Flap *addBuddy = new Flap(SNAC_DATA);
@@ -753,7 +806,7 @@ status_t AIMManager::LogOff(void) {
 		msg.AddString("protocol","AIM");
 		msg.AddString("status", OFFLINE_TEXT);
 	
-		fIMKit.SendMessage(msg);
+		fIMKit.SendMessage(&msg);
 		fConnectionState = AMAN_OFFLINE;
 
 		ret = B_OK;

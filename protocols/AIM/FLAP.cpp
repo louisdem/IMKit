@@ -1,6 +1,7 @@
 #include "FLAP.h"
 
 #include <stdio.h>
+#include <libim/Helpers.h>
 
 uint8 kFLAPHeader = 6;
 extern void PrintHex(unsigned char* buf, size_t size);
@@ -101,13 +102,13 @@ uint32 Flap::FlattenedSize(void) {
 
 const char *Flap::Flatten(uint16 seqNum) {
 	if (fDirty) {
-		printf("Sequence 0x%x 0x%x: Need to allocate %i bytes...",
-			(seqNum & 0xff00) >> 8, seqNum & 0x00ff, FlattenedSize());
-		fFlat = (char *)realloc(fFlat, sizeof(char) * FlattenedSize());
+		LOG("AIM", DEBUG, "Sequence 0x%0x: Need to allocate %i bytes...",
+			/*(seqNum & 0xff00) >> 8, seqNum & 0x00ff*/seqNum, FlattenedSize());
+		fFlat = (char *)realloc(fFlat, FlattenedSize());
 		if (fFlat == NULL) return NULL;
 		fDirty = false;
 		
-		printf("... Done!\n");
+		//printf("... Done!\n");
 		
 		list <TypeDataPair>::iterator i;
 		uint32 offset = 0;

@@ -16,6 +16,7 @@ Fixes
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Change Merge contacts, or make a new one, so it can be used from the Terminal
 * Client: not scrolling correctly in conversation when opening a conversation with a history
+* When running Zeta: reused message from sending message is corrupted somewhere along the line
 
 New features
 

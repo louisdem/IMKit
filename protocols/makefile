@@ -1,7 +1,8 @@
 # makefile for all sample code
 
 SUBDIRS = \
-	ICQ
+	ICQ \
+	AIM
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \

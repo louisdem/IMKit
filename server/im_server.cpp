@@ -487,7 +487,7 @@ Server::UnloadAddons()
 void
 Server::AddEndpoint( BMessenger msgr )
 {
-	LOG("im_server", DEBUG, "Endpoint added\n");
+	LOG("im_server", DEBUG, "Endpoint added");
 	fMessengers.push_back(msgr);
 }
 
@@ -496,7 +496,7 @@ Server::AddEndpoint( BMessenger msgr )
 void
 Server::RemoveEndpoint( BMessenger msgr )
 {
-	LOG("im_server", DEBUG, "Endpoint removed\n");
+	LOG("im_server", DEBUG, "Endpoint removed");
 	fMessengers.remove(msgr);
 }
 
@@ -729,7 +729,7 @@ Server::CreateContact( const char * proto_id )
 	
 	LOG("im_server", DEBUG, "  wrote connection");
 	
-	if ( result.SetStatus("offline") != B_OK )
+	if ( result.SetStatus(OFFLINE_TEXT) != B_OK )
 	{
 		return Contact();
 	}
