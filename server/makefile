@@ -51,7 +51,15 @@ RSRCS= im_server.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im stdc++.r4 textencoding
+LIBS= be translation im stdc++.r4 textencoding
+
+# Zeta needs find_directory_r() which is in libzeta, do a check
+ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
+# Is a BeOS build
+else
+# Zeta build
+LIBS += zeta
+endif
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths

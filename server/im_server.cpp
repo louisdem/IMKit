@@ -2,12 +2,15 @@
 
 #include <libim/Constants.h>
 #include "DeskbarIcon.h"
+#include <TranslationUtils.h>
 
 #include <image.h>
 #include <Roster.h>
 #include <Path.h>
+#include <FindDirectory.h>
 #include <Directory.h>
 #include <stdio.h>
+#include <Node.h>
 #include <NodeMonitor.h>
 #include <VolumeRoster.h>
 #include <Volume.h>
@@ -15,6 +18,7 @@
 #include <libim/Helpers.h>
 #include <Deskbar.h>
 #include <Roster.h>
+#include <be/kernel/fs_attr.h>
 
 using namespace IM;
 
@@ -53,11 +57,11 @@ Server::Server()
 :	BApplication(IM_SERVER_SIG)
 {
 	BDirectory dir;
+//	These should use find_directory()
 	dir.CreateDirectory("/boot/home/config/settings/im_kit", NULL);
+	dir.CreateDirectory("/boot/home/config/settings/im_kit/icons", NULL);
 	dir.CreateDirectory("/boot/home/config/settings/im_kit/add-ons", NULL);
 	dir.CreateDirectory("/boot/home/config/settings/im_kit/add-ons/protocols", NULL);
-	
-	SetAllOffline();
 	
 	LoadAddons();
 	
@@ -85,6 +89,34 @@ Server::Server()
 	
 	delete i;
 	
+	BPath prefsPath;
+	find_directory(B_USER_SETTINGS_DIRECTORY, &prefsPath, true);
+	prefsPath.Append("im_kit/icons");
+	
+	BString iconPath = prefsPath.Path();
+	iconPath << "/Online";
+	
+	fIcons.AddPointer(ONLINE_TEXT "_small", (const void *)GetBitmapFromAttribute(
+		iconPath.String(), BEOS_SMALL_ICON));
+	fIcons.AddPointer(ONLINE_TEXT "_large", (const void *)GetBitmapFromAttribute(
+		iconPath.String(), BEOS_LARGE_ICON));
+		
+	iconPath = prefsPath.Path();
+	iconPath << "/Away";
+	fIcons.AddPointer(AWAY_TEXT "_small", (const void *)GetBitmapFromAttribute(
+		iconPath.String(), BEOS_SMALL_ICON));
+	fIcons.AddPointer(AWAY_TEXT "_large", (const void *)GetBitmapFromAttribute(
+		iconPath.String(), BEOS_LARGE_ICON));
+
+	iconPath = prefsPath.Path();
+	iconPath << "/Offline";
+	fIcons.AddPointer(OFFLINE_TEXT "_small", (const void *)GetBitmapFromAttribute(
+		iconPath.String(), BEOS_SMALL_ICON));
+	fIcons.AddPointer(OFFLINE_TEXT "_large", (const void *)GetBitmapFromAttribute(
+		iconPath.String(), BEOS_LARGE_ICON));
+
+	SetAllOffline();
+
 	StartAutostartApps();
 	
 	Run();
@@ -111,6 +143,94 @@ bool
 Server::QuitRequested()
 {
 	return true;
+}
+
+// Loads attribute named 'attribute' from the file 'name'defaults to a type of 'BBMP'
+// Doesn't work on symlinks
+
+BBitmap *
+Server::GetBitmapFromAttribute(const char *name, const char *attribute, 
+	type_code type = 'BBMP') {
+	BBitmap 	*bitmap = NULL;
+	size_t 		len = 0;
+	status_t 	error;	
+
+	if ((name == NULL) || (attribute == NULL)) return NULL;
+
+	BNode node(name);
+	
+	if (node.InitCheck() != B_OK) {
+		return NULL;
+	};
+	
+	attr_info info;
+		
+	if (node.GetAttrInfo(attribute, &info) != B_OK) {
+		node.Unset();
+		return NULL;
+	};
+		
+	char *data = (char *)calloc(info.size, sizeof(char));
+	len = (size_t)info.size;
+		
+	if (node.ReadAttr(attribute, 'BBMP', 0, data, len) != len) {
+		node.Unset();
+		free(data);
+	
+		return NULL;
+	};
+	
+//	Icon is a square, so it's right / bottom co-ords are the root of the bitmap length
+//	Offset is 0
+	BRect bound = BRect(0, 0, 0, 0);
+	bound.right = sqrt(len) - 1;
+	bound.bottom = bound.right;
+	
+	bitmap = new BBitmap(bound, B_COLOR_8_BIT);
+	bitmap->SetBits(data, len, 0, B_COLOR_8_BIT);
+
+//	make sure it's ok
+	if(bitmap->InitCheck() != B_OK) {
+		free(data);
+		delete bitmap;
+		return NULL;
+	};
+	
+	return bitmap;
+}
+
+BBitmap *
+Server::GetBitmap(const char *name, type_code type = 'BBMP') {
+	BResources *res = AppResources();
+
+	BBitmap 	*bitmap = NULL;
+	size_t 		len = 0;
+	status_t 	error;	
+
+	// load resource
+	const void *data = res->LoadResource(type, name, &len);
+	
+	BMemoryIO stream(data, len);
+	
+	// unflatten it
+	BMessage archive;
+	error = archive.Unflatten(&stream);
+	if (error != B_OK)
+		return NULL;
+
+	// make a bbitmap from it
+	bitmap = new BBitmap(&archive);
+	if(!bitmap)
+		return NULL;
+
+	// make sure it's ok
+	if(bitmap->InitCheck() != B_OK)
+	{
+		delete bitmap;
+		return NULL;
+	}
+	
+	return bitmap;
 }
 
 /**
@@ -1169,6 +1289,41 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 		{
 			_ERROR("Error writing status attribute",msg);
 		}
+		
+		if (strcmp(status, OFFLINE_TEXT) == 0) {
+			node.RemoveAttr(BEOS_LARGE_ICON);
+			node.RemoveAttr(BEOS_SMALL_ICON);
+
+			return;
+		};
+			
+		
+		BBitmap *large = NULL;
+		BBitmap *small = NULL;
+		
+		BString pointerName = status;
+		pointerName << "_small";
+
+		fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&small));
+		
+		pointerName = status;
+		pointerName << "_large";
+		
+		fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&large));
+		
+		if (large != NULL) {
+			node.WriteAttr(BEOS_LARGE_ICON, 'ICON', 0, large->Bits(), 
+				large->BitsLength());
+		} else {
+			node.RemoveAttr(BEOS_LARGE_ICON);
+		};	
+
+		if (small != NULL) {
+			node.WriteAttr(BEOS_SMALL_ICON, 'MICN', 0, small->Bits(), 
+				small->BitsLength());
+		} else {
+			node.RemoveAttr(BEOS_SMALL_ICON);
+		};
 	}
 }
 
@@ -1215,11 +1370,33 @@ Server::SetAllOffline()
 		BEntry e(&entry);
 		if ( e.GetName(filename) != B_OK )
 			strcpy(filename,"<no filename?!>");
-		
+			
 		LOG("im_server", DEBUG, "Setting %s (%s) offline, filename: %s", name, nickname, filename);
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
 			LOG("im_server", DEBUG, "  error.");
+
+		BNode node(&entry);
+
+		BBitmap *large = NULL;
+		BBitmap *small = NULL;
+		
+		fIcons.FindPointer(OFFLINE_TEXT "_small", reinterpret_cast<void **>(&small));
+		fIcons.FindPointer(OFFLINE_TEXT "_large", reinterpret_cast<void **>(&large));
+		
+		if (large != NULL) {
+			node.WriteAttr(BEOS_LARGE_ICON, 'ICON', 0, large->Bits(), 
+				large->BitsLength());
+		} else {
+			node.RemoveAttr(BEOS_LARGE_ICON);
+		};	
+
+		if (small != NULL) {
+			node.WriteAttr(BEOS_SMALL_ICON, 'MICN', 0, small->Bits(), 
+				small->BitsLength());
+		} else {
+			node.RemoveAttr(BEOS_SMALL_ICON);
+		};
 	}
 }
 

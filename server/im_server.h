@@ -64,6 +64,10 @@ class Server : public BApplication
 		void	reply_ADD_AUTOSTART_APPSIG( BMessage * );
 		void	reply_REMOVE_AUTOSTART_APPSIG( BMessage * );
 		
+		BBitmap	*GetBitmap(const char *name, type_code type = 'BBMP');
+		BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute, 
+			type_code type = 'BBMP');
+		
 		BQuery						fQuery;
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
@@ -71,10 +75,14 @@ class Server : public BApplication
 		map<string,string>			fStatus;// proto_id_string,status_string
 		
 		map<node_ref,list<pair<string,string> > >	contacts_protocols_ids;
+
+		BMessage					fIcons;
 };
 
 };
 
 #define LOG_PREFIX "im_server"
+#define BEOS_SMALL_ICON "BEOS:M:STD_ICON"
+#define BEOS_LARGE_ICON "BEOS:L:STD_ICON"
 
 #endif
