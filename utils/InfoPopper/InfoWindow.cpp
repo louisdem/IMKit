@@ -2,6 +2,7 @@
 
 #include <NodeMonitor.h>
 #include <algorithm>
+#include <stdio.h>
 
 property_info main_prop_list[] = {
 	{ "message", {B_GET_PROPERTY, B_COUNT_PROPERTIES, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
