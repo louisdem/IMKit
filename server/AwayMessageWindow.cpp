@@ -6,17 +6,24 @@
 #include <string.h>
 #include <libim/Helpers.h>
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 const float kPadding = 5.0;
 
 AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
-	: BWindow(BRect(100, 100, 325, 220), "IM Kit: Set Away Message", B_TITLED_WINDOW,
+	: BWindow(BRect(100, 100, 325, 220), _T("IM Kit: Set Away Message"), B_TITLED_WINDOW,
 		B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS),
 	
 	fProtocol(NULL) {
 
 	if (protocol != NULL) {
 		fProtocol = strdup(protocol);
-		BString t = "IM Kit: Set Away Message (";
+		BString t = _T( "IM Kit: Set Away Message" );
+		t << " (";
 		t << fProtocol;
 		t << ")";
 		SetTitle(t.String());
@@ -66,18 +73,18 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 	rect = Bounds();
 	rect.InsetBy(kPadding, kPadding);
 	
-	rect.left = rect.right - (be_plain_font->StringWidth("Set Away") + (kPadding * 2));
+	rect.left = rect.right - (be_plain_font->StringWidth(_T("Set Away")) + (kPadding * 2));
 	rect.bottom -= kPadding;
 	rect.top = rect.bottom - (fFontHeight + kPadding);
 	
-	fOkay = new BButton(rect, "OkayButton", "Set Away", new BMessage(SET_AWAY),
+	fOkay = new BButton(rect, "OkayButton", _T("Set Away"), new BMessage(SET_AWAY),
 		B_FOLLOW_LEFT | B_FOLLOW_BOTTOM);
 	fView->AddChild(fOkay);
 	
 	rect.right = rect.left - kPadding;
-	rect.left = rect.right - (be_plain_font->StringWidth("Cancel") + (kPadding * 2));
+	rect.left = rect.right - (be_plain_font->StringWidth(_T("Cancel")) + (kPadding * 2));
 	
-	fCancel = new BButton(rect, "CancelButton", "Cancel", new BMessage(CANCEL_AWAY),
+	fCancel = new BButton(rect, "CancelButton", _T("Cancel"), new BMessage(CANCEL_AWAY),
 		B_FOLLOW_LEFT | B_FOLLOW_BOTTOM);
 	fView->AddChild(fCancel);
 

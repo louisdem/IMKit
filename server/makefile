@@ -156,6 +156,14 @@ ifeq ($(DEBUG_BUILD), true)
 
 endif
 
+#Detect Zeta
+ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
+# BeOS
+else
+#Zeta
+    DEFINES += ZETA
+endif
+
 INSTALL_DIR= /boot/home/config/servers
 
 include $(TOPDIR)/makefile-engine.IMkit

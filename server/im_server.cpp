@@ -26,6 +26,12 @@
 #include <algorithm>
 #include <Beep.h>
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 using namespace IM;
 
 #define AUTOSTART_APPSIG_SETTING "autostart_appsig"
@@ -154,6 +160,13 @@ Server::Server()
 	SetAllOffline();
 	
 	StartAutostartApps();
+
+#ifdef ZETA
+	/* same badness as in DeskbarIcon.cpp */
+	BPath path( "/boot/apps/Internet/IMKit/Language/Dictionaries/im_server" );
+	if( path.InitCheck() == B_OK )
+		be_locale.LoadLanguageFile( path.Path() );
+#endif
 	
 	Run();
 }

@@ -15,6 +15,12 @@
 #include <Path.h>
 #include <FindDirectory.h>
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 const char *kTrackerQueryVolume = "_trk/qryvol1";
 const char *kTrackerQueryPredicate = "_trk/qrystr";
 
@@ -169,6 +175,17 @@ IM_DeskbarIcon::_init() {
 	} else {
 		middleAction.GetRef(&fMiddleClickRef);
 	};
+
+#ifdef ZETA
+	/*
+	 * This is straightforward and unsafe as the location of the locale
+	 * files may change. We could put the files relative to the im_server
+	 * install location, but this is quite ugly.
+	 */
+	BPath path( "/boot/apps/Internet/IMKit/Language/Dictionaries/im_server" );
+	if( path.InitCheck() == B_OK )
+		be_locale.LoadLanguageFile( path.Path() );
+#endif
 }
 
 void
@@ -455,7 +472,7 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 	{ // update bubblehelper text and fetch statuses if needed
 		if ( !BMessenger(IM_SERVER_SIG).IsValid() )
 		{
-			fTipText = "im_server not running";
+			fTipText = _T("im_server not running");
 		} else 
 		{
 			IM::Manager man;
@@ -466,14 +483,14 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 				BMessage protStatus;
 				man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
 				
-				fTipText = "Online Status:";
+				fTipText = _T("Online Status:");
 				for (int i = 0; protStatus.FindString("protocol",i); i++ ) {
 					const char *protocol = protStatus.FindString("protocol",i);
 					const char *status = protStatus.FindString("status", i);
 	
 					fStatuses[protocol] = status;
 	
-					fTipText << "\n  " << protocol << ": " << status << "";
+					fTipText << "\n  " << protocol << ": " << _T(status) << "";
 					
 					LOG("deskbar", liDebug, "Protocol status: %s is %s", protocol, status );
 				}
@@ -506,7 +523,7 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			fModeIcon = fOfflineIcon;
 			
 			LOG("deskbar", liDebug, "Build menu: im_server not running");
-			fMenu->AddItem( new BMenuItem("Start im_server", new BMessage(START_IM_SERVER)) );
+			fMenu->AddItem( new BMenuItem(_T("Start im_server"), new BMessage(START_IM_SERVER)) );
 			
 			fMenu->SetTargetForItems( this );
 
@@ -525,16 +542,16 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		
 		if ( true || fDirtyStatusMenu || !fStatusMenu) {
 			LOG("deskbar", liDebug, "Rebuilding status menu");
-			fStatusMenu = new BMenu("Set status");
+			fStatusMenu = new BMenu(_T("Set status"));
 			
 			LOG("deskbar", liDebug, "'All protocols'");
-			BMenu *total = new BMenu("All Protocols");
+			BMenu *total = new BMenu(_T("All Protocols"));
 			BMessage *msg_online = new BMessage(SET_STATUS); msg_online->AddString("status", ONLINE_TEXT);
-			total->AddItem(new BMenuItem(ONLINE_TEXT, msg_online) );	
+			total->AddItem(new BMenuItem(_T(ONLINE_TEXT), msg_online) );	
 			BMessage *msg_away = new BMessage(SET_STATUS); msg_away->AddString("status", AWAY_TEXT);
-			total->AddItem(new BMenuItem(AWAY_TEXT, msg_away) );	
+			total->AddItem(new BMenuItem(_T(AWAY_TEXT), msg_away) );	
 			BMessage *msg_offline = new BMessage(SET_STATUS); msg_offline->AddString("status", OFFLINE_TEXT);
-			total->AddItem(new BMenuItem(OFFLINE_TEXT, msg_offline) );	
+			total->AddItem(new BMenuItem(_T(OFFLINE_TEXT), msg_offline) );	
 			
 			total->ItemAt(fStatus)->SetMarked(true);
 			total->SetTargetForItems(this);
@@ -557,11 +574,11 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 				protMsg.AddString("protocol", name.c_str());
 				
 				BMessage *msg1 = new BMessage(protMsg); msg1->AddString("status", ONLINE_TEXT);
-				protocol->AddItem(new BMenuItem(ONLINE_TEXT, msg1));
+				protocol->AddItem(new BMenuItem(_T(ONLINE_TEXT), msg1));
 				BMessage *msg2 = new BMessage(protMsg); msg2->AddString("status", AWAY_TEXT);
-				protocol->AddItem(new BMenuItem(AWAY_TEXT, msg2));
+				protocol->AddItem(new BMenuItem(_T(AWAY_TEXT), msg2));
 				BMessage *msg3 = new BMessage(protMsg); msg3->AddString("status", OFFLINE_TEXT);
-				protocol->AddItem(new BMenuItem(OFFLINE_TEXT, msg3));
+				protocol->AddItem(new BMenuItem(_T(OFFLINE_TEXT), msg3));
 				
 				protocol->SetTargetForItems(this);
 				if ((*it).second == ONLINE_TEXT) {
@@ -594,15 +611,15 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 
 //		settings
 		fMenu->AddSeparatorItem();
-		fMenu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
+		fMenu->AddItem( new BMenuItem(_T("Settings"), new BMessage(OPEN_SETTINGS)) );
 
 //		About
 		fMenu->AddSeparatorItem();
-		fMenu->AddItem(new BMenuItem("About", new BMessage(B_ABOUT_REQUESTED)));
+		fMenu->AddItem(new BMenuItem(_T("About"), new BMessage(B_ABOUT_REQUESTED)));
 	
 //		Quit
 		fMenu->AddSeparatorItem();
-		fMenu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
+		fMenu->AddItem(new BMenuItem(_T("Quit"), new BMessage(CLOSE_IM_SERVER)));
 	
 		fMenu->SetTargetForItems( this );
 
@@ -735,15 +752,28 @@ void IM_DeskbarIcon::DetachedFromWindow() {
 }
 
 void IM_DeskbarIcon::AboutRequested(void) {
+	BString text;
+	text
+		<< _T( "SVN Version: " ) << BUILD_REVISION << "\n"
+		<< _T( "Built on: " ) << BUILD_DATE << "\n\n"
+		<< _T( "The IM Kit is a collaborative effort released under the BeClan banner." )
+		<< _T( " Collaborators include:" ) << "\n"
+		<<     "  - Mikael \"m_eiman\" Eiman\n"
+		<<     "  - Mikael \"tic\" Jansson\n"
+		<<     "  - B \"Lazy Sod ;)\" GA\n"
+		<<     "  - Michael \"slaad\" Davidson\n";
+
 	BAlert *alert = new BAlert("About",
-		"SVN Version: " BUILD_REVISION "\n"
-		"Built on: " BUILD_DATE "\n\n"
-		"The IM Kit is a collaborative effort released under the BeClan banner."
-		" Collaborators include: \n"
-		"  - Mikael \"m_eiman\" Eiman\n"
-		"  - Mikael \"tic\" Jansson\n"
-		"  - B \"Lazy Sod ;)\" GA\n"
-		"  - Michael \"slaad\" Davidson\n", "Wow!", NULL, NULL, B_WIDTH_AS_USUAL,
+		text.String(),
+//		"SVN Version: " BUILD_REVISION "\n"
+//		"Built on: " BUILD_DATE "\n\n"
+//		"The IM Kit is a collaborative effort released under the BeClan banner."
+//		" Collaborators include: \n"
+//		"  - Mikael \"m_eiman\" Eiman\n"
+//		"  - Mikael \"tic\" Jansson\n"
+//		"  - B \"Lazy Sod ;)\" GA\n"
+//		"  - Michael \"slaad\" Davidson\n",
+		"Wow!", NULL, NULL, B_WIDTH_AS_USUAL,
 		B_EVEN_SPACING, B_INFO_ALERT);
 	alert->SetShortcut(0, B_ESCAPE);
 	alert->SetFeel(B_NORMAL_WINDOW_FEEL);
@@ -774,7 +804,7 @@ void IM_DeskbarIcon::BuildQueryMenu(void) {
 	querymap::iterator qIt;
 	fQueryMenu = new BMenu("Queries");
 	
-	fQueryMenu->AddItem(new BMenuItem("Open Query directory", new BMessage(OPEN_QUERY_DIR)));
+	fQueryMenu->AddItem(new BMenuItem(_T("Open Query directory"), new BMessage(OPEN_QUERY_DIR)));
 	fQueryMenu->AddSeparatorItem();
 	
 	for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) {
