@@ -1,6 +1,7 @@
 #include "IMInfoApp.h"
 
 #include <stdio.h>
+#include <Messenger.h>
 
 IMInfoApp::IMInfoApp(void)
 	: BApplication("application/x-vnd.beclan.IM_InfoPopper") {
@@ -171,7 +172,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 						pop_msg.AddMessage("icon", &image);
 					};
 					
-					BMessenger(InfoPopperAppSig).SendMessage(pop_msg);				
+					BMessenger(InfoPopperAppSig).SendMessage(&pop_msg);				
 				}	return; // yes, return. Progress is a special case.
 			};
 			
@@ -200,7 +201,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 				pop_msg.AddString("onClickApp", "application/x-person");
 				pop_msg.AddRef("onClickRef", &ref);
 
-				BMessenger(InfoPopperAppSig).SendMessage(pop_msg);				
+				BMessenger(InfoPopperAppSig).SendMessage(&pop_msg);				
 			};
 		} break;
 		
