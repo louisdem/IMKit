@@ -803,10 +803,22 @@ Server::FindContact( const char * proto_id )
 	BString regexp;
 	for ( int i=0; i<protoUpper.Length(); i++ )
 	{
-		regexp << "[";
-		regexp << protoUpper[i];
-		regexp << protoLower[i];
-		regexp << "]";
+		if (!isalpha((int)(protoUpper[i])))
+		{
+			// "[--]" seems to have a special meaning for the query engine so it
+			// would fail if we did the same expansion we were doing as "-"
+			// would become "[--]". As it probably happens with other chars too,
+			// I am doing this isalpha() thing here. WARNING! Does it work with
+			// UTF8 at all?
+			regexp << protoUpper[i];
+		}
+		else
+		{
+			regexp << "[";
+			regexp << protoUpper[i];
+			regexp << protoLower[i];
+			regexp << "]";
+		}
 	}
 	
 	proto_id = regexp.String();
@@ -834,6 +846,8 @@ Server::FindContact( const char * proto_id )
 		vol.GetName(volName);
 		
 		BQuery query;
+
+		LOG("im_server", liHigh, "FindContact BQuery::SetPredicate(\"%s\")", pred.c_str());
 		
 		query.SetPredicate( pred.c_str() );
 		
@@ -845,6 +859,8 @@ Server::FindContact( const char * proto_id )
 		
 		if ( query.GetNextRef(&entry) == B_OK )
 		{
+			LOG("im_server", liHigh, "FindContact found \"%s\"", entry.name);		
+			
 			result.SetTo(entry);
 			break;
 		}
