@@ -791,7 +791,20 @@ Server::FindContact( const char * proto_id )
 list<Contact>
 Server::FindAllContacts( const char * proto_id )
 {
-	BVolumeRoster 	vroster;
+	list<Contact> results;
+	
+	list< pair<ContactHandle, list<string>* > >::iterator iter;
+	
+	for ( iter=fContacts.begin(); iter!=fContacts.end(); iter++ ) {
+		for ( list<string>::iterator j=(*iter).second->begin(); j != (*iter).second->end(); j++ ) {
+			if ( *j == proto_id ) {
+				results.push_back( Contact(iter->first.entry) );
+			}
+		}
+	}
+	
+	return results;
+/*	BVolumeRoster 	vroster;
 	BVolume			vol;
 	char 			volName[B_FILE_NAME_LENGTH];
 
@@ -832,6 +845,7 @@ Server::FindAllContacts( const char * proto_id )
 	}
 	
 	return results;
+*/
 }
 
 /**
