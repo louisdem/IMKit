@@ -46,7 +46,7 @@ bool InfoWindow::QuitRequested(void) {
 	return BWindow::QuitRequested();
 }
 
-void InfoWindow::WorkspaceActivated(int32 workspace, bool active) {
+void InfoWindow::WorkspaceActivated(int32 /*workspace*/, bool active) {
 //	Ensure window is in the correct position
 	if ( active ) ResizeAll();
 };
@@ -148,7 +148,7 @@ BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *sp
 			int32 i;
 			if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
 		
-			if ( i >= 0 && i < fInfoViews.size() ) {
+			if ( i >= 0 && i < (int32)fInfoViews.size() ) {
 				printf("Found message\n");
 				msg->PopSpecifier();
 				return fInfoViews[i];
