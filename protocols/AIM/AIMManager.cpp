@@ -96,7 +96,7 @@ AIMManager::~AIMManager(void) {
 
 status_t AIMManager::Send(Flap *f) {
 	if (f->Channel() == SNAC_DATA) {
-printf("Need to send SNAC\n");
+printf("\n\n\n\n\n------------------------------\nNeed to send SNAC\n");
 		SNAC *s = f->SNACAt(0);
 		
 		if (s != NULL) {
@@ -138,6 +138,8 @@ printf("\t0x%04x\n", family);
 
 status_t AIMManager::Login(const char *server, uint16 port, const char *username,
 	const char *password) {
+	
+	if ((username == NULL) || (password == NULL)) return B_ERROR;
 	
 	if (fConnectionState == AMAN_OFFLINE) {
 		uint8 nickLen = strlen(username);
@@ -204,7 +206,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 //			We can cheat here. Just try resending all the items, Send() will
 //			take care of finding a connection for it
 			for (i = fWaitingSupport.begin(); i != fWaitingSupport.end(); i++) {
-printf("Wanting to send %p\n", (*i));
 				fWaitingSupport.pop_front();
 				Send((*i));
 			};
@@ -278,30 +279,82 @@ printf("Wanting to send %p\n", (*i));
 //							This message contains lots of stuff, most of which we
 //							ignore. We're good like that :)
 							PrintHex(data, bytes);
-							uint8 nickLen = data[16];
+							uint8 nickLen = data[++offset];
+							printf("Nicklen: %i\n", nickLen);
+
 							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-							memcpy(nick, (void *)(data + 17), nickLen);
+printf("Reading nick from %i offset - 0x%x\n", offset, (data + offset));
+							memcpy(nick, (void *)(data + offset + 1), nickLen);
 							nick[nickLen] = '\0';
 						
-							offset += nickLen + 3;
+							offset += nickLen;
+							uint16 warningLevel = (data[++offset] << 8) + data[++offset];
+printf("\"%s\"'s warning level is %i (0x%4x) - naughty naughty!\n", nick, warningLevel, warningLevel);
+
 							uint16 tlvs = (data[++offset] << 8) + data[++offset];
+printf("There are %i TLVs in this message\n", tlvs);
 
 							while (offset < bytes) {
 								uint16 tlvtype = (data[++offset] << 8) + data[++offset];
 								uint16 tlvlen = (data[++offset] << 8) + data[++offset];
-								
-								if (tlvtype == 0x0001) {
-									uint16 userclass = (data[++offset] << 8) +
-										data[++offset];
-
-									if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
-										fHandler->StatusChanged(nick, AWAY);
-									} else {
-										fHandler->StatusChanged(nick, ONLINE);
-									};
-								} else {
-									offset += tlvlen;
-								};
+printf("Got TLV 0x%04x / 0x%04x (%i)\n", tlvtype, tlvlen, tlvlen);								
+								switch (tlvtype) {
+									case 0x0001: {	// User class / status
+										uint16 userclass = (data[++offset] << 8) +
+											data[++offset];
+	
+										if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
+											fHandler->StatusChanged(nick, AWAY);
+										} else {
+											fHandler->StatusChanged(nick, ONLINE);
+										};
+									} break;
+									
+									case 0x001d: {	// Icon / available message
+printf("Icon!!!\n");
+										uint16 type;
+										uint8 index;
+										uint8 length;
+										uint16 end = offset + tlvlen;
+										
+										while (offset < end) {
+											type = (data[++offset] << 8) + data[++offset];
+											index = data[++offset];
+											length = data[++offset];
+printf("Type : %i, index %i, length %i\n", type, index, length);											
+											switch (type) {
+												case 0x0000: {	// Official icon
+												} break;
+												case 0x0001: {
+printf("Got Icon %i: %i bytes\n", index, length);
+char *v = (char *)calloc(length, sizeof(char));
+memcpy(v, data + offset, length);
+PrintHex((uchar *)v, length);
+Flap *buddy = new Flap(SNAC_DATA);
+buddy->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, 0x0004, 0x00, 0x00, 0x00000000));
+buddy->AddRawData((uchar *)&nickLen, 1);
+buddy->AddRawData((uchar *)nick, nickLen);
+buddy->AddRawData((uchar []){0x010, 0x00, 0x01, 0x01}, 4);
+buddy->AddRawData((uchar []){0x10}, 1);
+buddy->AddRawData((uchar *)v, 16);
+printf("Sending Buddy, honest!!!");
+Send(buddy);
+free(v);
+												} break;
+												case 0x0002: {
+												} break;
+												default: {
+												};
+											};
+											
+											offset += length;
+										}; 
+									} break;
+									
+									default: {
+										offset += tlvlen;
+									} break;
+								}
 							};
 
 							free(nick);
@@ -554,7 +607,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
-//	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, ++fRequestID));
+	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, 0x00000000)); //++fRequestID));
 	msg->AddRawData((uchar []){0x00, 0x00, 0xff, 0x00, 0x00, 0x0f, 0x08, 0x03}, 8); // MSG-ID Cookie
 	msg->AddRawData((uchar []){0x00, 0x01}, 2); // Channel: Plain Text
 
@@ -577,6 +630,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	free(buffer);
 	msg->AddTLV(msgData);
 	msg->AddTLV(0x0006, "", 0);
+	msg->AddTLV(0x0009, "", 0);
 	
 	Send(msg);
 

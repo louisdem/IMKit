@@ -137,7 +137,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					
 					fMsgr.SendMessage(msg);
 					
-					fManager->RequestBuddyIcon(id);
+//					fManager->RequestBuddyIcon(id);
 				}	break;
 				case IM::USER_STARTED_TYPING: {
 //					const char *id = msg->FindString("id");
