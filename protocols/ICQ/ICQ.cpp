@@ -199,7 +199,7 @@ void SimpleClient::select_socket_cb(int fd, Select::SocketInputCondition cond)
 /*
  * called when the library has connected
  */
-void SimpleClient::connected_cb(ConnectedEvent *c) {
+void SimpleClient::connected_cb(ConnectedEvent */*c*/) {
   LOG("icq", liHigh, "Connected");
   
   icqclient.fetchServerBasedContactList();
@@ -284,7 +284,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
   	
   	char uin_string[100];
   	
-  	sprintf(uin_string,"%ld",msg->getSenderUIN());
+  	sprintf(uin_string,"%d",msg->getSenderUIN());
 
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::AUTH_REQUEST);
@@ -305,7 +305,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
  * so they could be displayed in a Dialog, for example. Here they're
  * dumped out to stdout, with some pretty colours showing the level.
  */
-void SimpleClient::logger_cb(LogEvent *c) {
+void SimpleClient::logger_cb(LogEvent */*c*/) {
 }
 
 /*
@@ -645,10 +645,10 @@ ICQProtocol::Process( BMessage * msg )
 					if ( !fClient.icqclient.isConnected() )
 						return B_ERROR;
 					
-					char newmsg[65536];
-					int32 state=0;
-					int32 dstlen = sizeof(newmsg);
-					int32 srclen = strlen(message_text);
+//					char newmsg[65536];
+//					int32 state=0;
+//					int32 dstlen = sizeof(newmsg);
+//					int32 srclen = strlen(message_text);
 					
 					uint32 uin = atoi(id);
 					
