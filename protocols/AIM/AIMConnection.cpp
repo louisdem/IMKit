@@ -108,6 +108,7 @@ int32 AIMConnection::Receiver(void *con) {
 	const uint32 kSleep = 2000000;
 	const char *kHost = connection->Server();
 	const char kPort = connection->Port();
+	const BMessenger *kMsgr = connection->fSockMsgr;
 	
 	int32 socket = 0;
 
@@ -132,7 +133,7 @@ int32 AIMConnection::Receiver(void *con) {
 		LOG("AIM", LOW, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
 		return B_ERROR;
 	}
-
+	
 	struct fd_set read;
 	struct fd_set error;
 	int16 bytes = 0;
@@ -140,7 +141,7 @@ int32 AIMConnection::Receiver(void *con) {
 	uint16 flapLen = 0;
 	uchar flapHeader[kFLAPHeaderLen];
 	
-	while (connection->fSockMsgr->IsValid()) {
+	while (kMsgr->IsValid() == true) {
 		bytes = 0;
 		processed = 0;
 						
@@ -152,6 +153,11 @@ int32 AIMConnection::Receiver(void *con) {
 			FD_SET(socket, &error);
 
 			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
+				if (FD_ISSET(socket, &error)) {
+					LOG(kProtocolName, LOW, "%s:%i: Got socket error", kHost, kPort);
+					snooze(kSleep);
+					continue;
+				};
 				if (FD_ISSET(socket, &read)) {
 					if ((bytes = recv(socket, (void *)(flapHeader + processed),
 						kFLAPHeaderLen - processed, 0)) > 0) {
@@ -161,7 +167,9 @@ int32 AIMConnection::Receiver(void *con) {
 							snooze(kSleep);
 							continue;
 						} else {
-							LOG("AIM", LOW, "%s:%i: Got socket error:",
+							if (kMsgr->IsValid() == false) return B_OK;
+
+							LOG(kProtocolName, LOW, "%s:%i: Socket got less than 0",
 								kHost, kPort);
 							perror("SOCKET ERROR");
 							
@@ -218,6 +226,8 @@ int32 AIMConnection::Receiver(void *con) {
 							snooze(kSleep);
 							continue;
 						} else {
+							if (kMsgr->IsValid() == false) return B_OK;
+						
 							LOG("AIM", LOW, "%s:%i. Got socket error:",
 								connection->Server(), connection->Port());
 							perror("SOCKET ERROR");
@@ -267,7 +277,7 @@ if (connection->fUberDebug) {
 	dataReady.PrintToStream();
 }
 
-		connection->fSockMsgr->SendMessage(&dataReady);
+		kMsgr->SendMessage(&dataReady);
 
 		free(flapContents);
 	}
@@ -427,7 +437,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 							switch(tlvType) {
 								case 0x000d: {	// Service Family
 									if ((tlvValue[0] == 0x00) && (tlvValue[1] == 0x10)) {
-										service.AddBool("icon", true);
+//										service.AddBool("icon", true);
 										printf("Icon service!\n");
 									};
 								} break;
@@ -554,6 +564,16 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 							0x01, 0x10, 0x07, 0x39}, 8);
 	
 						Send(cready);
+						
+						Flap *ssi = new Flap(SNAC_DATA);
+						ssi->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
+							REQUEST_LIST, 0x00, 0x00, ++fRequestID));
+						Send(ssi);
+						
+						Flap *useSSI = new Flap(SNAC_DATA);
+						useSSI->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
+							ACTIVATE_SSI_LIST, 0x00, 0x00, ++fRequestID));
+						Send(useSSI);
 						
 						BMessage status(AMAN_STATUS_CHANGED);
 						status.AddInt8("status", AMAN_ONLINE);

@@ -149,7 +149,6 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 	
 	if ((username == NULL) || (password == NULL)) return B_ERROR;
 	
-printf("Connection state (0x%x) needs to be 0x%x\n", fConnectionState, AMAN_OFFLINE);
 	if (fConnectionState == AMAN_OFFLINE) {
 		uint8 nickLen = strlen(username);
 	
@@ -301,6 +300,10 @@ printf("Is icon: %i\n", icon);
 				
 				case BUDDY_LIST_MANAGEMENT: {
 					HandleBuddyList(msg);
+				} break;
+				
+				case SERVER_SIDE_INFORMATION: {
+					HandleSSI(msg);
 				} break;
 				
 				case ICBM: {
@@ -554,8 +557,8 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 					} break;
 					
 					case 0x001d: {	// Icon / available message
-						LOG("AIM", LOW, "User %s has icon / available"
-							" message.", nick);
+						LOG("AIM", LOW, "User %s has icon / available message.",
+							nick);
 						uint16 type;
 						uint8 index;
 						uint8 length;
@@ -615,11 +618,88 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 			
 		} break;
 		default: {
-			LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
-				"family 0x0003 (Buddy List). Subtype 0x%04x",
-				subtype);						
+			LOG(kProtocolName, LOW, "Got an unhandled SNAC of family 0x0003 "
+				"(Buddy List). Subtype 0x%04x", subtype);						
 		}
 	};
+};
+
+status_t AIMManager::HandleSSI(BMessage *msg) {
+	ssize_t bytes = 0;
+	const uchar *data = NULL;
+	uint16 offset = 0;
+	uint16 subtype = 0;
+	uint16 flags = 0;
+
+	msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+	subtype = (data[2] << 8) + data[3];
+	flags = (data[4] << 8) + data[5];
+	
+	offset = 9;
+	
+	PrintHex(data, bytes);
+	
+	if (flags & 0x8000) {
+		uint16 skip = (data[++offset] << 8) + data[++offset];
+		offset += skip;
+	};
+	
+	switch (subtype) {
+		case ROSTER_CHECKOUT: {
+			list <BString> contacts;
+		
+			uint8 ssiVersion = data[++offset];
+			uint16 itemCount = (data[++offset] << 8) + data[++offset];
+
+			LOG(kProtocolName, DEBUG, "SSI Version 0x%x", ssiVersion);
+			LOG(kProtocolName, LOW, "%i SSI items", itemCount);
+
+			for (uint16 i = 0; i < itemCount; i++) {
+				
+				uint16 nameLen = (data[++offset] << 8) + data[++offset];
+				char *name = NULL;
+				if (nameLen > 0) {
+					name = (char *)calloc(nameLen + 1, sizeof(char));
+					memcpy(name, (void *)(data + offset + 1), nameLen);
+					name[nameLen] = '\0';
+
+					offset += nameLen;
+				};
+							
+				uint16 groupID = (data[++offset] << 8) + data[++offset];
+				uint16 itemID = (data[++offset] << 8) + data[++offset];
+				uint16 type = (data[++offset] << 8) + data[++offset];
+				uint16 len = (data[++offset] << 8) + data[++offset];
+				
+				LOG(kProtocolName, LOW, "SSI item %i is of type 0x%04x (%i bytes)",
+					 i, type, len);
+
+				switch (type) {
+					case BUDDY_RECORD: {
+//						There's some custom info here.
+						contacts.push_back(name);
+						offset += len;
+					} break;
+					default: {
+						offset += len;
+					} break;
+				};
+
+				free(name);
+			};
+						
+			uint32 checkOut = (data[++offset] << 24) + (data[++offset] << 16) +
+				(data[++offset] << 8) + data[++offset];	
+			LOG(kProtocolName, LOW, "Last checkout of SSI list 0x%08x", checkOut);
+
+			fHandler->SSIBuddies(contacts);
+		} break;
+		default: {
+			LOG(kProtocolName, LOW, "Got an unhandles SSI SNAC (0x0013 / 0x%04x)",
+				subtype);
+		} break;
+	};
+	
 };
 
 

@@ -370,3 +370,16 @@ status_t AIMProtocol::UserIsTyping(const char *nick, typing_notification type) {
 	return B_OK;
 };
 
+status_t AIMProtocol::SSIBuddies(list<BString> buddies) {
+	list <BString>::iterator i;
+
+	BMessage serverBased(IM::SERVER_BASED_CONTACT_LIST);
+	serverBased.AddString("protocol", "AIM");
+
+	for (i = buddies.begin(); i != buddies.end(); i++) {
+		LOG("AIM", LOW, "Got server side buddy %s", i->String());
+		serverBased.AddString("id", i->String());
+	};
+			
+	fMsgr.SendMessage(&serverBased);
+};

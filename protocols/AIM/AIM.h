@@ -40,6 +40,7 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 			status_t	StatusChanged(const char *nick, online_types status);
 			status_t	MessageFromUser(const char *nick, const char *msg);
 			status_t	UserIsTyping(const char *nick, typing_notification type);
+			status_t 	SSIBuddies(list<BString> buddies);
 
 	private:
 		#define ICQ_THREAD_NAME "AIM Protocol"
