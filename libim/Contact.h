@@ -40,6 +40,8 @@ class Contact
 		// returns B_OK if the Contact is connected to a valis People-file
 		status_t InitCheck();
 		
+		bool Exists();
+		
 		// call this function to reload information from attributes
 		void Update();
 		

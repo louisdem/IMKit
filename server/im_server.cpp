@@ -984,49 +984,69 @@ Server::CreateContact( const char * proto_id, const char *namebase )
 /**
 	Select the 'best' protocol for sending a message to contact
 */
-string
-Server::FindBestProtocol( Contact & contact )
+status_t
+Server::selectConnection( BMessage * msg, Contact & contact )
 {
 	char connection[255];
 	
-	string protocol = "";
+	string conn = "";
+	
+	const char * protocol = msg->FindString("protocol");
+	const char * id = msg->FindString("id");
 	
 	// first of all, check if source of last message is still online
 	// if it is, we use it.
 	
-	if ( fPreferredProtocol[contact].length() > 0 )
+	if ( fPreferredConnection[contact].length() > 0 )
 	{
-		protocol = fPreferredProtocol[contact];
+		strcpy(connection, fPreferredConnection[contact].c_str());
 		
-		if ( contact.FindConnection(protocol.c_str(), connection) == B_OK )
+		if ( fStatus[connection].length() > 0 && fStatus[connection] != OFFLINE_TEXT )
 		{
-			if ( fStatus[connection] == AWAY_TEXT || fStatus[connection] == ONLINE_TEXT )
+			if ( fStatus[connection_protocol(connection)] != OFFLINE_TEXT )
 			{
-				if ( fStatus[protocol] != OFFLINE_TEXT )
-				{
-					LOG("im_server", liDebug, "Using preferred protocol %s", protocol.c_str() );
-					return protocol;
-				}
+				LOG("im_server", liDebug, "Using preferred connection %s", connection );
+				
+				if ( !protocol )
+					msg->AddString("protocol", connection_protocol(connection).c_str());
+				if ( !id )
+					msg->AddString("id", connection_id(connection).c_str());
+				
+				return B_OK;
 			}
 		}
+		LOG("im_server", liDebug, "Preferred connection not online");
 	}
 	
 	// look for an online protocol
+	if ( protocol && id )
+	{
+		// all set
+		return B_OK;
+	}
+	
 	for ( int i=0; contact.ConnectionAt(i,connection) == B_OK; i++ )
 	{
 		string curr = connection;
 		
-		if ( fStatus[curr] == AWAY_TEXT || fStatus[curr] == ONLINE_TEXT )
+		if ( protocol )
 		{
-			// extract protocol part of connection
-			int separator_pos = curr.find(":");
-			curr.erase(separator_pos, strlen(connection)-separator_pos);
-			
-			if ( fStatus[curr] != OFFLINE_TEXT )
+			if ( connection_protocol(curr) != protocol )
+			{
+				// protocol selected, and this is not it. skip.
+				continue;
+			}
+		}
+		
+		if ( fStatus[curr].length() > 0 && fStatus[curr] != OFFLINE_TEXT )
+		{
+			if ( fStatus[connection_protocol(conn)] != OFFLINE_TEXT )
 			{ // make sure WE'RE online on this protocol too
-				protocol = curr;
-				LOG("im_server", liDebug, "Using online protocol %s", protocol.c_str() );
-				return protocol;
+				if ( !protocol )
+					msg->AddString("protocol", connection_protocol(curr).c_str());
+				msg->AddString("id", connection_id(curr).c_str());
+				LOG("im_server", liDebug, "Using online connection %s", curr.c_str() );
+				return B_OK;
 			}
 		}
 	}
@@ -1041,9 +1061,14 @@ Server::FindBestProtocol( Contact & contact )
 			{ // check if contact has a connection for this protocol
 				if ( fStatus[p->second->GetSignature()] != OFFLINE_TEXT )
 				{ // make sure we're online with this protocol
-					protocol = p->first;
-					LOG("im_server", liDebug, "Using offline protocol %s", protocol.c_str() );
-					return protocol;
+					LOG("im_server", liDebug, "Using offline connection %s", connection );
+					
+					if ( !protocol )
+						msg->AddString("protocol", connection_protocol(connection).c_str());
+					if ( !id )
+						msg->AddString("id", connection_id(connection).c_str());
+					
+					return B_OK;
 				}
 			}
 		}
@@ -1051,7 +1076,7 @@ Server::FindBestProtocol( Contact & contact )
 	
 	// No matching protocol!
 	
-	return "";
+	return B_ERROR;
 }
 
 /**
@@ -1066,32 +1091,25 @@ Server::MessageToProtocols( BMessage * msg )
 	{ // contact present, select protocol and ID
 		Contact contact(entry);
 		
-		if ( contact.InitCheck() != B_OK )
+		if ( (contact.InitCheck() != B_OK) || !contact.Exists() )
 		{ // invalid target
 			_SEND_ERROR("Invalid target, no such contact", msg);
 			return;
 		}
 		
-		if ( msg->FindString("protocol") == NULL )
-		{ // no protocol specified, figure one out
-			string protocol = FindBestProtocol(contact);
+		if ( selectConnection(msg, contact) != B_OK )
+		{ // No available connection, can't send message!
+			LOG("im_server", liHigh, "Can't send message, no possible connection");
 			
-			if ( protocol == "")
-			{ // No available connection, can't send message!
-				LOG("im_server", liHigh, "Can't send message, no possible connection");
+			// send ERROR message here..
+			BMessage error(ERROR);
+			error.AddRef("contact", contact);
+			error.AddString("error", "Can't send message, no available connections. Go online!");
+			error.AddMessage("message", msg);
 				
-				// send ERROR message here..
-				BMessage error(ERROR);
-				error.AddRef("contact", contact);
-				error.AddString("error", "Can't send message, no available connections. Go online!");
-				error.AddMessage("message", msg);
-				
-				Broadcast( &error );
-				return;
-			}
-			
-			msg->AddString("protocol", protocol.c_str() );
-		}// done chosing protocol
+			Broadcast( &error );
+			return;
+		}
 		
 		if ( fStatus[msg->FindString("protocol")] == OFFLINE_TEXT )
 		{ // selected protocol is offline, impossible to send message
@@ -1351,16 +1369,18 @@ Server::MessageFromProtocols( BMessage * msg )
 			{ // message received from contact, store the protocol in fPreferredProtocol
 				char status[256];
 				contact.GetStatus(status,sizeof(status));
-			
+				
 				if ( strcmp(status,BLOCKED_TEXT) == 0 )
 				{ // contact blocked, dropping message!
 					LOG("im_server", liHigh, "Dropping message from blocked contact [%s:%s]", protocol, id);
 				} else {
 					msg->AddRef( "contact", *iter );
-					if ( fPreferredProtocol[*iter] != protocol )
+					if ( fPreferredConnection[*iter] != protocol )
 					{
-						fPreferredProtocol[*iter] = protocol;
-						LOG("im_server", liLow, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
+						char connection[512];
+						sprintf(connection, "%s:%s", protocol, id);
+						fPreferredConnection[*iter] = connection;
+						LOG("im_server", liLow, "Setting preferred connection for contact to %s", connection );
 					}
 				}
 			} else {

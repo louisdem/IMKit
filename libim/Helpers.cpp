@@ -476,3 +476,15 @@ nl2crlf( const char * orig, BString & conv )
 	}
 }
 
+
+string
+connection_protocol( string conn )
+{
+	return conn.substr(0, conn.find(":"));
+}
+
+string
+connection_id( string conn )
+{
+	return conn.substr(conn.find(":")+1);
+}

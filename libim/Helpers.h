@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <String.h>
 #include <Message.h>
+#include <string>
 
 class Tracer
 {
@@ -58,5 +59,8 @@ extern void im_get_client_list( BMessage * list );
 
 extern void crlf2nl( const char * orig, BString & conv );
 extern void nl2crlf( const char * orig, BString & conv );
+
+extern string connection_protocol( string connection );
+extern string connection_id( string connection );
 
 #endif

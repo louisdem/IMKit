@@ -123,7 +123,7 @@ class Server : public BApplication
 		
 		void	handle_SETTINGS_UPDATED(BMessage *);
 		
-		string	FindBestProtocol( Contact & contact );
+		status_t	selectConnection( BMessage * msg, Contact & contact );
 		
 		/**
 			Contact monitoring functions
@@ -153,7 +153,7 @@ class Server : public BApplication
 			status per connection */
 		map<string,string>			fStatus;// proto_id_string,status_string
 		
-		map<Contact,string>			fPreferredProtocol;
+		map<Contact,string>			fPreferredConnection;
 		
 		BMessage					fIcons;
 //		Names for SVG icons, only used on Zeta

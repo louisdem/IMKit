@@ -89,6 +89,13 @@ Contact::InitCheck()
 	return ret;
 }
 
+bool
+Contact::Exists()
+{
+	BEntry entry(&fEntry);
+	return entry.Exists();
+}
+
 void
 Contact::Update()
 {
