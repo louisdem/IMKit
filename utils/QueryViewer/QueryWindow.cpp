@@ -1,0 +1,248 @@
+#include "QueryWindow.h"
+
+const float kEdgeSpacer = 5.0;
+const char *kQueryDir = "/boot/home/config/settings/BeClan/QueryViewer/Queries";
+
+QueryWindow::QueryWindow(BRect rect)
+	: BWindow(rect, "QueryViewer", B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS) {
+	
+	fView = new BView(Bounds(), "MainView", B_FOLLOW_ALL_SIDES, B_WILL_DRAW);
+	AddChild(fView);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+	fView->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fView->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fView->SetHighColor(ui_color(B_PANEL_TEXT_COLOR));
+#else
+	fView->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fView->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	fView->SetHighColor(0, 0, 0, 0);
+#endif
+
+	BRect outline = Bounds();
+	outline.InsetBy(kEdgeSpacer, kEdgeSpacer);
+	outline.right = outline.right * 0.4;
+	
+	fQueryList = new BOutlineListView(outline, "Queries", B_SINGLE_SELECTION_LIST,
+		B_FOLLOW_ALL_SIDES, B_WILL_DRAW);
+	fQueryList->SetSelectionMessage(new BMessage(qwQuerySelected));
+		
+	BScrollView *scroll = new BScrollView("Scroller", fQueryList,
+		B_FOLLOW_LEFT | B_FOLLOW_TOP_BOTTOM, 0, false, true);
+	fView->AddChild(scroll);
+	
+	fListRect = Bounds();
+	fListRect.InsetBy(kEdgeSpacer, kEdgeSpacer);
+	fListRect.left = outline.right + kEdgeSpacer + B_V_SCROLL_BAR_WIDTH + kEdgeSpacer;
+	
+	fRootItem = new IconCountItem("Queries", ReadNodeIcon(kQueryDir));
+	fQueryList->AddItem(fRootItem);
+	
+	entry_ref ref;
+	if (get_ref_for_path(kQueryDir, &ref) != B_OK) {
+		BString msg = "Could not open the root query directory (";
+		msg << kQueryDir << "). Please ensure this exists and try again.";
+
+		BAlert *alert = new BAlert("Error", msg.String(), "Fish merchant!", NULL, NULL,
+			B_WIDTH_AS_USUAL, B_OFFSET_SPACING, B_STOP_ALERT);
+		alert->Go();
+		be_app_messenger.SendMessage(B_QUIT_REQUESTED);			
+	} else {
+		fDirectoryItem[ref] = fRootItem;
+		CreateGroups(BDirectory(kQueryDir), fRootItem, fListRect);
+	
+		Show();
+	
+		fQueryList->Select(1);
+		fCurrentQView = NULL;
+		BMessage msg(qwQuerySelected);
+		msg.AddInt32("index", 1);
+		BMessenger(this).SendMessage(msg);
+	};
+};
+
+QueryWindow::~QueryWindow(void) {
+	be_app_messenger.SendMessage(B_QUIT_REQUESTED);
+};
+
+//#pragma mark -
+
+void QueryWindow::MessageReceived(BMessage *msg) {
+	switch (msg->what) {
+		case qwQuerySelected: {
+			int32 index = -1;
+			if (msg->FindInt32("index", &index) != B_OK) return;
+			
+			IconCountItem *item = reinterpret_cast<IconCountItem *>(fQueryList->ItemAt(index));
+			
+			if (fQueryList->CountItemsUnder(item, false) == 0) {
+				BString name = item->Text();
+				
+				cl_map::iterator cIt = fLeafViews.begin();
+				cIt = fLeafViews.find(name.String());
+				if (cIt == fLeafViews.end()) return;
+
+				if (fCurrentQView) fCurrentQView->Hide();
+				fCurrentQView = cIt->second;
+				fCurrentQView->Show();
+			};
+			
+		} break;
+		
+		case mscActionTaken: {
+			msg->PrintToStream();
+			BPopUpMenu *source = NULL;
+			BRow *row = NULL;
+
+			entry_ref actionRef;
+			entry_ref targetRef;
+			msg->FindRef("actionRef", &actionRef);
+			msg->FindRef("targetRef", &targetRef);
+			
+			BMessage open(B_REFS_RECEIVED);
+			open.AddRef("refs", &targetRef);
+			be_roster->Launch(&actionRef, &open);
+		} break;
+		
+		case qwQueryUpdated: {
+			int32 count = -1;
+			IconCountItem *item = NULL;
+
+			if (msg->FindInt32("qclvCount", &count) != B_OK) return;
+			if (msg->FindPointer("itemPointer", reinterpret_cast<void **>(&item)) != B_OK) return;
+
+			item = reinterpret_cast<IconCountItem *>(item);
+			
+			item->SetCount(count);
+			CountItemEntries(fRootItem);
+			
+			fQueryList->Invalidate();
+		} break;
+		
+		case B_NODE_MONITOR: {
+			msg->PrintToStream();
+			int32 opcode;
+			if (msg->FindInt32("opcode", &opcode) != B_OK) return;
+			
+			switch (opcode) {
+				case B_ENTRY_CREATED: {				
+					entry_ref ref;
+					const char *name;
+					msg->FindInt32("device", &ref.device);
+					msg->FindInt64("directory", &ref.directory);
+					msg->FindString("name", &name);
+					ref.set_name(name);
+
+					BEntry entry(&ref);
+					BPath path(&ref);
+					struct stat s;
+					IconCountItem *item = new IconCountItem(path.Leaf(),
+						ReadNodeIcon(path.Path()));
+					
+					entry.GetStat(&s);
+
+					node_ref parentNRef;
+					BDirectory parent;
+					BEntry parentEntry;
+					entry_ref parentRef;
+					
+					parentNRef.device = ref.device;
+					parentNRef.node = ref.directory;
+					parent.SetTo(&parentNRef);
+					parent.GetEntry(&parentEntry);
+					parentEntry.GetRef(&parentRef);
+					
+					di_map::iterator dIt = fDirectoryItem.find(parentRef);
+					if (dIt == fDirectoryItem.end()) return;
+
+					
+					if (S_ISDIR(s.st_mode)) {
+						fQueryList->AddUnder(item, dIt->second);
+						fDirectoryItem[parentRef] = item;
+						
+						CreateGroups(BDirectory(&ref), item, fListRect);
+					} else {
+					};
+
+					
+				} break;
+			};
+			
+		} break;
+		
+		default: {
+			BWindow::MessageReceived(msg);
+		} break;
+	};
+};
+
+//#pragma mark -
+
+void QueryWindow::CreateGroups(BDirectory dir, BListItem *under, BRect rect) {
+	if (dir.InitCheck() != B_OK) debugger(strerror(dir.InitCheck()));
+	BEntry entry;
+
+	node_ref nref;
+	dir.GetNodeRef(&nref);
+	watch_node(&nref, B_WATCH_ALL, BMessenger(this));
+
+	for (int32 i = 0; dir.GetNextEntry(&entry, true) == B_OK; i++) {
+		struct stat s;
+		entry.GetStat(&s);
+		BPath path;
+		entry.GetPath(&path);
+		BBitmap *icon = ReadNodeIcon(path.Path());
+		IconCountItem *item = new IconCountItem(path.Leaf(), icon);
+		
+		if (S_ISDIR(s.st_mode)) {
+			entry_ref ref;
+			entry.GetRef(&ref);
+
+			fQueryList->AddUnder(item, under);
+			fDirectoryItem[ref] = item;
+			CreateGroups(BDirectory(&entry), item, rect);
+			
+		} else if (S_ISREG(s.st_mode)) {
+			BNode node(&entry);
+			int32 length = -1;
+			char *type = ReadAttribute(node, "BEOS:TYPE", &length);
+			if ((length > 0) && (strncmp(type, kTrackerQueryType, length) == 0)) {
+				entry_ref ref;
+				entry.GetRef(&ref);
+				
+				BMessage *updateMsg = new BMessage(qwQueryUpdated);
+				updateMsg->AddPointer("itemPointer", item);
+				
+				QueryColumnListView *view = new QueryColumnListView(rect,
+					path.Path(), B_FOLLOW_ALL_SIDES, B_WILL_DRAW, ref,
+					updateMsg, new BMessenger(this), 
+					B_FANCY_BORDER);
+				fQueryViews[path.Path()] = view;
+				fLeafViews[path.Leaf()] = view;
+				fView->AddChild(view);
+				view->Hide();
+				
+				fQueryList->AddUnder(item, under);
+			};
+			free(type);
+		};
+	};
+};
+
+int32 QueryWindow::CountItemEntries(IconCountItem *item) {
+	int32 ret = 0;
+	int32 children = fQueryList->CountItemsUnder(item, true);
+	
+	if (children > 0) {
+		for (int32 i = 0; i < children; i++) {
+			BListItem *child = fQueryList->ItemUnderAt(item, true, i);
+			if (child) ret += CountItemEntries((IconCountItem *)child);
+		};
+		
+		item->SetCount(ret);
+	} else {
+		ret = item->GetCount();
+	};
+	
+	return ret;
+};
+
