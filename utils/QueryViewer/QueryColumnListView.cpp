@@ -249,6 +249,64 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 	};
 };
 
+void QueryColumnListView::KeyDown(const char *bytes, int32 numBytes) {
+	char c = bytes[0];
+	
+	switch (c) {
+		case B_DELETE: {
+			BRow *row = NULL;
+		
+			while ((row = CurrentSelection()) != NULL) {
+				if (row) {
+					BStringField *pathField = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
+					BStringField *nameField = reinterpret_cast<BStringField *>(row->GetField(kNameIndex));
+					
+					if ((pathField != NULL) && (nameField != NULL)) {
+						BPath path = pathField->String();
+						path.Append(nameField->String());
+	
+						entry_ref ref;
+						if (get_ref_for_path(path.Path(), &ref) == B_OK) {
+							RemoveRowByRef(&ref);
+							unlink(path.Path());
+						};
+					};
+				};
+			};
+		} break;
+
+		case B_HOME: {
+			if ((modifiers() & B_SHIFT_KEY) != 0) {
+				int32 maxIndex = IndexOf(FocusRow());
+				for (int32 i = 0; i < maxIndex; i++) {
+					BRow *row = RowAt(i);
+					if (row) AddToSelection(row);
+				};
+			};
+			SetFocusRow(0L, (modifiers() & B_CONTROL_KEY) == 0);
+			ScrollTo(FocusRow());
+		} break;
+		
+		case B_END: {
+			int32 startIndex = IndexOf(FocusRow());
+			int32 maxIndex = CountRows();
+
+			if ((modifiers() & B_SHIFT_KEY) != 0) {
+				for (int32 i = startIndex; i < maxIndex; i++) {
+					BRow *row = RowAt(i);
+					if (row) AddToSelection(row);
+				};
+			};
+			SetFocusRow(maxIndex - 1, (modifiers() & B_CONTROL_KEY) == 0);
+			ScrollTo(FocusRow());
+		} break;
+				
+		default: {
+			BColumnListView::KeyDown(bytes, numBytes);
+		};
+	};
+};
+
 void QueryColumnListView::AttachedToWindow(void) {
 	fMIMEString = MIMEType();
 

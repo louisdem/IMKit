@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <map>
 #include <vector>
@@ -104,6 +105,8 @@ class QueryColumnListView : public BColumnListView {
 		virtual status_t	RemoveRowByRef(entry_ref *ref);
 				
 			virtual void	MessageReceived(BMessage *msg);
+			virtual void 	KeyDown(const char *bytes, int32 numBytes);
+			
 			virtual void	AttachedToWindow(void);
 			
 			 		char	*MIMETypeFor(entry_ref *ref);
