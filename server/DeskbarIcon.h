@@ -129,6 +129,8 @@ class _EXPORT IM_DeskbarIcon : public BView
 		void				AddQueryRef(BMessage *msg);
 		void				BuildQueryMenu(void);
 		status_t			ExtractVolumes(BNode *node, vollist *volumes);
+		
+		entry_ref			fMiddleClickRef;
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

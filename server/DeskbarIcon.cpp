@@ -70,8 +70,6 @@ IM_DeskbarIcon::_init() {
 	BPath iconDir = userDir;
 	iconDir.Append("im_kit/icons");
 	
-	LOG("deskbar", liDebug, "Icon dir path: %s", iconDir.Path() );
-	
 //	Load the Offline, Away, Online and Flash icons from disk
 	BString iconPath = iconDir.Path();
 	iconPath << "/DeskbarAway";
@@ -160,6 +158,17 @@ IM_DeskbarIcon::_init() {
 	};
 	
 	fQueryMenu = NULL;
+	
+	BPath middlePath = userDir;
+	middlePath.Append("im_kit/_MIDDLE_CLICK_ACTION_");
+	
+	BEntry middleAction(middlePath.Path(), true);
+	if ((middleAction.InitCheck() != B_OK) || (middleAction.Exists() == false)) {
+		middlePath.SetTo("/boot/home/people");
+		get_ref_for_path(middlePath.Path(), &fMiddleClickRef);
+	} else {
+		middleAction.GetRef(&fMiddleClickRef);
+	};
 }
 
 void
@@ -613,12 +622,8 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 	if ((buttons & B_TERTIARY_MOUSE_BUTTON) ||
 		((modifiers() & B_COMMAND_KEY) & (buttons & B_PRIMARY_MOUSE_BUTTON))) {
 		
-		
-		entry_ref ref;
-		if (get_ref_for_path("/boot/home/people/", &ref) != B_OK) return;
-		
 		BMessage openPeople(B_REFS_RECEIVED);
-		openPeople.AddRef("refs", &ref);
+		openPeople.AddRef("refs", &fMiddleClickRef);
 		
 		BMessenger tracker("application/x-vnd.Be-TRAK");
 		tracker.SendMessage(&openPeople);
