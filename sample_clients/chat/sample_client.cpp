@@ -341,7 +341,6 @@ ChatWindow::MessageReceived( BMessage * msg )
 					msg->FindString("message", &message);
 					if (message.Compare("/me ", 4) == 0) {
 						fText->Insert("* ");
-						fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &own_text_color);
 						message.Remove(0, 4);
 						fText->Insert(message.String());
 					} else {
@@ -364,7 +363,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 						fText->Insert("* ");
 						fText->Insert(fName);
 						fText->Insert(" ");
-						fText->SetFontAndColor( be_plain_font, B_FONT_ALL, &contact_text_color);
+						message.Remove(0, 4);
 						fText->Insert(message.String());
 					} else {
 						fText->Insert(fName);
