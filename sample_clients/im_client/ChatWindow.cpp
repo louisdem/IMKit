@@ -165,6 +165,20 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		"Block"
 	);
 	fDock->AddChild(btn);
+	
+	// block icon
+	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
+		"/Block", "BEOS:L:STD_ICON");
+	btn = new ImageButton(
+		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
+		"request_auth button",
+		new BMessage(AUTH),
+		B_FOLLOW_NONE,
+		B_WILL_DRAW,
+		icon,
+		"Get auth"
+	);
+	fDock->AddChild(btn);
 	// done adding buttons
 	
 	textRect.top = fDock->Bounds().bottom+1;
@@ -604,6 +618,15 @@ ChatWindow::MessageReceived( BMessage * msg )
 					LOG("im_client", liHigh, "Block: Error setting contact status");
 				}
 			}
+		}	break;
+		
+		case AUTH:
+		{
+			BMessage auth_msg(IM::MESSAGE);
+			auth_msg.AddInt32("im_what", IM::REQUEST_AUTH);
+			auth_msg.AddRef("contact", &fEntry);
+			
+			fMan->SendMessage( &auth_msg );
 		}	break;
 		
 		case B_NODE_MONITOR:

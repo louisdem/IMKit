@@ -82,7 +82,8 @@ class ChatWindow : public BWindow
 			
 			SHOW_INFO		= 100,
 			BLOCK,
-			EMAIL
+			EMAIL,
+			AUTH
 		 };
 		
 		entry_ref	fEntry;

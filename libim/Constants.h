@@ -24,7 +24,8 @@ enum im_what_code {
 	STATUS_SET			= 15,  // own status was altered
 	AUTH_REQUEST		= 16,   // auth request
 	SEND_AUTH_ACK		= 17,	// auth request reply
-	CONTACT_AUTHORIZED	= 18	// trigger contact creation on auth accepted
+	CONTACT_AUTHORIZED	= 18,	// trigger contact creation on auth accepted
+	REQUEST_AUTH		= 19
 };
 
 /**
@@ -32,7 +33,7 @@ enum im_what_code {
 */
 enum message_what_codes {
 	/*
-		USed for all error messages
+		Used for all error messages
 	*/
 	ERROR				= 'IMer',
 	/*

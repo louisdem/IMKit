@@ -1,6 +1,7 @@
 #include "AIMConnection.h"
 
 #include <UTF8.h>
+#include <sys/select.h>
 
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
