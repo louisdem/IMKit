@@ -54,6 +54,8 @@ void PrintHex(const unsigned char* buf, size_t size) {
 
 void remove_html( char * msg )
 {
+	printf("removing html from: [%s]\n", msg);
+	
 	bool is_in_tag = false;
 	int copy_pos = 0;
 	
@@ -522,7 +524,13 @@ void AIMManager::MessageReceived(BMessage *msg) {
 												LOG("AIM", DEBUG, "Ignoring Client Features, %ld bytes", tlvlen);
 											} break;
 											case 0x0101: { // Message Len
-												tlvlen = (data[++offset] << 8) + data[++offset];
+												
+												if ( data[offset+1] == 1 )
+												{ // message from BeMSN
+													offset++;
+													tlvlen = (data[++offset] << 8) + data[++offset];
+												} else												
+													tlvlen = (data[++offset] << 8) + data[++offset];
 												
 												if ( tlvlen == 0 )
 												{ // old-style message?
