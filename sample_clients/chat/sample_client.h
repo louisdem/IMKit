@@ -41,6 +41,7 @@ class ChatWindow : public BWindow
 		bool QuitRequested();
 		
 		virtual void FrameResized( float, float );
+		virtual void WindowActivated( bool );
 		
 		bool handlesRef( entry_ref & );
 		void reloadContact();
@@ -55,6 +56,8 @@ class ChatWindow : public BWindow
 		BTextView		* fText;
 		
 		IM::Manager		* fMan;
+		bool			fChangedNotActivated;
+		char			fTitleCache[512];
 };
 
 class SettingsWindow : public BWindow

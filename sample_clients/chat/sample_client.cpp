@@ -217,7 +217,8 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		B_ASYNCHRONOUS_CONTROLS
 	),
 	fEntry(ref),
-	fMan( new IM::Manager(BMessenger(this)) )
+	fMan( new IM::Manager(BMessenger(this))),
+	fChangedNotActivated(false)
 {
 	// create views
 	BRect textRect = Bounds();
@@ -349,6 +350,13 @@ ChatWindow::MessageReceived( BMessage * msg )
 					fText->Insert(msg->FindString("message"));
 					fText->Insert("\n");
 					fText->ScrollToSelection();
+
+					if (!IsActive()) {
+						fChangedNotActivated = true;
+						char str[256];
+						sprintf(str, "@ - %s", fTitleCache);
+						SetTitle(str);
+					}
 				}	break;
 			}
 			
@@ -427,6 +435,17 @@ ChatWindow::FrameResized( float w, float h )
 	fText->ScrollToSelection();
 }
 
+void
+ChatWindow::WindowActivated(bool active)
+{
+	if (active && fChangedNotActivated) {
+		fChangedNotActivated = false;	
+		SetTitle(fTitleCache);
+
+	}
+	BWindow::WindowActivated(active);
+}
+
 bool
 ChatWindow::handlesRef( entry_ref & ref )
 {
@@ -467,10 +486,9 @@ ChatWindow::reloadContact()
 		status[num_read] = 0;
 	
 	// rename window
-	char title[1024];
-	sprintf(title,"%s - %s", fName, status);
+	sprintf(fTitleCache,"%s - %s", fName, status);
 	
-	SetTitle(title);
+	SetTitle(fTitleCache);
 }
 
 //// SETTINGS WINDOW
