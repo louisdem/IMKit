@@ -69,9 +69,9 @@ enum message_what_codes {
 #define IM_SERVER_SIG "application/x-vnd.beclan.im_kit"
 
 // Valid IM:status texts
-#define ONLINE_TEXT		"available"
-#define AWAY_TEXT		"away"
-#define OFFLINE_TEXT	"offline"
+#define ONLINE_TEXT		"Available"
+#define AWAY_TEXT		"Away"
+#define OFFLINE_TEXT	"Offline"
 
 };
 

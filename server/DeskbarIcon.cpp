@@ -189,9 +189,9 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			
 			switch ( msg->what )
 			{
-				case SET_ONLINE:  newmsg.AddString("status","online"); break;
-				case SET_AWAY:    newmsg.AddString("status","away"); break;
-				case SET_OFFLINE: newmsg.AddString("status","offline"); break;
+				case SET_ONLINE:  newmsg.AddString("status",ONLINE_TEXT); break;
+				case SET_AWAY:    newmsg.AddString("status",AWAY_TEXT); break;
+				case SET_OFFLINE: newmsg.AddString("status",OFFLINE_TEXT); break;
 			}
 			
 			IM::Manager man;
