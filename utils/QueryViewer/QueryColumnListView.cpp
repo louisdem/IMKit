@@ -17,7 +17,7 @@ const char *kAttrMIMEType = "BEOS:TYPE";
 
 const char *kFolderState = "_trk/columns_le";
 const char *kViewState = "_trk/viewstate_le";
-const int32 kSnoozePeriod = 1000 * 1000;
+const int32 kSnoozePeriod = 1000 * 1000 * 0.5;
 const int32 kIconSize = 16;
 const int32 kPathIndex = 6;
 const int32 kNameIndex = 1;
@@ -54,6 +54,8 @@ QueryColumnListView::~QueryColumnListView(void) {
 
 	querylist::iterator qIt;
 	for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) delete (*qIt);
+	
+	stop_watching(this);
 };
 
 //#pragma mark -
@@ -85,6 +87,12 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 					fResults[r.ref] = r;
 					fPending.push_back(r.ref);
 
+					status_t watch = watch_node(&r.nref, B_WATCH_ALL, this);
+					if (watch != B_OK) {
+						BPath path(&r.ref);
+						printf("Error starting node monitor for \"%s\": %s\n",
+							path.Path(), strerror(watch));
+					};
 				} break;
 				
 				case B_ENTRY_REMOVED: {
@@ -98,8 +106,15 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 						result r = rIt->second;
 						
 						if (nref == r.nref) {
-							fResults.erase(r.ref);
 							RemoveRowByRef(&r.ref);
+							status_t watch = watch_node(&nref, B_STOP_WATCHING, this);
+							if (watch != B_OK) {
+								BPath path(&r.ref);
+								printf("Error stopping node monitor for \"%s\": %s\n",
+									path.Path(), strerror(watch));
+							};
+							
+							fResults.erase(r.ref);
 							break;
 						};
 					};
@@ -115,6 +130,76 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 #else
 				fNotify->SendMessage(&send);
 #endif
+			};
+		} break;
+		
+		case B_NODE_MONITOR: {
+			int32 opcode = B_ERROR;
+			resultmap::iterator rIt = fResults.begin();
+			node_ref nref;
+
+			if (msg->FindInt32("opcode", &opcode) != B_OK) return;
+		
+			switch (opcode) {
+				case B_STAT_CHANGED:
+				case B_ATTR_CHANGED: {
+					if (msg->FindInt32("device", &nref.device) != B_OK) return;
+					if (msg->FindInt64("node", &nref.node) != B_OK) return;					
+				
+					for (; rIt != fResults.end(); rIt++) {
+						result r = rIt->second;
+
+						if (nref == r.nref) {
+							RemoveRowByRef(&r.ref);
+							AddRowByRef(&r.ref);
+							break;
+						};
+					};
+				} break;
+				
+				case B_ENTRY_REMOVED: {
+					if (msg->FindInt32("device", &nref.device) != B_OK) return;
+					if (msg->FindInt64("node", &nref.node) != B_OK) return;					
+				
+					for (; rIt != fResults.end(); rIt++) {
+						result r = rIt->second;
+						
+						if (nref == r.nref) {
+							RemoveRowByRef(&r.ref);
+							fResults.erase(r.ref);
+							break;
+						};
+					};
+				} break;
+				
+				case B_ENTRY_MOVED: {
+					msg->PrintToStream();
+				
+					entry_ref ref;
+					const char *name;
+					if (msg->FindInt32("device", &nref.device) != B_OK) return;
+					if (msg->FindInt64("from directory", &nref.node) != B_OK) return;
+					if (msg->FindString("name", &name) != B_OK) return;
+
+					ref.set_name(name);
+					ref.directory = nref.node;
+					ref.device = nref.device;
+
+					RemoveRowByRef(&ref);
+					fResults.erase(ref);
+					
+					if (msg->FindInt64("to directory", &nref.node) != B_OK) return;
+					
+					result r;
+					r.ref.set_name(name);
+					r.ref.device = nref.device;
+					r.ref.directory = nref.node;
+					r.nref = nref;
+					
+					fResults[r.ref] = r;
+					AddRowByRef(&r.ref); 
+				
+				} break;
 			};
 		} break;
 				
@@ -135,25 +220,23 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 		} break;
 		
 		case qclvInvoke: {
-			BRow *row = FocusRow();
-			if (row) {
+			BRow *row = NULL;
+			
+			while ((row = CurrentSelection(row)) != NULL) {
 				BStringField *pathField = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
 				BStringField *nameField = reinterpret_cast<BStringField *>(row->GetField(kNameIndex));
 				
-				if ((pathField != NULL) && (nameField != NULL)) {					
+				if ((pathField != NULL) && (nameField != NULL)) {
 					BPath path = pathField->String();
 					path.Append(nameField->String());
-				
+
 					entry_ref ref;
 					if (get_ref_for_path(path.Path(), &ref) == B_OK) {
-					
 						entry_ref actionRef = ActionFor(&ref);
-						BPath t(&actionRef);
-				
 						BMessage open(B_REFS_RECEIVED);
 						open.AddRef("refs", &ref);
 			
-						be_roster->Launch("application/x-vnd.Be-TRAK", &open);	
+						be_roster->Launch(&actionRef, &open);	
 					};
 				};
 			};
@@ -534,7 +617,6 @@ status_t QueryColumnListView::ExtractViewState(BMallocIO *buffer) {
 	secondaryType = B_SWAP_INT32(secondaryType);
 	
 	buffer->Read(&reverse, sizeof(reverse));
-	reverse = !reverse;
 	
 	bool addToSort = false;
 	hash_info_map::iterator hIt = fHashCols.find(primaryAttr);
@@ -740,15 +822,20 @@ uint32 QueryColumnListView::CalculateHash(const char *string, uint32 type) {
 
 int32 QueryColumnListView::BackgroundAdder(void *arg) {
 	QueryColumnListView *self = reinterpret_cast<QueryColumnListView *>(arg);
+//	srand(system_time());
+//	uint32 sleepTime = (rand() % 1000) * 1000;
+	uint32 sleepTime = kSnoozePeriod;
 	
 	while (self->fSelfMsgr->IsValid()) {
 		BMessage getPending(qclvRequestPending);
 		BMessage pending;
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
-		if (self->fSelfMsgr->SendMessage(getPending, &pending) == B_OK) {
+		status_t request = self->fSelfMsgr->SendMessage(getPending, &pending);
 #else
-		if (self->fSelfMsgr->SendMessage(&getPending, &pending) == B_OK) {
+		status_t request = self->fSelfMsgr->SendMessage(&getPending, &pending);
 #endif
+
+		if (request == B_OK) {		
 			entry_ref ref;
 			bool updatedAny = false;
 			
@@ -766,7 +853,8 @@ int32 QueryColumnListView::BackgroundAdder(void *arg) {
 				
 							r.ref = ref;
 							node.GetNodeRef(&r.nref);
-				
+							watch_node(&r.nref, B_WATCH_ALL, self);
+
 							self->fResults[ref] = r;
 							pending.AddRef("ref", &ref);
 						};
@@ -774,7 +862,7 @@ int32 QueryColumnListView::BackgroundAdder(void *arg) {
 					
 					updatedAny = true;
 				};			
-				
+								
 				for (int32 i = 0; pending.FindRef("ref", i, &ref) == B_OK; i++) {
 					updatedAny = true;
 					self->AddRowByRef(&ref);
@@ -801,7 +889,7 @@ int32 QueryColumnListView::BackgroundAdder(void *arg) {
 			};
 		};
 		
-		snooze(kSnoozePeriod);
+		snooze(sleepTime);
 	};
 
 	return B_OK;

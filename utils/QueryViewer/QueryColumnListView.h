@@ -55,12 +55,16 @@ typedef struct ci_internal {
 	};
 } col_info;
 
+typedef struct {
+	entry_ref ref;
+	node_ref nref;
+} result;
+
 typedef map<BString, BString> attr_map;
 typedef map<BString, uint32> type_map;
 typedef map<BString, int32> ai_map;
 typedef map<int32, BString> ia_map;
 typedef map<entry_ref, BRow *> ref_map;
-typedef vector<entry_ref> pending_stack;
 typedef map<BString, BColumn *> pc_map;
 
 typedef map<uint32, col_info *> hash_info_map;
@@ -72,11 +76,9 @@ typedef map<BString, BString> mime_map;
 typedef vector<BVolume> vollist;
 typedef vector<BQuery *> querylist;
 
-typedef struct {
-	entry_ref ref;
-	node_ref nref;
-} result;
 typedef map<entry_ref, result> resultmap;
+typedef vector<entry_ref> pending_stack;
+
 
 enum {
 	qclvAddRow = 'qc01',

@@ -35,35 +35,48 @@ QueryWindow::QueryWindow(BRect rect)
 	fListRect.InsetBy(kEdgeSpacer, kEdgeSpacer);
 	fListRect.left = outline.right + kEdgeSpacer + B_V_SCROLL_BAR_WIDTH + kEdgeSpacer;
 	
-	fRootItem = new IconCountItem("Queries", "", ReadNodeIcon(kQueryDir));
-	fQueryList->AddItem(fRootItem);
-	
 	entry_ref ref;
-	if (get_ref_for_path(kQueryDir, &ref) != B_OK) {
-		BString msg = "Could not open the root query directory (";
-		msg << kQueryDir << "). Please ensure this exists and try again.";
+	BEntry entry(kQueryDir);
+	if (entry.Exists() == false) {
+		if (create_directory(kQueryDir, 0777) != B_OK) {
+			BString msg = "Could not create the root query directory (";
+			msg << kQueryDir << "). Please ensure this exists and try again.";
+	
+			BAlert *alert = new BAlert("Error", msg.String(), "Fish merchant!", NULL, NULL,
+				B_WIDTH_AS_USUAL, B_OFFSET_SPACING, B_STOP_ALERT);
+			alert->Go();
+			be_app_messenger.SendMessage(B_QUIT_REQUESTED);
+		};
+	};
 
-		BAlert *alert = new BAlert("Error", msg.String(), "Fish merchant!", NULL, NULL,
+	if (get_ref_for_path(kQueryDir, &ref) != B_OK) {
+		BString msg = "Could not get the query directory (";
+		msg << kQueryDir << "). Please ensure this exists and try again.";
+			 
+		BAlert *alert = new BAlert("Error", msg.String(), "John West!", NULL, NULL,
 			B_WIDTH_AS_USUAL, B_OFFSET_SPACING, B_STOP_ALERT);
 		alert->Go();
-		be_app_messenger.SendMessage(B_QUIT_REQUESTED);			
-	} else {
-		fDirectoryItem[ref] = fRootItem;
-		CreateGroups(BDirectory(kQueryDir), fRootItem, fListRect);
-	
-		Show();
-	
 		
-		fQueryList->Select(1);
-		fCurrentQView = NULL;
-		BMessage msg(qwQuerySelected);
-		msg.AddInt32("index", 1);
-#if B_BEOS_VERSION > B_BEOS_VERSION_5
-		BMessenger(this).SendMessage(msg);
-#else
-		BMessenger(this).SendMessage(&msg);
-#endif
+		be_app_messenger.SendMessage(B_QUIT_REQUESTED);
 	};
+	
+	fRootItem = new IconCountItem("Queries", "", ReadNodeIcon(kQueryDir));
+	fQueryList->AddItem(fRootItem);
+	fDirectoryItem[ref] = fRootItem;
+	CreateGroups(BDirectory(kQueryDir), fRootItem, fListRect);
+	
+	Show();
+
+	fQueryList->Select(0);
+	BMessage msg(qwQuerySelected);
+	msg.AddInt32("index", 0);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+	BMessenger(this).SendMessage(msg);
+#else
+	BMessenger(this).SendMessage(&msg);
+#endif
+
+	fCurrentQView = NULL;
 };
 
 QueryWindow::~QueryWindow(void) {
@@ -85,7 +98,7 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 			
 			if (fQueryList->CountItemsUnder(item, false) == 0) {
 				cl_map::iterator cIt = fQueryViews.find(item->Path());
-				if (cIt == fLeafViews.end()) return;
+				if (cIt == fQueryViews.end()) return;
 
 				if (fCurrentQView) fCurrentQView->Hide();
 				fCurrentQView = cIt->second;
@@ -111,7 +124,6 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 		} break;
 		
 		case mscActionTaken: {
-			msg->PrintToStream();
 			BPopUpMenu *source = NULL;
 			BRow *row = NULL;
 
@@ -248,7 +260,6 @@ void QueryWindow::CreateGroups(BDirectory dir, BListItem *under, BRect rect) {
 					updateMsg, new BMessenger(this), 
 					B_FANCY_BORDER);
 				fQueryViews[path.Path()] = view;
-				fLeafViews[path.Leaf()] = view;
 				fView->AddChild(view);
 				view->Hide();
 				

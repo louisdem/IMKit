@@ -44,7 +44,6 @@ class QueryWindow : public BWindow {
 					BRect	fListRect;
 
 					di_map	fDirectoryItem;
-					cl_map	fLeafViews; // As below, by Leaf()
 					cl_map	fQueryViews;
 		QueryColumnListView	*fCurrentQView;
 };
