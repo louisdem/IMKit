@@ -19,6 +19,9 @@
 #include <Deskbar.h>
 #include <Roster.h>
 #include <be/kernel/fs_attr.h>
+#include <Alert.h>
+#include <String.h>
+#include <Invoker.h>
 
 using namespace IM;
 
@@ -355,7 +358,7 @@ Server::LoadAddons()
 	// try loading all files in ./add-ons
 	
 	// get path
-/*	app_info info;
+	app_info info;
     be_app->GetAppInfo(&info); 
 
 	BPath path;
@@ -363,9 +366,9 @@ Server::LoadAddons()
 	entry.GetPath(&path); 
 	path.GetParent(&path);
 	path.Append("add-ons");
-*/
-	BPath path("/boot/home/config/settings/im_kit/add-ons/protocols");
-	BEntry entry;
+
+//	BPath path("/boot/home/config/settings/im_kit/add-ons/protocols");
+//	BEntry entry;
 	
 	// setup Directory to get list of files
 	BDirectory dir( path.Path() );
@@ -535,6 +538,7 @@ Server::Process( BMessage * msg )
 		case SET_STATUS:
 		case SEND_MESSAGE:
 		case GET_CONTACT_INFO:
+		case SEND_AUTH_ACK:
 		{
 			MessageToProtocols(msg);
 		}	break;
@@ -548,6 +552,37 @@ Server::Process( BMessage * msg )
 		case CONTACT_INFO:
 		{
 			MessageFromProtocols(msg);
+		}	break;
+		// authorization requests
+		case AUTH_REQUEST:
+		{
+			BString authProtocol;
+			BString authUIN;
+			BString authMessage;
+
+			BString authText;
+			
+			msg->FindString("protocol", &authProtocol);
+			msg->FindString("id", &authUIN);
+			msg->FindString("message", &authMessage);
+			
+			authText  = "Authorization request from ";
+			authText += authUIN;
+			authText += " :\n\n";
+			authText += authMessage;
+			authText += "\n\nDo you want to accept it?";
+
+			BMessage * authReply = new BMessage(MESSAGE);
+			authReply->AddInt32("im_what", SEND_AUTH_ACK);
+			authReply->AddString("protocol", authProtocol.String());
+			authReply->AddString("id", authUIN.String()); 
+
+			BInvoker * authInv = new BInvoker(authReply, this);
+			
+			BAlert * authAlert = new BAlert("Auth Request Alert",
+				authText.String(), "Yes", "No", NULL, 
+				B_WIDTH_AS_USUAL, B_OFFSET_SPACING, B_WARNING_ALERT);
+			authAlert->Go(authInv);
 		}	break;
 		default:
 			// unknown im_what opcode, skip and report

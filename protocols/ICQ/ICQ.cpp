@@ -260,7 +260,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
 	
 	char uin_string[100];
 	
-	sprintf(uin_string,"%d",msg->getSenderUIN() );
+	sprintf(uin_string,"%d",msg->getSenderUIN());
 	
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
@@ -270,6 +270,22 @@ void SimpleClient::message_cb(MessageEvent *c) {
 	im_msg.AddInt32("charset",fEncoding);
 	
 	fMsgr.SendMessage(&im_msg);
+  } else if (c->getType() == MessageEvent::AuthReq) {
+  	AuthReqEvent *msg = static_cast<AuthReqEvent*>(c);
+  	LOG("icq", MEDIUM, "Authorization request received: %s from %ld", msg->getMessage().c_str(), msg->getSenderUIN());
+  	
+  	char uin_string[100];
+  	
+  	sprintf(uin_string,"%d",msg->getSenderUIN());
+
+	BMessage im_msg(IM::MESSAGE);
+	im_msg.AddInt32("im_what", IM::AUTH_REQUEST);
+	im_msg.AddString("protocol", "ICQ");
+	im_msg.AddString("id", uin_string);
+	im_msg.AddString("message", msg->getMessage().c_str() );
+	im_msg.AddInt32("charset",fEncoding);
+	
+	fMsgr.SendMessage(&im_msg);	  
   }
 }
 
@@ -572,7 +588,30 @@ ICQProtocol::Process( BMessage * msg )
 					
 					fMsgr.SendMessage(msg);
 				}	break;
-				
+				case IM::SEND_AUTH_ACK:
+				{
+					bool authreply;
+					
+					if ( !fClient.icqclient.isConnected() )
+						return B_ERROR;
+					
+					const char * id = msg->FindString("id");
+					int32 button = msg->FindInt32("which");
+					
+					if (button == 0) {
+						LOG("icq", DEBUG, "Authorization granted to %s", id);
+						authreply = true;
+					} else {
+						LOG("icq", DEBUG, "Authorization rejected to %s", id);
+						authreply = false;					
+					}
+						
+					ICQ2000::ContactRef c = new ICQ2000::Contact( atoi(id) );
+					
+					AuthAckEvent * ev = new AuthAckEvent(c, authreply);
+
+					fClient.icqclient.SendEvent( ev );									
+				}
 				default:
 					break;
 			}

@@ -21,7 +21,9 @@ enum im_what_code {
 	CONTACT_STOPPED_TYPING	= 12,
 	USER_STARTED_TYPING		= 13,
 	USER_STOPPED_TYPING		= 14,
-	STATUS_SET			= 15  // own status was altered
+	STATUS_SET			= 15,  // own status was altered
+	AUTH_REQUEST		= 16,   // auth request
+	SEND_AUTH_ACK		= 17	// auth request reply
 };
 
 /**
