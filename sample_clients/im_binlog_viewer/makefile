@@ -55,7 +55,7 @@ RSRCS= logger.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im tracker
+LIBS= be im tracker stdc++
 
 ifeq ($(wildcard /boot/beos/system/lib/libicon.so), )
 # BeOS or Zeta > RC2 build
