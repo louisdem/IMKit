@@ -19,8 +19,15 @@ class MSNSBConnection : public MSNConnection
 		
 		bool InChat( const char * ) const;
 		
+		/**
+			Send a message to someone. If no participants have joined
+			yet, store the message until they have and then send.
+		*/
+		void SendMessage( Command * );
+		
 	protected:
 		list<string>	fParticipants;
+		list<Command*>	fPendingMessages;
 		
 		virtual status_t handleCAL( Command * );
 		virtual status_t handleJOI( Command * );

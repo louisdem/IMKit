@@ -55,6 +55,13 @@ MSNSBConnection::handleJOI( Command * cmd )
 	
 	fParticipants.push_back( cmd->Param(0) );
 	
+	// send any pending messages
+	for ( list<Command*>::iterator i=fPendingMessages.begin(); i != fPendingMessages.end(); i++ )
+	{
+		Send( *i );
+	}
+	fPendingMessages.clear();
+	
 	return B_OK;
 }
 
@@ -102,4 +109,17 @@ MSNSBConnection::handleUSR( Command * cmd  )
 	GoOnline();
 	
 	return B_OK;
+}
+
+void
+MSNSBConnection::SendMessage( Command * cmd )
+{
+	if ( fParticipants.size() > 0 )
+	{ // someone's listening, send away
+		Send(cmd);
+		return;
+	}
+	
+	// nobody there, queue the message until we get a JOI
+	fPendingMessages.push_back( cmd );
 }

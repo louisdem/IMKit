@@ -817,11 +817,11 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 status_t MSNConnection::handleMSG( Command * command ) {
 	LOG(kProtocolName, liDebug, "Processing MSG");
-
+	
 	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
-		
+	
 	const char * type = http.HeaderContents("Content-Type");
-		
+	
 	if ( type )
 	{ // we have a type, handle it.
 		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
@@ -833,7 +833,7 @@ status_t MSNConnection::handleMSG( Command * command ) {
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
 		} else
 		if (strcmp(type, "text/x-msmsgsinitialemailnotification; charset=UTF-8") == 0) {
-			LOG(kProtocolName, liHigh, "HotMail number of message in Inbox" );
+			LOG(kProtocolName, liHigh, "HotMail number of messages in Inbox" );
 			// Ignore this. It just tells us how many emails are in the Hotmail inbox.
 		} else
 		if (strcmp(type, "text/x-msmsgsprofile; charset=UTF-8") == 0) {

@@ -225,28 +225,28 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				con->Run();
 				
 				const char *authString = msg->FindString("authString");
-					
+				
 				Command *command = new Command("USR");
 				command->AddParam(Passport());
 				command->AddParam(authString);
-					
+				
 				con->Send(command);
-					
+				
 				waitingmsgmap::iterator it = fWaitingSBs.begin();
-					
+				
 				if (it != fWaitingSBs.end()) {
 					BString passport = (*it).second.first;
 					Command *message = (*it).second.second;
-						
+					
 					Command *cal = new Command("CAL");
 					cal->AddParam(passport.String());
-						
+					
 					con->Send(cal, qsOnline);
-					con->Send(message, qsOnline);
-						
+					con->SendMessage(message);
+					
 					// assume it's a MSG here..
 					fConnections.push_back( con );
-						
+					
 					fWaitingSBs.erase( (*it).first );
 				};
 			};
@@ -260,6 +260,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
 
 				if (con == fNoticeCon) {
+					LOG(kProtocolName, liLow, "  Notice connection closed, go offline");
 					connectionlist::iterator i;
 					for (i = fConnections.begin(); i != fConnections.end(); i++) {
 						Command * bye = new Command("OUT");
@@ -267,8 +268,10 @@ void MSNManager::MessageReceived(BMessage *msg) {
 						(*i)->Send(bye, qsImmediate);
 						BMessenger(*i).SendMessage(B_QUIT_REQUESTED);
 					};
+					
+					fHandler->StatusChanged(Passport(), otOffline);
 				};
-				fHandler->StatusChanged(Passport(), otOffline);
+				
 				BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 				
 				connectionlist::iterator i = find(fConnections.begin(), fConnections.end(), con);
@@ -329,9 +332,8 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 		
 		Command *sbReq = NULL;
 		
-		//if (it == fSwitchBoard.end()) {
 		if (it == fConnections.end()) {
-			LOG(kProtocolName, liHigh, "Could not message \"%s\" - no connection established",
+			LOG(kProtocolName, liDebug, "Could not message \"%s\" - no connection established",
 				passport);
 			
 			sbReq =  new Command("XFR");
@@ -340,8 +342,6 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 			fNoticeCon->Send(sbReq, qsImmediate);	
 			
 			needSB = true;
-			
-//			return 1;
 		};
 		
 		Command *msg = new Command("MSG");
@@ -434,11 +434,11 @@ status_t MSNManager::SetAway(bool away = true) {
 		
 		if (away) {
 			awayCom->AddParam("AWY");
-			fHandler->StatusChanged(Passport(), otAway);
+			//fHandler->StatusChanged(Passport(), otAway);
 			fConnectionState = otAway;
 		} else {
 			awayCom->AddParam("NLN");
-			fHandler->StatusChanged(Passport(), otOnline);
+			//fHandler->StatusChanged(Passport(), otOnline);
 			fConnectionState = otOnline;
 		};
 		

@@ -159,7 +159,8 @@ status_t Command::MakeObject(const char *string) {
 	BString temp = "";
 	
 	seperator = command.FindFirst(" ");
-	if (seperator == B_ERROR) return B_ERROR;
+	if (seperator == B_ERROR) 
+		return B_ERROR;
 	
 	command.CopyInto(fType, 0, seperator);
 	fType.ToUpper();
@@ -170,7 +171,8 @@ status_t Command::MakeObject(const char *string) {
 	if (seperator == B_ERROR) {
 		fTrID = 0;
 		command.CopyInto(temp, position, command.Length() - position);
-		fParams.push_back(command.String());
+		temp.ReplaceLast("\r\n", "");
+		fParams.push_back(temp.String());
 		return B_OK;
 	} else {
 		temp = "";
@@ -191,8 +193,9 @@ status_t Command::MakeObject(const char *string) {
 		position = wordBoundary;
 	};
 	
-	
 	fParams.back().ReplaceLast("\r\n", "");
+	
+	return B_OK;
 };
 
 bool Command::ExpectsPayload(int32 *payloadSize) {

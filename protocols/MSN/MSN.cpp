@@ -45,10 +45,12 @@ status_t MSNProtocol::Init(BMessenger msgr) {
 
 status_t MSNProtocol::Shutdown() {
 	fManager->LogOff();
-	if (fManager->Lock()) fManager->Quit();
+	
+	BMessenger(fManager).SendMessage( B_QUIT_REQUESTED );
+//	if (fManager->Lock()) fManager->Quit();
 	
 	LOG(kProtocolName, liMedium, "MSNProtocol::Shutdown() done");
-		
+	
 	return B_OK;
 }
 
