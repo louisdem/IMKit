@@ -46,6 +46,6 @@ InfoView::AttachedToWindow()
 	BMessage msg(REMOVE_VIEW);
 	msg.AddPointer("view", this);
 	
-	fRunner = new BMessageRunner( BMessenger(this), &msg, 10*1000*1000, 1 );
+	fRunner = new BMessageRunner( BMessenger(this), &msg, 5*1000*1000, 1 );
 }
 
