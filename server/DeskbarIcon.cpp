@@ -57,11 +57,6 @@ IM_DeskbarIcon::~IM_DeskbarIcon() {
 	delete fOfflineIcon;
 	delete fFlashIcon;
 	delete fMenu;
-
-//	querymap::iterator qmIt;
-//	for (qmIt = fQueries.begin(); qmIt != fQueries.end(); qmIt++) {
-//		BMessenger(qmIt->second).SendMessage(B_QUIT_REQUESTED);
-//	};
 }
 
 void
@@ -646,9 +641,17 @@ IM_DeskbarIcon::AttachedToWindow()
 	fQueryMenu->SetTargetForItems(this);
 }
 
-void
-IM_DeskbarIcon::DetachedFromWindow()
-{
+void IM_DeskbarIcon::DetachedFromWindow() {
+	querymap::iterator qIt;
+	
+	for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) {
+		queryinfo info = qIt->second;
+		
+		delete info.icon;
+		if (info.query) {
+			BMessenger(info.query).SendMessage(B_QUIT_REQUESTED);
+		};
+	};
 }
 
 void
@@ -715,6 +718,22 @@ void IM_DeskbarIcon::AddQueryRef(BMessage *msg) {
 	
 	info.ref.set_name(name);
 	free(name);
+
+//	Query stuff
+	BNode node(&info.ref);
+	vollist volumes;
+	char *predicate = ReadAttribute(node, kTrackerQueryPredicate, &length);
+	predicate = (char *)realloc(predicate, sizeof(char) * (length + 1));
+	predicate[length] = '\0';
+
+	if (ExtractVolumes(&node, &volumes) == B_OK) {
+		BMessage *msg = new BMessage(QUERY_UPDATED);
+		msg->AddRef("ref", &info.ref);
+		info.query = new QueryLooper(predicate, volumes, info.ref.name, this, msg);
+	} else {
+		info.query = NULL;
+	};
+	free(predicate);
 	
 	msg->FindInt32("device", &info.nref.device);
 	msg->FindInt64("node", &info.nref.node);
@@ -735,6 +754,9 @@ void IM_DeskbarIcon::RemoveQueryRef(BMessage *msg) {
 		queryinfo info = qIt->second;
 		if (info.nref == nref) {
 			fQueries.erase(info.ref);
+			if (info.query) {
+				BMessenger(info.query).SendMessage(B_QUIT_REQUESTED);
+			}
 			delete info.icon;
 			break;
 		};
