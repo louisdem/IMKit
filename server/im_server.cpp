@@ -1289,15 +1289,7 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 		{
 			_ERROR("Error writing status attribute",msg);
 		}
-		
-		if (strcmp(status, OFFLINE_TEXT) == 0) {
-			node.RemoveAttr(BEOS_LARGE_ICON);
-			node.RemoveAttr(BEOS_SMALL_ICON);
-
-			return;
-		};
 			
-		
 		BBitmap *large = NULL;
 		BBitmap *small = NULL;
 		
