@@ -354,7 +354,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 					if (!IsActive()) {
 						fChangedNotActivated = true;
 						char str[256];
-						sprintf(str, "@ - %s", fTitleCache);
+						sprintf(str, "√ %s", fTitleCache);
 						SetTitle(str);
 					}
 				}	break;
