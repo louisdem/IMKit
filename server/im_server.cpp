@@ -682,33 +682,43 @@ Contact
 Server::FindContact( const char * proto_id )
 {
 	BVolumeRoster 	vroster;
-	BVolume			boot_volume;
+	BVolume			vol;
+	char 			volName[B_FILE_NAME_LENGTH];
 
-	vroster.GetBootVolume(&boot_volume);
+	vroster.Rewind();
 	
 	Contact result;
 	
-	BQuery query;
-	
-	string pred = 
-		string( 
-			string("IM:connections=\"*") + 
-			string(proto_id) +
-			string("*\"")
-		);
-	
-	query.SetPredicate( pred.c_str() );
-	
-	
-	query.SetVolume(&boot_volume);
-	
-	query.Fetch();
-	
-	entry_ref entry;
-	
-	if ( query.GetNextRef(&entry) == B_OK )
+	while ( vroster.GetNextVolume(&vol) == B_OK )
 	{
-		result.SetTo(entry);
+		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
+			continue;
+		
+		vol.GetName(volName);
+		LOG("im_server", LOW, "FindContact: Looking for contacts on %s", volName);
+		
+		BQuery query;
+		
+		string pred = 
+			string( 
+				string("IM:connections=\"*") + 
+				string(proto_id) +
+				string("*\"")
+			);
+			
+		query.SetPredicate( pred.c_str() );
+			
+		query.SetVolume(&vol);
+			
+		query.Fetch();
+			
+		entry_ref entry;
+			
+		if ( query.GetNextRef(&entry) == B_OK )
+		{
+			result.SetTo(entry);
+			break;
+		}
 	}
 	
 	return result;
@@ -1465,23 +1475,32 @@ void
 Server::SetAllOffline()
 {
 	BVolumeRoster 	vroster;
-	BVolume			boot_volume;
+	BVolume			vol;
+	char 			volName[B_FILE_NAME_LENGTH];
 
-	vroster.GetBootVolume(&boot_volume);
-	
-	BQuery query;
-	
-	query.SetPredicate( "IM:connections=*" );
-	query.SetVolume(&boot_volume);
-	query.Fetch();
-	
-	entry_ref entry;
+	vroster.Rewind();
 	
 	BMessage msg;
+	entry_ref entry;
 	
-	while ( query.GetNextRef(&entry) == B_OK )
+	while ( vroster.GetNextVolume(&vol) == B_OK )
 	{
-		msg.AddRef("contact",&entry);
+		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
+			continue;
+		
+		vol.GetName(volName);
+		LOG("im_server", LOW, "SetAllOffline: Getting contacts on %s", volName);
+		
+		BQuery query;
+		
+		query.SetPredicate( "IM:connections=*" );
+		query.SetVolume(&vol);
+		query.Fetch();
+		
+		while ( query.GetNextRef(&entry) == B_OK )
+		{
+			msg.AddRef("contact",&entry);
+		}
 	}
 	
 	char nickname[512], name[512], filename[512], status[512];
@@ -1557,25 +1576,26 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 	vroster.Rewind();
 
 	while (vroster.GetNextVolume(&vol) == B_OK) {
-		if ((vol.InitCheck() == B_OK) && (vol.KnowsQuery() == true)) {
-			vol.GetName(volName);
-			LOG("im_server", LOW, "Querying for Contacts on %s", volName);
-			query.PushAttr("IM:connections");
-			query.PushString(protocol);
-			query.PushOp(B_CONTAINS);
-	
-			query.SetVolume(&vol);
+		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true))
+			continue;
+		
+		vol.GetName(volName);
+		LOG("im_server", LOW, "GetContactsForProtocol: Looking for contacts on %s", volName);
+		query.PushAttr("IM:connections");
+		query.PushString(protocol);
+		query.PushOp(B_CONTAINS);
+
+		query.SetVolume(&vol);
 			
-			query.Fetch();
+		query.Fetch();
 			
-			entry_ref entry;
+		entry_ref entry;
 			
-			while (query.GetNextRef(&entry) == B_OK) {
-				refs.push_back(entry);
-			};
-			
-			query.Clear();
+		while (query.GetNextRef(&entry) == B_OK) {
+			refs.push_back(entry);
 		};
+			
+		query.Clear();
 	};
 	
 	refs.sort();
