@@ -83,9 +83,22 @@ Jabber::Process( BMessage * msg )
 					{
 						if(IsAuthorized()){
 						
-						 const char *away_msg;						 
+						 //const char *away_msg;	
+						 BString away_msg;					 
 						 if(msg->FindString("away_msg",&away_msg) == B_OK)
-						 		 SetStatus(S_AWAY,away_msg); 
+						 {
+						 	// quick and dirty way to use advanced away status:
+						 	// add 'DND: ' for Do not Disturb
+						 	// or  'XA: ' for Extended Away
+						 	
+						 	if(away_msg.Compare("DND: ",4) == 0)
+						 		SetStatus(S_DND,away_msg); 
+						 	else
+						 	if(away_msg.Compare("XA: ",4) == 0)
+						 		SetStatus(S_XA,away_msg); 
+						 	else	
+						 		SetStatus(S_AWAY,away_msg); 
+						 }
 						 	 else
 						 		 SetStatus(S_AWAY,AWAY_TEXT); 
 						 
@@ -588,7 +601,7 @@ Jabber::getContact(const char* id)
 		contact=reinterpret_cast<JabberContact*>(getRosterList()->ItemAt(i));
 		//LOG(kProtocolName, liDebug, "getContact [%3d] GetJID %s", i,contact->GetJid().String());
 		
-		if(contact->GetJid().Compare(id)==0)
+		if(contact->GetJid().ICompare(id)==0)
 		{
 			//LOG(kProtocolName, liDebug, "getContact found!");
 			return contact;								
