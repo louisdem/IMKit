@@ -15,7 +15,7 @@ const float kEdgeOffset = 5.0;
 const float kDividerWidth = 100;
 
 PWindow::PWindow(void)
-	: BWindow(BRect(25, 25, 460, 260), "Instant Messaging", B_TITLED_WINDOW,
+	: BWindow(BRect(25, 25, 460, 285), "Instant Messaging", B_TITLED_WINDOW,
 	 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS) {
 #ifdef ZETA
 	app_info ai;

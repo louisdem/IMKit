@@ -56,8 +56,8 @@
 #include <libim/Helpers.h>
 
 /* Get these from http://libyahoo2.sourceforge.net/ */
-#include <libyahoo2/yahoo2.h>
-#include <libyahoo2/yahoo2_callbacks.h>
+#include <yahoo2.h>
+#include <yahoo2_callbacks.h>
 #include "yahoo_util.h"
 
 int fileno(FILE * stream);

@@ -2,7 +2,7 @@ You need to fetch and install libyahoo2.
 
 http://libyahoo2.sf.net/
 
-We've been using 0.7.4, not sure if other versions will work.
+We've been using 0.7.5, not sure if other versions will work.
 
 To get it to build you need to fiddle a bit with the makefile:
 
