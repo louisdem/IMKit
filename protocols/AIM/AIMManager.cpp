@@ -449,7 +449,7 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 		uint16 skip = (data[++offset] << 8) + data[++offset];
 		offset += skip;
 	};
-
+	
 	switch (subtype) {
 		case ERROR: {
 			LOG(kProtocolName, liHigh, "GOT SERVER ERROR 0x%x "
@@ -481,16 +481,22 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 				value = (char *)calloc(length + 1, sizeof(char));
 				memcpy(value, (void *)(data + offset), length);
 				value[length] = '\0';
-
 				free(value);
 				offset += length;
 			};
 
 //							We only support plain text channels currently									
 			switch (channel) {
-				case PLAIN_TEXT: {
+				case PLAIN_TEXT:
+				case AUTO_AWAY:
+				case AUTO_BUSY:
+				case AUTO_NA:
+				case AUTO_DND: {
 					//offset--;
-					offset += 2; // hack, hack. slaad should look at this :9
+					uint16 msgkind = (data[++offset] << 8) + data[++offset];
+					if (msgkind == 0x04)
+						offset += 4;
+					//offset += 2; // hack, hack. slaad should look at this :9
 					uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
 					offset += 2;
 					LOG(kProtocolName, liLow, "AIMManager: PLAIN_TEXT "
@@ -519,9 +525,17 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 										", new size: %ld", tlvlen);
 								}
 								
-								char *msg = (char *)calloc(tlvlen - 2, sizeof(char));
-								memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
-								msg[tlvlen - 3] = '\0';
+								char *msg;
+								if (msgkind == 0x04) {
+									msg = (char *)calloc(tlvlen + 14, sizeof(char));
+									strcpy(msg,"(Auto-response) ");
+									strncpy(&msg[16], (char *)(data + offset + 5), tlvlen - 4);
+									msg[tlvlen + 13] = '\0';
+								} else {
+									msg = (char *)calloc(tlvlen - 2, sizeof(char));
+									memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
+									msg[tlvlen - 3] = '\0';
+								}
 								
 								remove_html( msg );
 								
