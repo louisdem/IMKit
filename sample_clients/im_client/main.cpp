@@ -34,6 +34,13 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 	}
 }
 
+extern "C" void process_refs(entry_ref dir_ref, BMessage *msg, void *) {
+	msg->what = B_REFS_RECEIVED;
+	msg->AddRef("dir_ref", &dir_ref);
+	
+	be_roster->Launch("application/x-vnd.m_eiman.sample_im_client", msg);
+};
+
 int main(void)
 {
 	ChatApp app;
