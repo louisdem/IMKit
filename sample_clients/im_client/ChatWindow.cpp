@@ -1,7 +1,5 @@
 #include "ChatWindow.h"
 
-#include "ImageButton.h"
-
 #include "../../common/IMKitUtilities.h"
 
 #include <libim/Contact.h>
@@ -186,77 +184,33 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	find_directory(B_USER_SETTINGS_DIRECTORY, &iconDir, true);
 	iconDir.Append("im_kit/icons");
 	
-//	People icon
-	iconPath = iconDir;
-	iconPath.Append("People");
-	icon = ReadNodeIcon(iconPath.Path(), iconBarSize);
-	
-	btn = new ImageButton(
-		buttonRect,
-		"open in people button",
-		new BMessage(SHOW_INFO),
-		B_FOLLOW_NONE,
-		B_WILL_DRAW,
-		icon,
-		NULL
-	);
+//	People Button
+	icon = IconForHandler(fPeopleHandler.String(), iconBarSize);
+	btn = MakeButton(icon, "Show contact in People", new BMessage(SHOW_INFO), buttonRect);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, (char*)_T("Show contact in People"));
-	
-	// email icon
-	entry_ref emailAppRef;
-	if ( be_roster->FindApp( "text/x-email", &emailAppRef ) != B_OK )
-	{ // failed to get email icon, oopsie.
-		LOG("im_client", liMedium, "Failed to get email app icon");
-		emailAppRef = fEntry; // this isn't what we should be doing, but it might be better than nothing.
-	}
-	
-	BPath emailPath(&emailAppRef);
-	icon = ReadNodeIcon(emailPath.Path(), iconBarSize);
-	
-	btn = new ImageButton(
-		buttonRect,
-		"open in people button",
-		new BMessage(EMAIL),
-		B_FOLLOW_NONE,
-		B_WILL_DRAW,
-		icon,
-		NULL
-	);
+		
+//	Email button
+	icon = IconForHandler("text/x-email", iconBarSize);
+	btn = MakeButton(icon, "Send email to contact", new BMessage(EMAIL), buttonRect);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, (char*)_T("Send email to contact"));
 	
-//	Block icon
+//	Block Button
 	iconPath = iconDir;
 	iconPath.Append("Block");
-	
 	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
-	//icon = render_SVG("/boot/home/config/settings/im_kit/svg/blocked.svg", iconBarSize );
-	btn = new ImageButton(
-		buttonRect,
-		"email button",
-		new BMessage(BLOCK),
-		B_FOLLOW_NONE,
-		B_WILL_DRAW,
-		icon,
-		NULL
-	);
+	btn = MakeButton(icon, "Block messages from contact", new BMessage(BLOCK), buttonRect);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, (char*)_T("Block messages from contact"));
 
-	entry_ref logAppRef;
-	if (be_roster->FindApp("application/x-vnd.BeClan.im_binlog_viewer", &logAppRef ) != B_OK )
-	{ // failed to get log icon, oopsie.
-		LOG("im_client", liMedium, "Failed to get log app icon");
-		emailAppRef = fEntry; // this isn't what we should be doing, but it might be better than nothing.
-	}
-	BPath logPath(&logAppRef);
-	icon = ReadNodeIcon(logPath.Path(), iconBarSize);
-	btn = new ImageButton(buttonRect, "log button", new BMessage(VIEW_LOG),
-		B_FOLLOW_NONE, B_WILL_DRAW, icon, NULL);
+//	Log Button
+	icon = IconForHandler("application/x-vnd.BeClan.im_binlog_viewer", iconBarSize);
+	btn = MakeButton(icon, "View chat history for contact", new BMessage(VIEW_LOG), buttonRect);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, (char*)_T("View chat history for contact"));
-		
+	
+//	Webpage Button
+	icon = IconForHandler("text/html", iconBarSize);
+	btn = MakeButton(icon, "View contact's web page", new BMessage(VIEW_WEBPAGE), buttonRect);
+	fDock->AddItem(btn);
+
 	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
 	textRect.bottom = inputDivider.y;
@@ -807,6 +761,31 @@ ChatWindow::MessageReceived( BMessage * msg )
 			be_roster->Launch("application/x-vnd.BeClan.im_binlog_viewer", &open);
 		} break;
 		
+		case VIEW_WEBPAGE: {
+			entry_ref htmlRef;
+			be_roster->FindApp("text/html", &htmlRef);
+			BPath htmlPath(&htmlRef);
+
+			BMessage argv(B_ARGV_RECEIVED);
+			argv.AddString("argv", htmlPath.Path());
+
+			int32 length = -1;
+			char *url = ReadAttribute(BNode(&fEntry), "META:url", &length);
+			if ((url != NULL) && (length > 1)) {
+				url = (char *)realloc(url, (length + 1) * sizeof(char));
+				url[length] = '\0;';
+				
+				argv.AddString("argv", url);	
+				argv.AddInt32("argc", 2);
+	
+				be_roster->Launch(&htmlRef, &argv);
+			} else {
+				LOG("im_client", liMedium, "Contact had no homepage");
+			};
+			
+			if (url) free(url);
+		} break;
+		
 		case EMAIL:
 		{
 			BMessage open_msg(B_REFS_RECEIVED);
@@ -1219,3 +1198,25 @@ void ChatWindow::RebuildDisplay(void) {
 #endif
 };
 
+BBitmap *ChatWindow::IconForHandler(const char *type, int32 size) {
+	entry_ref handlerRef;
+	
+	if (be_roster->FindApp(type, &handlerRef) != B_OK) {
+		LOG("im_client", liMedium, "Failed to get icon for %s", type);
+//		this isn't what we should be doing, but it might be better than nothing.
+		handlerRef = fEntry;
+	};
+	
+	BPath handlerPath(&handlerRef);
+	return ReadNodeIcon(handlerPath.Path(), size);
+};
+
+ImageButton *ChatWindow::MakeButton(BBitmap *icon, const char *help,
+	BMessage *msg, BRect rect) {
+	
+	ImageButton *button = new ImageButton(rect, help, msg, B_FOLLOW_NONE,
+		B_WILL_DRAW, icon, NULL);
+	gBubbles.SetHelp(button, (char *)_T(help));
+	
+	return button;	
+};

@@ -28,6 +28,7 @@
 #include "IconMenuItem.h"
 #include "StatusBar.h"
 #include "IconBar.h"
+#include "ImageButton.h"
 
 #include <be/kernel/fs_attr.h>
 
@@ -91,6 +92,10 @@ class ChatWindow : public BWindow {
 					void	startSelfTypingTimer(void);
 					void	stopSelfTypingTimer(void);
 					void	RebuildDisplay(void);
+					
+				BBitmap		*IconForHandler(const char *type, int32 size);
+				ImageButton	*MakeButton(BBitmap *icon, const char *help,
+								BMessage *msg, BRect rect);
 		
 					enum { 
 							SEND_MESSAGE	= 1,
@@ -100,6 +105,7 @@ class ChatWindow : public BWindow {
 							EMAIL,
 							AUTH,
 							VIEW_LOG,
+							VIEW_WEBPAGE,
 						
 							CLEAR_TYPING	= 1000,
 							PROTOCOL_SELECTED,
