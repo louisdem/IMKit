@@ -112,7 +112,7 @@ YahooConnection::AddBuddy( const char * who )
 	
 	if ( iter == fBuddies.end() )
 	{ // not in list, adding
-		yahoo_add_buddy( fID, who, "BeOS Yahoo" );//, "Adding you from BeOS" );
+		yahoo_add_buddy( fID, who, "BeOS Yahoo", "Adding you from BeOS" );
 		fBuddies.push_back( who );
 		printf("Yahoo: Added buddy\n");
 	}
