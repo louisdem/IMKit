@@ -128,7 +128,7 @@ int32 MSNConnection::Receiver(void *con) {
 	MSNConnection *connection = reinterpret_cast<MSNConnection *>(con);
 
 	const uint32 kSleep = 2000000;
-	const char *kHost = connection->Server();
+	const char *kHost = strdup(connection->Server()); // memory leak.
 	const uint16 kPort = connection->Port();
 	BMessenger **kMsgr = &connection->fSockMsgr;
 //	BMessenger kManMsgr = connection->fManMsgr;
@@ -461,6 +461,8 @@ void MSNConnection::ClearQueues(void) {
 };
 
 status_t MSNConnection::ProcessCommand(Command *command) {
+	command->Debug();
+	
 	if (command->Type() == "VER") {
 		return handleVER( command );
 	} else
@@ -494,6 +496,24 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 	} else
 	if (command->Type() == "LST") {
 		return handleLST(command);
+	} else
+	if (command->Type() == "QRY") {
+		return handleQRY(command);
+	} else
+	if (command->Type() == "GTC") {
+		return handleGTC(command);
+	} else
+	if (command->Type() == "BLP") {
+		return handleBLP(command);
+	} else
+	if (command->Type() == "PRP") {
+		return handlePRP(command);
+	} else
+	if (command->Type() == "CHG") {
+		return handleCHG(command);
+	} else
+	if (command->Type() == "FLN") {
+		return handleFLN(command);
 	} else {
 		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
 			fPort, command->Type().String());
@@ -632,9 +652,9 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	LOG(kProtocolName, liDebug, "Processing USR");
 	if (strcmp(command->Param(0), "OK") == 0) {
 		LOG(kProtocolName, liHigh, "Online!");
-
+		
 		GoOnline();
-
+		
 		BMessage statusChange(msnmsgOurStatusChanged);
 		statusChange.AddInt8("status", fState);
 		fManMsgr.SendMessage(&statusChange);
@@ -778,6 +798,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 }
 
 status_t MSNConnection::handleMSG( Command * command ) {
+	LOG(kProtocolName, liDebug, "Processing MSG");
+
 	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
 		
 	const char * type = http.HeaderContents("Content-Type");
@@ -790,6 +812,12 @@ status_t MSNConnection::handleMSG( Command * command ) {
 		} else
 		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
+		} else
+		if (strcmp(type, "text/x-msmsgsinitialemailnotification; charset=UTF-8") == 0) {
+			// Ignore this. It just tells us how many emails are in the Hotmail inbox.
+		} else
+		if (strcmp(type, "text/x-msmsgsprofile; charset=UTF-8") == 0) {
+			// Maybe we should process this, it's a profile message.
 		} else
 		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {
 			LOG(kProtocolName, liDebug, "Got an invite, we're popular!");
@@ -806,15 +834,21 @@ status_t MSNConnection::handleMSG( Command * command ) {
 }
 
 status_t MSNConnection::handleADC(Command *command) {
+	LOG(kProtocolName, liDebug, "Processing ADC");
+
 	BString listStr = command->Param(0);
 	BString passport = command->Param(1, true);
 	passport.ReplaceFirst("N=", "");
-	BString display = command->Param(2, true);
-	display.ReplaceFirst("F=", "");
+	BString display = "<unknown display name>";
+	if ( command->Params() == 3 )
+	{
+		display = command->Param(2, true);
+		display.ReplaceFirst("F=", "");
+	}
 	list_types listtype = ltReverseList;
-		
+	
 	if (listStr == "RL") listtype = ltReverseList;
-
+	
 	BMessage requestAuth(msnAuthRequest);
 	requestAuth.AddString("displayname", display);
 	requestAuth.AddString("passport", passport);
@@ -826,22 +860,95 @@ status_t MSNConnection::handleADC(Command *command) {
 };
 
 status_t MSNConnection::handleLST(Command *command) {
+	LOG(kProtocolName, liDebug, "Processing LST");
+	
 	BString passport = command->Param(0);
 	passport.ReplaceFirst("N=", "");
 	BString display = command->Param(1, true);
 	display.ReplaceFirst("F=", "");
 	
-//	This is a bitmask. 1 = FL, 2 = AL, 4 = BL, 8 = RL
-	int32 lists = atol(command->Param(3));
+	if ( command->Params() == 4 )
+	{ // this param might not be here if the contact is in no lists
+		//	This is a bitmask. 1 = FL, 2 = AL, 4 = BL, 8 = RL
+		int32 lists = atol(command->Param(3));
 	
-	printf("%s (%s) is in list %i\n", passport.String(), display.String(), lists);
+		LOG(kProtocolName, liDebug, "%s (%s) is in list %i", passport.String(), display.String(), lists);
 
-	if (lists == ltReverseList) {
-		LOG(kProtocolName, liDebug, "\"%s\" (%s) is only on our reverse list. Likely they "
-			"added us while we were offline. Ask for authorisation", display.String(),
-			passport.String());
-		fManager->Handler()->AuthRequest(ltReverseList, passport.String(), display.String());
-	};
-		
+		if (lists == ltReverseList) {
+			LOG(kProtocolName, liDebug, "\"%s\" (%s) is only on our reverse list. Likely they "
+				"added us while we were offline. Ask for authorisation", display.String(),
+				passport.String());
+			fManager->Handler()->AuthRequest(ltReverseList, passport.String(), display.String());
+		};
+	} else
+	{
+		LOG(kProtocolName, liDebug, "%s (%s) is in no lists", passport.String(), display.String() );
+	}
+	
 	return B_OK;
 };
+
+status_t MSNConnection::handleQRY(Command *command) {
+	// ignore this. It's a challenge response status indicator.
+	LOG(kProtocolName, liDebug, "Processing QRY");
+	return B_OK;
+}
+
+status_t MSNConnection::handleGTC(Command *command) {
+	// ignore this. It's a setting for the client that dictates how
+	// to handle people added to the RL. See protocol spec, Notification,
+	// Getting details, Privacy settings.
+	// Eg: GTC {TrID} GTC N
+	LOG(kProtocolName, liDebug, "Processing GTC");
+	return B_OK;
+}
+
+status_t MSNConnection::handleBLP(Command *command) {
+	// Default list for contact not on either BL or AL.
+	// Eg: BLP {TrID} BLP AL
+	LOG(kProtocolName, liDebug, "Processing BLP");
+	return B_OK;
+}
+
+status_t MSNConnection::handlePRP(Command *command) {
+	// Contact phone numbers
+	LOG(kProtocolName, liDebug, "Processing PRP");
+	return B_OK;
+}
+
+status_t MSNConnection::handleCHG(Command *command) {
+	// Own status changed
+	LOG(kProtocolName, liDebug, "Processing CHG");
+	
+	BString status = command->Param(0);
+	
+	BMessage statusChange(msnmsgOurStatusChanged);
+	
+	if ( status == "NLN" ) {
+		statusChange.AddInt8("status", otOnline);
+	} else
+	if ( status == "AWY" ) {
+		statusChange.AddInt8("status", otAway);
+	} else {
+		LOG(kProtocolName, liDebug, "Unknown status: %s", status.String() );
+		statusChange.what = 0; // so we don't send the message.
+	}
+	
+	if ( statusChange.what )
+		fManMsgr.SendMessage(&statusChange);
+	
+	return B_OK;
+}
+
+status_t MSNConnection::handleFLN(Command *command) {
+	// Contact went offline
+	LOG(kProtocolName, liDebug, "Processing FLN");
+	
+	BMessage statusChange(msnmsgStatusChanged);
+	statusChange.AddString("passport", command->Param(0) );
+	statusChange.AddInt8("status", otOffline);
+	fManMsgr.SendMessage(&statusChange);
+	
+	return B_OK;
+}
+

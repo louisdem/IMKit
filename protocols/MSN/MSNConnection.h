@@ -54,14 +54,20 @@ class MSNConnection : public BLooper {
 		virtual status_t handleMSG( Command * );
 		virtual status_t handleADC( Command * );
 		virtual status_t handleLST( Command * );
-
+		virtual status_t handleQRY( Command * );
+		virtual status_t handleGTC( Command * );
+		virtual status_t handleBLP( Command * );
+		virtual status_t handlePRP( Command * );
+		virtual status_t handleCHG( Command * );
+		virtual status_t handleFLN( Command * );
+		
 		void			StartReceiver(void);
 		void			StopReceiver(void);
 		void			GoOnline(void);
 		void			ClearQueues(void);
-
+		
 		ServerAddress	ExtractServerDetails(char *details);
-
+		
 		MSNManager		*fManager;	
 		BMessenger		fManMsgr;
 
