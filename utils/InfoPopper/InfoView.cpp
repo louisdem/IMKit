@@ -10,8 +10,8 @@
 
 const float kEdgePadding = 2.0;
 
-//InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
-InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
+InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
+//InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
 
 // 
 property_info message_prop_list[] = {

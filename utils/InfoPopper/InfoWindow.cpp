@@ -98,7 +98,10 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			fBorder->RemoveChild(info);
 			
 			vector<InfoView*>::iterator i = find(fInfoViews.begin(), fInfoViews.end(), info);
-			fInfoViews.erase(i);
+			if ( i != fInfoViews.end() )
+				fInfoViews.erase(i);
+			
+			delete info;
 			
 			ResizeAll();
 		} break;
