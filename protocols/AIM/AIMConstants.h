@@ -4,6 +4,9 @@
 extern const char *kProtocolName;
 extern const char *kThreadName;
 
+extern const uint16 AIM_ERROR_COUNT;
+extern const char *kErrors[];
+
 const uchar COMMAND_START = 0x2a;
 
 enum flap_channel {
@@ -63,6 +66,7 @@ enum snac_subtype {
 	
 //	Family 3 - Buddy List
 	ADD_BUDDY_TO_LIST = 0x0004,
+	REMOVE_BUDDY_FROM_LIST = 0x0005,
 	USER_ONLINE = 0x000b,
 	USER_OFFLINE = 0x000c,
 	
@@ -75,7 +79,10 @@ enum snac_subtype {
 //	Family 13 - SSI
 	REQUEST_LIST = 0x0004,
 	ROSTER_CHECKOUT = 0x0006,
-	ACTIVATE_SSI_LIST = 0x0007
+	ACTIVATE_SSI_LIST = 0x0007,
+	SSI_DELETE_ITEM = 0x000a,
+	SSI_EDIT_BEGIN = 0x0011,
+	SSI_EDIT_END = 0x0012
 };
 
 enum typing_notification {
@@ -126,4 +133,5 @@ enum online_types {
 	AMAN_AWAY = 2,
 	AMAN_ONLINE = 3
 };
+
 #endif

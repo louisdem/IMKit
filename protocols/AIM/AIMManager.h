@@ -20,10 +20,14 @@
 #include <libim/Helpers.h>
 
 #include <list>
+#include <map>
 
 #include "AIMConnection.h"
 #include "FLAP.h"
 #include "TLV.h"
+#include "Buddy.h"
+
+typedef map<BString, Buddy *> buddymap;
 
 enum {
 	AMAN_PULSE = 'ampu',
@@ -65,6 +69,8 @@ class AIMManager : public BLooper {
 			status_t	AddBuddy(const char *buddy);
 			status_t	AddBuddies(list<char *>buddies);
 			int32		Buddies(void) const;
+			status_t	RemoveBuddy(const char *buddy);
+			status_t	RemoveBuddies(list<char *>buddies);
 
 			status_t	Login(const char *server, uint16 port,
 							const char *username, const char *password);
@@ -79,7 +85,7 @@ class AIMManager : public BLooper {
 		
 		inline const char *Profile(void) const { return fProfile.String(); };
 		
-			
+			status_t	Progress(const char *id, const char *msg, float progress);
 	private:
 			status_t	ClearConnections(void);
 			status_t	ClearWaitingSupport(void);
@@ -89,7 +95,7 @@ class AIMManager : public BLooper {
 			status_t	HandleSSI(BMessage *msg);
 			status_t	HandleICBM(BMessage *msg);
 			
-		list<BString>	fBuddy;
+			buddymap	fBuddy;
 		list<AIMConnection *>
 						fConnections;	
 		list<Flap *>	fWaitingSupport;

@@ -38,6 +38,11 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 		
 		virtual uint32 GetEncoding();
 		
+			status_t	Error(const char *msg);
+			status_t	Progress(const char * id, const char * message,
+							float progress);
+			
+			
 			status_t	StatusChanged(const char *nick, online_types status);
 			status_t	MessageFromUser(const char *nick, const char *msg);
 			status_t	UserIsTyping(const char *nick, typing_notification type);

@@ -394,10 +394,13 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			LOG(kProtocolName, liLow, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
 				Server(), Port(), family, subtype);
 			
-			if (family != SERVICE_CONTROL) {
+			if (family != SERVICE_CONTROL){
 				fManMsgr.SendMessage(msg);
 			} else {
 				switch (subtype) {
+					case ERROR: {
+						fManMsgr.SendMessage(msg);
+					} break;
 					case VERIFICATION_REQUEST: {
 						LOG(kProtocolName, liLow, "AIMConn: AOL sent us a client verification");
 						PrintHex((uchar *)data, bytes);
@@ -419,6 +422,9 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 							f->AddSNAC(new SNAC(SERVICE_CONTROL,
 								REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
 							Send(f);
+							
+							fManager->Progress("AIM Login", "AIM: Got server capabilities",
+								0.5);
 						};
 					} break;
 					
@@ -500,6 +506,8 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 						
 						if (fState != AMAN_CONNECTING) return;
 						
+						fManager->Progress("AIM Login", "AIM: Got rate limits", 0.6);
+						
 //						Server won't respond to the Rate ACK above
 //						Carry on with login (Send Privacy bits)
 						Flap *SPF = new Flap(SNAC_DATA);
@@ -540,7 +548,8 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 						icbm->AddRawData((uchar []){0x00, 0x01}, 2); // Plain text?
 //						Capabilities - (LSB) Typing Notifications, Missed Calls,
 //							Unknown, Messages allowed
-						icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
+						icbm->AddRawData((uchar []){0xff, 0xff, 0xff, 0xff}, 4);
+//						icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
 						icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
 						icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
 						icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
@@ -573,7 +582,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 							0x01, 0x10, 0x07, 0x39}, 8);
 	
 						Send(cready);
-						
+											
 						Flap *ssi = new Flap(SNAC_DATA);
 						ssi->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
 							REQUEST_LIST, 0x00, 0x00, ++fRequestID));
@@ -583,6 +592,9 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 						useSSI->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
 							ACTIVATE_SSI_LIST, 0x00, 0x00, ++fRequestID));
 						Send(useSSI);
+						
+						fManager->Progress("AIM Login", "AIM: Requested server"
+							" side buddy list", 1.0);
 						
 						BMessage status(AMAN_STATUS_CHANGED);
 						status.AddInt8("status", AMAN_ONLINE);
@@ -660,6 +672,8 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 					
 				};
 				
+				fManager->Progress("AIM Login", "AIM: Reconnecting to server",
+					0.25);
 	
 				StopReceiver();
 				

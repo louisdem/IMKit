@@ -9,6 +9,36 @@
 #include "AIMHandler.h"
 #include "htmlparse.h"
 
+const uint16 AIM_ERROR_COUNT = 0x18;
+const char *kErrors[] = {
+	"",
+	"Invalid SNAC header",
+	"Server rate limit exceeded",
+	"Client rate limit exceeded",
+	"Recipient is not logged in",
+	"Requested service unavailable",
+	"Requested service undefined",
+	"An old SNAC was sent",
+	"Command not supported by server",
+	"Command not supprted by client",
+	"Refused by client",
+	"Reply too big",
+	"Responses lost",
+	"Request denied",
+	"Malformed SNAC",
+	"Insufficient rights",
+	"Recipient blocked",
+	"Sender too evil",
+	"Receiver too evil",
+	"User unavailable",
+	"No match",
+	"List overflow",
+	"Request ambiguous",
+	"Server queue full",
+	"Not while on my watch ... err... AOL"
+};
+
+
 void PrintHex(const unsigned char* buf, size_t size) {
 	if ( g_verbosity_level != liDebug ) {
 		// only print this stuff in debug mode
@@ -189,11 +219,17 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 		fConnections.push_back(c);
 		c->Send(flap);
 
+		fHandler->Progress("AIM Login", "AIM: Connecting...", 0.10);
+
 		return B_OK;
 	} else {
 		LOG(kProtocolName, liDebug, "AIMManager::Login: Already online");
 		return B_ERROR;
 	};
+};
+
+status_t AIMManager::Progress(const char *id, const char *msg, float progress) {
+	return fHandler->Progress(id, msg, progress);
 };
 
 char *AIMManager::EncodePassword(const char *pass) {
@@ -301,6 +337,13 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				(data[++offset] << 8) + data[++offset];
 
 			LOG(kProtocolName, liLow, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
+			
+			if (subtype == ERROR) {
+				uint16 code = 0;
+				code = (data[++offset] << 8) + data[++offset];
+				fHandler->Error(kErrors[code]);
+				return;
+			};
 			
 			switch(family) {
 				case SERVICE_CONTROL: {
@@ -457,7 +500,7 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 				offset += length;
 			};
 
-//							We only support plain text channels currently									
+//			We only support plain text channels currently									
 			switch (channel) {
 				case PLAIN_TEXT: {
 					//offset--;
@@ -716,10 +759,18 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 				
 				LOG(kProtocolName, liLow, "SSI item %i is of type 0x%04x (%i bytes)",
 					 i, type, len);
+				
+				printf("\tName: %s\n\tGroupID: 0x%04x\n\tItemID: 0x%04x\nData:\n",
+					name, groupID, itemID);
+
+				for (int32 i = 0; i < len; i++) printf("0x%02x ", data[offset + i + 1]);
+				printf("\n");
 
 				switch (type) {
 					case BUDDY_RECORD: {
 //						There's some custom info here.
+						fBuddy[name] = new Buddy(name, groupID, itemID);
+
 						contacts.push_back(name);
 						offset += len;
 					} break;
@@ -737,8 +788,12 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 
 			fHandler->SSIBuddies(contacts);
 		} break;
+		case 0x000e: {
+			msg->PrintToStream();
+			exit(0);
+		} break;
 		default: {
-			LOG(kProtocolName, liLow, "Got an unhandles SSI SNAC (0x0013 / 0x%04x)",
+			LOG(kProtocolName, liLow, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
 				subtype);
 		} break;
 	};
@@ -790,7 +845,8 @@ status_t AIMManager::AddBuddy(const char *buddy) {
 	if (buddy == NULL) return B_ERROR;
 //	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
 		LOG(kProtocolName, liLow, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
-		fBuddy.push_back(BString(buddy));
+//		fBuddy.push_back(BString(buddy));
+		fBuddy[buddy] = NULL;
 	
 		Flap *addBuddy = new Flap(SNAC_DATA);
 		addBuddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, ADD_BUDDY_TO_LIST, 0x00,
@@ -820,6 +876,8 @@ status_t AIMManager::AddBuddies(list <char *>buddies) {
 		char *buddy = (*i);
 		buddyLen = strlen(buddy);
 
+		fBuddy[buddy] = NULL;		
+		
 		addBuds->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
 		addBuds->AddRawData((uchar *)buddy, buddyLen);
 		
@@ -829,6 +887,82 @@ status_t AIMManager::AddBuddies(list <char *>buddies) {
 	Send(addBuds);
 	
 	return B_OK;	
+};
+
+status_t AIMManager::RemoveBuddy(const char *buddy) {
+	status_t ret = B_ERROR;
+	return ret;
+	
+printf("Deleting %s\n", buddy);
+	
+	if (buddy) {
+		buddymap::iterator bIt = fBuddy.find(buddy);
+		uint8 buddyLen = strlen(buddy);
+
+		if ((bIt == fBuddy.end()) || (bIt->second == NULL)) {		
+//			Not an SSI buddy, client side only
+			Flap *remove = new Flap(SNAC_DATA);
+			remove->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, REMOVE_BUDDY_FROM_LIST,
+				0x00, 0x00, 0x00000000));
+	
+			remove->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
+			remove->AddRawData((uchar *)buddy, buddyLen);
+	
+			Send(remove);
+	
+			ret = B_OK;
+		} else {
+
+printf("Buddy is an SSI user!\n");
+//			Start modification session
+			Flap *begin = new Flap(SNAC_DATA);
+			begin->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_BEGIN,
+				0x00, 0x00, 0x00000000));
+			Send(begin);
+
+//			Buddy is in our SSI list
+			Flap *remove = new Flap(SNAC_DATA);
+			remove->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_DELETE_ITEM,
+				0x00, 0x00, 0x00000000));
+			
+//			Buddy name
+			remove->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
+			remove->AddRawData((uchar *)buddy, buddyLen);
+
+			Buddy *ssi = bIt->second;
+			uint16 groupID = ssi->GroupID();
+			uint16 itemID = ssi->ItemID();
+			uint16 type = BUDDY_RECORD;
+
+printf("0x%04x / 0x%04x\n", groupID, itemID);
+
+			remove->AddRawData((uchar *)&groupID, sizeof(groupID));
+printf("1\n");
+			remove->AddRawData((uchar *)&itemID, sizeof(itemID));
+printf("2\n");
+			remove->AddRawData((uchar *)&type, sizeof(type));
+printf("3\n");
+			remove->AddRawData((uchar []){0x00, 0x00}, 2);
+printf("4\n");
+
+			Send(remove);
+			
+			fBuddy.erase(buddy);
+			delete ssi;
+			
+			Flap *end = new Flap(SNAC_DATA);
+			end->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_END,
+				0x00, 0x00, 0x00000000));
+			Send(end);
+			
+			ret = B_OK;			
+		};
+	};
+	
+	return ret;
+};
+
+status_t AIMManager::RemoveBuddies(list <char *>buddy) {
 };
 
 int32 AIMManager::Buddies(void) const {

@@ -58,10 +58,20 @@ status_t AIMProtocol::Process(BMessage * msg) {
 			msg->FindInt32("im_what",&im_what);
 		
 			switch (im_what) {
+				case IM::UNREGISTER_CONTACTS: {
+					printf("Unregister\n");
+					msg->PrintToStream();
+					
+					fManager->RemoveBuddy(msg->FindString("id"));
+					
+				} break;
 				case IM::REGISTER_CONTACTS:
 				{
 					if ( !fManager->IsConnected() )
 						break;
+					
+					printf("AIM: Got Register\n");
+					msg->PrintToStream();
 					
 					type_code garbage;
 					int32 count = 0;
@@ -316,6 +326,31 @@ uint32 AIMProtocol::GetEncoding()
 //	return fClient.fEncoding;
 	return B_ISO1_CONVERSION;
 }
+
+status_t AIMProtocol::Error(const char *error) {
+	BMessage msg(IM::ERROR);
+	msg.AddString("protocol", kProtocolName);
+	msg.AddString("error", error);
+	
+	fMsgr.SendMessage(&msg);
+};
+
+status_t AIMProtocol::Progress(const char *id, const char *message,
+	float progress) {
+
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", IM::PROGRESS );
+	msg.AddString("protocol", kProtocolName);
+	msg.AddString("progressID", id);
+	msg.AddString("message", message);
+	msg.AddFloat("progress", progress);
+	msg.AddInt32("state", IM::impsConnecting );
+	
+	fMsgr.SendMessage(&msg);
+	
+	return B_OK;
+};
+
 
 status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	BMessage msg(IM::MESSAGE);
