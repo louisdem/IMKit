@@ -314,6 +314,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			{ // open new window on message received or user request
 				LOG("im_client", liMedium, "Creating new window to handle message");
 				win = new ChatWindow(ref);//, fIconBarSize, fCommandSends);
+				chat_windows.AddItem(win);
 				_msgr = BMessenger(win);
 				if ( _msgr.LockTarget() )
 				{
@@ -362,10 +363,10 @@ ChatApp::MessageReceived( BMessage * msg )
 ChatWindow *
 ChatApp::findWindow( entry_ref & ref )
 {
-	for ( int i=0; i<CountWindows(); i++ )
+	for ( int i=0; chat_windows.ItemAt(i) != NULL; i++ )
 	{
-		ChatWindow * win = (ChatWindow*)WindowAt(i);
-		
+		ChatWindow * win = (ChatWindow*)(chat_windows.ItemAt(i));
+				
 		if ( win->handlesRef(ref) )
 			return win;
 	}

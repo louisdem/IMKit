@@ -28,8 +28,11 @@ class ChatApp : public BApplication
 			status_t	StoreRunView(const char *id, RunView *rv);
 			RunView		*GetRunView(const char *id);
 		
+		BList			chat_windows;
+		
 	private:
 		ChatWindow		*findWindow( entry_ref & );
+		
 		
 		IM::Manager		*fMan;
 		bool			fIsQuiting;

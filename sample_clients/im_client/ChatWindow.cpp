@@ -512,7 +512,7 @@ ChatWindow::QuitRequested()
 	char id[256];
 	con.ConnectionAt(0, id);
 	((ChatApp *)be_app)->StoreRunView(id, fText);
-
+	((ChatApp *)be_app)->chat_windows.RemoveItem(this);
 
 	return true;
 }
@@ -987,7 +987,7 @@ ChatWindow::WindowActivated(bool active)
 bool
 ChatWindow::handlesRef( entry_ref & ref )
 {
-	return ( fEntry == ref );
+	return ( strcmp(BPath(&fEntry).Path(),BPath(&ref).Path()) == 0 );
 }
 
 void
