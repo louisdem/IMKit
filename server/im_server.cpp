@@ -355,7 +355,7 @@ Server::LoadAddons()
 	// try loading all files in ./add-ons
 	
 	// get path
-	app_info info;
+/*	app_info info;
     be_app->GetAppInfo(&info); 
 
 	BPath path;
@@ -363,6 +363,9 @@ Server::LoadAddons()
 	entry.GetPath(&path); 
 	path.GetParent(&path);
 	path.Append("add-ons");
+*/
+	BPath path("/boot/home/config/settings/im_kit/add-ons/protocols");
+	BEntry entry;
 	
 	// setup Directory to get list of files
 	BDirectory dir( path.Path() );
