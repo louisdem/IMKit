@@ -161,12 +161,15 @@ ChatWindow::~ChatWindow()
 bool
 ChatWindow::QuitRequested()
 {
+/*
 	if ( ((ChatApp*)be_app)->IsQuiting() )
 		return true;
 	
 	Minimize(true);
 	
 	return false;
+*/
+	return true;
 }
 
 status_t
@@ -181,8 +184,6 @@ ChatWindow::SaveSettings(void) {
 	if (fWindowSettings.ReplacePoint("inputdivider", resize) != B_OK) {
 		fWindowSettings.AddPoint("inputdivider", resize);
 	};
-
-	fWindowSettings.PrintToStream();
 
 	ssize_t size = fWindowSettings.FlattenedSize();
 	char *buffer = (char *)calloc(size, sizeof(char));
@@ -373,7 +374,6 @@ ChatWindow::MessageReceived( BMessage * msg )
 				case B_ENTRY_REMOVED:
 					// oops. should we close down this window now?
 					// Nah, we'll just disable everything.
-//					fInput->SetEnabled(false);
 					fInput->MakeEditable(false);
 					break;
 				case B_ENTRY_MOVED:

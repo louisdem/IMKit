@@ -139,7 +139,10 @@ ChatApp::MessageReceived( BMessage * msg )
 					if ( msg->FindBool("user_opened",&user_opened) != B_OK )
 					{ // play sound if not opened by user
 						system_beep(kImNewMessageSound);
-					}
+					} else {
+//						Was opened by the user, so make focus
+						win->Activate(true);
+					};
 				} else
 				{
 					LOG("sample_client", LOW, "This is a fatal error that should never occur. Lock fail on new win.");
