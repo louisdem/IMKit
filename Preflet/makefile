@@ -165,9 +165,9 @@ ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
 else
 #Zeta
   ifeq ($(shell nm --demangle /system/lib/libicon.so | grep " GetNodeIcon"), )
-    DEFINES += GET_TRACKER_ICON
+    DEFINES += GET_TRACKER_ICON ZETA
   else
-    DEFINES += GET_NODE_ICON
+    DEFINES += GET_NODE_ICON ZETA
   endif
 endif
 

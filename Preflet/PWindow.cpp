@@ -4,6 +4,12 @@
 #include <Entry.h>
 #include <Roster.h>
 
+#ifdef ZETA
+#include <locale/Locale.h>
+#else
+#define _T(str) (str)
+#endif
+
 const float kControlOffset = 5.0;
 const float kEdgeOffset = 5.0;
 const float kDividerWidth = 100;
@@ -11,6 +17,23 @@ const float kDividerWidth = 100;
 PWindow::PWindow(void)
 	: BWindow(BRect(25, 25, 460, 260), "Instant Messaging", B_TITLED_WINDOW,
 	 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS) {
+#ifdef ZETA
+	app_info ai;
+	be_app->GetAppInfo( &ai );
+	BPath path;
+	BEntry entry( &ai.ref, true );
+	entry.GetPath( &path );
+	path.GetParent( &path );
+	path.Append( "Language/Dictionaries/InstantMessaging" );
+	BString path_string;
+	
+	if( path.InitCheck() != B_OK )
+		path_string.SetTo( "Language/Dictionaries/InstantMessaging" );
+	else
+		path_string.SetTo( path.Path() );
+	
+	be_locale.LoadLanguageFile( path_string.String() );
+#endif
 	
 	fManager = new IM::Manager(BMessenger(this));
 	
@@ -187,17 +210,17 @@ PWindow::PWindow(void)
 	frame.InsetBy(kEdgeOffset, kEdgeOffset);
 	frame.bottom -= (kEdgeOffset * 2);
 	frame.top = frame.bottom - ((fontHeight.descent + fontHeight.leading + fontHeight.ascent));
-	frame.left = frame.right - (be_plain_font->StringWidth("APPLY") +
+	frame.left = frame.right - (be_plain_font->StringWidth(_T("Save")) +
 		(kControlOffset * 2));
 
-	fSave = new BButton(frame, "Save", "Save", new BMessage(SAVE));
+	fSave = new BButton(frame, "Save", _T("Save"), new BMessage(SAVE));
 	fView->AddChild(fSave);
 
 	frame.right = frame.left - kControlOffset;
-	frame.left = frame.right - (be_plain_font->StringWidth("REVERT") +
+	frame.left = frame.right - (be_plain_font->StringWidth(_T("Revert")) +
 		(kControlOffset * 2));
 
-	fRevert = new BButton(frame, "Revert", "Revert", new BMessage(REVERT));
+	fRevert = new BButton(frame, "Revert", _T("Revert"), new BMessage(REVERT));
 	fView->AddChild(fRevert);
 
 	Show();
@@ -491,7 +514,7 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 				};
 			
 				control = new BCheckBox(BRect(0, 0, kControlWidth, fFontHeight),
-					name, desc, NULL);
+					name, _T(desc), NULL);
 				printf("%s is Active? %i\n", name, active);
 				if (active) ((BCheckBox*)control)->SetValue(B_CONTROL_ON);
 				settings.PrintToStream();
@@ -508,15 +531,15 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 				if (multiLine == false) {
 					control = new BTextControl(
 						BRect(0, 0, kControlWidth, fFontHeight), name,
-						desc, value, NULL);
+						_T(desc), value, NULL);
 					if (secret) {
 						((BTextControl *)control)->TextView()->HideTyping(true);
-						((BTextControl *)control)->SetText(value);
+						((BTextControl *)control)->SetText(_T(value));
 					};
 					((BTextControl *)control)->SetDivider(kDividerWidth);
 				} else {
 					BRect labelRect(0, 0, kDividerWidth, fFontHeight);
-					BStringView *label = new BStringView(labelRect, "NA", desc,
+					BStringView *label = new BStringView(labelRect, "NA", _T(desc),
 						B_FOLLOW_LEFT | B_FOLLOW_TOP, B_WILL_DRAW);
 					view->AddChild(label);
 					label->MoveTo(kEdgeOffset, yOffset);
@@ -533,11 +556,11 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 
 					control = new BScrollView("NA", textView, B_FOLLOW_ALL_SIDES,
 						B_WILL_DRAW | B_NAVIGABLE, false, true);
-					textView->SetText(value);			
+					textView->SetText(_T(value));			
 				};
 			} else {
 				control = new BMenuField(BRect(0, 0, kControlWidth, fFontHeight),
-					name, desc, menu);
+					name, _T(desc), menu);
 				((BMenuField *)control)->SetDivider(kDividerWidth);
 			};
 		};
