@@ -13,6 +13,8 @@ namespace InfoPopper {
 	
 	enum info_messages {
 		AddMessage = 'ipAM',	// Adds a message to the InfoPopper
+		GetIconSize = 'ipGS',	// Fetch the current user preferred icon size
+								// Sends back int16 iconSize
 	};
 	
 	enum icon_type {
@@ -39,6 +41,11 @@ namespace InfoPopper {
 //    - or -
 //	entry_ref	iconRef: entry_ref to icon file
 //  int32		iconType: where to look for icon, either Attribute or Contents.
+////// Overlay Icon
+//	BMessage overlayIcon: An archived BBitmap to display
+//	  - or -
+//	entry_ref	overlayIconRef: entry_ref to icon file
+//	int32		overlayIconType: where to look for icon, Attribute or Contents
 ////// Action on click
 //  String onClickApp: MIME string of Application to launch when clicked
 //    - or -
@@ -46,7 +53,6 @@ namespace InfoPopper {
 //  String onClickArgv: A string to be passed to the application as an argv (may be multiples)
 //  entry_ref onClickRef: Entry ref to be passed to launched (may be multiples)
 //  BMessage onClicMsg: Message to be sent on click (may be multiples)
-
 
 #define InfoPopperAppSig "application/x-vnd.beclan.InfoPopper"
 
