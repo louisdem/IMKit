@@ -1675,7 +1675,8 @@ Server::SetAllOffline()
 		
 		BBitmap *large = NULL;
 		BBitmap *small = NULL;
-		
+
+#ifndef B_ZETA_VERSION
 		fIcons.FindPointer(OFFLINE_TEXT "_small", reinterpret_cast<void **>(&small));
 		fIcons.FindPointer(OFFLINE_TEXT "_large", reinterpret_cast<void **>(&large));
 		
@@ -1692,6 +1693,7 @@ Server::SetAllOffline()
 		} else {
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
+#endif
 		
 		// SVG icon is a bit special atm
 		// Copy the BEOS_SVG_ICON_EXTRA thing is not needed in Zeta > RC3
@@ -1725,7 +1727,7 @@ Server::SetAllOffline()
 				node.RemoveAttr(BEOS_SVG_ICON_ATTRIBUTE);
 			}
 			
-			len = 0;
+/*			len = 0;
 			
 			svg_icon = ReadAttribute( svgNode, BEOS_SVG_EXTRA_ATTRIBUTE, &len );
 			
@@ -1738,6 +1740,7 @@ Server::SetAllOffline()
 				LOG("im_server", liDebug, "Error reading attribute %s", BEOS_SVG_EXTRA_ATTRIBUTE);
 				node.RemoveAttr(BEOS_SVG_EXTRA_ATTRIBUTE);
 			}
+*/
 		}
 		
 		node.Unset();

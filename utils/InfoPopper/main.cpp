@@ -27,8 +27,8 @@ class InfoApp : public BApplication {
 					if (msg->FindInt8("type", &type) == B_OK) {
 printf("Type: %i / %s\n", type, kSoundNames[type - 1]);
 						system_beep(kSoundNames[type - 1]);
-						BMessenger(fWin).SendMessage(msg);
 					};
+					BMessenger(fWin).SendMessage(msg);
 				} break;
 				
 				default:

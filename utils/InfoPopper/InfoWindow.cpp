@@ -53,8 +53,18 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			const char *title;
 			
 			if (msg->FindInt8("type", &type) != B_OK) type = InfoPopper::Information;
-			if (msg->FindString("content", &message) != B_OK) return;
-			if (msg->FindString("title", &title) != B_OK) return;
+			if (msg->FindString("content", &message) != B_OK)
+			{
+				printf("Error: missing content\n");
+				msg->PrintToStream();
+				return;
+			}
+			if (msg->FindString("title", &title) != B_OK) 
+			{
+				printf("Error: missing title\n");
+				msg->PrintToStream();
+				return;
+			}
 			
 			const char *messageID;
 			if ( msg->FindString("messageID",&messageID) == B_OK )
