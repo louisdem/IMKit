@@ -498,8 +498,9 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( contact != fEntry )
 				return;
 			
-			if ( msg->FindString("message") == NULL )
-				return;
+//			if ( msg->FindString("message") == NULL )
+				// AHA!
+//				return;
 			
 			// this message is related to our Contact
 			
@@ -538,8 +539,13 @@ ChatWindow::MessageReceived( BMessage * msg )
 				
 				case IM::MESSAGE_RECEIVED:
 				{
+					if ( msg->FindString("message") == NULL )
+					{ // no message to display, probably opened by user
+						return;
+					}
+					
 					fText->Append(timestr, C_TIMESTAMP, C_TIMESTAMP, F_TIMESTAMP);
-
+					
 					BString protocol = msg->FindString("protocol");
 					BString message = msg->FindString("message");
 					

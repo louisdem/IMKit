@@ -236,7 +236,7 @@ ChatApp::MessageReceived( BMessage * msg )
 					BMessenger(win).SendMessage(msg);
 					win->Unlock();
 					
-					bool user_opened;
+					bool user_opened=false;
 					
 					if ( msg->FindBool("user_opened",&user_opened) != B_OK )
 					{ // play sound if not opened by user
