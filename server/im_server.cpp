@@ -1230,6 +1230,12 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	LOG("im_server", liMedium, "STATUS_CHANGED [%s] is now %s",proto_id.c_str(),new_status.c_str());
 	
+	// add old status to msg
+	if ( fStatus[proto_id] != "" )
+		msg->AddString( "old_status", fStatus[proto_id].c_str() );
+	else
+		msg->AddString( "old_status", OFFLINE_TEXT );
+	
 	// update status
 	fStatus[proto_id] = new_status;
 	

@@ -37,7 +37,7 @@ InfoWindow::InfoWindow()
 	if ( settings.FindBool("auto_start", &temp) != B_OK )
 		settings.AddBool("auto_start", true );
 	if (settings.FindString("status_text", &fStatusText) != B_OK) {
-		fStatusText = "$nickname$ is now $status$";
+		fStatusText = "$nickname$ ($protocol$:$id$) is now $status$";
 		settings.AddString("status_text", fStatusText);
 	};
 	if (settings.FindString("msg_text", &fMessageText) != B_OK) {
@@ -164,14 +164,14 @@ InfoWindow::MessageReceived( BMessage * msg )
 				}	break;
 				
 				case IM::STATUS_CHANGED: {
-					const char * new_status = msg->FindString("total_status");
-					const char * old_status = msg->FindString("old_total_status");
+					const char * new_status = msg->FindString("status");
+					const char * old_status = msg->FindString("old_status");
 					
 					if ( new_status && old_status && strcmp(new_status,old_status) )
 					{ // only show if total status has changed
 						text = fStatusText;
 						
-						text.ReplaceAll("$status$", msg->FindString("total_status"));
+						text.ReplaceAll("$status$", msg->FindString("status"));
 					}
 				}	break;
 			}
@@ -181,6 +181,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 			text.ReplaceAll("$contactname$", contactname);
 			text.ReplaceAll("$email$", email);
 			text.ReplaceAll("$id$", msg->FindString("id"));
+			text.ReplaceAll("$protocol$", msg->FindString("protocol"));
 			
 			if ( text != "" )
 			{ // a message to display
