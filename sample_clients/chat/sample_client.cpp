@@ -184,10 +184,10 @@ MyApp::MessageReceived( BMessage * msg )
 			{
 				win->Lock();
 				win->PostMessage(msg);
-				if ( win->IsHidden() )
+				if ( win->IsMinimized() )
 				{ // window is hidden, move to this workspace and show it
 					win->SetWorkspaces( B_CURRENT_WORKSPACE );
-					win->Show();
+					win->Minimize(false);
 				}
 				win->Unlock();
 			}
@@ -290,7 +290,7 @@ ChatWindow::QuitRequested()
 	if ( ((MyApp*)be_app)->IsQuiting() )
 		return true;
 	
-	Hide();
+	Minimize(true);
 	
 	return false;
 }
