@@ -11,6 +11,21 @@ MSNSBConnection::~MSNSBConnection()
 {
 }
 
+void
+MSNSBConnection::MessageReceived( BMessage * msg )
+{
+	switch ( msg->what )
+	{
+		case msnmsgPing:
+			// ignore.
+			break;
+		
+		default:
+			MSNConnection::MessageReceived(msg);
+			break;
+	}
+}
+
 bool
 MSNSBConnection::IsGroupChat() const
 {

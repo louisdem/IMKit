@@ -90,6 +90,17 @@ void remove_html( char * msg )
 	strcpy(msg, copy);
 }
 
+void
+wait_for_threads( list<thread_id> threads )
+{
+	int32 res=0;
+	
+	for ( list<thread_id>::iterator i = threads.begin(); i != threads.end(); i++ )
+	{
+		wait_for_thread( *i, &res );
+	}
+}
+
 MSNManager::MSNManager(MSNHandler *handler)
 : BLooper("MSNManager looper") {	
 	fConnectionState = otOffline;
@@ -127,7 +138,7 @@ status_t MSNManager::Login(const char *server, uint16 port, const char *passport
 		Command *command = new Command("VER");
 		command->AddParam(kProtocolsVers);
 		fNoticeCon->Send(command);
-
+		
 		return B_OK;
 	} else {
 		LOG(kProtocolName, liDebug, "MSNManager::Login: Already online");
@@ -257,12 +268,16 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			msg->FindPointer("connection", (void **)&con);
 			
 			if (con != NULL) {
-				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
-
+//				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
+				LOG(kProtocolName, liLow, "Connection (%P) closed", con);
+				
+				list<thread_id> threads;
+				
 				if (con == fNoticeCon) {
 					LOG(kProtocolName, liLow, "  Notice connection closed, go offline");
 					connectionlist::iterator i;
 					for (i = fConnections.begin(); i != fConnections.end(); i++) {
+						threads.push_back( (*i)->Thread() );
 						Command * bye = new Command("OUT");
 						bye->UseTrID(false);
 						(*i)->Send(bye, qsImmediate);
@@ -270,14 +285,19 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					};
 					
 					fHandler->StatusChanged(Passport(), otOffline);
+					
+					fNoticeCon = NULL;
 				};
 				
+				threads.push_back( con->Thread() );
 				BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 				
 				connectionlist::iterator i = find(fConnections.begin(), fConnections.end(), con);
 				
 				if ( i != fConnections.end() )
 					fConnections.erase( i );
+				
+				wait_for_threads( threads );
 			};
 		} break;
 		
@@ -294,6 +314,9 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					
 					fConnections.erase( i );
 				}
+				
+				if ( con == fNoticeCon )
+					fNoticeCon = NULL;
 			};
 		} break;
 		
@@ -389,16 +412,26 @@ status_t MSNManager::LogOff(void) {
 	LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
 	connectionlist::iterator it;
 	
+	list<thread_id> threads;
+	
 	for (it = fConnections.begin(); it != fConnections.end(); it++) {
 		MSNConnection *con = (*it);
-		if (con == NULL) continue;
+		
+		threads.push_back( con->Thread() );
+		
 		LOG(kProtocolName, liLow, "Killing switchboard connection to %s:%i",
 			con->Server(), con->Port());
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
 		con->Send(bye, qsImmediate);
-
-		BMessenger(con).SendMessage(B_QUIT_REQUESTED);
+		
+		if ( con->Lock() ) {
+			LOG(kProtocolName, liDebug, "  Lock()+Quit()");
+			con->Quit();
+		} else {
+			LOG(kProtocolName, liDebug, "  B_QUIT_REQUESTED");
+			BMessenger(con).SendMessage(B_QUIT_REQUESTED);
+		}
 	};
 	
 	fConnections.clear();
@@ -406,14 +439,21 @@ status_t MSNManager::LogOff(void) {
 	fConnectionState = otOffline;
 	
 	if (fNoticeCon) {
+		threads.push_back( fNoticeCon->Thread() );
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
 		fNoticeCon->Send(bye, qsImmediate);
 		
 		BMessenger(fNoticeCon).SendMessage(B_QUIT_REQUESTED);
+		
+		fNoticeCon = NULL;
 	};
 	
-	fHandler->StatusChanged(fPassport.String(), otOffline);
+	if ( fPassport != "" )
+		fHandler->StatusChanged(fPassport.String(), otOffline);
+	
+	wait_for_threads( threads );
+	
 	ret = B_OK;
 	
 	return ret;
@@ -452,17 +492,18 @@ status_t MSNManager::SetAway(bool away = true) {
 };
 
 status_t MSNManager::SetDisplayName(const char *displayname) {
-	fDisplayName = displayname;
-
 	if (fNoticeCon) {
+		fDisplayName = displayname;
+		
 		Command *rea = new Command("PRP");
 		rea->AddParam("MFN");
 		rea->AddParam(DisplayName(), true);
 	
 		fNoticeCon->Send(rea);
+		return B_OK;
 	};
-
-	return B_OK;
+	
+	return B_ERROR;
 };
 
 status_t MSNManager::AuthUser(const char *passport) {

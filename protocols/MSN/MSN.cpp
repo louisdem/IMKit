@@ -44,10 +44,18 @@ status_t MSNProtocol::Init(BMessenger msgr) {
 }
 
 status_t MSNProtocol::Shutdown() {
+	thread_id manager_thread_id = fManager->Thread();
+	
 	fManager->LogOff();
 	
 	BMessenger(fManager).SendMessage( B_QUIT_REQUESTED );
 //	if (fManager->Lock()) fManager->Quit();
+	
+	fManager = NULL;
+	
+	int32 res=0;
+	
+	wait_for_thread( manager_thread_id, &res );
 	
 	LOG(kProtocolName, liMedium, "MSNProtocol::Shutdown() done");
 	

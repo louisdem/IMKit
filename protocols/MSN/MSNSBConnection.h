@@ -13,6 +13,8 @@ class MSNSBConnection : public MSNConnection
 		
 		~MSNSBConnection();
 		
+		virtual void MessageReceived( BMessage * );
+		
 		bool IsGroupChat() const;
 		
 		bool IsSingleChatWith( const char * ) const;

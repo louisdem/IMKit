@@ -47,10 +47,13 @@ MSNConnection::~MSNConnection(void) {
 	
 	if (fSock > 0) close(fSock);
 
-	BMessage removeCon(msnmsgRemoveConnection);
+	BMessage removeCon(msnmsgRemoveConnection), reply;
 	removeCon.AddPointer("connection", this);
-			
-	fManMsgr.SendMessage(&removeCon);
+	
+	// There's a slight risk with not having the reply here, I think.
+	// At least there used to be, a race condition with the MSNManager
+	// reading the connection's host and port.   /ME
+	fManMsgr.SendMessage(&removeCon/*, reply*/);
 };
 
 bool MSNConnection::QuitRequested() {
