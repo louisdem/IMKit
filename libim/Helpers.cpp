@@ -1,6 +1,6 @@
 #include "Helpers.h"
 
-VERBOSITY_LEVEL g_verbosity_level = DEBUG;
+VERBOSITY_LEVEL g_verbosity_level = MEDIUM;
 
 #if 0
 // Use this to add unlimited buffer size to LOG()
