@@ -466,6 +466,7 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 		public_info_map::iterator pIt = fPublicCols.find(publicName);
 		if (pIt != fPublicCols.end()) {
 			hash = B_SWAP_INT32(hash);
+			pIt->second->col->SetWidth(width);
 			pIt->second->hash = hash;
 			fHashCols[hash] = pIt->second;
 		} else {
@@ -477,7 +478,6 @@ status_t QueryColumnListView::ExtractColumnState(BMallocIO *source) {
 
 		bool isStat = false;
 		source->Read(&isStat, sizeof(bool));
-//		if (isStat) printf("\"%s\" / \"%s\" is a stat field\n", internalName, publicName);
 		source->Seek(sizeof(bool), SEEK_CUR); // editable
 	
 		ai_map::iterator iIt = fAttrIndex.find(internalName);
