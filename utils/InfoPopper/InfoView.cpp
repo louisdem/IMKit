@@ -31,43 +31,8 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 	fBitmap(NULL),
 	fParent(win) {
 	
-	BMessage iconMsg;
-	BBitmap *icon = NULL;
-	
-	if (fDetails->FindMessage("icon", &iconMsg) == B_OK) {
-		icon = new BBitmap(&iconMsg);
-	} else {		
-		int32 iconType;
-		if (fDetails->FindInt32("iconType", &iconType) != B_OK) {
-			iconType = Attribute;
-		};
-		
-		entry_ref ref;
-		
-		if ( fDetails->FindRef("iconRef", &ref) == B_OK ) {
-			// It's a ref.
-			BPath path(&ref);
-			
-			switch ( iconType )
-			{
-				case Attribute: {
-					icon = ReadNodeIcon(path.Path(), fParent->IconSize());
-				}	break;
-				case Contents: {
-					// ye ol' "create a bitmap from contens of file"
-					icon = BTranslationUtils::GetBitmapFile(path.Path());
-					if (!icon) {
-						printf("Error reading bitmap\n");
-					};
-				} break;
-				default:
-					// Eek! Invalid icon type!
-					break;
-			}
-		}
-	};
-	
-	ScaleBitmap(icon);
+	fBitmap = ExtractIcon("icon", fDetails, fParent->IconSize());
+	fOverlayBitmap = ExtractIcon("overlayIcon", fDetails, fParent->IconSize() / 4);
 	
 	const char * messageID = NULL;
 	if (fDetails->FindString("messageID", &messageID) != B_OK) {
@@ -240,6 +205,7 @@ void InfoView::Draw(BRect drawBounds) {
 	SetDrawingMode( B_OP_ALPHA );
 	
 	// draw icon
+	BPoint iconPoint(0, 0);
 	if (fBitmap) {
 		lineinfo * appLine = fLines.back();
 		font_height fh;
@@ -260,8 +226,24 @@ void InfoView::Draw(BRect drawBounds) {
 			iy -= (progRect.Height() + kEdgePadding) / 2.0;
 		}
 		
-		DrawBitmap(fBitmap,	BPoint(ix,iy));
-	}
+		iconPoint.x = ix;
+		iconPoint.y = iy;
+		DrawBitmapAsync(fBitmap, iconPoint);
+	};
+	
+	if (fOverlayBitmap) {
+		BRect overRect = fOverlayBitmap->Bounds();
+		if (fBitmap) {
+			BRect rect = fBitmap->Bounds();
+			iconPoint.x += rect.Width() - overRect.Width();
+			iconPoint.y += rect.Height() - overRect.Height();
+		} else {
+			iconPoint.x += overRect.Width();
+			iconPoint.y += overRect.Height();
+		};
+		
+		DrawBitmapAsync(fOverlayBitmap, iconPoint);
+	};
 	
 //	Draw content
 	vline::iterator lIt;
@@ -295,6 +277,8 @@ void InfoView::Draw(BRect drawBounds) {
 
 	StrokeLine(crossRect.LeftTop(), crossRect.RightBottom());
 	StrokeLine(crossRect.LeftBottom(), crossRect.RightTop());
+	
+	Sync();
 }
 
 void InfoView::MouseDown(BPoint point) {
@@ -572,151 +556,44 @@ void InfoView::FrameResized( float w, float h ) {
 
 //#pragma mark -
 
-typedef struct {
-	int32 srcColumn;
-	int32 alpha0;
-	int32 alpha1;
-} ColumnData;
-
-typedef int32 fixed_point;
-typedef int64 long_fixed_point;
-
-#define to_fixed_point(number) static_cast<fixed_point>((number) * kFPPrecisionFactor)
-#define from_fixed_point(number) ((number) / kFPPrecisionFactor)
-#define to_float(number) from_fixed_point(static_cast<float>(number))
-
-#define int_value(number) ((number) & kFPInverseMask)
-#define tail_value(number) ((number) & kFPPrecisionMask)
-
-// Has to be called after muliplication of two fixed point values
-#define mult_correction(number) ((number) / kFPPrecisionFactor)
-
-const int32 kFPPrecision = 8; // (32-kFPPrecision).kFPPrecision
-const int32 kFPPrecisionFactor = (1 << kFPPrecision);
-const int32 kFPPrecisionMask = ((kFPPrecisionFactor)-1);
-const int32 kFPInverseMask = (~kFPPrecisionMask);
-const int32 kFPOne = to_fixed_point(1);
-
-void InfoView::ScaleBitmap(BBitmap *source) {
-	if (fBitmap) delete fBitmap;
-	fBitmap = source;
-/*
-//	int32 iconSize = (dynamic_cast<InfoWindow *>(Window()))->IconSize();
-	int32 iconSize = 16;
-	BRect bounds(0, 0, iconSize - 1, iconSize - 1);
-	fBitmap = new BBitmap(bounds, B_RGBA32);
-
-	if (source == NULL) {
-		memset(fBitmap->Bits(), B_TRANSPARENT_MAGIC_RGBA32, fBitmap->BitsLength());
-	} else {
-		int32 fromRow = 0;
-		int32 toRow = iconSize - 1;
+BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
+	BBitmap *icon = NULL;
+	BMessage iconMsg;
+	BString refName = prefix;
+	BString refType = prefix;
+	refName << "Ref";
+	refType << "Type";
 	
-		const int32 kBPP = sizeof(int32);
-	
-		int32 srcW = source->Bounds().IntegerWidth();
-		int32 srcH = source->Bounds().IntegerHeight();
-		int32 destW = fBitmap->Bounds().IntegerWidth();
-		int32 destH = fBitmap->Bounds().IntegerHeight();
-
-//		Fixed point representations
-		fixed_point fpSrcW = to_fixed_point(srcW);
-		fixed_point fpSrcH = to_fixed_point(srcH);
-		fixed_point fpDestW = to_fixed_point(destW);
-		fixed_point fpDestH = to_fixed_point(destH);
+	if (msg->FindMessage(prefix, &iconMsg) == B_OK) {
+		BBitmap temp(&iconMsg);
+		icon = rescale_bitmap(&temp, size);
+	} else {		
+		int32 iconType;
+		if (msg->FindInt32(refType.String(), &iconType) != B_OK) iconType = Attribute;
 		
-		uchar *srcBits = (uchar *)source->Bits();
-		uchar *destBits = (uchar *)fBitmap->Bits();
+		entry_ref ref;
 		
-		int32 srcBPR = source->BytesPerRow();
-		int32 destBPR = fBitmap->BytesPerRow();
-		
-		ColumnData *cols = new ColumnData[destW];
-		for (int32 i = 0; i < destW; i++) {
-			fixed_point column = to_fixed_point(i) * (long_fixed_point)fpSrcW / fpDestW;
-			cols->srcColumn = from_fixed_point(column);
-			cols->alpha1 = tail_value(column); // weight for left pixel value;
-			cols->alpha0 = kFPOne - cols->alpha1; // weight for right pixel
-		};
-		
-		uchar *destDataRow = destBits + fromRow * destBPR;
-		
-		for (int32 y =	0; y <= toRow; y++, destDataRow += destBPR) {
-			fixed_point row = 0;
-			int32 srcRow;
-			fixed_point alpha0;
-			fixed_point alpha1;
+		if (fDetails->FindRef(refName.String(), &ref) == B_OK) {
+			// It's a ref.
+			BPath path(&ref);
 			
-			if (fpDestH != 0) {
-				row = to_fixed_point(y) * (long_fixed_point)fpSrcH / fpDestH;
-			};
-			
-			srcRow = from_fixed_point(row);
-			alpha1 = tail_value(row);	// weight for y + 1
-			alpha0 = kFPOne - alpha1;	// weight for y
-		
-			const uchar *srcData = srcBits + srcRow * srcBPR;
-			uchar *destData = destDataRow;
-			
-			// Need mult_correction for "outer" multiplication only
-			#define I4(i) from_fixed_point(mult_correction(\
-				(a[i] * a0 + b[i] * a1) * alpha0 + \
-				(c[i] * a0 + d[i] * a1) * alpha1))
-			#define V2(i) from_fixed_point(a[i] * alpha0 + c[i] * alpha1);
-			#define H2(i) from_fixed_point(a[i] * a0 + b[i] * a1);
-
-			if (y < destH) {
-				fixed_point a0, a1;
-				const uchar *a, *b, *c, *d;
-	
-				for (int32 x = 0; x < destW; x ++, destData += kBPP) {
-					a = srcData + cols[x].srcColumn * kBPP;
-					b = a + kBPP;
-					c = a + srcBPR;
-					d = c + kBPP;
-					
-					a0 = cols[x].alpha0;
-					a1 = cols[x].alpha1;
-					
-					printf("%i / %i\n", x, destW);
-					
-					destData[0] = I4(0);
-					destData[1] = I4(1);
-					destData[2] = I4(2);
-				}
-				
-				// right column
-				a = srcData + srcW * kBPP;
-				c = a + srcBPR;
-				
-				destData[0] = V2(0);
-				destData[1] = V2(1);
-				destData[2] = V2(2);
-			} else {
-				fixed_point a0, a1;
-				const uchar *a, *b;
-				for (int32 x = 0; x < destW; x ++, destData += kBPP) {
-					a = srcData + cols[x].srcColumn * kBPP;
-					b = a + kBPP;
-					
-					a0 = cols[x].alpha0;
-					a1 = cols[x].alpha1;
-					
-					destData[0] = H2(0);
-					destData[1] = H2(1);
-					destData[2] = H2(2);
-				}
-				
-				// bottom, right pixel
-				a = srcData + srcW * kBPP;
-	
-				destData[0] = a[0];
-				destData[1] = a[1];
-				destData[2] = a[2];
+			switch (iconType) {
+				case Attribute: {
+					icon = ReadNodeIcon(path.Path(), size);
+				} break;
+				case Contents: {
+					// ye ol' "create a bitmap from contens of file"
+					BBitmap *temp = BTranslationUtils::GetBitmapFile(path.Path());
+					icon = rescale_bitmap(temp, size);
+					delete temp;
+					if (!icon) printf("Error reading bitmap\n");
+				} break;
+				default: {
+					// Eek! Invalid icon type!
+				}; break;
 			};
 		};
-		
-		delete[] cols;
 	};
-*/
+	
+	return icon;
 };

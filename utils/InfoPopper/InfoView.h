@@ -68,7 +68,7 @@ class InfoView : public BView
 		status_t GetSupportedSuites(BMessage*);
 		
 	private:
-		void			ScaleBitmap(BBitmap *source);
+		BBitmap			*ExtractIcon(const char *prefix, BMessage *msg, int16 size);
 		InfoWindow		*fParent;
 	
 		info_type		 fType;
@@ -78,6 +78,7 @@ class InfoView : public BView
 		
 		BMessage		*fDetails;
 		BBitmap			*fBitmap;
+		BBitmap			*fOverlayBitmap;
 		
 		vline			fLines;
 
@@ -86,7 +87,6 @@ class InfoView : public BView
 		BString			fText;
 		
 		float			fHeight;
-		//infoview_layout	fLayout;
 };
 
 #endif

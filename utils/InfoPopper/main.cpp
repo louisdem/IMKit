@@ -26,10 +26,16 @@ class InfoApp : public BApplication {
 				case InfoPopper::AddMessage: {
 					int8 type = 0;
 					if (msg->FindInt8("type", &type) == B_OK) {
-						//printf("Playing sound type %ld %s\n", (int32)(type), kSoundNames[type]);
 						system_beep(kSoundNames[type]);
 					};
 					BMessenger(fWin).SendMessage(msg);
+				} break;
+				
+				case InfoPopper::GetIconSize: {
+					BMessage reply(B_REPLY);
+					reply.AddInt16("iconSize", fWin->IconSize());
+					
+					msg->SendReply(&reply);
 				} break;
 				
 				default:
@@ -65,6 +71,8 @@ class InfoApp : public BApplication {
 //#pragma mark -
 
 int main(int argc, char *argv[]) {
+	(void)argc;
+	(void)argv[0];
 	int32 i = 0;
 	while (kSoundNames[i] != NULL) add_system_beep_event(kSoundNames[i++], 0);
 
