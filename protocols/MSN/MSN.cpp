@@ -176,7 +176,10 @@ status_t MSNProtocol::Process(BMessage * msg) {
 					if (!passport) return B_ERROR;
 					if (!message_text) return B_ERROR;
 					
-					if (fManager->MessageUser(passport, message_text) == B_OK) {
+					BString message;
+					nl2crlf(message_text, message);
+					
+					if (fManager->MessageUser(passport, message.String()) == B_OK) {
 					
 						BMessage newMsg(*msg);
 						
@@ -379,16 +382,19 @@ status_t MSNProtocol::StatusChanged(const char *nick, online_types status) {
 	return B_OK;
 };
 
-status_t MSNProtocol::MessageFromUser(const char *passport, const char *msg) {
+status_t MSNProtocol::MessageFromUser(const char *passport, const char *_msg) {
+	BString msg;
+	crlf2nl(_msg, msg);
+	
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
 	im_msg.AddString("protocol", kProtocolName);
 	im_msg.AddString("id", NormalizeNick(passport));
-	im_msg.AddString("message", msg);
+	im_msg.AddString("message", msg.String());
 	//im_msg.AddInt32("charset",B_ISO1_CONVERSION);
 	
 	fMsgr.SendMessage(&im_msg);											
-
+	
 	return B_OK;
 };
 
@@ -484,7 +490,7 @@ status_t MSNProtocol::AuthRequest(list_types list,const char *passport, const ch
 //	im_msg.AddInt32("charset",fEncoding);
 	
 	fMsgr.SendMessage(&im_msg);
-
+	
 	return B_OK;
 };
 

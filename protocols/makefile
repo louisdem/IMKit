@@ -3,7 +3,8 @@
 SUBDIRS = \
 	ICQ \
 	AIM \
-	MSN
+	MSN \
+	Yahoo
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \
