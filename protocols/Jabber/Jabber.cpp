@@ -149,7 +149,7 @@ Jabber::Process( BMessage * msg )
 					int32 count = 0;
 					msg->GetInfo("id", &garbage, &count);
 					
-					
+					msg->PrintToStream();
 						
 					if (count > 0 ) {
 						//list<char *> buddies;
@@ -161,10 +161,14 @@ Jabber::Process( BMessage * msg )
 								  BuddyStatusChanged(contact);
 							else
 							{
+							 
 								//Are we on-line?
 								// send auth req?
-								if(fFullLogged=true)
-									Error(id,id);
+								if(fFullLogged) debugger("REGISTER");
+								
+								Error(id,id);
+								
+								
 								//else
 								// we add to a temp list.
 								
@@ -516,7 +520,7 @@ Jabber::AddStatusString(JabberPresence* jp ,BMessage* msg)
 void
 Jabber::BuddyStatusChanged( const char * who, const char * status )
 {
-	LOG("Jabber", liDebug, "Jabber::BuddyStatusChanged()");
+	LOG("Jabber", liDebug, "Jabber::BuddyStatusChanged(%s,%s)",who,status);
 	
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::STATUS_CHANGED);
@@ -546,15 +550,20 @@ Jabber::getContact(const char* id)
 {
 	RosterList *rl=getRosterList();
 	JabberContact* contact=NULL;
+	LOG(kProtocolName, liDebug, "getContact %s", id);
+	
 	for(int i=0;i<rl->CountItems();i++)
 	{
 		contact=reinterpret_cast<JabberContact*>(getRosterList()->ItemAt(i));
+		LOG(kProtocolName, liDebug, "getContact [%3d] GetJID %s", i,contact->GetJid().String());
+		
 		if(contact->GetJid().Compare(id)==0)
 		{
+			LOG(kProtocolName, liDebug, "getContact found!");
 			return contact;								
 		}								
 	}
-	return contact;
+	return NULL;
 }
 
 void			
