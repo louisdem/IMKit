@@ -33,7 +33,8 @@ enum {
 	msnmsgStatusChanged = 'msn7',
 	msnMessageRecveived = 'msn8',
 	msnAuthRequest = 'msn9',
-	msnmsgRemoveConnection = 'msna'
+	msnmsgRemoveConnection = 'msna',
+	msnContactInfo = 'manb'
 };
 
 enum queuestyle {
@@ -95,6 +96,8 @@ class MSNManager : public BLooper {
 		
 		MSNHandler		*Handler(void) { return fHandler; };
 	private:
+		void			UpdateContactInfo(BMessage *);
+		
 		waitingmsgmap	fWaitingSBs;
 		
 		waitingauth		fWaitingAuth;	// For people requesting OUR auth

@@ -35,7 +35,7 @@ MSNSBConnection::IsGroupChat() const
 bool MSNSBConnection::IsSingleChatWith(const char * who) {
 	particilist::iterator i = fParticipants.begin();
 	
-	return ((fParticipants.size() == 1) && (strcmp((*i)->Passport(), who) == 0));
+	return ((fParticipants.size() == 1) && (strcasecmp((*i)->Passport(), who) == 0));
 }
 
 bool MSNSBConnection::InChat(const char * who) {

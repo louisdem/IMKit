@@ -430,7 +430,13 @@ int32 MSNConnection::NetworkSend(Command *command) {
 		const char * data = command->Flatten(++fTrID);
 		int32 data_size = command->FlattenedSize();
 		int32 sent_data = 0;
-			
+		
+/*		char * blah = (char*)malloc(data_size+1);
+		memcpy(blah, data, data_size);
+		blah[data_size] = 0;
+		printf("MSN sending command: [%s]\n", blah);
+		free(blah);*/
+		
 		while (sent_data < data_size) {
 			int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
 			
@@ -1025,7 +1031,7 @@ status_t MSNConnection::handleMSG( Command * command ) {
 
 status_t MSNConnection::handleADC(Command *command) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing ADC", this);
-
+	
 	BString listStr = command->Param(0);
 	BString passport = command->Param(1, true);
 	passport.ReplaceFirst("N=", "");
@@ -1035,16 +1041,23 @@ status_t MSNConnection::handleADC(Command *command) {
 		display = command->Param(2, true);
 		display.ReplaceFirst("F=", "");
 	}
+	
 	list_types listtype = ltReverseList;
 	
 	if (listStr == "RL") listtype = ltReverseList;
+	if (listStr == "AL") listtype = ltAllowList;
+	if (listStr == "FL") listtype = ltForwardList;
+	if (listStr == "BL") listtype = ltBlockList;
 	
-	BMessage requestAuth(msnAuthRequest);
-	requestAuth.AddString("displayname", display);
-	requestAuth.AddString("passport", passport);
-	requestAuth.AddInt8("list", (int8)listtype);
-	
-	BMessenger(fManager).SendMessage(&requestAuth);
+	if ( listtype == ltReverseList )
+	{
+		BMessage requestAuth(msnAuthRequest);
+		requestAuth.AddString("displayname", display);
+		requestAuth.AddString("passport", passport);
+		requestAuth.AddInt8("list", (int8)listtype);
+		
+		BMessenger(fManager).SendMessage(&requestAuth);
+	}
 	
 	return B_OK;
 };
@@ -1057,23 +1070,32 @@ status_t MSNConnection::handleLST(Command *command) {
 	BString display = command->Param(1, true);
 	display.ReplaceFirst("F=", "");
 	
+	BMessage contactInfo(msnContactInfo);
+	contactInfo.AddString("passport", passport.String() );
+	contactInfo.AddString("display", display.String() );
+	
 	if ( command->Params() == 4 )
 	{ // this param might not be here if the contact is in no lists
 		//	This is a bitmask. 1 = FL, 2 = AL, 4 = BL, 8 = RL
 		int32 lists = atol(command->Param(3));
-	
+		
 		LOG(kProtocolName, liDebug, "C %lX: %s (%s) is in list %i", this, passport.String(), display.String(), lists);
-
-		if (lists == ltReverseList) {
+		
+/*		if (lists == ltReverseList) {
 			LOG(kProtocolName, liDebug, "C %lX: \"%s\" (%s) is only on our reverse list. Likely they "
 				"added us while we were offline. Ask for authorisation", this, display.String(),
 				passport.String());
 			fManager->Handler()->AuthRequest(ltReverseList, passport.String(), display.String());
-		};
+		}; */
+		
+		contactInfo.AddInt32("lists", lists);
 	} else
 	{
 		LOG(kProtocolName, liDebug, "C %lX: %s (%s) is in no lists", this, passport.String(), display.String() );
+		contactInfo.AddInt32("lists", 0);
 	}
+	
+	fManMsgr.SendMessage( &contactInfo );
 	
 	return B_OK;
 };

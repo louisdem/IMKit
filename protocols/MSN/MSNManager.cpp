@@ -165,19 +165,19 @@ void MSNManager::MessageReceived(BMessage *msg) {
 
 			fHandler->MessageFromUser(passport.String(), message.String());
 		} break;
-	
+		
 		case msnmsgStatusChanged: {
 			uint8 status = msg->FindInt8("status");
 			BString passport = msg->FindString("passport");
 			fHandler->StatusChanged(passport.String(), (online_types)status);
 		} break;
-
+		
 		case msnmsgOurStatusChanged: {
 			uint8 status = msg->FindInt8("status");
 			fHandler->StatusChanged(fPassport.String(), (online_types)status);
 			fConnectionState = status;
 		} break;
-
+		
 		case msnmsgNewConnection: {
 			const char *cookie;
 			int32 bytes = 0;
@@ -354,15 +354,20 @@ void MSNManager::MessageReceived(BMessage *msg) {
 		} break;
 		
 		case msnAuthRequest: {
+			// check if that person is already in our AL before asking.
 			BString display = msg->FindString("displayname");
 			BString passport = msg->FindString("passport");
 			list_types listType = (list_types)msg->FindInt8("list");
-
+			
 			fWaitingAuth[passport] = 1;
 			
 			fHandler->AuthRequest(listType, passport.String(), display.String());
 		} break;
-
+		
+		case msnContactInfo: {
+			UpdateContactInfo( msg );
+		} break;
+		
 		default: {
 			BLooper::MessageReceived(msg);
 		};
@@ -428,11 +433,32 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 };
 
 status_t MSNManager::AddBuddy(const char *buddy) {
-	status_t ret = B_ERROR;
-	return ret;
+	if ( !fNoticeCon )
+		return B_ERROR;
+	
+	LOG(kProtocolName, liDebug, "MSNManager::AddBuddy(%s)", buddy);
+	
+	// check for duplicates first?
+	
+	BString n("N="); n += buddy;
+	BString f("F=someone"); f += buddy; f.ReplaceAll("@", "%40");
+	
+	Command * add_fl = new Command("ADC");
+	add_fl->AddParam("FL" /* FL, 1 */);
+	add_fl->AddParam( n.String() );
+	add_fl->AddParam( f.String() );
+	
+	fNoticeCon->Send(add_fl);
+	
+	return B_OK;
 };
 
 status_t MSNManager::AddBuddies(list <char *>buddies) {
+/*	for ( list<char*>::iterator i=buddies.begin(); i!=buddies.end(); i++ ) {
+		// BuddyDetails will create the contact if needed
+		BuddyDetails(*i);
+	}
+*/	
 	return B_OK;
 };
 
@@ -443,7 +469,15 @@ int32 MSNManager::Buddies(void) const {
 Buddy *MSNManager::BuddyDetails(const char *passport) {
 	Buddy *bud = NULL;
 	buddymap::iterator bIt = fBuddy.find(passport);
-	if (bIt != fBuddy.end()) bud = bIt->second;
+	if (bIt != fBuddy.end()) 
+		bud = bIt->second;
+	else {
+		// new buddy, add it!
+		bud = new Buddy(passport);
+		fBuddy[passport] = bud;
+		// request an add to list here as well, I suppose..
+		AddBuddy( passport );
+	}
 	
 	return bud;
 };
@@ -647,3 +681,47 @@ status_t MSNManager::BlockUser(const char *passport) {
 	return ret;
 };
 
+void MSNManager::UpdateContactInfo( BMessage * msg ) {
+	buddymap::iterator i = fBuddy.find(msg->FindString("passport"));
+	
+	Buddy * bud = NULL;
+	
+	// Find or create Buddy
+	if ( i == fBuddy.end() ) {
+		bud =  new Buddy( msg->FindString("passport") );
+		fBuddy[msg->FindString("passport")] = bud;
+	} else {
+		bud = i->second;
+	}
+	
+	// update info
+	if ( msg->FindString("display") )
+		bud->FriendlyName( msg->FindString("display") );
+	
+	int32 lists=0;
+	
+	if ( msg->FindInt32("lists", &lists) == B_OK ) {
+		bud->Lists(lists);
+		
+		if ( bud->Lists() == ltReverseList ) {
+			LOG(kProtocolName, liDebug, "\"%s\" (%s) is only on our reverse list. Likely they "
+				"added us while we were offline. Ask for authorisation", bud->FriendlyName(),
+				bud->Passport());
+			Handler()->AuthRequest(ltReverseList, bud->Passport(), bud->FriendlyName());
+		}
+		
+		if ( bud->Lists() == 0 ) {
+			// Buddy in no lists, add to FL
+			BString n("N="); n += bud->Passport();
+			// should be friendly name, but we'll have to HTML-encode it first!
+			BString f("F="); f += bud->Passport(); f.ReplaceAll("@", "%40"); 
+			
+			Command * add_fl = new Command("ADC");
+			add_fl->AddParam("FL" /* FL, 1 */);
+			add_fl->AddParam( n.String() );
+			add_fl->AddParam( f.String() );
+	
+			fNoticeCon->Send(add_fl);
+		}
+	}
+}
