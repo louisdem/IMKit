@@ -41,6 +41,7 @@
 #include <be/interface/MenuItem.h>
 #include <be/interface/Rect.h>
 #include <be/interface/Bitmap.h>
+#include <String.h>
 
 //------------------------------------------------------------------------------
 // D E C L A R A T I O N S
