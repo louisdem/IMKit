@@ -186,9 +186,6 @@ int32 Command::FlattenedSize(void) {
 			vector<BString>::iterator i;
 			for (i = fParams.begin(); i != fParams.end(); i++) 
 				size += i->Length() + 1;
-			size--; // Ditch trailing space.
-		} else {
-			size--;
 		}
 		
 		if (Payloads() > 0 ) {
@@ -199,14 +196,13 @@ int32 Command::FlattenedSize(void) {
 			temp = "";
 			temp << payloadSize;
 			size += temp.Length() + 1;
+			
+			size += payloadSize;
 		};
 		
 		size += strlen("\r\n");
 		
-		if (Payloads() > 0) 
-			size += payloadSize;
-		
-		fFlattenedSize = size+1;
+		fFlattenedSize = size;
 	};
 	
 	return fFlattenedSize;
