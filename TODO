@@ -5,8 +5,6 @@ Fixes
 * Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
 * Add status changes to im_logger?
 * Smart protocol selection, if contact is online on any service, use that etc
-* Fix ICQ add-on 'message received' string
-* Try making time in chat window gray and see if it works out
 
 New features
 
