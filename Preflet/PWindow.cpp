@@ -103,20 +103,20 @@ PWindow::PWindow(void)
 			fListView->AddItem(new IconTextItem(protocol,
 				GetBitmapFromAttribute(BPath(&ref).Path(), "BEOS:M:STD_ICON", 'ICON')));
 			
-			BMessage settings;
-			BMessage tmplate;
+			BMessage protocol_settings;
+			BMessage protocol_template;
 			BMessage reqSettings(IM::GET_SETTINGS);
 			reqSettings.AddString("protocol", protocol);
 			BMessage reqTemplate(IM::GET_SETTINGS_TEMPLATE);
 			reqTemplate.AddString("protocol", protocol);
 			
-			fManager->SendMessage(&reqSettings, &settings);
-			fManager->SendMessage(&reqTemplate, &tmplate);
+			fManager->SendMessage(&reqSettings, &protocol_settings);
+			fManager->SendMessage(&reqTemplate, &protocol_template);
 		
-			pair <BMessage, BMessage> p(settings, tmplate);
+			pair <BMessage, BMessage> p(protocol_settings, protocol_template);
 			fAddOns[protocol] = p; //pair<BMessage, BMessage>(settings, tmplate);
 
-			BView *view = new BView(frame, "protocol", B_FOLLOW_ALL_SIDES,
+			BView *view = new BView(frame, protocol, B_FOLLOW_ALL_SIDES,
 				B_WILL_DRAW);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 			view->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
@@ -128,7 +128,7 @@ PWindow::PWindow(void)
 			view->SetHighColor(0, 0, 0, 0);
 #endif
 
-			BuildGUI(tmplate, settings, view);
+			BuildGUI(protocol_template, protocol_settings, view);
 			fPrefView.AddItem(view);
 			fBox->AddChild(view);
 			view->Hide();
@@ -258,15 +258,17 @@ void PWindow::MessageReceived(BMessage *msg) {
 			tmplate = p.second;
 			tmplate.PrintToStream();
 			
+			BView * panel = FindView(item->Text());
+			
 			for (int i = 0; tmplate.FindMessage("setting", i, &cur) == B_OK; i++) {
 				const char *name = cur.FindString("name");
 				int32 type = -1;
 				
 				cur.FindInt32("type", &type);
 				
-				if ( dynamic_cast<BTextControl*>(FindView(name))) { 
+				if ( dynamic_cast<BTextControl*>(panel->FindView(name))) { 
 //					Free text
-					BTextControl * ctrl = (BTextControl*)FindView(name);
+					BTextControl * ctrl = (BTextControl*)panel->FindView(name);
 				
 					switch (type) {
 						case B_STRING_TYPE: {
@@ -279,9 +281,9 @@ void PWindow::MessageReceived(BMessage *msg) {
 							return;
 						};
 					};
-				} else if (dynamic_cast<BMenuField*>(FindView(name))) {
+				} else if (dynamic_cast<BMenuField*>(panel->FindView(name))) {
 //					Provided option
-					BMenuField * ctrl = (BMenuField*)FindView(name);
+					BMenuField * ctrl = (BMenuField*)panel->FindView(name);
 					BMenuItem * item = ctrl->Menu()->FindMarked();
 					
 					if (!item) return;
@@ -298,17 +300,17 @@ void PWindow::MessageReceived(BMessage *msg) {
 						};
 					}
 				} else
-				if (dynamic_cast<BCheckBox*>(FindView(name))) {
+				if (dynamic_cast<BCheckBox*>(panel->FindView(name))) {
 // 					Boolean setting
-					BCheckBox * box = (BCheckBox*)FindView(name);
+					BCheckBox * box = (BCheckBox*)panel->FindView(name);
 					
 					if ( box->Value() == B_CONTROL_ON ) {
 						settings.AddBool(name,true);
 					} else {
 						settings.AddBool(name,false);
 					}
-				} else if (dynamic_cast<BTextView *>(FindView(name))) {
-					BTextView *view = (BTextView *)FindView(name);
+				} else if (dynamic_cast<BTextView *>(panel->FindView(name))) {
+					BTextView *view = (BTextView *)panel->FindView(name);
 					settings.AddString(name, view->Text());
 				};
 				
