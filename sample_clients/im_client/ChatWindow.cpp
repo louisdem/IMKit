@@ -1074,7 +1074,11 @@ void ChatWindow::BuildProtocolMenu(void) {
 	getStatus.AddRef("contact", &fEntry);
 	BMessage statusMsg;
 	
-	fMan->SendMessage(&getStatus, &statusMsg);
+	if ( fMan->SendMessage(&getStatus, &statusMsg) != B_OK )
+	{
+		LOG("im_client", liHigh, "Failed to get contact statues");
+		return;
+	}
 	
 	BPath iconDir;
 	find_directory(B_USER_ADDONS_DIRECTORY, &iconDir, true);
@@ -1123,7 +1127,8 @@ void ChatWindow::BuildProtocolMenu(void) {
 		);
 	};
 	
-	menu->SetFont(be_plain_font);
+	// TODO: Is this call needed or not?
+	//menu->SetFont(be_plain_font);
 	
 	fStatusBar->PositionViews();
 

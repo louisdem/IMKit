@@ -197,7 +197,7 @@ ChatApp::RefsReceived( BMessage * msg )
 	for ( int i=0; msg->FindRef("refs", i, &ref ) == B_OK; i++ ) {
 		node = BNode(&ref);
 		char *type = ReadAttribute(node, "BEOS:TYPE");
-		if (type != null && strcmp(type, "application/x-person") == 0) {
+		if (type != NULL && strcmp(type, "application/x-person") == 0) {
 			if (node.GetAttrInfo("IM:connections", &info) == B_OK) {
 				msg->AddRef("contact", &ref);
 				hasValidRefs = true;
