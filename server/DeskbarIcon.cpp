@@ -429,7 +429,8 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 		}
 	}
 	
-	if (buttons & B_TERTIARY_MOUSE_BUTTON) {
+
+	if ((buttons & B_TERTIARY_MOUSE_BUTTON) || (modifiers() & B_COMMAND_KEY)) {
 		entry_ref ref;
 		if (get_ref_for_path("/boot/home/people/", &ref) != B_OK) return;
 		

@@ -90,6 +90,9 @@ Server::Server()
 		
 		if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
 		{
+			BPath p(&ref);
+			
+			printf("ref.name: %s / %s\n", ref.name, p.Path());
 			if ( db.AddItem( &ref ) != B_OK )
 				LOG("im_server", liHigh, "Error adding icon to deskbar!");
 		} else
@@ -154,100 +157,6 @@ Server::QuitRequested()
 {
 	return true;
 }
-
-
-/**
-	Loads attribute named 'attribute' from the file 'name'defaults to a type of 'BBMP'
-	Doesn't work on symlinks
-*/
-/*BBitmap *
-Server::GetBitmapFromAttribute(const char *name, const char *attribute, 
-	type_code type = 'BBMP') {
-	BBitmap 	*bitmap = NULL;
-	size_t 		len = 0;
-	status_t 	error;	
-
-	if ((name == NULL) || (attribute == NULL)) return NULL;
-
-	BNode node(name);
-	
-	if (node.InitCheck() != B_OK) {
-		return NULL;
-	};
-	
-	attr_info info;
-		
-	if (node.GetAttrInfo(attribute, &info) != B_OK) {
-		node.Unset();
-		return NULL;
-	};
-		
-	char *data = (char *)calloc(info.size, sizeof(char));
-	len = (size_t)info.size;
-		
-	if (node.ReadAttr(attribute, 'BBMP', 0, data, len) != len) {
-		node.Unset();
-		free(data);
-	
-		return NULL;
-	};
-	
-//	Icon is a square, so it's right / bottom co-ords are the root of the bitmap length
-//	Offset is 0
-	BRect bound = BRect(0, 0, 0, 0);
-	bound.right = sqrt(len) - 1;
-	bound.bottom = bound.right;
-	
-	bitmap = new BBitmap(bound, B_COLOR_8_BIT);
-	bitmap->SetBits(data, len, 0, B_COLOR_8_BIT);
-
-//	make sure it's ok
-	if(bitmap->InitCheck() != B_OK) {
-		free(data);
-		delete bitmap;
-		return NULL;
-	};
-	
-	return bitmap;
-}
-*/
-/**
-	Read an image form a file?
-*/
-/*BBitmap *
-Server::GetBitmap(const char *name, type_code type = 'BBMP') {
-	BResources *res = AppResources();
-
-	BBitmap 	*bitmap = NULL;
-	size_t 		len = 0;
-	status_t 	error;	
-
-	// load resource
-	const void *data = res->LoadResource(type, name, &len);
-	
-	BMemoryIO stream(data, len);
-	
-	// unflatten it
-	BMessage archive;
-	error = archive.Unflatten(&stream);
-	if (error != B_OK)
-		return NULL;
-
-	// make a bbitmap from it
-	bitmap = new BBitmap(&archive);
-	if(!bitmap)
-		return NULL;
-
-	// make sure it's ok
-	if(bitmap->InitCheck() != B_OK)
-	{
-		delete bitmap;
-		return NULL;
-	}
-	
-	return bitmap;
-}
-*/
 
 /**
 */
@@ -410,7 +319,7 @@ Server::LoadAddons()
 	UnloadAddons(); // make sure we don't load any addons twice
 
 	// try loading all files in ./add-ons
-	
+
 	// get path
 	BEntry entry;
 	addonsDir.Rewind();
@@ -418,9 +327,10 @@ Server::LoadAddons()
 	{ // continue until no more files
 		if( entry.InitCheck() != B_NO_ERROR )
 			continue;
-		
+	
 		if( entry.GetPath(&path) != B_NO_ERROR )
 			continue;
+
 		
 		image_id curr_image = load_add_on( path.Path() );
 		if( curr_image < 0 )
