@@ -26,7 +26,7 @@ class AIMManager;
 class AIMConnection : public BLooper {
 	public:
 						AIMConnection(const char *server, uint16 port,
-							AIMManager *man);
+							AIMManager *man, bool uberDebug = false);
 						~AIMConnection();
 						
 		void			MessageReceived(BMessage *msg);
@@ -42,6 +42,9 @@ class AIMConnection : public BLooper {
 		inline uint16	Port(void) const { return fPort; };
 
 	private:
+bool fUberDebug;
+	
+	
 		int32			ConnectTo(const char *hostname, uint16 port);
 		static int32	Receiver(void *con);
 		void			StartReceiver(void);

@@ -82,6 +82,9 @@ class AIMManager : public BLooper {
 			
 	private:	
 			char		*EncodePassword(const char *pass);
+			
+			status_t	HandleBuddyList(BMessage *msg);
+			
 		list<BString>	fBuddy;
 		list<AIMConnection *>
 						fConnections;	

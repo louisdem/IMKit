@@ -82,6 +82,15 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 		B_FOLLOW_LEFT | B_FOLLOW_BOTTOM);
 	fView->AddChild(fCancel);
 
+	IM::Manager man;
+	BMessage settings;
+	BMessage reqSettings(IM::GET_SETTINGS);
+	reqSettings.AddString("protocol", "");
+
+	man.SendMessage(&reqSettings, &settings);	
+
+	fTextView->SetText(settings.FindString("default_away"));	
+
 	fTextView->MakeFocus(true);
 }
 

@@ -149,6 +149,7 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 	
 	if ((username == NULL) || (password == NULL)) return B_ERROR;
 	
+printf("Connection state (0x%x) needs to be 0x%x\n", fConnectionState, AMAN_OFFLINE);
 	if (fConnectionState == AMAN_OFFLINE) {
 		uint8 nickLen = strlen(username);
 	
@@ -230,15 +231,17 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			int32 bytes = 0;
 			int16 port = 0;
 			char *host = NULL;
-			
+
 			if (msg->FindData("cookie", B_RAW_TYPE, (const void **)&cookie, &bytes) != B_OK) return;
 			if (msg->FindString("host", (const char **)&host) != B_OK) return;
 			if (msg->FindInt16("port", &port) != B_OK) return;
 			
 			Flap *srvCookie = new Flap(OPEN_CONNECTION);
 			srvCookie->AddTLV(new TLV(0x0006, cookie, bytes));
-			
-			AIMConnection *con = new AIMConnection(host, port, this);
+
+bool icon = msg->FindBool("icon");
+printf("Is icon: %i\n", icon);
+			AIMConnection *con = new AIMConnection(host, port, this, icon);
 			con->Run();
 			fConnections.push_back(con);
 			
@@ -259,8 +262,10 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				LOG("AIM", LOW, "After close we have %i connections",
 					fConnections.size());
 					
-				if (fConnections.size() == 0) fHandler->StatusChanged(fOurNick,
-					AMAN_OFFLINE);
+				if (fConnections.size() == 0) {
+					fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
+					fConnectionState = AMAN_OFFLINE;
+				};
 			};
 		} break;
 
@@ -278,8 +283,8 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
 			
-			uint32 offset = 5;
-			uint16 family = (data[++offset] << 8) + data[++offset];
+			uint32 offset = 0;
+			uint16 family = (data[offset] << 8) + data[++offset];
 			uint16 subtype = (data[++offset] << 8) + data[++offset];
 			uint16 flags = (data[++offset] << 8) + data[++offset];
 			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
@@ -295,101 +300,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				} break;
 				
 				case BUDDY_LIST_MANAGEMENT: {
-					switch (subtype) {
-						case USER_ONLINE: {
-//							This message contains lots of stuff, most of which we
-//							ignore. We're good like that :)
-							PrintHex(data, bytes);
-							uint8 nickLen = data[++offset];
-							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-							memcpy(nick, (void *)(data + offset + 1), nickLen);
-							nick[nickLen] = '\0';
-						
-							offset += nickLen;
-							uint16 warningLevel = (data[++offset] << 8) + data[++offset];
-
-							uint16 tlvs = (data[++offset] << 8) + data[++offset];
-
-							while (offset < bytes) {
-								uint16 tlvtype = (data[++offset] << 8) + data[++offset];
-								uint16 tlvlen = (data[++offset] << 8) + data[++offset];
-								switch (tlvtype) {
-									case 0x0001: {	// User class / status
-										uint16 userclass = (data[++offset] << 8) +
-											data[++offset];
-	
-										if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
-											fHandler->StatusChanged(nick, AMAN_AWAY);
-										} else {
-											fHandler->StatusChanged(nick, AMAN_ONLINE);
-										};
-									} break;
-									
-									case 0x001d: {	// Icon / available message
-										LOG("AIM", LOW, "User %s has icon / available"
-											" message.", nick);
-										uint16 type;
-										uint8 index;
-										uint8 length;
-										uint16 end = offset + tlvlen;
-										
-										while (offset < end) {
-											type = (data[++offset] << 8) + data[++offset];
-											index = data[++offset];
-											length = data[++offset];
-											switch (type) {
-												case 0x0000: {	// Official icon
-												} break;
-												case 0x0001: {	// Icon
-													char *v = (char *)calloc(length, sizeof(char));
-													memcpy(v, data + offset, length);
-													Flap *buddy = new Flap(SNAC_DATA);
-													buddy->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, 0x0004, 0x00, 0x00, 0x00000000));
-													buddy->AddRawData((uchar *)&nickLen, 1);
-													buddy->AddRawData((uchar *)nick, nickLen);
-													buddy->AddRawData((uchar []){0x010, 0x00, 0x01, 0x01}, 4);
-													buddy->AddRawData((uchar []){0x10}, 1);
-													buddy->AddRawData((uchar *)v, 16);
-													Send(buddy);
-													free(v);
-												} break;
-												case 0x0002: {
-												} break;
-												default: {
-												};
-											};
-
-											offset += length;
-										}; 
-									} break;
-									
-									default: {
-										offset += tlvlen;
-									} break;
-								}
-							};
-
-							free(nick);
-
-						} break;
-						case USER_OFFLINE: {
-							uint8 nickLen = data[16];
-							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-							memcpy(nick, (void *)(data + 17), nickLen);
-							nick[nickLen] = '\0';
-												
-							LOG("AIM", LOW, "AIMManager: \"%s\" went offline", nick);
-							
-							fHandler->StatusChanged(nick, AMAN_OFFLINE);
-							free(nick);
-							
-						} break;
-						default: {
-							LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
-								"family 0x0003 (Buddy List). Subtype 0x%04x",
-								subtype);						
-						}
-					};
+					HandleBuddyList(msg);
 				} break;
 				
 				case ICBM: {
@@ -400,18 +311,19 @@ void AIMManager::MessageReceived(BMessage *msg) {
 						} break;
 						
 						case MESSAGE_FROM_SERVER: {
+							offset = 18;
 							
-							uint16 channel = (data[24] << 8) + data[25];
-							uint8 nickLen = data[26];
+							uint16 channel = (data[offset] << 8) + data[++offset];
+							uint8 nickLen = data[++offset];
 							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
 
-							memcpy(nick, (void *)(data + 27), nickLen);
+							memcpy(nick, (void *)(data + offset + 1), nickLen);
 							nick[nickLen] = '\0';
 
-							int offset = 26 + nickLen;
+							offset += nickLen;
 							uint16 warning = (data[++offset] << 8) + data[++offset];
 							uint16 TLVs = (data[++offset] << 8) + data[++offset];
-						
+
 							for (uint16 i = 0; i < TLVs; i++) {
 								uint16 type = 0;
 								uint16 length = 0;
@@ -600,6 +512,119 @@ void AIMManager::MessageReceived(BMessage *msg) {
 	};
 };
 
+status_t AIMManager::HandleBuddyList(BMessage *msg) {
+	ssize_t bytes = 0;
+	const uchar *data = NULL;
+	uint16 offset = 0;
+	uint16 subtype = 0;
+
+	msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+	subtype = (data[2] << 8) + data[3];
+	
+	offset = 9;
+
+	switch (subtype) {
+		case USER_ONLINE: {
+//			This message contains lots of stuff, most of which we
+//			ignore. We're good like that :)
+			PrintHex(data, bytes);
+			uint8 nickLen = data[++offset];
+			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
+			memcpy(nick, (void *)(data + offset + 1), nickLen);
+			nick[nickLen] = '\0';
+		
+			offset += nickLen;
+			uint16 warningLevel = (data[++offset] << 8) + data[++offset];
+
+			uint16 tlvs = (data[++offset] << 8) + data[++offset];
+
+			while (offset < bytes) {
+				uint16 tlvtype = (data[++offset] << 8) + data[++offset];
+				uint16 tlvlen = (data[++offset] << 8) + data[++offset];
+				switch (tlvtype) {
+					case 0x0001: {	// User class / status
+						uint16 userclass = (data[++offset] << 8) +
+							data[++offset];
+
+						if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
+							fHandler->StatusChanged(nick, AMAN_AWAY);
+						} else {
+							fHandler->StatusChanged(nick, AMAN_ONLINE);
+						};
+					} break;
+					
+					case 0x001d: {	// Icon / available message
+						LOG("AIM", LOW, "User %s has icon / available"
+							" message.", nick);
+						uint16 type;
+						uint8 index;
+						uint8 length;
+						uint16 end = offset + tlvlen;
+						
+						while (offset < end) {
+							type = (data[++offset] << 8) + data[++offset];
+							index = data[++offset];
+							length = data[++offset];
+							switch (type) {
+								case 0x0000: {	// Official icon
+								} break;
+								case 0x0001: {	// Icon
+									char *v = (char *)calloc(length, sizeof(char));
+									memcpy(v, data + offset, length);
+									Flap *buddy = new Flap(SNAC_DATA);
+									buddy->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS,
+										0x0004, 0x00, 0x00, 0x00000000));
+									buddy->AddRawData((uchar *)&nickLen, 1);
+									buddy->AddRawData((uchar *)nick, nickLen);
+									buddy->AddRawData((uchar []){0x01, 0x00, 0x01, 0x01}, 4);
+									buddy->AddRawData((uchar []){0x10}, 1);
+									buddy->AddRawData((uchar *)v, 16);
+									Send(buddy);
+									free(v);
+								} break;
+								case 0x0002: {
+								} break;
+								default: {
+								};
+							};
+
+							offset += length;
+						}; 
+					} break;
+					
+					default: {
+						offset += tlvlen;
+					} break;
+				}
+			};
+
+			free(nick);
+
+		} break;
+		case USER_OFFLINE: {
+			offset = 10;
+			uint8 nickLen = data[++offset];
+			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
+			memcpy(nick, (void *)(data + offset), nickLen);
+			nick[nickLen] = '\0';
+								
+			LOG("AIM", LOW, "AIMManager: \"%s\" went offline", nick);
+			
+			fHandler->StatusChanged(nick, AMAN_OFFLINE);
+			free(nick);
+			
+		} break;
+		default: {
+			LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
+				"family 0x0003 (Buddy List). Subtype 0x%04x",
+				subtype);						
+		}
+	};
+};
+
+
+// -- Interface
+
 status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	LOG("AIM", LOW, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
 		message, strlen(message), screenname, strlen(screenname));
@@ -690,7 +715,6 @@ uchar AIMManager::IsConnected(void) const {
 };
 
 status_t AIMManager::LogOff(void) {
-
 	status_t ret = B_ERROR;
 	if (fConnectionState != AMAN_OFFLINE) {
 		fConnectionState = AMAN_OFFLINE;
@@ -754,18 +778,26 @@ status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
 status_t AIMManager::SetAway(const char *message) {
 	Flap *away = new Flap(SNAC_DATA);
 	away->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00, 0x00000000));
-	away->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
-	away->AddTLV(new TLV(0x0004, message, strlen(message)));
+
+	if (message) {
+		away->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
+		away->AddTLV(new TLV(0x0004, message, strlen(message)));
+		fAwayMsg = message;
+
+		fHandler->StatusChanged(fOurNick, AMAN_AWAY);
+		fConnectionState = AMAN_AWAY;
+	} else {
+		away->AddTLV(new TLV(0x0003, kEncoding, strlen(kEncoding)));
+		away->AddTLV(new TLV(0x0004, "", 0));
 	
+		fAwayMsg = "";
+		
+		fHandler->StatusChanged(fOurNick, AMAN_ONLINE);
+		fConnectionState = AMAN_ONLINE;
+	};
+		
 	Send(away);
-
-	fAwayMsg = message;
-
-	fHandler->StatusChanged(fOurNick, AMAN_AWAY);
-	fConnectionState = AMAN_AWAY;
-
 };
-
 
 status_t AIMManager::SetProfile(const char *profile) {
 	if (profile == NULL) {

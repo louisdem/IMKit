@@ -6,8 +6,10 @@ void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
 const char kProtocolName[] = "AIM";
 
-AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man) {
+AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
+	bool uberDebug = false) {
 	
+fUberDebug = uberDebug;
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
@@ -17,6 +19,9 @@ AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man) {
 	fServer[serverLen] = '\0';
 	fPort = port;
 	
+if (fUberDebug) {
+	printf("\n\n\n\nNew connection %s:%i\n", fServer, fPort);
+};
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_PULSE), 1000000, -1);	
 
@@ -99,10 +104,15 @@ void AIMConnection::StopReceiver(void) {
 int32 AIMConnection::Receiver(void *con) {
 	AIMConnection *connection = reinterpret_cast<AIMConnection *>(con);
 
+	const uint8 kFLAPHeaderLen = 6;
+	const uint32 kSleep = 2000000;
+	const char *kHost = connection->Server();
+	const char kPort = connection->Port();
+	
 	int32 socket = 0;
 
 	if ( !connection->fSockMsgr->IsValid() ) {
-		LOG("AIM", LOW, "AIMConnection::: Messenger wasn't valid!");
+		LOG("AIM", LOW, "%s:%i: Messenger wasn't valid!", kHost, kPort);
 		return B_ERROR;
 	}
 
@@ -114,124 +124,152 @@ int32 AIMConnection::Receiver(void *con) {
 	{
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
 		{
-			LOG("AIM", LOW, "AIMConn::MonitorSocket: Couldn't get socket: %i", ret);
+			LOG("AIM", LOW, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
 			return B_ERROR;
 		}
 	} else 
 	{
-		LOG("AIM", LOW, "AIMConn::MonitorSocket: Couldn't obtain socket: %i", ret);
+		LOG("AIM", LOW, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
 		return B_ERROR;
 	}
 
 	struct fd_set read;
 	struct fd_set error;
-	uchar buffer[2048];
 	int16 bytes = 0;
 	int32 processed = 0;
 	uint16 flapLen = 0;
+	uchar flapHeader[kFLAPHeaderLen];
 	
-	while (connection->fSockMsgr->IsValid()) 
-	{
-		//bytes = 0;
-		
-		FD_ZERO(&read);
-		FD_ZERO(&error);
-		
-		FD_SET(socket, &read);
-		FD_SET(socket, &error);
-		
-		if (select(socket + 1, &read, NULL, &error, NULL) > 0) 
-		{
-			if (FD_ISSET(socket, &error)) 
-			{
-				LOG("AIM", LOW, "AIMConn::MonitorSocket: Error reading socket");
-			}
-				
-			if (FD_ISSET(socket, &read)) 
-			{
-				if ((bytes = recv(socket, (void *)(buffer + processed),
-					sizeof(buffer) - processed, 0)) > 0) 
-				{
-					LOG("AIM", LOW, "AIMConn::MonitorSocket: Got data (%i bytes)", bytes);
-											
-					if (buffer[0] == COMMAND_START) 
-					{
-						BMessage dataReady;
-						switch (buffer[1]) 
-						{
-							case OPEN_CONNECTION: {
-								dataReady.what = AMAN_FLAP_OPEN_CON;
-							} break;
-							case SNAC_DATA: {
-								dataReady.what = AMAN_FLAP_SNAC_DATA;
-							} break;
-							case FLAP_ERROR: {
-								dataReady.what = AMAN_FLAP_ERROR;
-							} break;
-							case CLOSE_CONNECTION: {
-								dataReady.what = AMAN_FLAP_CLOSE_CON;
-							} break;
-							default:
-//								LOG(kProtocolName, LOW, "Got unknown FLAP channel");
-								PrintHex((uchar *)buffer, bytes);
-								// unkown message
-								break;
-						}
+	while (connection->fSockMsgr->IsValid()) {
+		bytes = 0;
+		processed = 0;
 						
-						flapLen = (buffer[4] << 8) + ((uint8)buffer[5]);
-						flapLen += 6;
-						LOG("AIM", LOW, "%s:%i. Got FLAP. FLAP is %u bytes, read %u bytes",
-							connection->Server(), connection->Port(), flapLen, bytes);
+		while (processed < kFLAPHeaderLen) {
+			FD_ZERO(&read);
+			FD_ZERO(&error);
+			
+			FD_SET(socket, &read);
+			FD_SET(socket, &error);
 
-						if (flapLen == bytes) {
-							dataReady.AddInt32("bytes", bytes);
-							dataReady.AddData("data", B_RAW_TYPE, buffer, (uint16)bytes);
-							memset(buffer, 0, bytes);
-							processed = 0;
-						} else {
-							if ((uint16)flapLen < (uint16)bytes) {
-								dataReady.AddInt32("bytes", flapLen);
-								dataReady.AddData("data", B_RAW_TYPE, buffer, flapLen);
-								memmove(buffer, (void *)(buffer + flapLen), flapLen);
-								processed = flapLen;
-							} else {
-								LOG("AIM", HIGH, "Huge packet! Abort for now");
-								processed = 0;
-								continue;
-							}
-						};
-													
-						connection->fSockMsgr->SendMessage(&dataReady);
+			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
+				if (FD_ISSET(socket, &read)) {
+					if ((bytes = recv(socket, (void *)(flapHeader + processed),
+						kFLAPHeaderLen - processed, 0)) > 0) {
+						processed += bytes;
 					} else {
-						LOG("AIM", LOW, "Got packet without COMMAND_START");
-						memset(buffer, 0, sizeof(buffer));
-						processed = 0;
-					};
-						
-				} else 
-				{ // recv return zero or less
-					if ( bytes == 0 )
-					{ // no error, just no data. this shouldn't happen though.
-						snooze(2000000);
-					} else
-					{
-						LOG("AIM", LOW, "%s:%i. Got socket error:",
-							connection->Server(), connection->Port());
-						perror("SOCKET ERROR");
-						
-						BMessage msg(AMAN_CLOSED_CONNECTION);
-						msg.AddPointer("connection", con);
+						if (bytes == 0) {
+							snooze(kSleep);
+							continue;
+						} else {
+							LOG("AIM", LOW, "%s:%i: Got socket error:",
+								kHost, kPort);
+							perror("SOCKET ERROR");
+							
+							BMessage msg(AMAN_CLOSED_CONNECTION);
+							msg.AddPointer("connection", con);
+			
+							connection->fManMsgr.SendMessage(&msg);
+							connection->fState = AMAN_OFFLINE;
+							
+							return B_ERROR;							
+						};
+					};					
+				};
+			};
+		};
+
+		PrintHex(flapHeader, kFLAPHeaderLen);
+		uint8 channel = 0;
+		uint16 seqNum = 0;
+		uint16 flapLen = 0;
+		uchar *flapContents;
 		
-						connection->fManMsgr.SendMessage(&msg);
-						connection->fState = AMAN_OFFLINE;
-						
-						return B_ERROR;
-//						We seem to get here somehow :/
-//						LOG("AIMMananager::MonitorSocket", LOW, "Socket error");
-					}
-				}
-			}
+		if (flapHeader[0] != COMMAND_START) {
+			LOG(kProtocolName, HIGH, "%s:%i: Packet header doesn't start with 0x2a "
+				" - discarding!", kHost, kPort);
+			continue;
+		};
+	
+		channel = flapHeader[1];
+		seqNum = (flapHeader[2] << 8) + flapHeader[3];
+		flapLen = (flapHeader[4] << 8) + flapHeader[5];
+		
+		flapContents = (uchar *)calloc(flapLen, sizeof(char));
+		
+//		printf("FLAP is %i (0x%04x) bytes\n", flapLen, flapLen);
+	
+		processed = 0;
+		bytes = 0;
+		
+		while (processed < flapLen) {
+			FD_ZERO(&read);
+			FD_ZERO(&error);
+			
+			FD_SET(socket, &read);
+			FD_SET(socket, &error);
+
+			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
+				if (FD_ISSET(socket, &read)) {
+					if ((bytes = recv(socket, (void *)(flapContents + processed),
+						flapLen - processed, 0)) > 0) {
+						processed += bytes;
+					} else {
+						if (bytes == 0) {
+							snooze(kSleep);
+							continue;
+						} else {
+							LOG("AIM", LOW, "%s:%i. Got socket error:",
+								connection->Server(), connection->Port());
+							perror("SOCKET ERROR");
+							
+							BMessage msg(AMAN_CLOSED_CONNECTION);
+							msg.AddPointer("connection", con);
+			
+							connection->fManMsgr.SendMessage(&msg);
+							connection->fState = AMAN_OFFLINE;
+							
+							return B_ERROR;							
+						};
+					};
+				};
+			};
+		};
+		
+		BMessage dataReady;
+		
+		switch (channel) {
+			case OPEN_CONNECTION: {
+				dataReady.what = AMAN_FLAP_OPEN_CON;
+			} break;
+			case SNAC_DATA: {
+				dataReady.what = AMAN_FLAP_SNAC_DATA;
+			} break;
+			case FLAP_ERROR: {
+				dataReady.what = AMAN_FLAP_ERROR;
+			} break;
+			case CLOSE_CONNECTION: {
+				dataReady.what = AMAN_FLAP_CLOSE_CON;
+			} break;
+			default: {
+				LOG(kProtocolName, HIGH, "%s:%i Got an unsupported FLAP channel",
+					kHost, kPort);
+				continue;
+			};
 		}
+
+		dataReady.AddInt8("channel", channel);
+		dataReady.AddInt16("seqNum", seqNum);
+		dataReady.AddInt16("flapLen", flapLen);
+		dataReady.AddData("data", B_RAW_TYPE, flapContents, flapLen);
+
+if (connection->fUberDebug) {
+	LOG(kProtocolName, LOW, "%s:%i\n", kHost, kPort);
+	dataReady.PrintToStream();
+}
+
+		connection->fSockMsgr->SendMessage(&dataReady);
+
+		free(flapContents);
 	}
 
 //	delete msgr;
@@ -250,6 +288,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 				if (fOutgoing.size() == 0) return;
 				Flap *f = fOutgoing.front();
 				if (f->Channel() == SNAC_DATA) {
+if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 					LOG("AIM", LOW, "Connection %s:%i 0x%04x / 0x%04x", Server(),
 						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
 				};
@@ -306,22 +345,27 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-			LOG(kProtocolName, LOW, "Got FLAP_OPEN_CON packet");
+			LOG(kProtocolName, LOW, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
+				Port());
 		} break;
 		
 		case AMAN_FLAP_SNAC_DATA: {
+			uint16 seqNum = msg->FindInt16("seqNum");
+			uint16 flapLen = msg->FindInt16("flapLen");
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+
 			
-			uint32 offset = 5;
-			uint16 family = (data[++offset] << 8) + data[++offset];
+			uint32 offset = 0;
+			uint16 family = (data[offset] << 8) + data[++offset];
 			uint16 subtype = (data[++offset] << 8) + data[++offset];
 			uint16 flags = (data[++offset] << 8) + data[++offset];
 			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
 				(data[++offset] << 8) + data[++offset];
 
-			LOG("AIM", LOW, "AIMConn: Got SNAC (0x%04x, 0x%04x)", family, subtype);
+			LOG(kProtocolName, LOW, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
+				Server(), Port(), family, subtype);
 			
 			if (family != SERVICE_CONTROL) {
 				fManMsgr.SendMessage(msg);
@@ -357,11 +401,16 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 						uint16 tlvLen = 0;
 						char *tlvValue = NULL;
 						
-						if (data[10] & 0x80) {
-							uint16 skip = (data[16] << 8) + data[17];
+						offset = 10;
+						
+						if (data[4] & 0x80) {
+							uint16 skip = (data[10] << 8) + data[11];
 							LOG("AIM", LOW, "Skipping %i bytes", skip);
 							offset += skip + 2;
 						};
+						
+						printf("Offset: %i - 0x%x\n", offset, data[offset]);
+						offset--;
 						
 						BMessage service(AMAN_NEW_CONNECTION);
 						PrintHex((uchar *)data, bytes);
@@ -377,6 +426,10 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 	
 							switch(tlvType) {
 								case 0x000d: {	// Service Family
+									if ((tlvValue[0] == 0x00) && (tlvValue[1] == 0x10)) {
+										service.AddBool("icon", true);
+										printf("Icon service!\n");
+									};
 								} break;
 								
 								case 0x0005: {	// Server Details
@@ -537,15 +590,16 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 
 			if (fState == AMAN_CONNECTING) {
 	
-				int32 i = 6;
 				char *server = NULL;
-				uint16 port = 0;
 				char *cookie = NULL;
+				char *value = NULL;
+
+				int32 i = 0;
+				uint16 port = 0;
 				uint16 cookieSize = 0;
 	
 				uint16 type = 0;
 				uint16 length = 0;
-				char *value = NULL;
 	
 				while (i < bytes) {
 					type = (data[i] << 8) + data[++i];
@@ -559,6 +613,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 						} break;
 						
 						case 0x0005: {	// New Server:IP
+printf("\n\n\n\nRaw details: %s\n", value);
 							pair<char *, uint16> serv = ExtractServerDetails(value);
 							server = serv.first;
 							port = serv.second;
@@ -582,7 +637,9 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 				
 //				Nuke the old packet queue
 				fOutgoing.empty();
-				
+
+PrintHex((uchar *)data, bytes);				
+printf("Attempting connection to %s:%i\n", server, port);
 				fSock = ConnectTo(server, port);
 
 				free(fServer);

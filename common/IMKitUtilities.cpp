@@ -30,7 +30,7 @@ BBitmap *GetBitmapFromAttribute(const char *name, const char *attribute,
 	char *data = (char *)calloc(info.size, sizeof(char));
 	len = (size_t)info.size;
 		
-	if (node.ReadAttr(attribute, 'BBMP', 0, data, len) != len) {
+	if (node.ReadAttr(attribute, type, 0, data, len) != len) {
 		node.Unset();
 		free(data);
 	

@@ -93,8 +93,12 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						};
 					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {
-						fManager->Login("login.oscar.aol.com", (uint16)5190,
-							fScreenName, fPassword);
+						if (fManager->IsConnected() == AMAN_AWAY) {
+							fManager->SetAway(NULL);
+						} else {
+							fManager->Login("login.oscar.aol.com", (uint16)5190,
+								fScreenName, fPassword);
+						};
 					} else
 					{
 						LOG("AIM", LOW, "Invalid status when setting status: '%s'", status);

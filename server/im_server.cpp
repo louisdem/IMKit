@@ -1635,8 +1635,18 @@ Server::GenerateSettingsTemplate()
 	auto_start.AddString("description", "Auto-start im_server");
 	auto_start.AddInt32("type", B_BOOL_TYPE );
 	auto_start.AddBool("default", true );
-	
+		
 	main_msg.AddMessage("setting", &auto_start);
+	
+	BMessage default_away;
+	default_away.AddString("name", "default_away");
+	default_away.AddString("description", "Away Message");
+	default_away.AddInt32("type", B_STRING_TYPE);
+	default_away.AddString("default", "I'm currently looking at pr0n - "
+		"back in a bit");
+	default_away.AddBool("multi_line", true);
+
+	main_msg.AddMessage("setting", &default_away);
 	
 	return main_msg;
 }
