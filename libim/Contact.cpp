@@ -310,6 +310,8 @@ Contact::SetStatus( const char * status )
 	
 	node.SetModificationTime( time(NULL) );
 	
+	node.Unset();
+	
 	return B_OK;
 }
 
@@ -327,6 +329,8 @@ Contact::ReadAttribute( const char * attr, char * buffer, int bufsize )
 		return B_ERROR;
 	
 	buffer[num_read] = 0;
+	
+	node.Unset();
 	
 	return B_OK;
 }

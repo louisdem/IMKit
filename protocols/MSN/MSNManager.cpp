@@ -498,8 +498,63 @@ status_t MSNManager::RequestBuddyIcon(const char *buddy) {
 	return B_OK;
 };
 
-status_t MSNManager::TypingNotification(const char *buddy, uint16 typing) {
-	return B_OK;
+status_t MSNManager::TypingNotification(const char *passport, uint16 typing) {
+	LOG(kProtocolName, liDebug, "Typing notify to %s", passport);
+	
+	if ((fConnectionState != otOffline) && (fConnectionState != otConnecting)) {
+		if (fNoticeCon == NULL) {
+			LOG(kProtocolName, liDebug, "Can't send typing notify to %s, fNoticeCon is null", passport);
+			return B_ERROR;
+		}
+		
+		// Set up message
+		Command *msg = new Command("MSG");
+		msg->AddParam("U");
+		BString format = "MIME-Version: 1.0\r\n"
+			"Content-Type: text/x-msmsgscontrol\r\n"
+			"TypingUser: ";
+		format << fPassport;
+		format << "\r\n\r\n\r\n";
+		
+		msg->AddPayload(format.String(), format.Length());
+		
+		// Find connection
+		bool needSB = false;
+		connectionlist::iterator it;
+		for ( it=fConnections.begin(); it != fConnections.end(); it++ )
+		{
+			MSNSBConnection * c = dynamic_cast<MSNSBConnection*>( *it );
+			
+			if ( c != NULL  && c->IsSingleChatWith( passport ) )
+				break;
+		}
+		
+		Command *sbReq = NULL;
+		
+		if (it == fConnections.end()) {
+			LOG(kProtocolName, liDebug, "Can't send typing notify to %s, no open connection: opening new",
+				passport);
+			
+			sbReq =  new Command("XFR");
+			sbReq->AddParam("SB");	// Request a SB connection;
+			
+			fNoticeCon->Send(sbReq, qsImmediate);	
+			
+			needSB = true;
+		};
+		
+		if (needSB) {
+			fWaitingSBs[sbReq->TransactionID()] = pair<BString,Command*>(passport, msg);
+		} else {
+			(*it)->Send(msg);
+		};
+		
+		return B_OK;
+	};
+	
+	LOG(kProtocolName, liHigh, "Error sending typing notification to %s", passport);
+	
+	return B_ERROR;
 };
 
 status_t MSNManager::SetAway(bool away = true) {

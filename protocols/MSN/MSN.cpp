@@ -187,14 +187,12 @@ status_t MSNProtocol::Process(BMessage * msg) {
 					};
 					
 				}	break;
-//				case IM::USER_STARTED_TYPING: {
-////					const char *id = msg->FindString("id");
-////					if (!id) return B_ERROR;
-//				
-////					fManager->TypingNotification(id, STARTED_TYPING);
-////					snooze(1000 * 1);
-////					fManager->TypingNotification(id, STILL_TYPING);
-//				} break;
+				case IM::USER_STARTED_TYPING: {
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
+					
+					fManager->TypingNotification(id, 1001 /* should be STARTED_TYPING*/);
+				} break;
 //				case IM::USER_STOPPED_TYPING: {
 ////					const char *id = msg->FindString("id");
 ////					if (!id) return B_ERROR;

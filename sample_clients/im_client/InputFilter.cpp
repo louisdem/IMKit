@@ -53,6 +53,7 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 					BMessenger(fParent->Window()).SendMessage(typing);			
 				
 					BMessenger(fParent->Window()).SendMessage(fMessage);
+					fLastTyping = 0;
 					return B_SKIP_MESSAGE;
 				};
 			} else {
@@ -61,6 +62,7 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 					BMessenger(fParent->Window()).SendMessage(typing);			
 				
 					BMessenger(fParent->Window()).SendMessage(fMessage);
+					fLastTyping = 0;
 					return B_SKIP_MESSAGE;
 				} else {
 					fParent->Insert(fParent->TextLength(), "\n", strlen("\n"));
@@ -74,8 +76,8 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 		} break;
 	
 		default: {
-			if ( system_time() - fLastTyping > 15*1000*1000 )
-			{ // only send typing messages every 15 sec
+			if ( system_time() - fLastTyping > 10*1000*1000 )
+			{ // only send typing messages every 10 sec
 				BMessenger(fParent->Window()).SendMessage(new BMessage(IM::USER_STARTED_TYPING));
 				fLastTyping = system_time();
 			}

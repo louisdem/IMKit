@@ -135,16 +135,20 @@ im_load_attribute( const char * path, const char * attribute, BMessage * msg )
 	if ( num_read <= 0 )
 	{
 		LOG("helpers", liLow, "load_attribute: Error reading (%s) from (%s)", attribute, path);
+		node.Unset();
 		return B_ERROR;
 	}
 	
 	if ( msg->Unflatten(data) != B_OK )
 	{
 		LOG("helpers", liHigh, "ERROR: load_attribute: Error unflattening (%s) from (%s)", attribute, path);
+		node.Unset();
 		return B_ERROR;
 	}
 	
 	LOG("helpers", liDebug, "Read (%s) from (%s)", attribute, path);
+	
+	node.Unset();
 	
 	return B_OK;
 }
@@ -170,6 +174,7 @@ im_save_attribute( const char * path, const char * attribute, const BMessage * m
 	if ( node.InitCheck() != B_OK )
 	{
 		LOG("helpers", liHigh, "ERROR: save_attribute: Error opening save file (%s):(%s)", attribute, path);
+		node.Unset();
 		return B_ERROR;
 	}
 	
@@ -181,10 +186,13 @@ im_save_attribute( const char * path, const char * attribute, const BMessage * m
 	if ( num_written != data_size )
 	{ // error saving settings
 		LOG("helpers", liHigh, "ERROR: save_attribute: Error saving (%s) to (%s)", attribute, path);
+		node.Unset();
 		return B_ERROR;
 	}
 	
 	LOG("helpers", liDebug, "Wrote (%s) to file: %s", attribute, path);
+	
+	node.Unset();
 	
 	return B_OK;
 }
