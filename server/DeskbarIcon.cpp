@@ -12,6 +12,7 @@
 #include <MenuItem.h>
 #include <Application.h>
 #include <Window.h>
+#include <Deskbar.h>
 
 #include <Path.h>
 #include <FindDirectory.h>
@@ -296,6 +297,14 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 void
 IM_DeskbarIcon::MouseDown( BPoint p )
 {
+	// make sure that the im_server is still running
+	if ( !BMessenger(IM_SERVER_SIG).IsValid() )
+	{
+		BDeskbar db;
+	
+		db.RemoveItem( DESKBAR_ICON_NAME );
+	}
+
 	int32 buttons;
 	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
 	

@@ -1286,59 +1286,8 @@ Server::MessageFromProtocols( BMessage * msg )
 	}
 	
 	if ( im_what == STATUS_SET && protocol != NULL )
-	{ // own status set for protocol, register the id's we're interested in
-	  // THIS IS NOT CORRECT! We need to do this on a "connected" message, not on
-	  // status changed!
-		if ( !msg->FindString("status") )
-		{
-			_ERROR("ERROR: STATUS_SET: status not in message",msg);
-			return;
-		}
-		
-		const char * status = msg->FindString("status");
-		
-		if ( strcmp(ONLINE_TEXT,status) == 0 )
-		{ // we're online. register contacts. (should be: only do this if we were offline)
-			if ( fProtocols.find(protocol) == fProtocols.end() )
-			{
-				_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);
-				return;
-			}
-			
-			Protocol * p = fProtocols[protocol];
-			
-			BMessage connections(MESSAGE);
-			connections.AddInt32("im_what",REGISTER_CONTACTS);
-			GetContactsForProtocol( p->GetSignature(), &connections );
-			
-			p->Process( &connections );
-		}
-		
-		//fAddOnInfo[protocol].online_status = status;
-		
-		// Find out 'total' online status
-		fStatus[protocol] = status;
-		
-		string total_status = OFFLINE_TEXT;
-		
-		for ( map<string,string>::iterator i = fStatus.begin(); i != fStatus.end(); i++ )
-		{
-			if ( i->second == ONLINE_TEXT )
-			{
-				total_status = ONLINE_TEXT;
-				break;
-			}
-			
-			if ( i->second == AWAY_TEXT )
-			{
-				total_status = AWAY_TEXT;
-			}
-		}
-		
-		msg->AddString("total_status", total_status.c_str() );
-		//
-		
-		handleDeskbarMessage(msg);
+	{ // own status set for protocol, register the id's we're interested in etc
+		handle_STATUS_SET(msg);
 	}
 	
 	if ( im_what == CONTACT_AUTHORIZED && protocol != NULL ) {
@@ -1774,4 +1723,88 @@ Server::handleDeskbarMessage( BMessage * msg )
 			}
 			break;
 	}
+}
+
+void
+Server::handle_STATUS_SET( BMessage * msg )
+{
+	const char * protocol = msg->FindString("protocol");
+	
+	const char * status = msg->FindString("status");
+		
+	if ( !status )
+	{
+		_ERROR("ERROR: STATUS_SET: status not in message",msg);
+		return;
+	}
+	
+	if ( strcmp(ONLINE_TEXT,status) == 0 )
+	{ // we're online. register contacts. (should be: only do this if we were offline)
+		if ( fProtocols.find(protocol) == fProtocols.end() )
+		{
+			_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);
+			return;
+		}
+			
+		Protocol * p = fProtocols[protocol];
+			
+		// THIS IS NOT CORRECT! We need to do this on a "connected" message, not on
+		// status changed!
+		BMessage connections(MESSAGE);
+		connections.AddInt32("im_what",REGISTER_CONTACTS);
+		GetContactsForProtocol( p->GetSignature(), &connections );
+		
+		p->Process( &connections );
+	}
+		
+	if ( strcmp(OFFLINE_TEXT,status) == 0 )
+	{ // we're offline. set all connections for protocol to offline
+		if ( fProtocols.find(protocol) == fProtocols.end() )
+		{
+			_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);
+			return;
+		}
+			
+		BMessage contacts;
+			
+		GetContactsForProtocol(protocol, &contacts );
+			
+		for ( int i=0; contacts.FindString("id", i); i++ )
+		{
+			BMessage update(MESSAGE);
+			update.AddInt32("im_what", STATUS_CHANGED);
+			update.AddString("protocol", protocol);
+			update.AddString("id", contacts.FindString("id",i) );
+			update.AddString("status", OFFLINE_TEXT);
+				
+			PostMessage( &update );
+		}
+	}
+	//fAddOnInfo[protocol].online_status = status;
+		
+	// Find out 'total' online status
+	fStatus[protocol] = status;
+		
+	string total_status = OFFLINE_TEXT;
+	
+	for ( map<string,Protocol*>::iterator i = fProtocols.begin(); i != fProtocols.end(); i++ )
+	{
+		
+		if ( fStatus[i->second->GetSignature()] == ONLINE_TEXT )
+		{
+			total_status = ONLINE_TEXT;
+			break;
+		}
+		
+		if ( fStatus[i->second->GetSignature()] == AWAY_TEXT )
+		{
+			total_status = AWAY_TEXT;
+		}
+	}
+	
+	msg->AddString("total_status", total_status.c_str() );
+	LOG("im_server", HIGH, "Total status changed to %s", total_status.c_str() );
+	// end 'Find out total status'
+		
+	handleDeskbarMessage(msg);
 }

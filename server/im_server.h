@@ -54,6 +54,7 @@ class Server : public BApplication
 		
 		void	UpdateStatus(BMessage*,Contact &);
 		void	SetAllOffline();
+		void	handle_STATUS_SET( BMessage * );
 		
 		void	GetContactsForProtocol( const char * protocol, BMessage * msg );
 		
@@ -78,11 +79,12 @@ class Server : public BApplication
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
 		map<Protocol*,AddOnInfo>	fAddOnInfo;
+		/*	Used to store both <protocol>:<id> and <protocol> status.
+			In other words, both own status per protocol and contact
+			status per connection */
 		map<string,string>			fStatus;// proto_id_string,status_string
 		map<Contact,string>			fPreferredProtocol;
 		
-		//map<node_ref,list<pair<string,string> > >	contacts_protocols_ids;
-
 		BMessage					fIcons;
 		
 		BMessenger					fDeskbarMsgr;

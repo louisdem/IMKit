@@ -20,6 +20,10 @@ Fixes
 
 New features
 
+Connect/disconnect sounds
+
+Play sound on -every- message receive?
+
 Add a new attribute, IM Specific Status, for network-specific status (well, d'uh.)
 For things like "out to lunch" or whatever messages you can set on e.g. MSN.
 
