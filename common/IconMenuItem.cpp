@@ -90,7 +90,7 @@ void IconMenuItem::DrawContent() {
 	BMenu		*parent = Menu();
 	BPoint		loc = parent->PenLocation();
 	
-	parent->SetDrawingMode(B_OP_OVER);
+	parent->SetDrawingMode(B_OP_ALPHA);
 	
 	b.OffsetBy(0, kEdgePadding);
 	b.left = loc.x;

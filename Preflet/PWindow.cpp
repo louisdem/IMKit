@@ -5,9 +5,7 @@
 #include <Roster.h>
 
 const float kControlOffset = 5.0;
-//const float kEdgeOffset = 2.0;
 const float kEdgeOffset = 5.0;
-//const float kControlWidth = 300;
 const float kDividerWidth = 100;
 
 PWindow::PWindow(void)
@@ -75,10 +73,9 @@ PWindow::PWindow(void)
 			entry_ref ref;
 			//protocols.FindRef("ref", i, &ref);	
 			
-			char protopath[512];
-			sprintf(protopath, "/boot/home/config/add-ons/im_kit/protocols/%s", protocol);
-			BEntry e(protopath, true);
-			e.GetRef(&ref);
+//			XXX Fix Me: Change to use find_directory()
+			BString protoPath = "/boot/home/config/add-ons/im_kit/protocols/";
+			protoPath << protocol;
 			
 			BMessage protocol_settings;
 			BMessage protocol_template;
@@ -87,8 +84,10 @@ PWindow::PWindow(void)
 			im_load_protocol_template( protocol, &protocol_template );
 			
 			//printf("Getting icon from %s\n", BPath(&ref).Path() );
-			fListView->AddItem(new IconTextItem(protocol,
-				GetBitmapFromAttribute(BPath(&ref).Path(), "BEOS:M:STD_ICON", 'ICON')));
+
+			BBitmap *icon = ReadNodeIcon(protoPath.String(), kSmallIcon, true);
+
+			fListView->AddItem(new IconTextItem(protocol, icon));
 			
 			protocol_template.AddString("protocol", protocol); // for identification when saving
 			
@@ -144,9 +143,11 @@ PWindow::PWindow(void)
 				be_roster->FindApp( client_settings.FindString("app_sig"), &ref );
 				printf("Client path: %s\n", BPath(&ref).Path() );
 			}
+
+			BBitmap *icon = ReadNodeIcon(BPath(&ref).Path(), kSmallIcon, true);
+			printf("Loading icon from %s\n", BPath(&ref).Path());
 			
-			fListView->AddItem(new IconTextItem(client,
-				GetBitmapFromAttribute(BPath(&ref).Path(), "BEOS:M:STD_ICON", 'ICON')));
+			fListView->AddItem(new IconTextItem(client, icon));
 			
 			client_template.AddString("client", client); // for identification when saving
 			
@@ -184,7 +185,7 @@ PWindow::PWindow(void)
 
 	frame = fView->Frame();
 	frame.InsetBy(kEdgeOffset, kEdgeOffset);
-	frame.bottom -= (kEdgeOffset * 2); // * 5);
+	frame.bottom -= (kEdgeOffset * 2);
 	frame.top = frame.bottom - ((fontHeight.descent + fontHeight.leading + fontHeight.ascent));
 	frame.left = frame.right - (be_plain_font->StringWidth("APPLY") +
 		(kControlOffset * 2));

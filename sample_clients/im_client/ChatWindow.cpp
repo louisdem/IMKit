@@ -13,20 +13,13 @@
 const char *kImNewMessageSound = "IM Message Received";
 const float kPadding = 2.0;
 
-#define kButtonWidth	50
-#define kButtonHeight	50
-#define kButtonDockHeight (kButtonHeight+ (kPadding * 2))
+const char *kWidestButtonText = "Show Info";
 
+float kButtonWidth = 50;
+float kButtonHeight = 50;
+float  kButtonDockHeight = 50;
 
-#if  B_BEOS_VERSION > B_BEOS_VERSION_5
-	#ifdef GET_NODE_ICON
-		BBitmap* GetNodeIcon(BNode& Node, uint32, status_t *);
-	#else
-		BBitmap *GetTrackerIcon(BNode &, unsigned long, long *);
-	#endif
-#endif
-
-ChatWindow::ChatWindow( entry_ref & ref )
+ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon)
 :	BWindow( 
 		BRect(100,100,400,300), 
 		"unknown contact - unknown status", 
@@ -41,6 +34,15 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	font_height height;
 	be_plain_font->GetHeight(&height);
 	fFontHeight = height.ascent + height.descent + height.leading;
+
+	kButtonWidth = iconBarSize;
+	float temp = be_plain_font->StringWidth(kWidestButtonText);
+
+	if (temp > kButtonWidth) kButtonWidth = temp;
+	kButtonWidth += kPadding * 2;
+
+	kButtonHeight = iconBarSize + fFontHeight + (kPadding * 3);
+	kButtonDockHeight = kButtonHeight + (kPadding * 3);
 
 	BRect windowRect(100, 100, 400, 300);
 	BPoint inputDivider(0, 150);
@@ -84,7 +86,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fDock->SetHighUIColor(B_UI_PANEL_TEXT_COLOR);
 #else
 	fDock->SetViewColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
-//	fDock->SetLowColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
+	fDock->SetLowColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
 //	fDock->SetHighColor( ui_color(B_PANEL_TEXT_COLOR) );
 #endif
 	AddChild(fDock);
@@ -93,20 +95,16 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	ImageButton * btn;
 	BBitmap * icon;
 	long err = 0;
+	BPath iconDir;
+	BPath iconPath;
 	
-	// people icon
-#if  B_BEOS_VERSION > B_BEOS_VERSION_5
-	BNode peopleApp("/boot/beos/apps/People");
-
-	#ifdef GET_NODE_ICON
-		icon = GetNodeIcon(peopleApp, 32, &err);
-	#else
-		icon = GetTrackerIcon(peopleApp, 32, &err);
-	#endif
-#else
-	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/People", "BEOS:L:STD_ICON");
-#endif
+	find_directory(B_USER_SETTINGS_DIRECTORY, &iconDir, true);
+	iconDir.Append("im_kit/icons");
+	
+//	People icon
+	iconPath = iconDir;
+	iconPath.Append("People");
+	icon = ReadNodeIcon(iconPath.Path(), iconBarSize);
 	
 	btn = new ImageButton(
 		BRect(2,2,2+kButtonWidth,2+kButtonHeight),
@@ -127,21 +125,9 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		emailAppRef = fEntry; // this isn't what we should be doing, but it might be better than nothing.
 	}
 	
-#if  B_BEOS_VERSION > B_BEOS_VERSION_5
-	BNode emailApp(&emailAppRef);
+	BPath emailPath(&emailAppRef);
+	icon = ReadNodeIcon(emailPath.Path(), iconBarSize);
 
-	#ifdef GET_NODE_ICON
-		icon = GetNodeIcon(emailApp, 32, &err);
-	#else
-		icon = GetTrackerIcon(emailApp, 32, &err);
-	#endif
-#else
-	BEntry emailAppEntry(&emailAppRef);
-	BPath emailPath;
-	emailAppEntry.GetPath( &emailPath );
-	icon = GetBitmapFromAttribute( emailPath.Path(), "BEOS:L:STD_ICON", 'ICON');
-#endif
-	
 	btn = new ImageButton(
 		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
 		"open in people button",
@@ -153,9 +139,11 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	);
 	fDock->AddChild(btn);
 	
-	// block icon
-	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/Block", "BEOS:L:STD_ICON", 'ICON');
+//	Block icon
+	iconPath = iconDir;
+	iconPath.Append("Block");
+
+	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
 	btn = new ImageButton(
 		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
 		"email button",
@@ -168,8 +156,10 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fDock->AddChild(btn);
 	
 	// Auth icon
-	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
-		"/GetAuth", "BEOS:L:STD_ICON");
+	iconPath = iconDir;
+	iconPath.Append("GetAuth");
+	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
+	
 	btn = new ImageButton(
 		btn->Frame().OffsetByCopy(kButtonWidth+1,0),
 		"request_auth button",
@@ -588,8 +578,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BString text = nick;
 					text << " is typing!";
 					fTypingView->SetText(text.String());
-					printf("We are teh typer!!!\n");
-				};
+				} break;
+				
+				case IM::CONTACT_STOPPED_TYPING: {
+					fTypingView->SetText("");
+				} break;
+				
 			}
 			
 			fText->ScrollToSelection();
@@ -936,9 +930,11 @@ void ChatWindow::BuildProtocolMenu(void) {
 			BString iconPath = iconDir.Path();
 			iconPath << "/" << protocol.String();
 			
-			menu->AddItem(new IconMenuItem(GetBitmapFromAttribute(iconPath.String(),
-				 BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', true),
-				 (connection << " (" << status << ")").String(), protocol.String()));
+			BBitmap *icon = ReadNodeIcon(iconPath.String(), kSmallIcon, true);
+			BString label = connection;
+			label << " (" << status << ")";
+			
+			menu->AddItem(new IconMenuItem(icon, label.String(), protocol.String()));
 		};
 	};
 	

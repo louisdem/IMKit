@@ -35,7 +35,7 @@ void IconTextItem::DrawItem(BView *owner, BRect frame, bool complete) {
 	}
 	
 	if (fIcon) {
-		owner->SetDrawingMode(B_OP_OVER);
+		owner->SetDrawingMode(B_OP_ALPHA);
 		owner->DrawBitmap(fIcon, BPoint(frame.left + kEdgeOffset,
 			frame.top + kEdgeOffset));
 		owner->SetDrawingMode(B_OP_COPY);

@@ -2,6 +2,39 @@
 
 #include <stdio.h>
 
+const int32 kSmallIcon = 16;
+const int32 kLargeIcon = 32;
+
+// Loads the icon. Callers responsibility to free BBitmap
+
+BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
+	bool followSymlink = true) {
+	
+	BBitmap *ret = NULL;
+
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+	BEntry entry(name, followSymlink);
+	entry_ref ref;
+	BPath path;
+	
+	entry.GetRef(&ref);
+	BNode node(BPath(&ref).Path());
+
+	ret = GetTrackerIcon(node, size, NULL);
+#else
+	if (size == kSmallIcon) {
+		ret = GetBitmapFromAttribute(name, BEOS_SMALL_ICON_ATTRIBUTE, 'MICN',
+			followSymlink);
+	} else {
+		ret = GetBitmapFromAttribute(name, BEOS_LARGE_ICON_ATTRIBUTE, 'ICON',
+			followSymlink);
+	};
+#endif
+	
+	return ret;
+
+};
+
 // Loads 'attribute' of 'type' from file 'name'. Returns a BBitmap (Callers 
 //  responsibility to delete it) on success, NULL on failure. 
 

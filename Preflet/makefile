@@ -32,7 +32,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS=  main.cpp PApplication.cpp PWindow.cpp IconTextItem.cpp  $(TOPDIR)/common/IMKitUtilities.cpp
+SRCS=  main.cpp PApplication.cpp PWindow.cpp $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/IconTextItem.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -144,13 +144,24 @@ ifeq ($(DEBUG_BUILD), true)
 
 endif
 
-
-
 #	Detect BONE
 ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
 	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
 	LIBS += socket bind
 	DEFINES += BONE
+endif
+
+#Detect Zeta
+ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
+# BeOS
+else
+#Zeta
+  ifeq ($(shell nm --demangle /system/lib/libicon.so | grep " GetNodeIcon"), )
+    DEFINES += GET_TRACKER_ICON
+  else
+    DEFINES += GET_NODE_ICON
+  endif
+  LIBS += zeta icon
 endif
 
 INSTALL_DIR= /boot/home/config/be/Preferences

@@ -22,20 +22,40 @@ ChatApp::ChatApp()
 	appsig.AddInt32("type", B_STRING_TYPE);
 	appsig.AddBool("default", "application/x-vnd.m_eiman.sample_im_client");
 	
+	BMessage iconSize;
+	iconSize.AddString("name", "icon_size");
+	iconSize.AddString("description", "Menubar Icon Size");
+	iconSize.AddInt32("type", B_INT32_TYPE);
+	iconSize.AddInt32("default", kLargeIcon);
+
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+#else
+	iconSize.AddInt32("valid_value", kSmallIcon);
+	iconSize.AddInt32("valid_value", kLargeIcon);
+#endif
+	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
+	tmplate.AddMessage("setting", &iconSize);
 	
 	im_save_client_template("im_client", &tmplate);
 	
 	// Make sure default settings are there
 	BMessage settings;
 	bool temp;
+
 	im_load_client_settings("im_client", &settings);
 	if ( !settings.FindString("app_sig") )
 		settings.AddString("app_sig", "application/x-vnd.m_eiman.sample_im_client");
 	if ( settings.FindBool("auto_start", &temp) != B_OK )
 		settings.AddBool("auto_start", true );
+	if (settings.FindInt32("icon_size", &fIconBarSize) != B_OK) {
+		settings.AddInt32("icon_size", kLargeIcon);
+		fIconBarSize = kLargeIcon;
+	};
+	if (fIconBarSize == 0) fIconBarSize = kLargeIcon;
+	
 	im_save_client_settings("im_client", &settings);
 	// done with template and settings.
 }
@@ -125,8 +145,15 @@ ChatApp::MessageReceived( BMessage * msg )
 	switch ( msg->what )
 	{
 		case IM::SETTINGS_UPDATED:
-		{
-			LOG("im_client", liHigh, "Settings updated, but we don't handle that yet");
+		{	
+			BMessage settings;
+			im_load_client_settings("im_client", &settings);
+
+			if (settings.FindInt32("icon_size", &fIconBarSize) != B_OK) {
+				fIconBarSize = kLargeIcon;
+			};
+			if (fIconBarSize == 0) fIconBarSize = kLargeIcon;
+			
 		}	break;
 		
 		case IM::MESSAGE:
@@ -200,7 +227,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
 				LOG("im_client", liMedium, "Creating new window to handle message");
-				win = new ChatWindow(ref);
+				win = new ChatWindow(ref, fIconBarSize);
 				_msgr = BMessenger(win);
 				if ( _msgr.LockTarget() )
 				{
