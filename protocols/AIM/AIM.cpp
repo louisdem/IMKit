@@ -37,13 +37,6 @@ status_t AIMProtocol::Init(BMessenger msgr) {
 	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 	fManager->Run();
 
-
-	BMessage msg(IM::MESSAGE);
-	msg.AddInt32("im_what",IM::STATUS_SET);
-	msg.AddString("protocol","AIM");
-	msg.AddString("status",ONLINE_TEXT);
-//	fMsgr.SendMessage( &msg );
-	
 	return B_OK;
 }
 
@@ -71,16 +64,13 @@ status_t AIMProtocol::Process(BMessage * msg) {
 								
 					if (count > 0) {
 						list<char *> buddies;
-						printf("%i buddies\n", count);
 						for ( int i=0; msg->FindString("id",i); i++ )
 						{
 							const char * id = msg->FindString("id",i);
-						printf("\t%i: %s\n", i, id);
 							buddies.push_back(strdup(id));
 						};
 						fManager->AddBuddies(buddies);
 					} else {
-						printf("One buddy: %s\n", msg->FindString("id"));
 						fManager->AddBuddy(msg->FindString("id"));
 					};
 				}	break;
@@ -288,7 +278,6 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	BMessage msg(IM::MESSAGE);
 	msg.AddString("protocol", "AIM");
 
-printf("Nick for status change: \"%s\" vs \"%s\"\n", nick, fScreenName);
 	if (strcmp(nick, fScreenName) == 0) {
 		msg.AddInt32("im_what", IM::STATUS_SET);
 	} else {
@@ -319,7 +308,6 @@ printf("Nick for status change: \"%s\" vs \"%s\"\n", nick, fScreenName);
 };
 
 status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
-	printf("AIMProt: Msg from %s content: \"%s\"\n", nick, msg);
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
 	im_msg.AddString("protocol", "AIM");

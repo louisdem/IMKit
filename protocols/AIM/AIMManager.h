@@ -7,11 +7,15 @@
 #include <MessageRunner.h>
 #include <String.h>
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <unistd.h>
-
+#ifdef BONE
+	#include <arpa/inet.h>
+	#include <sys/socket.h>
+	#include <netdb.h>
+	#include <unistd.h>
+#else
+	#include <net/socket.h>
+	#include <net/netdb.h>
+#endif
 
 #include <libim/Helpers.h>
 
@@ -30,16 +34,17 @@ enum {
 	AMAN_FLAP_ERROR = 'amfe',
 	AMAN_FLAP_CLOSE_CON = 'amcc',
 	AMAN_NEW_CONNECTION = 'amnc',
+	AMAN_CLOSED_CONNECTION = 'amcd',
 
 	AMAN_STATUS_CHANGED = 'amsc',
 	AMAN_NEW_CAPABILITIES = 'amna'
 };
 
 enum {
-	AMAN_OFFLINE,
-	AMAN_CONNECTING,
-	AMAN_AWAY,
-	AMAN_ONLINE
+	AMAN_OFFLINE = 0,
+	AMAN_CONNECTING = 1,
+	AMAN_AWAY = 2,
+	AMAN_ONLINE = 3
 };
 
 class AIMConnection;

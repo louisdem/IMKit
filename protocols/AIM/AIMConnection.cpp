@@ -7,6 +7,7 @@ void PrintHex(const unsigned char* buf, size_t size);
 const char kProtocolName[] = "AIM";
 
 AIMConnection::AIMConnection(const char *server, uint16 port, BMessenger manager) {
+	
 	fManager = manager;
 	
 	uint8 serverLen = strlen(server);
@@ -30,7 +31,6 @@ AIMConnection::AIMConnection(const char *server, uint16 port, BMessenger manager
 
 AIMConnection::~AIMConnection(void) {
 	free(fServer);
-	
 	snooze(1000);
 	
 	StopReceiver();
@@ -217,6 +217,13 @@ int32 AIMConnection::Receiver(void *con) {
 						LOG("AIM", LOW, "%s:%i. Got socket error:",
 							connection->Server(), connection->Port());
 						perror("SOCKET ERROR");
+						
+						BMessage msg(AMAN_CLOSED_CONNECTION);
+						msg.AddPointer("connection", con);
+		
+						connection->fManager.SendMessage(&msg);
+						connection->fState = AMAN_OFFLINE;
+						
 						return B_ERROR;
 //						We seem to get here somehow :/
 //						LOG("AIMMananager::MonitorSocket", LOW, "Socket error");
@@ -241,10 +248,10 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			if (fSock > 0) {
 				if (fOutgoing.size() == 0) return;
 				Flap *f = fOutgoing.front();
-if (f->Channel() == SNAC_DATA) {
-printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
-	f->SNACAt()->Family(), f->SNACAt()->SubType());
-};
+				if (f->Channel() == SNAC_DATA) {
+					LOG("AIM", LOW, "Connection %s:%i 0x%04x / 0x%04x", Server(),
+						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
+				};
 				const char * data = f->Flatten(++fOutgoingSeqNum);
 				int32 data_size = f->FlattenedSize();
 				int32 sent_data = 0;
@@ -324,11 +331,6 @@ printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
 						} break;
 							
 						case SERVER_SUPPORTED_SNACS: {
-//							This is a list of Server supported SNACs
-//							We should, in a perfect happy world, parse this
-//							and make a note. We aren't going to, we'll just
-//							carry on.
-
 							LOG(kProtocolName, LOW, "Got server supported SNACs");
 
 							while (offset < bytes) {
@@ -389,14 +391,16 @@ printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
 											service.AddInt16("port", 5190);
 										};
 										
-//										service.AddString("host", sd.first);
-//										service.AddInt16("port", sd.second);
-//										LOG("AIM", LOW, "Server details %s:%i", sd.first, sd.second);
-//										free(sd.first);
 									};
 									
 									case 0x0006: {	// Cookie, nyom nyom nyom!
-									LOG("AIM", LOW, "Cookie");
+										for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[i]);
+										printf("\n");
+										for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[(tlvLen - 10)+ i]);
+										printf("\n");
+									
+									
+										LOG("AIM", LOW, "Cookie");
 										service.AddData("cookie", B_RAW_TYPE,
 											tlvValue, tlvLen);
 									};
@@ -408,7 +412,7 @@ printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
 								free(tlvValue);
 							};
 							
-							fManager.SendMessage(service);
+							fManager.SendMessage(&service);
 							
 						};
 						
@@ -495,7 +499,7 @@ printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
 							Send(cready);
 							
 							BMessage status(AMAN_STATUS_CHANGED);
-							status.AddInt8("status", ONLINE);
+							status.AddInt8("status", AMAN_ONLINE);
 
 							fManager.SendMessage(&status);
 							fState = AMAN_ONLINE;
@@ -581,6 +585,11 @@ printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
 				fOutgoing.empty();
 				
 				fSock = ConnectTo(server, port);
+
+				free(fServer);
+				fPort = port;
+				fServer = strdup(server);
+				
 				free(server);
 				
 				StartReceiver();
@@ -592,11 +601,9 @@ printf("Connection %s:%i is sending 0x%04x / 0x%04x\n", Server(), Port(),
 				Send(f);
 			} else {
 				
-				BMessage msg(IM::MESSAGE);
-				msg.AddInt32("im_what", IM::STATUS_SET);
-				msg.AddString("protocol", kProtocolName);
-				msg.AddString("status", OFFLINE_TEXT);
-			
+				BMessage msg(AMAN_CLOSED_CONNECTION);
+				msg.AddPointer("connection", this);
+
 				fManager.SendMessage(&msg);
 				fState = AMAN_OFFLINE;
 

@@ -92,30 +92,30 @@ AIMManager::AIMManager(AIMHandler *handler) {
 };
 
 AIMManager::~AIMManager(void) {
+	LogOff();
 }
 
 status_t AIMManager::Send(Flap *f) {
 	if (f->Channel() == SNAC_DATA) {
-printf("\n\n\n\n\n------------------------------\nNeed to send SNAC\n");
 		SNAC *s = f->SNACAt(0);
 		
 		if (s != NULL) {
 			uint16 family = s->Family();
-printf("\t0x%04x\n", family);
-			
+
 			list <AIMConnection *>::iterator i;
 			
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
 				AIMConnection *con = (*i);
 				if (con->Supports(family) == true) {
-					printf("Connection %s:%i supports family\n", con->Server(),
-						con->Port());
+					LOG("AIM", LOW, "Sending SNAC (0x%04x) via %s:%i", family,
+						con->Server(), con->Port());
 					con->Send(f);
 					return B_OK;
 				};
 			}
 			
-			printf("Need to make a new request\n");
+			LOG("AIM", LOW, "No connections handle SNAC (0x%04x) requesting service",
+				family);
 			AIMConnection *con = fConnections.front();
 			
 			Flap *newService = new Flap(SNAC_DATA);
@@ -134,7 +134,7 @@ printf("\t0x%04x\n", family);
 		AIMConnection *con = fConnections.front();
 		con->Send(f);
 	};
-}
+};
 
 status_t AIMManager::Login(const char *server, uint16 port, const char *username,
 	const char *password) {
@@ -236,7 +236,22 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			
 			con->Send(srvCookie);
 		} break;
-	
+		
+		case AMAN_CLOSED_CONNECTION: {
+			AIMConnection *con = NULL;
+			msg->FindPointer("connection", (void **)&con);
+			if (con != NULL) {
+				LOG("AIM", LOW, "Connection (%s:%i) closed", con->Server(),
+					con->Port());
+					
+				fConnections.remove(con);
+				con->Lock();
+				con->Quit();
+				LOG("AIM", LOW, "After close we have %i connections",
+					fConnections.size());					
+			};
+		} break;
+
 		case AMAN_FLAP_OPEN_CON: {
 //			We don't do anything with this currently
 			const uchar *data;
@@ -261,12 +276,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			LOG("AIM", LOW, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
 			
 			switch(family) {
-				case 0x0010: {
-					PrintHex((uchar *)data, bytes);
-//					switch(subtype) {
-//						case 0x0005: {
-//							printf("Buddy icon repl!
-				} break;
 				case SERVICE_CONTROL: {
 					LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
 						"family 0x0001 (Service Control). Subtype 0x%04x",
@@ -280,24 +289,18 @@ void AIMManager::MessageReceived(BMessage *msg) {
 //							ignore. We're good like that :)
 							PrintHex(data, bytes);
 							uint8 nickLen = data[++offset];
-							printf("Nicklen: %i\n", nickLen);
-
 							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-printf("Reading nick from %i offset - 0x%x\n", offset, (data + offset));
 							memcpy(nick, (void *)(data + offset + 1), nickLen);
 							nick[nickLen] = '\0';
 						
 							offset += nickLen;
 							uint16 warningLevel = (data[++offset] << 8) + data[++offset];
-printf("\"%s\"'s warning level is %i (0x%4x) - naughty naughty!\n", nick, warningLevel, warningLevel);
 
 							uint16 tlvs = (data[++offset] << 8) + data[++offset];
-printf("There are %i TLVs in this message\n", tlvs);
 
 							while (offset < bytes) {
 								uint16 tlvtype = (data[++offset] << 8) + data[++offset];
 								uint16 tlvlen = (data[++offset] << 8) + data[++offset];
-printf("Got TLV 0x%04x / 0x%04x (%i)\n", tlvtype, tlvlen, tlvlen);								
 								switch (tlvtype) {
 									case 0x0001: {	// User class / status
 										uint16 userclass = (data[++offset] << 8) +
@@ -311,7 +314,8 @@ printf("Got TLV 0x%04x / 0x%04x (%i)\n", tlvtype, tlvlen, tlvlen);
 									} break;
 									
 									case 0x001d: {	// Icon / available message
-printf("Icon!!!\n");
+										LOG("AIM", LOW, "User %s has icon / available"
+											" message.", nick);
 										uint16 type;
 										uint8 index;
 										uint8 length;
@@ -321,32 +325,28 @@ printf("Icon!!!\n");
 											type = (data[++offset] << 8) + data[++offset];
 											index = data[++offset];
 											length = data[++offset];
-printf("Type : %i, index %i, length %i\n", type, index, length);											
 											switch (type) {
 												case 0x0000: {	// Official icon
 												} break;
-												case 0x0001: {
-printf("Got Icon %i: %i bytes\n", index, length);
-char *v = (char *)calloc(length, sizeof(char));
-memcpy(v, data + offset, length);
-PrintHex((uchar *)v, length);
-Flap *buddy = new Flap(SNAC_DATA);
-buddy->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, 0x0004, 0x00, 0x00, 0x00000000));
-buddy->AddRawData((uchar *)&nickLen, 1);
-buddy->AddRawData((uchar *)nick, nickLen);
-buddy->AddRawData((uchar []){0x010, 0x00, 0x01, 0x01}, 4);
-buddy->AddRawData((uchar []){0x10}, 1);
-buddy->AddRawData((uchar *)v, 16);
-printf("Sending Buddy, honest!!!");
-Send(buddy);
-free(v);
+												case 0x0001: {	// Icon
+													char *v = (char *)calloc(length, sizeof(char));
+													memcpy(v, data + offset, length);
+													Flap *buddy = new Flap(SNAC_DATA);
+													buddy->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS, 0x0004, 0x00, 0x00, 0x00000000));
+													buddy->AddRawData((uchar *)&nickLen, 1);
+													buddy->AddRawData((uchar *)nick, nickLen);
+													buddy->AddRawData((uchar []){0x010, 0x00, 0x01, 0x01}, 4);
+													buddy->AddRawData((uchar []){0x10}, 1);
+													buddy->AddRawData((uchar *)v, 16);
+													Send(buddy);
+													free(v);
 												} break;
 												case 0x0002: {
 												} break;
 												default: {
 												};
 											};
-											
+
 											offset += length;
 										}; 
 									} break;
@@ -377,7 +377,6 @@ free(v);
 								"family 0x0003 (Buddy List). Subtype 0x%04x",
 								subtype);						
 						}
-
 					};
 				} break;
 				
@@ -519,13 +518,11 @@ free(v);
 		case AMAN_FLAP_ERROR: {
 //			We ignore this for now
 		} break;
-				
+	
 		case AMAN_FLAP_CLOSE_CON: {
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-
-			PrintHex((uchar *)data, bytes);
 
 			if (fConnectionState == AMAN_CONNECTING) {
 	
@@ -573,16 +570,7 @@ free(v);
 					
 				};
 				
-	
-//				StopMonitor();
-				
-	//			Nuke the old packet queue
-//				fOutgoing.empty();
-				
-//				fSock = ConnectTo(server, port);
 				free(server);
-				
-//				StartMonitor();
 				
 				Flap *f = new Flap(OPEN_CONNECTION);
 				f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
@@ -592,8 +580,6 @@ free(v);
 			} else {
 				fHandler->StatusChanged(fOurNick, OFFLINE);
 			};
-
-			
 		} break;
 		
 		default: {
@@ -692,17 +678,23 @@ uchar AIMManager::IsConnected(void) const {
 };
 
 status_t AIMManager::LogOff(void) {
+
 	status_t ret = B_ERROR;
 	if (fConnectionState != AMAN_OFFLINE) {
-//		StopMonitor();
-//		
-//		snooze(10000);
-//		close(fSock);
-//		fSock = -1;
-//		fSockThread = -1;
-//		
-//		fSockMsgr = NULL;
-//
+		fConnectionState = AMAN_OFFLINE;
+		
+		LOG("AIM", LOW, "%i connection(s) to kill", fConnections.size());
+		list <AIMConnection *>::iterator i;
+		
+		for (i = fConnections.begin(); i != fConnections.end(); i++) {
+			AIMConnection *con = (*i);
+			if (con == NULL) continue;
+			LOG("AIM", LOW, "Killing connection to %s:%i", con->Server(),
+				con->Port());
+			con->Lock();
+			con->Quit();	
+		};
+
 		fHandler->StatusChanged(fOurNick, OFFLINE);
 		ret = B_OK;
 	};
@@ -742,7 +734,7 @@ status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
 	notify->AddRawData((uchar *)buddy, buddyLen);
 	notify->AddRawData((uchar *)&typing, sizeof(typing));
 	
-	Send(notify);
+//	Send(notify);
 	
 	return B_OK;
 };
