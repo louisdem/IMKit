@@ -10,6 +10,7 @@
 #include <libim/Constants.h>
 #include <Messenger.h>
 #include <OS.h>
+#include <File.h>
 
 #include "AIMManager.h"
 #include "AIMHandler.h"
@@ -52,8 +53,6 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 			BString 	NormalizeNick(const char *nick);
 			BString 	GetScreenNick(const char *nick);
 	
-		#define ICQ_THREAD_NAME "AIM Protocol"
-		
 		BMessenger		fMsgr;
 		thread_id		fThread;
 		AIMManager		*fManager;

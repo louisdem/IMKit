@@ -22,7 +22,6 @@
 #include <list>
 #include <map>
 
-#include "AIMConnection.h"
 #include "FLAP.h"
 #include "TLV.h"
 #include "Buddy.h"
@@ -45,6 +44,7 @@ enum {
 };
 
 class AIMConnection;
+class AIMReqConn;
 class AIMHandler;
 
 //const char kEncoding[] = "text/aolrtf; charset=\"us-ascii\"";
@@ -82,6 +82,7 @@ class AIMManager : public BLooper {
 			status_t	SetProfile(const char *profile);
 			status_t	SetAway(const char *message);
 			status_t	TypingNotification(const char *buddy, uint16 typing);
+			status_t	SetIcon(const char *icon, int16 size);
 		inline uchar	ConnectionState(void) const { return fConnectionState; };
 		
 		inline const char *Profile(void) const { return fProfile.String(); };
@@ -93,9 +94,25 @@ class AIMManager : public BLooper {
 			status_t	ClearWaitingSupport(void);
 			char		*EncodePassword(const char *pass);
 			
-			status_t	HandleBuddyList(BMessage *msg);
-			status_t	HandleSSI(BMessage *msg);
-			status_t	HandleICBM(BMessage *msg);
+	virtual status_t	HandleServiceControl(BMessage *msg);
+	virtual status_t	HandleLocation(BMessage *msg);
+	virtual status_t	HandleBuddyList(BMessage *msg);
+	virtual status_t	HandleICBM(BMessage *msg);
+	virtual status_t	HandleAdvertisement(BMessage *msg);
+	virtual status_t	HandleInvitation(BMessage *msg);
+	virtual status_t	HandleAdministrative(BMessage *msg);
+	virtual status_t	HandlePopupNotice(BMessage *msg);
+	virtual status_t	HandlePrivacy(BMessage *msg);
+	virtual status_t	HandleUserLookup(BMessage *msg);
+	virtual status_t	HandleUsageStats(BMessage *msg);
+	virtual status_t	HandleTranslation(BMessage *msg);
+	virtual status_t	HandleChatNavigation(BMessage *msg);
+	virtual status_t	HandleChat(BMessage *msg);
+	virtual status_t	HandleUserSearch(BMessage *msg);
+	virtual status_t	HandleBuddyIcon(BMessage *msg);
+	virtual status_t	HandleSSI(BMessage *msg);
+	virtual status_t	HandleICQ(BMessage *msg);
+	virtual status_t	HandleAuthorisation(BMessage *msg);
 			
 			buddymap	fBuddy;
 		list<AIMConnection *>
@@ -112,6 +129,8 @@ class AIMManager : public BLooper {
 			BString		fProfile;
 			BString		fAwayMsg;
 		AIMHandler		*fHandler;
+			char		*fIcon;
+			int16		fIconSize;
 };
 
 #endif

@@ -1,10 +1,10 @@
 #include "FLAP.h"
 
+#include <support/ByteOrder.h>
 #include <stdio.h>
 #include <libim/Helpers.h>
 
 uint8 kFLAPHeader = 6;
-extern void PrintHex(unsigned char* buf, size_t size, bool override = false);
 
 Flap::Flap(uint8 channel) {
 	fChannelID = channel;
@@ -24,13 +24,25 @@ Flap::~Flap() {
 	if (fFlat != NULL) free(fFlat);
 };
 
-status_t Flap::AddRawData(uint16 r) {
-	fDirty = true;
-	TypeDataPair p((void *)&r, DATA_TYPE_RAW);
-	fData.push_back(p);
-
-	return B_OK;
+status_t Flap::AddInt8(int8 value) {
+	return AddRawData((uchar *)&value, sizeof(value));
 };
+
+status_t Flap::AddInt16(int16 value) {
+	int16 v = B_HOST_TO_BENDIAN_INT16(value);
+	return AddRawData((uchar *)&v, sizeof(value));
+};
+
+status_t Flap::AddInt32(int32 value) {
+	int32 v = B_HOST_TO_BENDIAN_INT32(value);
+	return AddRawData((uchar *)&v, sizeof(value));
+};
+
+status_t Flap::AddInt64(int64 value) {
+	int64 v = B_HOST_TO_BENDIAN_INT64(value);
+	return AddRawData((uchar *)&v, sizeof(value));
+};
+
 
 status_t Flap::AddRawData(unsigned char *data, uint16 length) {
 	fDirty = true;
@@ -102,14 +114,15 @@ uint32 Flap::FlattenedSize(void) {
 
 const char *Flap::Flatten(uint16 seqNum) {
 	if (fDirty) {
-		LOG("AIM", liDebug, "Sequence 0x%0x: Need to allocate %i bytes...",
-			/*(seqNum & 0xff00) >> 8, seqNum & 0x00ff*/seqNum, FlattenedSize());
+		LOG("AIM", liDebug, "Sequence 0x%04x: Need to allocate %i bytes...",
+			seqNum, FlattenedSize());
 		fFlat = (char *)realloc(fFlat, FlattenedSize());
-		if (fFlat == NULL) return NULL;
+		if (fFlat == NULL) {
+			LOG("AIM", liHigh, "Could not allocate memory for flap");
+			return NULL;
+		};
 		fDirty = false;
-		
-		//printf("... Done!\n");
-		
+			
 		list <TypeDataPair>::iterator i;
 		uint32 offset = 0;
 		

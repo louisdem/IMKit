@@ -6,8 +6,8 @@
 class SNAC {
 	public:
 						SNAC(void);
-						SNAC(uint16 family, uint16 subtype, uint8 flag1,
-							uint8 flag2, uint32 request);
+						SNAC(uint16 family, uint16 subtype, uint8 flag1 = 0x00,
+							uint8 flag2 = 0x00, uint32 request = 0x00000000);
 						~SNAC(void);
 
 			uint16		Family(void) const;

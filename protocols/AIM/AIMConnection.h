@@ -22,11 +22,12 @@
 
 typedef pair <char *, uint16> ServerAddress;
 class AIMManager;
+const status_t kUnhandled = -1;
 
 class AIMConnection : public BLooper {
 	public:
 						AIMConnection(const char *server, uint16 port,
-							AIMManager *man);
+							AIMManager *man, const char *name = "AIM Connection");
 						~AIMConnection();
 						
 		void			MessageReceived(BMessage *msg);
@@ -34,6 +35,7 @@ class AIMConnection : public BLooper {
 		uint8			SupportedSNACs(void) const;
 		uint16			SNACAt(uint8 index) const;
 		bool			Supports(const uint16 family) const;
+		void			Support(uint16 family);
 		
 		status_t		Send(Flap *flap);
 
@@ -48,7 +50,28 @@ class AIMConnection : public BLooper {
 		void			StartReceiver(void);
 		void			StopReceiver(void);
 		ServerAddress	ExtractServerDetails(char *details);
-			
+
+		
+		virtual status_t	HandleServiceControl(BMessage *msg);
+		virtual status_t	HandleLocation(BMessage *msg);
+		virtual status_t	HandleBuddyList(BMessage *msg);
+		virtual status_t	HandleICBM(BMessage *msg);
+		virtual status_t	HandleAdvertisement(BMessage *msg);
+		virtual status_t	HandleInvitation(BMessage *msg);
+		virtual status_t	HandleAdministrative(BMessage *msg);
+		virtual status_t	HandlePopupNotice(BMessage *msg);
+		virtual status_t	HandlePrivacy(BMessage *msg);
+		virtual status_t	HandleUserLookup(BMessage *msg);
+		virtual status_t	HandleUsageStats(BMessage *msg);
+		virtual status_t	HandleTranslation(BMessage *msg);
+		virtual status_t	HandleChatNavigation(BMessage *msg);
+		virtual status_t	HandleChat(BMessage *msg);
+		virtual status_t	HandleUserSearch(BMessage *msg);
+		virtual status_t	HandleBuddyIcon(BMessage *msg);
+		virtual status_t	HandleSSI(BMessage *msg);
+		virtual status_t	HandleICQ(BMessage *msg);
+		virtual status_t	HandleAuthorisation(BMessage *msg);
+				
 		BString			fServer;
 		uint16			fPort;
 		
@@ -70,6 +93,8 @@ class AIMConnection : public BLooper {
 		uint32			fRequestID;
 		
 		AIMManager		*fManager;
+		
+		list<char *>		fIcons;
 };
 
 #endif

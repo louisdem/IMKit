@@ -168,18 +168,18 @@ status_t AIMProtocol::Process(BMessage * msg) {
 //					fManager->RequestBuddyIcon(id);
 				}	break;
 				case IM::USER_STARTED_TYPING: {
-//					const char *id = msg->FindString("id");
-//					if (!id) return B_ERROR;
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
 				
-//					fManager->TypingNotification(id, STARTED_TYPING);
+					fManager->TypingNotification(id, STARTED_TYPING);
 //					snooze(1000 * 1);
 //					fManager->TypingNotification(id, STILL_TYPING);
 				} break;
 				case IM::USER_STOPPED_TYPING: {
-//					const char *id = msg->FindString("id");
-//					if (!id) return B_ERROR;
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
 					
-//					fManager->TypingNotification(id, FINISHED_TYPING);
+					fManager->TypingNotification(id, FINISHED_TYPING);
 				} break;
 				
 				case IM::GET_AWAY_MESSAGE: {
@@ -239,11 +239,16 @@ BMessage AIMProtocol::GetSettingsTemplate() {
 	profile.AddString("default", "IM Kit: AIM user");
 	profile.AddBool("multi_line", true);
 
+	BMessage icon;
+	icon.AddString("name", "icon");
+	icon.AddString("description", "Buddy Icon");
+	icon.AddInt32("type", B_STRING_TYPE);
 		
 	main_msg.AddMessage("setting",&user_msg);
 	main_msg.AddMessage("setting",&pass_msg);
 //	main_msg.AddMessage("setting",&enc_msg);
 	main_msg.AddMessage("setting", &profile);
+	main_msg.AddMessage("setting", &icon);
 	
 	return main_msg;
 }
@@ -253,12 +258,14 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	const char * password = NULL;
 //	const char * encoding = NULL;
 	const char *profile = NULL;
+	const char *iconPath = NULL;
 	
 	msg.FindString("screenname", &screenname);
 	password = msg.FindString("password");
 //	encoding = msg.FindString("encoding");
 	profile = msg.FindString("profile");
-	
+	iconPath = msg.FindString("icon");
+		
 	if ( screenname == NULL || password == NULL || profile == NULL)
 		// invalid settings, fail
 		return B_ERROR;
@@ -291,13 +298,6 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 //		return B_ERROR;
 //	}
 //	
-	if ( fThread )
-	{
-		// we really should disconnect here if we're connected :/
-		// ICQ won't like us changing UIN in the middle of everything.
-	}
-	
-
 	if (fScreenName) free(fScreenName);
 	fScreenName = strdup(screenname);
 	
@@ -305,6 +305,22 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	fPassword = strdup(password);
 	
 	fManager->SetProfile(profile);
+	
+	if (iconPath) {
+		BFile file(iconPath, B_READ_ONLY);
+		if (file.InitCheck() == B_OK) {
+			off_t size;
+			if (file.GetSize(&size) == B_OK) {
+				char *buffer = (char *)calloc(size, sizeof(char));
+				if (file.Read(buffer, size) == size) {
+					fManager->SetIcon(buffer, size);
+				};
+				
+				free(buffer);
+			};
+		};
+		file.Unset();
+	};
 	
 	return B_OK;
 }

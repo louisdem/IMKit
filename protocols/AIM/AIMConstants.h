@@ -8,7 +8,7 @@ extern const uint16 AIM_ERROR_COUNT;
 extern const char *kErrors[];
 
 const uchar COMMAND_START = 0x2a;
-const uint16 kSSILimitCount = 15;
+const uint16 kSSILimitCount = 0x15;
 
 enum flap_channel {
 	OPEN_CONNECTION = 0x01,
@@ -54,8 +54,10 @@ enum snac_subtype {
 	RATE_LIMIT_ACK = 0x0008,
 	OWN_ONLINE_INFO = 0x000f,
 	SET_PRIVACY_FLAGS = 0x0014,
+	FAMILY_VERSIONS = 0x0017,
 	SERVER_FAMILY_VERSIONS = 0x0018,
 	UPDATE_STATUS = 0x001e,
+	EXTENDED_STATUS = 0x0021,
 	VERIFICATION_REQUEST = 0x001f,		// Evil AOLsses, we hateses them, we do.
 
 //	Family 2 - Location
@@ -77,12 +79,16 @@ enum snac_subtype {
 	MESSAGE_FROM_SERVER = 0x0007,
 	TYPING_NOTIFICATION = 0x0014,
 
+//	Family 10 - Buddy Icons
+	ICON_UPLOAD = 0x0002,
+
 //	Family 13 - SSI
 	REQUEST_PARAMETERS = 0x0002,
 	SERVICE_PARAMETERS = 0x003,
 	REQUEST_LIST = 0x0004,
 	ROSTER_CHECKOUT = 0x0006,
 	ACTIVATE_SSI_LIST = 0x0007,
+	ADD_SSI_ITEM = 0x0008,
 	SSI_DELETE_ITEM = 0x000a,
 	SSI_EDIT_BEGIN = 0x0011,
 	SSI_EDIT_END = 0x0012
@@ -136,5 +142,13 @@ enum online_types {
 	AMAN_AWAY = 2,
 	AMAN_ONLINE = 3
 };
+
+enum icbm_params {
+	CHANNEL_ALLOWED = 0x00000001,
+	MISSED_CALLS = 0x00000002,
+	TYPING_NOTIFICATIONS = 0x00000008
+};
+
+const uint32 kChannelParams = CHANNEL_ALLOWED | TYPING_NOTIFICATIONS;
 
 #endif

@@ -8,8 +8,9 @@ void PrintHex(const unsigned char* buf, size_t size, bool override = false);
 const char *kProtocolName = "AIM";
 const char *kThreadName = "IM Kit: AIM Connection";
 
-AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man)
-	: BLooper("AIM Connection") {
+AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
+	const char *name = "AIM Connection")
+	: BLooper(name) {
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
@@ -17,8 +18,7 @@ AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man)
 	fPort = port;
 	
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
-//		new BMessage(AMAN_PULSE), 1000000, -1);
-		new BMessage(AMAN_PULSE), 500000, -1);	
+		new BMessage(AMAN_PULSE), 250000, -1);	
 
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_KEEP_ALIVE), 30000000, -1);
@@ -38,6 +38,281 @@ AIMConnection::~AIMConnection(void) {
 	
 	ClearQueue();	
 };
+
+//#pragma mark -
+
+status_t AIMConnection::Send(Flap *f) {
+	fOutgoing.push_back(f);
+}
+
+void AIMConnection::MessageReceived(BMessage *msg) {
+	switch (msg->what) {
+		case AMAN_PULSE: {
+			if (fSock > 0) {
+				if (fOutgoing.size() == 0) return;
+				Flap *f = fOutgoing.front();
+
+				if (f->Channel() == SNAC_DATA) {
+					LOG(kProtocolName, liLow, "%s:%i Sending 0x%04x / 0x%04x", Server(),
+						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
+				};
+				const char * data = f->Flatten(++fOutgoingSeqNum);
+				int32 data_size = f->FlattenedSize();
+				int32 sent_data = 0;
+				
+				LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
+					Port(), data_size);
+				
+				while (sent_data < data_size) {
+					int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
+					
+					if (sent < 0) {
+						delete f;
+						LOG(kProtocolName, liLow, "%s:%i: Couldn't send packet", Server(),
+							Port());
+						perror("Socket error");
+						return;
+					};
+					
+					if (sent == 0) {
+						LOG(kProtocolName, liHigh, "%s:%i: send() returned 0, is this bad?",
+							Server(), Port());
+						snooze(1*1000*1000);
+					};
+					
+					sent_data += sent;
+				};
+				
+				LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
+					data_size);
+				
+				fOutgoing.pop_front();
+				delete f;
+				
+			};
+		} break;
+		
+		case AMAN_KEEP_ALIVE: {
+			if ((fState == AMAN_ONLINE) || (fState == AMAN_AWAY)) {
+				Flap *keepAlive = new Flap(KEEP_ALIVE);
+				Send(keepAlive);
+			};
+		} break;
+		
+		case AMAN_GET_SOCKET: {	
+			BMessage reply(B_REPLY);
+			reply.AddInt32("socket", fSock);
+			msg->SendReply(&reply);
+		} break;
+		
+		case AMAN_FLAP_OPEN_CON: {
+//			We don't do anything with this currently
+			const uchar *data;
+			int32 bytes = 0;
+			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+			LOG(kProtocolName, liLow, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
+				Port());
+		} break;
+		
+		case AMAN_FLAP_SNAC_DATA: {
+			const uchar *data;
+			int32 bytes = 0;
+			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+			
+			uint16 family = (data[0] << 8) + data[1];
+			uint16 subtype = (data[2] << 8) + data[3];
+			status_t result = kUnhandled;
+
+			LOG(kProtocolName, liLow, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
+				Server(), Port(), family, subtype);
+			
+			switch (family) {
+				case SERVICE_CONTROL: {
+					result = HandleServiceControl(msg);
+				} break;
+				case LOCATION: {
+					result = HandleLocation(msg);
+				} break;
+				case BUDDY_LIST_MANAGEMENT: {
+					result = HandleBuddyList(msg);
+				} break;
+				case ICBM: {
+					result = HandleICBM(msg);
+				} break;
+				case ADVERTISEMENTS: {
+					result = HandleAdvertisement(msg);
+				} break;
+				case INVITATION: {
+					result = HandleInvitation(msg);
+				} break;
+				case ADMINISTRATIVE: {
+					result = HandleAdministrative(msg);
+				} break;
+				case POPUP_NOTICES: {
+					result = HandlePopupNotice(msg);
+				} break;
+				case PRIVACY_MANAGEMENT: {
+					result = HandlePrivacy(msg);
+				} break;
+				case USER_LOOKUP: {
+					result = HandleUserLookup(msg);
+				} break;
+				case USAGE_STATS: {
+					result = HandleUsageStats(msg);
+				} break;
+				case TRANSLATION: {
+					result = HandleTranslation(msg);
+				} break;
+				case CHAT_NAVIGATION: {
+					result = HandleChatNavigation(msg);
+				} break;
+				case CHAT: {
+					result = HandleChat(msg);
+				} break;
+				case DIRECTORY_USER_SEARCH: {
+					result = HandleUserSearch(msg);
+				} break;
+				case SERVER_STORED_BUDDY_ICONS: {
+					result = HandleBuddyIcon(msg);
+				} break;
+				case SERVER_SIDE_INFORMATION: {
+					result = HandleSSI(msg);
+				} break;
+				case ICQ_SPECIFIC_EXTENSIONS: {
+					result = HandleICQ(msg);
+				} break;
+				case AUTHORISATION_REGISTRATION: {
+					result = HandleAuthorisation(msg);
+				} break;
+			};
+
+			if (result == kUnhandled) fManMsgr.SendMessage(msg);			
+		} break;
+			
+		case AMAN_FLAP_ERROR: {
+//			We ignore this for now
+		} break;
+				
+		case AMAN_FLAP_CLOSE_CON: {
+			const uchar *data;
+			int32 bytes = 0;
+			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+
+			if (fState == AMAN_CONNECTING) {
+	
+				char *server = NULL;
+				char *cookie = NULL;
+				char *value = NULL;
+
+				int32 i = 0;
+				uint16 port = 0;
+				uint16 cookieSize = 0;
+	
+				uint16 type = 0;
+				uint16 length = 0;
+	
+				while (i < bytes) {
+					type = (data[i] << 8) + data[++i];
+					length = (data[++i] << 8) + data[++i];
+					value = (char *)calloc(length + 1, sizeof(char));
+					memcpy(value, (char *)(data + i + 1), length);
+					value[length] = '\0';
+	
+					switch (type) {
+						case 0x0001: {	// Our name, god knows why
+						} break;
+						
+						case 0x0005: {	// New Server:IP
+							pair<char *, uint16> serv = ExtractServerDetails(value);
+							server = serv.first;
+							port = serv.second;
+							LOG(kProtocolName, liLow, "Need to reconnect to: %s:%i", server, port);
+						} break;
+	
+						case 0x0006: {
+							cookie = (char *)calloc(length, sizeof(char));
+							memcpy(cookie, value, length);
+							cookieSize = length;
+						} break;
+					};
+	
+					free(value);
+					i += length + 1;
+					
+				};
+				
+				fManager->Progress("AIM Login", "AIM: Reconnecting to server",
+					0.25);
+	
+				StopReceiver();
+				
+//				Nuke the old packet queue
+				ClearQueue();
+
+				LOG(kProtocolName, liDebug, "%s:%i attempting connection to %s:%i\n",
+					fServer.String(), fPort, server, port);
+				if (fSock > B_OK) {
+					fSock = ConnectTo(server, port);
+
+					fPort = port;
+					fServer = server;
+					
+					free(server);
+					
+					StartReceiver();
+					
+					Flap *f = new Flap(OPEN_CONNECTION);
+					f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
+					f->AddTLV(0x0006, cookie, cookieSize);
+					
+					Send(f);
+				} else {
+					free(server);
+				};
+			} else {
+				
+				BMessage msg(AMAN_CLOSED_CONNECTION);
+				msg.AddPointer("connection", this);
+
+				fManMsgr.SendMessage(&msg);
+				fState = AMAN_OFFLINE;
+
+				StopReceiver();
+				fSock = -1;
+			};
+
+			
+		} break;
+		
+		default: {
+			BLooper::MessageReceived(msg);
+		};
+	};
+};
+
+uint8 AIMConnection::SupportedSNACs(void) const {
+	return fSupportedSNACs.size();
+};
+
+uint16 AIMConnection::SNACAt(uint8 index) const {
+	return fSupportedSNACs[index];
+};
+
+bool AIMConnection::Supports(const uint16 family) const {
+	vector <const uint16>::iterator i;
+		
+	for (i = fSupportedSNACs.begin(); i != fSupportedSNACs.end(); i++) {
+		if (family == (*i)) return true;
+	};
+
+	return false;
+};
+
+void AIMConnection::Support(uint16 family) {
+	fSupportedSNACs.push_back(family);
+};
+
+//#pragma mark -
 
 void AIMConnection::ClearQueue(void) {
 	list<Flap *>::iterator it;
@@ -310,447 +585,6 @@ int32 AIMConnection::Receiver(void *con) {
 	return B_OK;
 };
 
-status_t AIMConnection::Send(Flap *f) {
-	fOutgoing.push_back(f);
-}
-
-void AIMConnection::MessageReceived(BMessage *msg) {
-	switch (msg->what) {
-		case AMAN_PULSE: {
-			if (fSock > 0) {
-				if (fOutgoing.size() == 0) return;
-				Flap *f = fOutgoing.front();
-
-				if (f->Channel() == SNAC_DATA) {
-					LOG(kProtocolName, liLow, "%s:%i Sending 0x%04x / 0x%04x", Server(),
-						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
-				};
-				const char * data = f->Flatten(++fOutgoingSeqNum);
-				int32 data_size = f->FlattenedSize();
-				int32 sent_data = 0;
-				
-				LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
-					Port(), data_size);
-				
-				while (sent_data < data_size) {
-					int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
-					
-					if (sent < 0) {
-						delete f;
-						LOG(kProtocolName, liLow, "%s:%i: Couldn't send packet", Server(),
-							Port());
-						perror("Socket error");
-						return;
-					};
-					
-					if (sent == 0) {
-						LOG(kProtocolName, liHigh, "%s:%i: send() returned 0, is this bad?",
-							Server(), Port());
-						snooze(1*1000*1000);
-					};
-					
-					sent_data += sent;
-				};
-				
-				LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
-					data_size);
-				
-				fOutgoing.pop_front();
-				delete f;
-				
-			};
-		} break;
-		
-		case AMAN_KEEP_ALIVE: {
-			if ((fState == AMAN_ONLINE) || (fState == AMAN_AWAY)) {
-				Flap *keepAlive = new Flap(KEEP_ALIVE);
-				Send(keepAlive);
-			};
-		} break;
-		
-		case AMAN_GET_SOCKET: {	
-			BMessage reply(B_REPLY);
-			reply.AddInt32("socket", fSock);
-			msg->SendReply(&reply);
-		} break;
-		
-		case AMAN_FLAP_OPEN_CON: {
-//			We don't do anything with this currently
-			const uchar *data;
-			int32 bytes = 0;
-			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-			LOG(kProtocolName, liLow, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
-				Port());
-		} break;
-		
-		case AMAN_FLAP_SNAC_DATA: {
-			uint16 seqNum = msg->FindInt16("seqNum");
-			uint16 flapLen = msg->FindInt16("flapLen");
-			const uchar *data;
-			int32 bytes = 0;
-			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-
-			
-			uint32 offset = 0;
-			uint16 family = (data[offset] << 8) + data[++offset];
-			uint16 subtype = (data[++offset] << 8) + data[++offset];
-			uint16 flags = (data[++offset] << 8) + data[++offset];
-			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
-				(data[++offset] << 8) + data[++offset];
-
-			LOG(kProtocolName, liLow, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
-				Server(), Port(), family, subtype);
-			
-			if (family != SERVICE_CONTROL){
-				fManMsgr.SendMessage(msg);
-			} else {
-				switch (subtype) {
-					case ERROR: {
-						fManMsgr.SendMessage(msg);
-					} break;
-					case VERIFICATION_REQUEST: {
-						LOG(kProtocolName, liLow, "AIMConn: AOL sent us a client verification");
-						PrintHex((uchar *)data, bytes);
-					} break;
-						
-					case SERVER_SUPPORTED_SNACS: {
-						LOG(kProtocolName, liLow, "Got server supported SNACs");
-	
-						while (offset < bytes) {
-							uint16 s = (data[++offset] << 8) + data[++offset];
-							LOG(kProtocolName, liLow, "Server supports 0x%04x", s);
-							fSupportedSNACs.push_back(s);
-						};
-	
-						fManMsgr.SendMessage(AMAN_NEW_CAPABILITIES);
-						
-						if (fState == AMAN_CONNECTING) {
-							Flap *f = new Flap(SNAC_DATA);
-							f->AddSNAC(new SNAC(SERVICE_CONTROL,
-								REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
-							Send(f);
-							
-							fManager->Progress("AIM Login", "AIM: Got server capabilities",
-								0.5);
-						};
-					} break;
-					
-					case SERVICE_REDIRECT: {
-						LOG(kProtocolName, liLow, "Got service redirect SNAC");
-						uint16 tlvType = 0;
-						uint16 tlvLen = 0;
-						char *tlvValue = NULL;
-						
-						offset = 10;
-						
-						if (data[4] & 0x80) {
-							uint16 skip = (data[10] << 8) + data[11];
-							LOG(kProtocolName, liLow, "Skipping %i bytes", skip);
-							offset += skip + 2;
-						};
-						
-						offset--;
-						
-						BMessage service(AMAN_NEW_CONNECTION);
-						PrintHex((uchar *)data, bytes);
-						
-						while (offset < bytes) {
-							tlvType = (data[++offset] << 8) + data[++offset];
-							tlvLen = (data[++offset] << 8) + data[++offset];
-							tlvValue = (char *)calloc(tlvLen + 1, sizeof(char));
-							memcpy(tlvValue, (void *)(data + offset + 1), tlvLen);
-							tlvValue[tlvLen] = '\0';
-							
-							offset += tlvLen;
-	
-							switch(tlvType) {
-								case 0x000d: {	// Service Family
-									if ((tlvValue[0] == 0x00) && (tlvValue[1] == 0x10)) {
-										service.AddBool("icon", true);
-									};
-								} break;
-								
-								case 0x0005: {	// Server Details
-									LOG(kProtocolName, liLow, "Server details: %s\n", tlvValue);
-	
-									if (strchr(tlvValue, ':')) {
-										pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
-										service.AddString("host", sd.first);
-										service.AddInt16("port", sd.second);
-										free(sd.first);
-									} else {
-										service.AddString("host", tlvValue);
-										service.AddInt16("port", 5190);
-									};
-									
-								};
-								
-								case 0x0006: {	// Cookie, nyom nyom nyom!
-									LOG(kProtocolName, liLow, "Cookie");
-									service.AddData("cookie", B_RAW_TYPE, tlvValue,
-										tlvLen);
-								};
-								
-								default: {
-								};
-							};
-							
-							free(tlvValue);
-						};					
-						fManMsgr.SendMessage(&service);
-						
-					};
-					
-					case RATE_LIMIT_RESPONSE: {
-						Flap *f = new Flap(SNAC_DATA);
-						f->AddSNAC(new SNAC(SERVICE_CONTROL, RATE_LIMIT_ACK,
-							0x00, 0x00, ++fRequestID));
-						f->AddRawData((uchar []){0x00, 0x01}, 2);
-						f->AddRawData((uchar []){0x00, 0x02}, 2);
-						f->AddRawData((uchar []){0x00, 0x03}, 2);
-						f->AddRawData((uchar []){0x00, 0x04}, 2);						
-						Send(f);
-						
-						if (fState != AMAN_CONNECTING) return;
-						
-						fManager->Progress("AIM Login", "AIM: Got rate limits", 0.6);
-						
-//						Server won't respond to the Rate ACK above
-//						Carry on with login (Send Privacy bits)
-						Flap *SPF = new Flap(SNAC_DATA);
-						SPF->AddSNAC(new SNAC(SERVICE_CONTROL,
-							SET_PRIVACY_FLAGS, 0x00, 0x00, ++fRequestID));
-						SPF->AddRawData((uchar []){0x00, 0x00, 0x00, 0x03}, 4); // View everything
-						Send(SPF);
-						
-//						And again... all these messages will be
-//						replied to as the server sees fit
-						Flap *OIR = new Flap(SNAC_DATA);
-						OIR->AddSNAC(new SNAC(SERVICE_CONTROL, UPDATE_STATUS,
-							0x00, 0x00, ++fRequestID));
-						Send(OIR);
-	
-						Flap *buddy = new Flap(SNAC_DATA);
-						buddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT,
-							ADD_BUDDY_TO_LIST, 0x00, 0x00, ++fRequestID));
-						buddy->AddRawData((uchar []){0x00}, 1);
-	
-						Flap *cap = new Flap(SNAC_DATA);
-						cap->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION,
-							0x00, 0x00, ++fRequestID));
-	
-						const char *profile = fManager->Profile();
-						if (profile != NULL) {
-							cap->AddTLV(new TLV(0x0001, kEncoding, strlen(kEncoding)));
-							cap->AddTLV(new TLV(0x0002, profile, strlen(profile)));
-						};
-//						cap->AddTLV(0x0005, "", 0);
-						cap->AddTLV(0x0005, kBuddyIconCap, kBuddyIconCapLen);
-						Send(cap);
-						
-						
-						Flap *icbm = new Flap(SNAC_DATA);
-						icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS, 0x00,
-							0x00, ++fRequestID));
-						icbm->AddRawData((uchar []){0x00, 0x01}, 2); // Plain text?
-//						Capabilities - (LSB) Typing Notifications, Missed Calls,
-//							Unknown, Messages allowed
-						icbm->AddRawData((uchar []){0xff, 0xff, 0xff, 0xff}, 4);
-//						icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
-						icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
-						icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
-						icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
-						icbm->AddRawData((uchar []){0x00, 0x00}, 2);// Min Message interval (sec);
-						icbm->AddRawData((uchar []){0x00, 0x64}, 2); //??
-	
-						Send(icbm);
-						
-						Flap *cready = new Flap(SNAC_DATA);
-						cready->AddSNAC(new SNAC(SERVICE_CONTROL, CLIENT_READY,
-							0x00, 0x00, ++fRequestID));
-						cready->AddRawData((uchar []){0x00, 0x01, 0x00, 0x03,
-							0x01, 0x10, 0x07, 0x39}, 8);
-						cready->AddRawData((uchar []){0x00, 0x02, 0x00, 0x01,
-							0x01, 0x10, 0x07, 0x39}, 8);
-						cready->AddRawData((uchar []){0x00, 0x03, 0x00, 0x01,
-							0x01, 0x10, 0x07, 0x39}, 8);
-						cready->AddRawData((uchar []){0x00, 0x04, 0x00, 0x01,
-							0x01, 0x10, 0x07, 0x39}, 8);
-						cready->AddRawData((uchar []){0x00, 0x06, 0x00, 0x01,
-							0x01, 0x10, 0x07, 0x39}, 8);
-						cready->AddRawData((uchar []){0x00, 0x08, 0x00, 0x01,
-							0x01, 0x04, 0x00, 0x01}, 8);
-						cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
-							0x01, 0x10, 0x07, 0x39}, 8);
-//						Possibly remove.
-//						cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
-//							0x01, 0x10, 0x07, 0x39}, 8);
-						cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
-							0x01, 0x10, 0x07, 0x39}, 8);
-	
-						Send(cready);
-						
-						Flap *ssiparam = new Flap(SNAC_DATA);
-						ssiparam->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
-							REQUEST_PARAMETERS, 0x00, 0x00, ++fRequestID));
-						Send(ssiparam);
-						
-						Flap *ssi = new Flap(SNAC_DATA);
-						ssi->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
-							REQUEST_LIST, 0x00, 0x00, ++fRequestID));
-						Send(ssi);
-						
-						Flap *useSSI = new Flap(SNAC_DATA);
-						useSSI->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
-							ACTIVATE_SSI_LIST, 0x00, 0x00, ++fRequestID));
-						Send(useSSI);
-						
-						fManager->Progress("AIM Login", "AIM: Requested server"
-							" side buddy list", 1.0);
-						
-						BMessage status(AMAN_STATUS_CHANGED);
-						status.AddInt8("status", AMAN_ONLINE);
-	
-						fManMsgr.SendMessage(&status);
-						fState = AMAN_ONLINE;
-					
-					} break;
-					case SERVER_FAMILY_VERSIONS: {
-						LOG(kProtocolName, liLow, "Supported SNAC families for "
-							"this server");
-						while (offset < bytes) {
-							LOG(kProtocolName, liLow, "\tSupported family: 0x%x "
-								" 0x%x, Version: 0x%x 0x%x", data[++offset],
-								data[++offset], data[++offset], data[++offset]);
-						};
-					} break;
-	
-					default: {
-						fManMsgr.SendMessage(msg);
-					};
-				};
-			};
-		} break;
-			
-		case AMAN_FLAP_ERROR: {
-//			We ignore this for now
-		} break;
-				
-		case AMAN_FLAP_CLOSE_CON: {
-			const uchar *data;
-			int32 bytes = 0;
-			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-
-			if (fState == AMAN_CONNECTING) {
-	
-				char *server = NULL;
-				char *cookie = NULL;
-				char *value = NULL;
-
-				int32 i = 0;
-				uint16 port = 0;
-				uint16 cookieSize = 0;
-	
-				uint16 type = 0;
-				uint16 length = 0;
-	
-				while (i < bytes) {
-					type = (data[i] << 8) + data[++i];
-					length = (data[++i] << 8) + data[++i];
-					value = (char *)calloc(length + 1, sizeof(char));
-					memcpy(value, (char *)(data + i + 1), length);
-					value[length] = '\0';
-	
-					switch (type) {
-						case 0x0001: {	// Our name, god knows why
-						} break;
-						
-						case 0x0005: {	// New Server:IP
-							pair<char *, uint16> serv = ExtractServerDetails(value);
-							server = serv.first;
-							port = serv.second;
-							LOG(kProtocolName, liLow, "Need to reconnect to: %s:%i", server, port);
-						} break;
-	
-						case 0x0006: {
-							cookie = (char *)calloc(length, sizeof(char));
-							memcpy(cookie, value, length);
-							cookieSize = length;
-						} break;
-					};
-	
-					free(value);
-					i += length + 1;
-					
-				};
-				
-				fManager->Progress("AIM Login", "AIM: Reconnecting to server",
-					0.25);
-	
-				StopReceiver();
-				
-//				Nuke the old packet queue
-				ClearQueue();
-
-				LOG(kProtocolName, liDebug, "%s:%i attempting connection to %s:%i\n",
-					fServer.String(), fPort, server, port);
-				if (fSock > B_OK) {
-					fSock = ConnectTo(server, port);
-
-					fPort = port;
-					fServer = server;
-					
-					free(server);
-					
-					StartReceiver();
-					
-					Flap *f = new Flap(OPEN_CONNECTION);
-					f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
-					f->AddTLV(0x0006, cookie, cookieSize);
-					
-					Send(f);
-				} else {
-					free(server);
-				};
-			} else {
-				
-				BMessage msg(AMAN_CLOSED_CONNECTION);
-				msg.AddPointer("connection", this);
-
-				fManMsgr.SendMessage(&msg);
-				fState = AMAN_OFFLINE;
-
-				StopReceiver();
-				fSock = -1;
-			};
-
-			
-		} break;
-		
-		default: {
-			BLooper::MessageReceived(msg);
-		};
-	};
-};
-
-uint8 AIMConnection::SupportedSNACs(void) const {
-	return fSupportedSNACs.size();
-};
-
-uint16 AIMConnection::SNACAt(uint8 index) const {
-	return fSupportedSNACs[index];
-};
-
-bool AIMConnection::Supports(const uint16 family) const {
-	vector <const uint16>::iterator i;
-		
-	for (i = fSupportedSNACs.begin(); i != fSupportedSNACs.end(); i++) {
-		if (family == (*i)) return true;
-	};
-
-	return false;
-};
-
 ServerAddress AIMConnection::ExtractServerDetails(char *details) {
 	char *colon = strchr(details, ':');
 	uint16 port = atoi(colon + 1);
@@ -762,3 +596,318 @@ ServerAddress AIMConnection::ExtractServerDetails(char *details) {
 	return p;
 };
 
+//#pragma mark -
+// These are the virtual handlers
+
+status_t AIMConnection::HandleServiceControl(BMessage *msg) {
+	status_t ret = B_OK;
+	uint16 seqNum = msg->FindInt16("seqNum");
+	uint16 flapLen = msg->FindInt16("flapLen");
+	const uchar *data;
+	int32 bytes = 0;
+	msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+
+	uint32 offset = 0;
+	uint16 family = (data[offset] << 8) + data[++offset];
+	uint16 subtype = (data[++offset] << 8) + data[++offset];
+	uint16 flags = (data[++offset] << 8) + data[++offset];
+	uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
+		(data[++offset] << 8) + data[++offset];
+
+	switch (subtype) {
+		case ERROR: {
+			ret = kUnhandled;
+		} break;
+		case VERIFICATION_REQUEST: {
+		} break;
+			
+		case SERVER_SUPPORTED_SNACS: {
+			LOG(kProtocolName, liLow, "Got server supported SNACs");
+
+			while (offset < bytes) {
+				uint16 s = (data[++offset] << 8) + data[++offset];
+				LOG(kProtocolName, liLow, "Server supports 0x%04x", s);
+				Support(s);
+			};
+
+			fManMsgr.SendMessage(AMAN_NEW_CAPABILITIES);
+			
+			if (fState == AMAN_CONNECTING) {
+				Flap *f = new Flap(SNAC_DATA);
+				f->AddSNAC(new SNAC(SERVICE_CONTROL,
+					REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
+				Send(f);
+				
+				fManager->Progress("AIM Login", "AIM: Got server capabilities", 0.5);
+			};
+		} break;
+		
+		case SERVICE_REDIRECT: {
+			LOG(kProtocolName, liLow, "Got service redirect SNAC");
+			uint16 tlvType = 0;
+			uint16 tlvLen = 0;
+			char *tlvValue = NULL;
+			
+			offset = 10;
+			
+			if (data[4] & 0x80) {
+				uint16 skip = (data[10] << 8) + data[11];
+				LOG(kProtocolName, liLow, "Skipping %i bytes", skip);
+				offset += skip + 2;
+			};
+			
+			offset--;
+			
+			BMessage service(AMAN_NEW_CONNECTION);
+		
+			while (offset < bytes) {
+				tlvType = (data[++offset] << 8) + data[++offset];
+				tlvLen = (data[++offset] << 8) + data[++offset];
+				tlvValue = (char *)calloc(tlvLen + 1, sizeof(char));
+				memcpy(tlvValue, (void *)(data + offset + 1), tlvLen);
+				tlvValue[tlvLen] = '\0';
+				
+				offset += tlvLen;
+
+				switch(tlvType) {
+					case 0x000d: {	// Service Family
+						uint16 family = (tlvValue[0] << 8) + tlvValue[1];						
+						service.AddInt16("family", family);
+					} break;
+					
+					case 0x0005: {	// Server Details
+						LOG(kProtocolName, liLow, "Server details: %s\n", tlvValue);
+
+						if (strchr(tlvValue, ':')) {
+							pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
+							service.AddString("host", sd.first);
+							service.AddInt16("port", sd.second);
+							free(sd.first);
+						} else {
+							service.AddString("host", tlvValue);
+							service.AddInt16("port", 5190);
+						};
+						
+					} break;
+					
+					case 0x0006: {	// Cookie, nyom nyom nyom!
+						LOG(kProtocolName, liLow, "Cookie");
+						service.AddData("cookie", B_RAW_TYPE, tlvValue,
+							tlvLen);
+					} break;
+					
+					default: {
+					};
+				};
+				
+				free(tlvValue);
+			};					
+			fManMsgr.SendMessage(&service);
+			
+		};
+		
+		case RATE_LIMIT_RESPONSE: {
+			Flap *f = new Flap(SNAC_DATA);
+			f->AddSNAC(new SNAC(SERVICE_CONTROL, RATE_LIMIT_ACK,
+				0x00, 0x00, ++fRequestID));
+			f->AddRawData((uchar []){0x00, 0x01}, 2);
+			f->AddRawData((uchar []){0x00, 0x02}, 2);
+			f->AddRawData((uchar []){0x00, 0x03}, 2);
+			f->AddRawData((uchar []){0x00, 0x04}, 2);						
+			Send(f);
+			
+			if (fState != AMAN_CONNECTING) return B_OK;
+			
+			fManager->Progress("AIM Login", "AIM: Got rate limits", 0.6);
+			
+//			Server won't respond to the Rate ACK above
+//			Carry on with login (Send Privacy bits)
+			Flap *SPF = new Flap(SNAC_DATA);
+			SPF->AddSNAC(new SNAC(SERVICE_CONTROL,
+				SET_PRIVACY_FLAGS, 0x00, 0x00, ++fRequestID));
+			SPF->AddRawData((uchar []){0x00, 0x00, 0x00, 0x03}, 4); // View everything
+			Send(SPF);
+			
+//			And again... all these messages will be
+//			replied to as the server sees fit
+			Flap *OIR = new Flap(SNAC_DATA);
+			OIR->AddSNAC(new SNAC(SERVICE_CONTROL, UPDATE_STATUS,
+				0x00, 0x00, ++fRequestID));
+			Send(OIR);
+
+			Flap *buddy = new Flap(SNAC_DATA);
+			buddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT,
+				ADD_BUDDY_TO_LIST, 0x00, 0x00, ++fRequestID));
+			buddy->AddRawData((uchar []){0x00}, 1);
+
+			Flap *cap = new Flap(SNAC_DATA);
+			cap->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION,
+				0x00, 0x00, ++fRequestID));
+
+			const char *profile = fManager->Profile();
+			if (profile != NULL) {
+				cap->AddTLV(new TLV(0x0001, kEncoding, strlen(kEncoding)));
+				cap->AddTLV(new TLV(0x0002, profile, strlen(profile)));
+			};
+			cap->AddTLV(0x0005, kBuddyIconCap, kBuddyIconCapLen);
+			Send(cap);
+			
+			
+			Flap *icbm = new Flap(SNAC_DATA);
+			icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS, 0x00,
+				0x00, ++fRequestID));
+			icbm->AddRawData((uchar []){0x00, 0x01}, 2);
+			icbm->AddRawData((uchar []){0x00, 0x00, 0x00, 0x09}, 4);
+			icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
+			icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
+			icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
+			icbm->AddRawData((uchar []){0x00, 0x00}, 2);// Min Message interval (sec);
+			icbm->AddRawData((uchar []){0x00, 0x64}, 2);//??
+
+			Send(icbm);
+			
+			Flap *cready = new Flap(SNAC_DATA);
+			cready->AddSNAC(new SNAC(SERVICE_CONTROL, CLIENT_READY,
+				0x00, 0x00, ++fRequestID));
+			cready->AddRawData((uchar []){0x00, 0x01, 0x00, 0x03,
+				0x01, 0x10, 0x07, 0x39}, 8);
+			cready->AddRawData((uchar []){0x00, 0x02, 0x00, 0x01,
+				0x01, 0x10, 0x07, 0x39}, 8);
+			cready->AddRawData((uchar []){0x00, 0x03, 0x00, 0x01,
+				0x01, 0x10, 0x07, 0x39}, 8);
+			cready->AddRawData((uchar []){0x00, 0x04, 0x00, 0x01,
+				0x01, 0x10, 0x07, 0x39}, 8);
+			cready->AddRawData((uchar []){0x00, 0x06, 0x00, 0x01,
+				0x01, 0x10, 0x07, 0x39}, 8);
+			cready->AddRawData((uchar []){0x00, 0x08, 0x00, 0x01,
+				0x01, 0x04, 0x00, 0x01}, 8);
+			cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
+				0x01, 0x10, 0x07, 0x39}, 8);
+//			Possibly remove.
+//			cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
+//				0x01, 0x10, 0x07, 0x39}, 8);
+			cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
+				0x01, 0x10, 0x07, 0x39}, 8);
+
+			Send(cready);
+			
+			Flap *ssiparam = new Flap(SNAC_DATA);
+			ssiparam->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
+				REQUEST_PARAMETERS, 0x00, 0x00, ++fRequestID));
+			Send(ssiparam);
+			
+			Flap *ssi = new Flap(SNAC_DATA);
+			ssi->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
+				REQUEST_LIST, 0x00, 0x00, ++fRequestID));
+			Send(ssi);
+			
+			Flap *useSSI = new Flap(SNAC_DATA);
+			useSSI->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
+				ACTIVATE_SSI_LIST, 0x00, 0x00, ++fRequestID));
+			Send(useSSI);
+			
+			fManager->Progress("AIM Login", "AIM: Requested server"
+				" side buddy list", 1.0);
+			
+			BMessage status(AMAN_STATUS_CHANGED);
+			status.AddInt8("status", AMAN_ONLINE);
+
+			fManMsgr.SendMessage(&status);
+			fState = AMAN_ONLINE;
+		
+		} break;
+		case SERVER_FAMILY_VERSIONS: {
+			LOG(kProtocolName, liLow, "Supported SNAC families for "
+				"this server");
+			while (offset < bytes) {
+				LOG(kProtocolName, liLow, "\tSupported family: 0x%x "
+					" 0x%x, Version: 0x%x 0x%x", data[++offset],
+					data[++offset], data[++offset], data[++offset]);
+			};
+		} break;
+
+		case EXTENDED_STATUS: {
+//			printf("AIMConnection %s:%i got extended status", Server(), Port());
+//			msg->PrintToStream();
+			ret = kUnhandled;
+		} break;
+
+		default: {
+			ret = kUnhandled;
+		};
+	};
+	
+	return ret;
+};
+
+status_t AIMConnection::HandleLocation(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleBuddyList(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleICBM(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleAdvertisement(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleInvitation(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleAdministrative(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandlePopupNotice(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandlePrivacy(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleUserLookup(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleUsageStats(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleTranslation(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleChatNavigation(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleChat(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleUserSearch(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleBuddyIcon(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleSSI(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleICQ(BMessage *msg) {
+	return kUnhandled;
+};
+
+status_t AIMConnection::HandleAuthorisation(BMessage *msg) {
+	return kUnhandled;
+};

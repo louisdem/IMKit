@@ -41,7 +41,7 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= AIM.cpp FLAP.cpp TLV.cpp AIMManager.cpp SNAC.cpp AIMConnection.cpp
+SRCS= AIM.cpp FLAP.cpp TLV.cpp AIMManager.cpp SNAC.cpp AIMConnection.cpp AIMReqConn.cpp
 SRCS+= Buddy.cpp $(TOPDIR)/common/htmlparse.cpp
 
 #	specify the resource files to use
@@ -63,7 +63,7 @@ RSRCS= aim.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im stdc++.r4 _APP_ textencoding
+LIBS= be im stdc++.r4 _APP_ textencoding crypto
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -128,8 +128,15 @@ APP_VERSION =
 #	/dev/video/usb when loaded. Default is "misc".
 DRIVER_PATH = 
 
+#	Detect BONE
+ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
+	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
+	LIBS += socket bind
+	DEFINES += BONE
+endif
+
 ifeq ($(CHECK_MEM), true)
-	COMPILER_FLAGS += -fcheck-memory-usage -D_NO_INLINE_ASM=1 -D_KERNEL_MODE=1
+	COMPILER_FLAGS += -fcheck-memory-usage -D_NO_INLINE_ASM=1
 	DEBUG_BUILD=true
 endif
 
@@ -144,15 +151,6 @@ ifeq ($(DEBUG_BUILD), true)
 		COMPILER_FLAGS += -fno-debug-opt
 	endif
 
-endif
-
-
-
-#	Detect BONE
-ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
-	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
-	LIBS += socket bind
-	DEFINES += BONE
 endif
 
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols

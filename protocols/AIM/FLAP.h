@@ -26,7 +26,10 @@ class Flap {
 			void	Channel(uint8);
 		uint8		Channel(void) const;
 		status_t	AddRawData(unsigned char *data, uint16 length);
-		status_t	AddRawData(uint16 raw);
+		status_t	AddInt8(int8 value);
+		status_t	AddInt16(int16 value);
+		status_t	AddInt32(int32 value);
+		status_t	AddInt64(int64 value);
 		status_t	AddTLV(TLV *data);
 		status_t	AddTLV(uint16 type, const char *value, uint16 length);
 		status_t	AddSNAC(SNAC *snac);
