@@ -27,6 +27,8 @@ class InfoView : public BView
 		void AttachedToWindow();
 		void MessageReceived( BMessage * );
 		
+		void GetPreferredSize( float *, float * );
+		
 	private:
 		BMessageRunner	* fRunner;
 		InputFilter		* fFilter;

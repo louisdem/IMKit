@@ -78,3 +78,9 @@ InfoView::MessageReceived( BMessage * msg )
 			BView::MessageReceived(msg);
 	}
 }
+
+void
+InfoView::GetPreferredSize( float * w, float * h )
+{
+	fView->GetPreferredSize(w,h);
+}

@@ -1,6 +1,7 @@
 #ifndef INFO_WINDOW_H
 #define INFO_WINDOW_H
 
+#include <Deskbar.h>
 #include <Window.h>
 #include <list>
 #include "InfoView.h"
@@ -19,9 +20,11 @@ class InfoWindow : public BWindow
 	
 	private:
 		void	ResizeAll();
+		void	PopupAnimation(float, float);
 		
 		IM::Manager 		* fMan;
 		list<InfoView*>		fInfoViews;
+		deskbar_location 	fDeskbarLocation;
 };
 
 #endif

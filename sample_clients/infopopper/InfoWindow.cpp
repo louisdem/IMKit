@@ -1,16 +1,17 @@
 #include "InfoWindow.h"
 
+#include <cmath>
+#include <String.h>
 #include <Entry.h>
 #include <Application.h>
 #include <libim/Constants.h>
 #include <libim/Contact.h>
-#include <String.h>
 
 InfoWindow::InfoWindow()
 :	BWindow( 
 		BRect(10,10,20,20), 
 		"InfoWindow", 
-		B_BORDERED_WINDOW, 
+		B_BORDERED_WINDOW,
 		B_AVOID_FRONT|B_AVOID_FOCUS
 	)
 {
@@ -21,6 +22,8 @@ InfoWindow::InfoWindow()
 	
 	Show();
 	Hide();
+	
+	fDeskbarLocation = BDeskbar().Location();
 }
 
 InfoWindow::~InfoWindow()
@@ -122,20 +125,86 @@ InfoWindow::ResizeAll()
 		return;
 	}
 	
-	if ( IsHidden() )
-		Show();
-	
 	float curry=0, maxw=0;
 	BView * view = NULL;
-			
+	
 	for ( list<InfoView*>::iterator i=fInfoViews.begin(); i != fInfoViews.end(); i++ )
 	{
+		float pw,ph;
+		
 		(*i)->MoveTo(0, curry);
+		(*i)->GetPreferredSize(&pw,&ph);
+		
 		curry += (*i)->Bounds().Height()+1;
-		if ( (*i)->Bounds().Width() > maxw )
-			maxw = (*i)->Bounds().Width();
+		
+		if ( pw > maxw )
+			maxw = pw;
+		
 		(*i)->ResizeTo( Bounds().Width(), (*i)->Bounds().Height() );
 	}
 	
 	ResizeTo( maxw, curry-1 );
+	
+	PopupAnimation(maxw, curry-1);
+}
+
+void
+InfoWindow::PopupAnimation(float width, float height) {
+	float x,y,sx,sy;
+	float pad = 2;
+	BDeskbar deskbar;
+	BRect frame = deskbar.Frame();
+	
+	switch ( deskbar.Location() ) {
+		case B_DESKBAR_TOP:
+			// put it just under, top right corner
+			sx = frame.right;
+			sy = frame.bottom+pad;
+			y = sy;
+			x = sx-width-pad;
+			break;
+		case B_DESKBAR_BOTTOM:
+			// put it just above, lower left corner
+			sx = frame.right;
+			sy = frame.top-height-pad;
+			y = sy;
+			x = sx - width-pad;
+			break;
+		case B_DESKBAR_LEFT_TOP:
+			// put it just to the right of the deskbar
+			sx = frame.right+pad;
+			sy = frame.top-height;
+			x = sx;
+			y = frame.top+pad;
+			break;
+		case B_DESKBAR_RIGHT_TOP:
+			// put it just to the left of the deskbar
+			sx = frame.left-width-pad;
+			sy = frame.top-height;
+			x = sx;
+			y = frame.top+pad;
+			break;
+		case B_DESKBAR_LEFT_BOTTOM:
+			// put it to the right of the deskbar.
+			sx = frame.right+pad;
+			sy = frame.bottom;
+			x = sx;
+			y = sy-height-pad;
+			break;
+		case B_DESKBAR_RIGHT_BOTTOM:
+			// put it to the left of the deskbar.
+			sx = frame.left-width-pad;
+			sy = frame.bottom;
+			y = sy-height-pad;
+			x = sx;
+			break;	
+		default: break;
+	}
+	
+	MoveTo(x, y);
+	
+	if (IsHidden()) {
+		Show();
+	}
+	
 }
