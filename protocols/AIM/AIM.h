@@ -43,6 +43,8 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 			status_t 	SSIBuddies(list<BString> buddies);
 
 	private:
+			BString 	ReNick(const char *nick);
+	
 		#define ICQ_THREAD_NAME "AIM Protocol"
 		
 		BMessenger		fMsgr;

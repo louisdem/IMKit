@@ -295,7 +295,10 @@ printf("Is icon: %i\n", icon);
 				case SERVICE_CONTROL: {
 					LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
 						"family 0x0001 (Service Control). Subtype 0x%04x",
-						subtype);						
+						subtype);
+					if (subtype == 0x0021) {
+						msg->PrintToStream();
+					};
 				} break;
 				
 				case BUDDY_LIST_MANAGEMENT: {

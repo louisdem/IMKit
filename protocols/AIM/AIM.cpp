@@ -67,12 +67,12 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						list<char *> buddies;
 						for ( int i=0; msg->FindString("id",i); i++ )
 						{
-							const char * id = msg->FindString("id",i);
+							const char * id = msg->FindString("id",i);//ReNick(msg->FindString("id",i)).String();
 							buddies.push_back(strdup(id));
 						};
 						fManager->AddBuddies(buddies);
 					} else {
-						fManager->AddBuddy(msg->FindString("id"));
+						fManager->AddBuddy(msg->FindString("id")); //ReNick(msg->FindString("id")).String());
 					};
 				}	break;
 				
@@ -108,23 +108,23 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				case IM::GET_CONTACT_INFO:
 				{
 					LOG("AIM", HIGH, "Getting contact info");
-					const char * id = msg->FindString("id");
+					const char * id = ReNick(msg->FindString("id")).String();
 					
-					BMessage *msg = new BMessage(IM::MESSAGE);
-					msg->AddInt32("im_what", IM::CONTACT_INFO);
-					msg->AddString("protocol", "AIM");
-					msg->AddString("id", id);
-					msg->AddString("nick", id);
-					msg->AddString("first name", id);
+					BMessage *infoMsg = new BMessage(IM::MESSAGE);
+					infoMsg->AddInt32("im_what", IM::CONTACT_INFO);
+					infoMsg->AddString("protocol", "AIM");
+					infoMsg->AddString("id", id);
+					infoMsg->AddString("nick", id);
+					infoMsg->AddString("first name", id);
 					//msg->AddString("last name", id);
 
-					fMsgr.SendMessage(msg);
+					fMsgr.SendMessage(infoMsg);
 				}	break;
 		
 				case IM::SEND_MESSAGE:
 				{
 					const char * message_text = msg->FindString("message");
-					const char * id = msg->FindString("id");
+					const char * id = ReNick(msg->FindString("id")).String();
 					
 					if ( !id )
 						return B_ERROR;
@@ -134,10 +134,12 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					
 					fManager->MessageUser(id, message_text);
 					
-					msg->RemoveName("contact");
-					msg->ReplaceInt32("im_what", IM::MESSAGE_SENT);
+					BMessage newMsg(*msg);
 					
-					fMsgr.SendMessage(msg);
+					newMsg.RemoveName("contact");
+					newMsg.ReplaceInt32("im_what", IM::MESSAGE_SENT);
+					
+					fMsgr.SendMessage(&newMsg);
 					
 //					fManager->RequestBuddyIcon(id);
 				}	break;
@@ -307,11 +309,13 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	BMessage msg(IM::MESSAGE);
 	msg.AddString("protocol", "AIM");
 
+printf("StatChanged: %s vs %s\n", nick, ReNick(nick).String());
+
 	if (strcmp(nick, fScreenName) == 0) {
 		msg.AddInt32("im_what", IM::STATUS_SET);
 	} else {
 		msg.AddInt32("im_what", IM::STATUS_CHANGED);
-		msg.AddString("id", nick);
+		msg.AddString("id", ReNick(nick));
 	};
 
 	switch (status) {
@@ -340,7 +344,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
 	im_msg.AddString("protocol", "AIM");
-	im_msg.AddString("id", nick);
+	im_msg.AddString("id", ReNick(nick));
 	im_msg.AddString("message", msg);
 	im_msg.AddInt32("charset",B_ISO1_CONVERSION);
 	
@@ -352,7 +356,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
 status_t AIMProtocol::UserIsTyping(const char *nick, typing_notification type) {
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddString("protocol", "AIM");
-	im_msg.AddString("id", nick);
+	im_msg.AddString("id", ReNick(nick));
 
 	switch (type) {
 		case STILL_TYPING:
@@ -377,9 +381,18 @@ status_t AIMProtocol::SSIBuddies(list<BString> buddies) {
 	serverBased.AddString("protocol", "AIM");
 
 	for (i = buddies.begin(); i != buddies.end(); i++) {
-		LOG("AIM", LOW, "Got server side buddy %s", i->String());
-		serverBased.AddString("id", i->String());
+		LOG("AIM", LOW, "Got server side buddy %s", ReNick(i->String()).String());
+		serverBased.AddString("id", ReNick(i->String()));
 	};
 			
 	fMsgr.SendMessage(&serverBased);
+};
+
+BString AIMProtocol::ReNick(const char *nick) {
+	BString renick = nick;
+
+	renick.ReplaceAll(" ", "");
+	renick.ToLower();
+	
+	return renick;
 };
