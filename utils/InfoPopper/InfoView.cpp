@@ -9,6 +9,7 @@
 #include <PropertyInfo.h>
 
 const float kEdgePadding = 2.0;
+const float kCloseWidth = 10.0;
 
 InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
 //InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
@@ -252,6 +253,8 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 				break;
 		}
 	}
+	
+	*w += kCloseWidth;
 };
 
 void InfoView::Draw(BRect drawBounds) {
@@ -329,6 +332,26 @@ void InfoView::Draw(BRect drawBounds) {
 		
 		y += fh.leading + fh.descent + fh.ascent;
 	}
+	
+	BRect closeRect = bound;
+	closeRect.left = closeRect.right - kCloseWidth;
+	SetHighColor(218, 218, 218);
+	FillRect(closeRect);
+	
+	closeRect.right++;
+	SetHighColor(0, 0, 0);
+	StrokeRect(closeRect);
+
+	BRect crossRect;
+	float midY = (closeRect.bottom - closeRect.top) / 2;
+	float midX = (closeRect.right - closeRect.left) / 2;
+	crossRect.left = closeRect.left + midX - kEdgePadding;
+	crossRect.right = closeRect.left + midX + kEdgePadding;
+	crossRect.top = closeRect.top + midY - kEdgePadding;
+	crossRect.bottom = closeRect.top + midY + kEdgePadding;
+
+	StrokeLine(crossRect.LeftTop(), crossRect.RightBottom());
+	StrokeLine(crossRect.LeftBottom(), crossRect.RightTop());
 }
 
 void InfoView::MouseDown(BPoint point) {
@@ -337,59 +360,65 @@ void InfoView::MouseDown(BPoint point) {
 	
 	switch (buttons) {
 		case B_PRIMARY_MOUSE_BUTTON: {
-			entry_ref launchRef;
-			BString launchString;
-			BMessage argMsg(B_ARGV_RECEIVED);
-			BMessage refMsg(B_REFS_RECEIVED);
-			entry_ref appRef;
-			bool useArgv = false;
-			BList messages;
-			entry_ref ref;
+			BRect closeRect;
+			closeRect = Bounds();
+			closeRect.left = closeRect.right - kCloseWidth;
 			
-			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
-				if (be_roster->FindApp(launchString.String(), &appRef) == B_OK) useArgv = true;
-			};
-			if (fDetails->FindRef("onClickFile", &launchRef) == B_OK) {
-				if (be_roster->FindApp(&launchRef, &appRef) == B_OK) useArgv = true;
-			};
-			
-			if (fDetails->FindRef("onClickRef", &ref) == B_OK) {			
-				for (int32 i = 0; fDetails->FindRef("onClickRef", i, &ref) == B_OK; i++) {
-					refMsg.AddRef("refs", &ref);
+			if (closeRect.Contains(point) == false) {		
+				entry_ref launchRef;
+				BString launchString;
+				BMessage argMsg(B_ARGV_RECEIVED);
+				BMessage refMsg(B_REFS_RECEIVED);
+				entry_ref appRef;
+				bool useArgv = false;
+				BList messages;
+				entry_ref ref;
+				
+				if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
+					if (be_roster->FindApp(launchString.String(), &appRef) == B_OK) useArgv = true;
+				};
+				if (fDetails->FindRef("onClickFile", &launchRef) == B_OK) {
+					if (be_roster->FindApp(&launchRef, &appRef) == B_OK) useArgv = true;
 				};
 				
-				messages.AddItem((void *)&refMsg);
-			};
-			
-			if (useArgv == true) {
-				type_code type;
-				int32 argc = 0;
-				BString arg;
-				
-				BPath p(&appRef);
-				argMsg.AddString("argv", p.Path());
-				
-				fDetails->GetInfo("onClickArgv", &type, &argc);
-				argMsg.AddInt32("argc", argc + 1);
-				
-				for (int32 i = 0; fDetails->FindString("onClickArgv", i, &arg) == B_OK;
-					i++) {
-	
-					argMsg.AddString("argv", arg);
+				if (fDetails->FindRef("onClickRef", &ref) == B_OK) {			
+					for (int32 i = 0; fDetails->FindRef("onClickRef", i, &ref) == B_OK; i++) {
+						refMsg.AddRef("refs", &ref);
+					};
+					
+					messages.AddItem((void *)&refMsg);
 				};
 				
-				messages.AddItem((void *)&argMsg);
-			};
-			
-			BMessage *tmp;
-			for (int32 i = 0; fDetails->FindMessage("onClickMsg", i, tmp) == B_OK; i++) {
-				messages.AddItem((void *)tmp);
-			};
-			
-			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
-				be_roster->Launch(launchString.String(), &messages);
-			} else {
-				be_roster->Launch(&launchRef, &messages);
+				if (useArgv == true) {
+					type_code type;
+					int32 argc = 0;
+					BString arg;
+					
+					BPath p(&appRef);
+					argMsg.AddString("argv", p.Path());
+					
+					fDetails->GetInfo("onClickArgv", &type, &argc);
+					argMsg.AddInt32("argc", argc + 1);
+					
+					for (int32 i = 0; fDetails->FindString("onClickArgv", i, &arg) == B_OK;
+						i++) {
+		
+						argMsg.AddString("argv", arg);
+					};
+					
+					messages.AddItem((void *)&argMsg);
+				};
+				
+				BMessage *tmp;
+				for (int32 i = 0; fDetails->FindMessage("onClickMsg", i, tmp) == B_OK; i++) {
+					messages.AddItem((void *)tmp);
+				};
+				
+				if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
+					be_roster->Launch(launchString.String(), &messages);
+				} else {
+					be_roster->Launch(&launchRef, &messages);
+				};
 			};
 			
 			// remove the info view after a click
