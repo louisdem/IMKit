@@ -25,8 +25,11 @@ TLV::TLV(uint16 type, const char *value, uint16 length) {
 	fFlatten = NULL;
 	fLength = length;
 	fValue = NULL;
-	fValue = (char *)realloc(fValue, length * sizeof(char));
-	memcpy(fValue, value, length);
+	if ( length > 0 )
+	{
+		fValue = (char *)realloc(fValue, length * sizeof(char));
+		memcpy(fValue, value, length);
+	}
 };
 
 TLV::~TLV(void) {

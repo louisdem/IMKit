@@ -547,9 +547,39 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 									strncpy(&msg[16], (char *)(data + offset + 5), tlvlen - 4);
 									msg[tlvlen + 13] = '\0';
 								} else {
-									msg = (char *)calloc(tlvlen - 2, sizeof(char));
-									memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
-									msg[tlvlen - 3] = '\0';
+									uint16 charset = (data[offset+1] << 8) + data[offset+2];
+									
+									if ( charset == 0x0002)
+									{
+										// utf16 message
+										char * utf16_msg = (char *)calloc(tlvlen - 2, sizeof(char));
+										memcpy(utf16_msg, (void *)(data + offset + 5), tlvlen - 4);
+										
+										int32 utf16_size = tlvlen - 3;
+										int32 utf8_size = (tlvlen - 3) * 2;
+										int32 state = 0;
+										msg = (char*)calloc(utf8_size, sizeof(char));
+										
+										convert_to_utf8(
+											B_UNICODE_CONVERSION,
+											utf16_msg,
+											&utf16_size,
+											msg,
+											&utf8_size,
+											&state
+										);
+										
+										msg[utf8_size] = '\0';
+										
+										free( utf16_msg );
+										
+										LOG(kProtocolName, liDebug, "Got UTF-16 message, converted to UTF-8");
+									} else {
+										// non-utf16 message
+										msg = (char *)calloc(tlvlen - 2, sizeof(char));
+										memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
+										msg[tlvlen - 3] = '\0';
+									}
 								}
 								
 								parse_html( msg );
@@ -836,16 +866,38 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	
 	BString msg_encode(message);
 	encode_html(msg_encode);
-	uint16 messageLen = msg_encode.Length();
-	char *buffer = (char *)calloc(messageLen + 4, sizeof(char));
+	
+	int32 utf16_size = msg_encode.Length()*2+2;
+	char * utf16_data = (char*)calloc( utf16_size, sizeof(char) );
+	int32 utf8_size = msg_encode.Length();
+	int32 state = 0;
+	
+	status_t res = convert_from_utf8(
+		B_UNICODE_CONVERSION,
+		msg_encode.String(),
+		&utf8_size,
+		utf16_data,
+		&utf16_size,
+		&state
+	);
+	
+	if ( res != B_OK ) {
+		LOG(kProtocolName, liDebug, "Conversion to UTF-16 failed" );
+		return B_ERROR;
+	}
+	
+	char *buffer = (char *)calloc(utf16_size + 4, sizeof(char));
 	buffer[0] = 0x00;
-	buffer[1] = 0x00;
+	buffer[1] = 0x02; // utf-16be
 	buffer[2] = 0xff;
 	buffer[3] = 0xff;
-	memcpy((void *)(buffer + 4), msg_encode.String(), messageLen);
-	msgData->AddTLV(new TLV(0x101, buffer, messageLen + 4));
 	
+	memcpy((void *)(buffer + 4), utf16_data, utf16_size);
+	msgData->AddTLV(new TLV(0x0101, buffer, utf16_size + 4));
+	
+	free(utf16_data );
 	free(buffer);
+	
 	msg->AddTLV(msgData);
 	msg->AddTLV(0x0006, "", 0);
 	msg->AddTLV(0x0009, "", 0);

@@ -24,6 +24,7 @@ AIMProtocol::AIMProtocol()
 	
 	fPassword = NULL;
 	fScreenName = NULL;
+	fEncoding = 0xffff; // No converstion == UTF-8
 	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 };
 
@@ -237,7 +238,7 @@ BMessage AIMProtocol::GetSettingsTemplate() {
 	pass_msg.AddInt32("type",B_STRING_TYPE);
 	pass_msg.AddBool("is_secret", true);
 	
-	BMessage enc_msg;
+/*	BMessage enc_msg;
 	enc_msg.AddString("name","encoding");
 	enc_msg.AddString("description","Text encoding");
 	enc_msg.AddInt32("type", B_STRING_TYPE);
@@ -246,7 +247,9 @@ BMessage AIMProtocol::GetSettingsTemplate() {
 	enc_msg.AddString("valid_value", "JIS");
 	enc_msg.AddString("valid_value", "Shift-JIS");
 	enc_msg.AddString("valid_value", "EUC");
+	enc_msg.AddString("valid_value", "Windows 1251");
 	enc_msg.AddString("default", "ISO 8859-1");
+*/
 
 	BMessage profile;
 	profile.AddString("name", "profile");
@@ -258,7 +261,7 @@ BMessage AIMProtocol::GetSettingsTemplate() {
 		
 	main_msg.AddMessage("setting",&user_msg);
 	main_msg.AddMessage("setting",&pass_msg);
-	main_msg.AddMessage("setting",&enc_msg);
+//	main_msg.AddMessage("setting",&enc_msg);
 	main_msg.AddMessage("setting", &profile);
 	
 	return main_msg;
@@ -281,23 +284,27 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	
 	if ( strcmp(encoding,"ISO 8859-1") == 0 )
 	{
-//		fClient.setEncoding( B_ISO1_CONVERSION );
+//		fEncoding = B_ISO1_CONVERSION;
 	} else
 	if ( strcmp(encoding,"UTF-8") == 0 )
 	{
-//		fClient.setEncoding( 0xffff );
+//		fEncoding = 0xffff;
 	} else
 	if ( strcmp(encoding,"JIS") == 0 )
 	{
-//		fClient.setEncoding( B_JIS_CONVERSION );
+//		fEncoding = B_JIS_CONVERSION;
 	} else
 	if ( strcmp(encoding,"Shift-JIS") == 0 )
 	{
-//		fClient.setEncoding( B_SJIS_CONVERSION );
+//		fEncoding = B_SJIS_CONVERSION;
 	} else
 	if ( strcmp(encoding,"EUC") == 0 )
 	{
-//		fClient.setEncoding( B_EUC_CONVERSION );
+//		fEncoding = B_EUC_CONVERSION;
+	} else
+	if ( strcmp(encoding,"Windows 1251") == 0 )
+	{
+//		fEncoding = B_MS_WINDOWS_1251_CONVERSION;
 	} else
 	{ // invalid encoding value
 		return B_ERROR;
@@ -323,8 +330,7 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 
 uint32 AIMProtocol::GetEncoding() 
 {
-//	return fClient.fEncoding;
-	return B_ISO1_CONVERSION;
+	return fEncoding;
 }
 
 status_t AIMProtocol::Error(const char *error) {
@@ -393,7 +399,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg) {
 	im_msg.AddString("protocol", "AIM");
 	im_msg.AddString("id", NormalizeNick(nick));
 	im_msg.AddString("message", msg);
-	im_msg.AddInt32("charset",B_ISO1_CONVERSION);
+	im_msg.AddInt32("charset", fEncoding);
 	
 	fMsgr.SendMessage(&im_msg);											
 

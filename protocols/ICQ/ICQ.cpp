@@ -756,6 +756,7 @@ ICQProtocol::GetSettingsTemplate()
 	enc_msg.AddString("valid_value", "JIS");
 	enc_msg.AddString("valid_value", "Shift-JIS");
 	enc_msg.AddString("valid_value", "EUC");
+	enc_msg.AddString("valid_value", "Windows 1251");
 	enc_msg.AddString("default", "ISO 8859-1");
 	
 	main_msg.AddMessage("setting",&user_msg);
@@ -799,6 +800,10 @@ ICQProtocol::UpdateSettings( BMessage & msg )
 	if ( strcmp(encoding,"EUC") == 0 )
 	{
 		fClient.setEncoding( B_EUC_CONVERSION );
+	} else
+	if ( strcmp(encoding,"Windows 1251") == 0 )
+	{
+		fClient.setEncoding( B_MS_WINDOWS_1251_CONVERSION );
 	} else
 	{ // invalid encoding value
 		return B_ERROR;

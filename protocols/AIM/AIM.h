@@ -59,7 +59,8 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 		AIMManager		*fManager;
 		char			*fScreenName;
 		char			*fPassword;
-
+		uint32			fEncoding;
+		
 		map<string,BString>		fNickMap;
 };
 
