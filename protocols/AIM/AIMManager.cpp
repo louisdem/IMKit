@@ -519,18 +519,19 @@ void AIMManager::MessageReceived(BMessage *msg) {
 										{
 											case 0x0501: {	// Client Features, ignore
 												tlvlen = (data[++offset] << 8) + data[++offset];
-												if ( tlvlen == 1 )
-													tlvlen = 0;
+												//if ( tlvlen == 1 )
+												//	tlvlen = 0;
 												LOG("AIM", DEBUG, "Ignoring Client Features, %ld bytes", tlvlen);
 											} break;
 											case 0x0101: { // Message Len
 												
-												if ( data[offset+1] == 1 )
+												/*if ( data[offset+1] == 1 )
 												{ // message from BeMSN
 													offset++;
 													tlvlen = (data[++offset] << 8) + data[++offset];
 												} else												
-													tlvlen = (data[++offset] << 8) + data[++offset];
+												*/	
+												tlvlen = (data[++offset] << 8) + data[++offset];
 												
 												if ( tlvlen == 0 )
 												{ // old-style message?
@@ -687,9 +688,25 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	f->AddRawData((uchar *)&l, 1);
 
 //	f->AddRawData((uchar []){((l & 0xff00) >> 8), (l & 0x00ff)}, 2);
-	l = 0x05;
+
+	// client capabilities
+	f->AddRawData((uchar []){0x05, 0x01, 0x00, 0x01, 0x01}, 5);
+	
+	// the message
+	f->AddRawData((uchar []){0x01, 0x01}, 2);
+	l = ((len + 0x04) >> 8) | (((len + 0x04) & 0xff) << 8);
+	f->AddRawData((uchar *)&l, 2);
+	f->AddRawData((uchar []){0x00, 0x00}, 2);
+	f->AddRawData((uchar []){0x00, 0x00}, 2);
+	for (uint16 i = 0; i < strlen(message); i++) {
+		f->AddRawData((uchar *)&message[i], 1);
+	};
+/*
+	l = 0x0005;
 	f->AddRawData((uchar *)&l, 1);
 	f->AddRawData((uchar []){0x01, 0x00}, 2);
+
+	// the message
 	f->AddRawData((uchar []){0x01, 0x01}, 2);
 	f->AddRawData((uchar []){0x01, 0x00}, 2);
 
@@ -697,7 +714,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	l = (l & 0xff00) >> 8;
 	f->AddRawData((uchar *)&l, 1);
 	l = (len + 0x04) & 0x00ff;
-	f->AddRawData((uchar *)&l, 1);
+	f->AddRawData((uchar *)&l, 1); // text length
 //	f->AddRawData((uchar []){(0 & 0xff00) >> 8, (l & 0x00ff)}, 2);
 	f->AddRawData((uchar []){0x00, 0x00}, 2);
 	f->AddRawData((uchar []){0x00, 0x00}, 2);
@@ -706,7 +723,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 		f->AddRawData((uchar *)&message[i], 1);
 	};
 //	f->AddRawData((uchar *)&message, len);
-
+*/
 	Send(f);
 
 	return B_OK;
