@@ -28,10 +28,10 @@ enum online_types {
 };
 
 enum list_types {
-	ltForwardList,
-	ltReverseList,
-	ltAllowList,
-	ltBlockList	
+	ltForwardList = 1,
+	ltAllowList = 2,
+	ltBlockList	= 4,
+	ltReverseList = 8,
 };
 
 enum typing_notification {

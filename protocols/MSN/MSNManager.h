@@ -84,13 +84,14 @@ class MSNManager : public BLooper {
 		inline const char *Passport(void) const { return fPassport.String(); };
 		inline const char *DisplayName(void) const { return fDisplayName.String(); };
 		inline const char *Password(void) const { return fPassword.String(); };
-			
+		
 		MSNHandler		*Handler(void) { return fHandler; };
 	private:
 		tridmap			fTrIDs;
 		waitingcon		fWaitingSBs;
 		
-		waitingauth		fWaitingAuth;
+		waitingauth		fWaitingAuth;	// For people requesting OUR auth
+		waitingauth		fWantsAuth;		// For people whose auth WE want
 		
 		list<BString>	fBuddy;
 		MSNConnection	*fNoticeCon;

@@ -31,6 +31,8 @@ class Command {
 		void		UseTrID(bool use) { fUseTrID = use; };
 
 		bool		ExpectsPayload(int32 *payloadSize);
+		
+		void		Debug(void);
 	private:
 		int32		fTrID;
 		bool		fUseTrID;

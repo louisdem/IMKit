@@ -338,8 +338,7 @@ status_t MSNManager::LogOff(void) {
 		bye->UseTrID(false);
 		con->Send(bye, qsImmediate);
 
-		con->Lock();
-		con->Quit();
+		BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 	};
 	
 	fSwitchBoard.clear();
@@ -350,9 +349,8 @@ status_t MSNManager::LogOff(void) {
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
 		fNoticeCon->Send(bye, qsImmediate);
-		fNoticeCon->Lock();
-		fNoticeCon->Quit();
-		fNoticeCon = NULL;
+
+		BMessenger(fNoticeCon).SendMessage(B_QUIT_REQUESTED);
 	};
 	
 	fHandler->StatusChanged(fPassport.String(), otOffline);

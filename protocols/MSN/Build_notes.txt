@@ -1,7 +1,11 @@
-Fetch and compile cryptlib.
+Fetch Cryptlib (http://www.bebits.com/app/3682).
 
-rename the cryptlib folder and place it in ~/config/include
+To compile cryptlib on Zeta (BONE systems?) you need to follow the steps details in the Talkback section
+(http://www.bebits.com/talkback/3682). Specifically you need add "-lbind -lsocket" to line 1203 of the 
+Makefile. Then do a make shared
 
-copy libcl.a to ~/config/lib
+Copy the resulting libcl.so to ~/config/lib.
 
-Then MSN should compile.
+Copy the headers (crypt.h, cryptacd.h etc) to ~/config/include/cryptlib
+
+The addon should then compile

@@ -128,6 +128,25 @@ const char *Command::Flatten(int32 sequence) {
 	return fFlattened.String();
 };
 
+void Command::Debug(void) {
+	printf("%s {TrID}", fType.String());
+	vector<BString>::iterator i;
+	for (i = fParams.begin(); i != fParams.end(); i++) printf(" %s", i->String());
+	
+	if (Payloads() > 0) {
+		int32 size = 0;
+		for (i = fPayloads.begin(); i != fPayloads.end(); i++) size += i->Length();
+		
+		printf(" %i", size);
+	};
+	
+	printf("\r\n");
+	
+	if (Payloads() >? 0) {
+		for (i = fPayloads.begin(); i != fPayloads.end(); i++) printf("%s\r\n", i->String());
+	};
+};
+
 int32 Command::FlattenedSize(void) {
 	return fFlattened.Length();
 };

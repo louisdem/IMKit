@@ -492,13 +492,14 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 		return B_OK;
 	} else
 	if (command->Type() == "ADC") {
-		return handleADC(command);		
+		return handleADC(command);
+	} else
+	if (command->Type() == "LST") {
+		return handleLST(command);
 	} else {
 		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
 			fPort, command->Type().String());
-
-		PrintHex((uchar *)command->Flatten(command->TransactionID()), command->FlattenedSize());
-		
+		command->Debug();
 		return B_ERROR;
 	}
 };
@@ -826,3 +827,23 @@ status_t MSNConnection::handleADC(Command *command) {
 	return B_OK;
 };
 
+status_t MSNConnection::handleLST(Command *command) {
+	BString passport = command->Param(0);
+	passport.ReplaceFirst("N=", "");
+	BString display = command->Param(1, true);
+	display.ReplaceFirst("F=", "");
+	
+//	This is a bitmask. 1 = FL, 2 = AL, 4 = BL, 8 = RL
+	int32 lists = atol(command->Param(3));
+	
+	printf("%s (%s) is in list %i\n", passport.String(), display.String(), lists);
+
+	if (lists == ltReverseList) {
+		LOG(kProtocolName, liDebug, "\"%s\" (%s) is only on our reverse list. Likely they "
+			"added us while we were offline. Ask for authorisation", display.String(),
+			passport.String());
+		fManager->Handler()->AuthRequest(ltReverseList, passport.String(), display.String());
+	};
+		
+	return B_OK;
+};

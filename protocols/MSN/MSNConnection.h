@@ -53,6 +53,7 @@ class MSNConnection : public BLooper {
 		virtual status_t handleUSR( Command * );
 		virtual status_t handleMSG( Command * );
 		virtual status_t handleADC( Command * );
+		virtual status_t handleLST( Command * );
 
 		void			StartReceiver(void);
 		void			StopReceiver(void);
