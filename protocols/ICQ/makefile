@@ -6,6 +6,15 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+ICQHEADER=/boot/home/config/include/libicq2000/libicq2000/ICQ.h
+ifeq ($(wildcard $(ICQHEADER)),)
+
+.PHONY: default
+default:
+	@echo $(ICQHEADER) not found. Ignoreing ICQ add-on.
+
+else
+
 # specify the name of the binary
 NAME= ICQ
 SVG_ICON=ICQ.svg
@@ -154,3 +163,6 @@ $(TARGET): _APP_
 
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
+
+endif     #ifeq( icq2000 header exist)
+

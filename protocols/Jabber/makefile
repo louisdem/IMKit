@@ -6,6 +6,13 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
+
+.PHONY: default
+default:
+	@echo The Jabber add-on requires BONE. Ignoring Jabber add-on.
+else
+
 # specify the name of the binary
 NAME= Jabber
 SVG_ICON=
@@ -157,3 +164,5 @@ $(TARGET): _APP_
 
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
+
+endif    #Bone check.

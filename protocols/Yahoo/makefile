@@ -6,6 +6,14 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+ifeq ($(wildcard ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)),)
+
+.PHONY: default
+default:
+	@echo Yahoo require libyahoo2. Yahoo add-on ignored.
+
+else
+
 # specify the name of the binary
 NAME= Yahoo
 SVG_ICON=Yahoo.svg
@@ -157,3 +165,5 @@ $(TARGET): _APP_
 
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
+
+endif #yahoo2 sanity check.

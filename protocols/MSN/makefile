@@ -6,6 +6,22 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
+
+.PHONY: default
+default:
+	@echo The AIM add-on currently requires BONE. MSN add-on ignored.
+
+else
+
+ifeq ($(wildcard /boot/develop/headers/openssl/ssl.h),)
+
+.PHONY: default
+default:
+	@echo The AIM add-on currently requires OpenSSL. MSN add-on ignored.
+
+else
+
 # specify the name of the binary
 NAME= MSN
 SVG_ICON=MSN.svg
@@ -156,3 +172,7 @@ $(TARGET): _APP_
 
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
+
+endif    #OpenSSL sanity check.
+
+endif    #BONE sanity check.

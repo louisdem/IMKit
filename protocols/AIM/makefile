@@ -6,6 +6,14 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
+
+.PHONY: default
+default:
+	@echo The AIM add-on requires BONE. Ignoring AIM add-on.
+
+else
+
 # specify the name of the binary
 NAME= AIM
 SVG_ICON=AIM.svg
@@ -156,3 +164,4 @@ $(TARGET): _APP_
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
 
+endif   #Bone check.
