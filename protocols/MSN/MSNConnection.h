@@ -1,10 +1,7 @@
 #ifndef MSNCONNECTION_H
 #define MSNCONNECTION_H
 
-#include "MSNManager.h"
-#include "MSNHandler.h"
-#include "Command.h"
-
+#include <UTF8.h>
 #include <Handler.h>
 #include <Looper.h>
 #include <Message.h>
@@ -18,6 +15,10 @@
 #include <libim/Constants.h>
 
 #include <cryptlib/cryptlib.h>
+
+#include "MSNManager.h"
+#include "MSNHandler.h"
+#include "Command.h"
 #include "HTTPFormatter.h"
 #include "md5.h"
 
@@ -51,18 +52,26 @@ class MSNConnection : public BLooper {
 		virtual status_t handleCHL( Command * );
 		virtual status_t handleUSR( Command * );
 		virtual status_t handleMSG( Command * );
-	
+		virtual status_t handleADC( Command * );
+
+		void			StartReceiver(void);
+		void			StopReceiver(void);
+		void			GoOnline(void);
+		void			ClearQueues(void);
+
+		ServerAddress	ExtractServerDetails(char *details);
+
+		MSNManager		*fManager;	
+		BMessenger		fManMsgr;
+
 	private:
 		int32			NetworkSend(Command *command);
 		int32			ConnectTo(const char *hostname, uint16 port);
 		static int32	Receiver(void *con);
-		void			StartReceiver(void);
-		void			StopReceiver(void);
-		ServerAddress	ExtractServerDetails(char *details);
 		status_t		SSLSend(const char *host, HTTPFormatter *send,
 			HTTPFormatter **recv);
-		void			GoOnline(void);
-		void			ClearQueues(void);
+		
+		list<BString>	fContacts;
 		
 		char			*fServer;
 		uint16			fPort;
@@ -71,7 +80,6 @@ class MSNConnection : public BLooper {
 		CommandQueue	fWaitingOnline;
 		uint32			fTrID;
 		
-		BMessenger		fManMsgr;
 		BMessenger		*fSockMsgr;
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
@@ -81,7 +89,7 @@ class MSNConnection : public BLooper {
 		uint8			fState;
 		thread_id		fThread;
 		
-		MSNManager		*fManager;
+
 		
 };
 

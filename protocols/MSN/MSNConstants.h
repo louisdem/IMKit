@@ -27,6 +27,13 @@ enum online_types {
 	otOffline
 };
 
+enum list_types {
+	ltForwardList,
+	ltReverseList,
+	ltAllowList,
+	ltBlockList	
+};
+
 enum typing_notification {
 	tnStartedTyping,
 	tnStillTyping,

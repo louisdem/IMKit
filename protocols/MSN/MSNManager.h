@@ -16,6 +16,7 @@
 	#include <net/socket.h>
 	#include <net/netdb.h>
 #endif
+#include <sys/select.h>
 
 #include <libim/Helpers.h>
 
@@ -30,7 +31,8 @@ enum {
 	msnmsgPulse = 'msn5',
 	msnmsgGetSocket = 'msn6',
 	msnmsgStatusChanged = 'msn7',
-	msnMessageRecveived = 'msn8'
+	msnMessageRecveived = 'msn8',
+	msnAuthRequest = 'msn9'
 };
 
 enum queuestyle {
@@ -39,14 +41,17 @@ enum queuestyle {
 	qsOnline
 };
 
-#include "MSNConnection.h"
-#include "Command.h"
-
+class MSNSBConnection;
 class MSNConnection;
 class MSNHandler;
 
+#include "Command.h"
+#include "MSNConnection.h"
+
 typedef map<BString, MSNConnection *> switchboardmap;
 typedef map<int32, Command *> tridmap;
+typedef map<int32, BString> waitingcon;
+typedef map<BString, int8> waitingauth;
 
 class MSNManager : public BLooper {
 	public:
@@ -67,8 +72,10 @@ class MSNManager : public BLooper {
 			status_t	LogOff(void);
 			status_t	RequestBuddyIcon(const char *buddy);
 			
+			status_t	AuthUser(const char *passport);
+			status_t	BlockUser(const char *passport);
 			status_t	SetDisplayName(const char *profile);
-			status_t	SetAway(const char *message);
+			status_t	SetAway(bool away = true);
 			status_t	TypingNotification(const char *buddy, uint16 typing);
 		inline uchar	ConnectionState(void) const { return fConnectionState; };
 			
@@ -78,8 +85,13 @@ class MSNManager : public BLooper {
 		inline const char *DisplayName(void) const { return fDisplayName.String(); };
 		inline const char *Password(void) const { return fPassword.String(); };
 			
+		MSNHandler		*Handler(void) { return fHandler; };
 	private:
 		tridmap			fTrIDs;
+		waitingcon		fWaitingSBs;
+		
+		waitingauth		fWaitingAuth;
+		
 		list<BString>	fBuddy;
 		MSNConnection	*fNoticeCon;
 		switchboardmap	fSwitchBoard;
@@ -94,7 +106,7 @@ class MSNManager : public BLooper {
 			BString		fAwayMsg;
 	
 	protected:
-		friend class MSNConnection;
+		friend class 	MSNConnection;
 		MSNHandler		*fHandler;
 };
 

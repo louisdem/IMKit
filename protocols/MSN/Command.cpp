@@ -50,8 +50,29 @@ status_t Command::AddParam(const char *param, bool encode = false) {
 	return B_OK;
 };
 
-const char *Command::Param(int32 index) {
-	return fParams[index].String();
+const char *Command::Param(int32 index, bool decode = false) {
+	BString param = fParams[index];
+	if (decode == true) {
+		param.IReplaceAll("%20", " ");
+		param.IReplaceAll("%22", "\"");
+		param.IReplaceAll("%23", "#");
+		param.IReplaceAll("%40", "@");
+		param.IReplaceAll("%60", "`");
+		param.IReplaceAll("%3A", ":");
+		param.IReplaceAll("%3C", "<");
+		param.IReplaceAll("%3E", ">");
+		param.IReplaceAll("%5B", "[");
+		param.IReplaceAll("%5C", "\\");
+		param.IReplaceAll("%5D", "]");
+		param.IReplaceAll("%5E", "^");
+		param.IReplaceAll("%7B", "{");
+		param.IReplaceAll("%7C", "|");
+		param.IReplaceAll("%7D", "}");
+		param.IReplaceAll("%7E", "~");
+		param.IReplaceAll("%25", "%");
+	};
+	
+	return param.String();
 };
 
 status_t Command::AddPayload(const char *payload, uint32 length, bool encode = true) {

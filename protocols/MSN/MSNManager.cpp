@@ -8,10 +8,10 @@
 #include "MSNHandler.h"
 
 void PrintHex(const unsigned char* buf, size_t size) {
-	if ( g_verbosity_level != liDebug ) {
-		// only print this stuff in debug mode
-		return;
-	}
+//	if ( g_verbosity_level != liDebug ) {
+//		// only print this stuff in debug mode
+//		return;
+//	}
 	
 	int i = 0;
 	int j = 0;
@@ -114,7 +114,7 @@ status_t MSNManager::Login(const char *server, uint16 port, const char *passport
 	fPassport = passport;
 	fPassword = password;
 	fDisplayName = displayname;
-	
+
 	if (fConnectionState == otOffline) {
 		if (fNoticeCon == NULL) {
 			fNoticeCon = new MSNConnection(server, port, this);
@@ -165,7 +165,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			char *host = NULL;
 			const char *type = NULL;
 
-printf("\n\n\n\nGot a new connection, request was TrID: %i\n", msg->FindInt32("trid"));
+			printf("Got a new connection, request was TrID: %i\n", msg->FindInt32("trid"));
 
 			if (msg->FindString("host", (const char **)&host) != B_OK) {
 				LOG(kProtocolName, liLow, "Got a malformed new connection message"
@@ -183,45 +183,51 @@ printf("\n\n\n\nGot a new connection, request was TrID: %i\n", msg->FindInt32("t
 			LOG(kProtocolName, liDebug, "Got a new connection to \"%s\":%i of type \"%s\"", host,
 				port, type);
 			
-			MSNConnection *con = new MSNConnection(host, port, this);
-			con->Run();
+			if (strcmp(type, "SB") != 0) {
+				MSNConnection *con = new MSNConnection(host, port, this);
+				con->Run();
 
-			if (strcmp(type, "NS") == 0) {
-				Command *command = new Command("VER");
-				command->AddParam(kProtocolsVers);
-				
-				con->Send(command);
-				
-				fNoticeCon = con;
-				
-				return;
-			};
-			if (strcmp(type, "RNG") == 0) {
-				const char *auth = msg->FindString("authString");
-				const char *sessionID = msg->FindString("sessionID");
-				const char *inviter = msg->FindString("inviterPassport");
-
-				Command *command = new Command("ANS");
-				command->AddParam(fPassport.String());
-				command->AddParam(auth);
-				command->AddParam(sessionID);
-				
-				con->Send(command);
-				
-				fSwitchBoard[inviter] = con;
-				
-				return;
+				if (strcmp(type, "NS") == 0) {
+					Command *command = new Command("VER");
+					command->AddParam(kProtocolsVers);
+					
+					con->Send(command);
+					
+					fNoticeCon = con;
+					
+					return;
+				};
+				if (strcmp(type, "RNG") == 0) {
+					const char *auth = msg->FindString("authString");
+					const char *sessionID = msg->FindString("sessionID");
+					const char *inviter = msg->FindString("inviterPassport");
+	
+					Command *command = new Command("ANS");
+					command->AddParam(fPassport.String());
+					command->AddParam(auth);
+					command->AddParam(sessionID);
+					
+					con->Send(command);
+					
+					fSwitchBoard[inviter] = con;
+					
+					return;
+				};
 			};
 			
 			if (strcmp(type, "SB") == 0) {
-printf("Got SB redir\n");
-				const char *authString = msg->FindString("authString");
+				MSNConnection *con = new MSNConnection(host, port, this);
+				tridmap::iterator origCommand = fTrIDs.find(msg->FindInt32("trid"));
+				if (origCommand != fTrIDs.end()) {
 
-				Command *command = new Command("USR");
-				command->AddParam(Passport());
-				command->AddParam(authString);
-				
-				con->Send(command);				
+					const char *authString = msg->FindString("authString");
+	
+					Command *command = new Command("USR");
+					command->AddParam(Passport());
+					command->AddParam(authString);
+					
+					con->Send(command);
+				};
 			};
 		} break;
 
@@ -231,22 +237,29 @@ printf("Got SB redir\n");
 
 			if (con != NULL) {
 				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(), con->Port());
-				
-//				fConnections.remove(con);
-				
-//				fSwitchboard.remove(
-				
-//				con->Lock();
-//				con->Quit();
-				
+
+				if (con == fNoticeCon) {
+					switchboardmap::iterator i;
+					for (i = fSwitchBoard.begin(); i != fSwitchBoard.end(); i++) {
+						Command bye("BYE");
+						bye.UseTrID(false);
+						i->second->Send(&bye, qsImmediate);
+						BMessenger(i->second).SendMessage(B_QUIT_REQUESTED);
+					};
+				};
+				fHandler->StatusChanged(Passport(), otOffline);
 				BMessenger(con).SendMessage(B_QUIT_REQUESTED);
-//				LOG(kProtocolName, liLow, "After close we have %i connections", fConnections.size());
-				
-//				if (fConnections.size() == 0) {
-//					fHandler->StatusChanged(fPassport.String(), otOffline);
-//					fConnectionState = otOffline;
-//				};
 			};
+		} break;
+		
+		case msnAuthRequest: {
+			BString display = msg->FindString("displayname");
+			BString passport = msg->FindString("passport");
+			list_types listType = (list_types)msg->FindInt8("list");
+
+			fWaitingAuth[passport] = 1;
+			
+			fHandler->AuthRequest(listType, passport.String(), display.String());
 		} break;
 
 		default: {
@@ -280,7 +293,7 @@ printf("Connection state: %i\n", fConnectionState);
 		msg->AddParam("N"); // Don't ack packet
 		BString format = "MIME-Version: 1.0\r\n"
 			"Content-Type: text/plain; charset=UTF-8\r\n"
-			"X-MMS-IM-Format: FN+Arial; EF=I; CO=0; CS=0; PF=22\r\n\r\n";
+			"X-MMS-IM-Format: FN=Arial; EF=I; CO=0; CS=0; PF=22\r\n\r\n";
 		format << message;
 		
 		msg->AddPayload(format.String(), format.Length());
@@ -323,7 +336,7 @@ status_t MSNManager::LogOff(void) {
 			con->Server(), con->Port());
 		Command *bye = new Command("OUT");
 		bye->UseTrID(false);
-		con->Send(bye, qsQueue);
+		con->Send(bye, qsImmediate);
 
 		con->Lock();
 		con->Quit();
@@ -357,7 +370,27 @@ status_t MSNManager::TypingNotification(const char *buddy, uint16 typing) {
 	return B_OK;
 };
 
-status_t MSNManager::SetAway(const char *message) {
+status_t MSNManager::SetAway(bool away = true) {
+	if (fNoticeCon) {
+		Command *awayCom = new Command("CHG");
+		
+		if (away) {
+			awayCom->AddParam("AWY");
+			fHandler->StatusChanged(Passport(), otAway);
+			fConnectionState = otAway;
+		} else {
+			awayCom->AddParam("NLN");
+			fHandler->StatusChanged(Passport(), otOnline);
+			fConnectionState = otOnline;
+		};
+		
+		BString caps = "";
+		caps << kOurCaps;
+	
+		awayCom->AddParam(caps.String());
+	
+		fNoticeCon->Send(awayCom);
+	};
 };
 
 status_t MSNManager::SetDisplayName(const char *displayname) {
@@ -373,4 +406,43 @@ status_t MSNManager::SetDisplayName(const char *displayname) {
 
 	return B_OK;
 };
+
+status_t MSNManager::AuthUser(const char *passport) {
+	status_t ret = B_ERROR;
+
+	if (fNoticeCon) {
+		waitingauth::iterator i = fWaitingAuth.find(passport);
+		if (i != fWaitingAuth.end()) fWaitingAuth.erase(i);
+	
+		Command *com = new Command("ADC");
+		com->AddParam("AL");	// Allow to see our presence
+
+		BString passParam = passport;
+		passParam.Prepend("N=");
+		com->AddParam(passParam.String());	// Passport
+		
+		ret = fNoticeCon->Send(com);
+	};
+	
+	return ret;
+};
+
+status_t MSNManager::BlockUser(const char *passport) {
+	status_t ret = B_ERROR;
+
+	if (fNoticeCon) {
+		waitingauth::iterator i = fWaitingAuth.find(passport);
+		if (i != fWaitingAuth.end()) fWaitingAuth.erase(i);
+	
+		Command *com = new Command("ADC");
+		com->AddParam("BL");	// Disallow to see our presence
+
+		BString passParam = passport;
+		passParam.Prepend("N=");
+		com->AddParam(passParam.String());// Passport
+		
+		ret = fNoticeCon->Send(com);
+	};
+	
+	return ret;};
 

@@ -1,10 +1,5 @@
 #include "MSNConnection.h"
 
-#include <UTF8.h>
-
-#include <DataIO.h>
-#include <sys/select.h>
-
 const char *kClientVer = "0x0409 win 4.10 i386 MSNMSGR 6.0.0602 MSMSGS";
 const char *kProtocolsVers = "MSNP10 MSNP9 CVR0";
 
@@ -468,7 +463,6 @@ void MSNConnection::ClearQueues(void) {
 };
 
 status_t MSNConnection::ProcessCommand(Command *command) {
-//	printf("Processing command: %s\n", command->Flatten(command->TransactionID()) );
 	if (command->Type() == "VER") {
 		return handleVER( command );
 	} else
@@ -494,11 +488,15 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 		return handleMSG( command );
 	} else
 	if (command->Type() == "QNG") {
-		// we ignore this, it's just a '"don't ping until x secs have passed" command
+//		We shouldn't ignore this, we should use fKeepAliveRunner->SetInterval()
 		return B_OK;
+	} else
+	if (command->Type() == "ADC") {
+		return handleADC(command);		
 	} else {
 		LOG(kProtocolName, liLow, "%s:%i got an unsupported message \"%s\"", fServer,
 			fPort, command->Type().String());
+
 		PrintHex((uchar *)command->Flatten(command->TransactionID()), command->FlattenedSize());
 		
 		return B_ERROR;
@@ -506,7 +504,7 @@ status_t MSNConnection::ProcessCommand(Command *command) {
 };
 
 status_t MSNConnection::handleVER( Command * command ) {
-	LOG("MSN", liDebug, "Processing VER");
+	LOG(kProtocolName, liDebug, "Processing VER");
 	Command *reply = new Command("CVR");
 	reply->AddParam(kClientVer);
 	reply->AddParam(fManager->Passport());
@@ -517,7 +515,7 @@ status_t MSNConnection::handleVER( Command * command ) {
 }
 
 status_t MSNConnection::handleNLN( Command * command ) {
-//		XXX - We should probably look at the caps and nick	
+//	XXX - We should probably look at the caps and nick	
 	BString statusStr = command->Param(0);
 	BString passport = command->Param(1);
 	BString friendly = command->Param(2);
@@ -542,7 +540,7 @@ status_t MSNConnection::handleNLN( Command * command ) {
 }
 
 status_t MSNConnection::handleCVR( Command * command ) {
-	LOG("MSN", liDebug, "Processing CVR");
+	LOG(kProtocolName, liDebug, "Processing CVR");
 	Command *reply = new Command("USR");
 	reply->AddParam("TWN");	// Authentication type
 	reply->AddParam("I");	// Initiate
@@ -554,7 +552,7 @@ status_t MSNConnection::handleCVR( Command * command ) {
 }
 
 status_t MSNConnection::handleRNG( Command * command ) {
-	LOG("MSN", liDebug, "Processing RNG");
+	LOG(kProtocolName, liDebug, "Processing RNG");
 //		The details are actually param 1, but param 0 will be interpretted as the
 //		TrID
 	LOG(kProtocolName, liDebug, "%s:%i got a chat invite from %s (%s)",
@@ -580,14 +578,15 @@ status_t MSNConnection::handleRNG( Command * command ) {
 }
 
 status_t MSNConnection::handleXFR( Command * command ) {
-	LOG("MSN", liDebug, "Processing XFR");
+	LOG(kProtocolName, liDebug, "Processing XFR");
 	ServerAddress sa = ExtractServerDetails((char *)command->Param(1));
 	
 	BMessage newCon(msnmsgNewConnection);
 	newCon.AddString("host", sa.first);
 	newCon.AddInt16("port", sa.second);
 	newCon.AddString("type", command->Param(0));
-		
+	newCon.AddInt32("trid", command->TransactionID());
+	
 	if (strcmp(command->Param(0), "NS") == 0) {
 		StopReceiver();
 			
@@ -610,7 +609,7 @@ status_t MSNConnection::handleXFR( Command * command ) {
 }
 
 status_t MSNConnection::handleCHL( Command * command ) {
-	LOG("MSN", liDebug, "Processing CHL");
+	LOG(kProtocolName, liDebug, "Processing CHL");
 	BString chal = command->Param(0);
 
 	Command *reply = new Command("QRY");
@@ -631,7 +630,7 @@ status_t MSNConnection::handleCHL( Command * command ) {
 }
 
 status_t MSNConnection::handleUSR( Command * command ) {
-	LOG("MSN", liDebug, "Processing USR");
+	LOG(kProtocolName, liDebug, "Processing USR");
 	if (strcmp(command->Param(0), "OK") == 0) {
 		LOG(kProtocolName, liHigh, "Online!");
 
@@ -654,6 +653,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		rea->AddParam(fManager->DisplayName(), true);
 		Send(rea);
 
+		fManager->Handler()->ContactList(&fContacts);
+				
 		Command *syn = new Command("SYN");
 		syn->AddParam("0");
 		syn->AddParam("0");
@@ -724,7 +725,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		
 		int repeatCount = 5; // max 5 redirects
 		
-		while ( recv->Status() == 302 && repeatCount-- > 0 ) {
+		while ((recv->Status() == 302) && (repeatCount-- > 0)) {
 			BString location = recv->HeaderContents("Location");
 			
 			location.ReplaceFirst("https://", "");
@@ -785,19 +786,43 @@ status_t MSNConnection::handleMSG( Command * command ) {
 	if ( type )
 	{ // we have a type, handle it.
 		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
-			LOG("MSN", liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
+			LOG(kProtocolName, liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else
 		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
-			//printf("TypingUser: %s\n", http.HeaderContents("TypingUser") );
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
+		} else
+		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {
+			LOG(kProtocolName, liDebug, "Got an invite, we're popular!");
+			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
 		} else {
-			LOG("MSN", liDebug, "Got message of unknown type <%s>", type );
+			LOG(kProtocolName, liDebug, "Got message of unknown type <%s>", type );
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
 		}
 	} else {
-		LOG("ICQ", liDebug, "No Content-Type in message!\n");
+		LOG(kProtocolName, liDebug, "No Content-Type in message!\n");
 	}
 		
 	return B_OK;
 }
+
+status_t MSNConnection::handleADC(Command *command) {
+	BString listStr = command->Param(0);
+	BString passport = command->Param(1, true);
+	passport.ReplaceFirst("N=", "");
+	BString display = command->Param(2, true);
+	display.ReplaceFirst("F=", "");
+	list_types listtype = ltReverseList;
+		
+	if (listStr == "RL") listtype = ltReverseList;
+
+	BMessage requestAuth(msnAuthRequest);
+	requestAuth.AddString("displayname", display);
+	requestAuth.AddString("passport", passport);
+	requestAuth.AddInt8("list", (int8)listtype);
+	
+	BMessenger(fManager).SendMessage(&requestAuth);
+	
+	return B_OK;
+};
+

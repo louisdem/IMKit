@@ -13,7 +13,7 @@ class Command {
 		const char *TypeStr(void) { return fType.String(); };
 		BString		Type(void) { return fType; };
 		status_t	AddParam(const char *param, bool encode = false);
-		const char	*Param(int32 index);
+		const char	*Param(int32 index, bool decode = false);
 		int32		Params(void) { return fParams.size(); };
 		
 		const char	*Flatten(int32 sequence);

@@ -60,7 +60,9 @@ status_t MSNProtocol::Process(BMessage * msg) {
 			msg->FindInt32("im_what",&im_what);
 		
 			switch (im_what) {
-//				case IM::REGISTER_CONTACTS:
+				case IM::REGISTER_CONTACTS: {
+					msg->PrintToStream();
+				
 //				{
 //					type_code garbage;
 //					int32 count = 0;
@@ -77,8 +79,32 @@ status_t MSNProtocol::Process(BMessage * msg) {
 //					} else {
 //						fManager->AddBuddy(msg->FindString("id")); //NormalizeNick(msg->FindString("id")).String());
 //					};
-//				}	break;
+				}	break;
+
+				case IM::SEND_AUTH_ACK: {
+					bool authreply = false;
+					
+					const char * id = msg->FindString("id");
+					int32 button = msg->FindInt32("which");
+
+					if (button == 0) authreply = true;
 				
+					if (authreply == true) {
+						fManager->AuthUser(id);
+
+						// Create a new contact now that we authorized him/her/it.
+						BMessage im_msg(IM::MESSAGE);
+						im_msg.AddInt32("im_what", IM::CONTACT_AUTHORIZED);
+						im_msg.AddString("protocol", kProtocolName);
+						im_msg.AddString("id", id);
+						im_msg.AddString("message", "" );
+
+						fMsgr.SendMessage(&im_msg);
+					} else {
+						fManager->BlockUser(id);
+					}
+				} break;
+
 				case IM::SET_STATUS: {
 					const char *status = msg->FindString("status");
 					LOG(kProtocolName, liMedium, "Set status to %s", status);
@@ -88,16 +114,12 @@ status_t MSNProtocol::Process(BMessage * msg) {
 					} else
 					if (strcmp(status, AWAY_TEXT) == 0) {
 						if (fManager->ConnectionState() == (uchar)otOnline) {
-							const char *away_msg = msg->FindString("away_msg");
-							if (away_msg != NULL) {
-								LOG(kProtocolName, liMedium, "Setting away message: %s", away_msg);
-								fManager->SetAway(away_msg);
-							}
+							fManager->SetAway(true);
 						};
 					} else
 					if (strcmp(status, ONLINE_TEXT) == 0) {
 						if (fManager->IsConnected() == otAway) {
-							fManager->SetAway(NULL);
+							fManager->SetAway(false);
 						} else {
 							LOG(kProtocolName, liDebug, "Calling fManager.Login()");
 							fManager->Login("gateway.messenger.hotmail.com", kDefaultPort,
@@ -224,6 +246,13 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	screen_msg.AddString("description", "Display Name");
 	screen_msg.AddInt32("type", B_STRING_TYPE);
 
+	BMessage auth_msg;
+	auth_msg.AddString("name", "authmessage");
+	auth_msg.AddString("description", "Default auth. request");
+	auth_msg.AddInt32("type", B_STRING_TYPE);
+	auth_msg.AddString("default", "Please add me to your list!");
+	auth_msg.AddBool("multi_line", true);
+
 	BMessage homePhoneMsg;
 	homePhoneMsg.AddString("name", "homephone");
 	homePhoneMsg.AddString("description", "Home Phone Number");
@@ -253,6 +282,7 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	main_msg.AddMessage("setting", &user_msg);
 	main_msg.AddMessage("setting", &pass_msg);
 	main_msg.AddMessage("setting", &screen_msg);
+	main_msg.AddMessage("setting", &auth_msg);
 //	main_msg.AddMessage("setting", &homePhoneMsg);
 //	main_msg.AddMessage("setting", &workPhoneMsg);
 //	main_msg.AddMessage("setting", &mobilePhoneMsg);
@@ -407,3 +437,33 @@ BString MSNProtocol::GetScreenNick( const char *nick ) {
 	
 	return BString(nick);
 };
+
+status_t MSNProtocol::ContactList(list<BString> *contacts) {
+	const char *id;
+	BMessage reply;
+	BMessage msg(IM::GET_CONTACTS_FOR_PROTOCOL);
+	msg.AddString("protocol", kProtocolName);
+
+	fMsgr.SendMessage(&msg, &reply);
+
+	for (int32 i = 0; reply.FindString("id", i, &id) == B_OK; i++) {
+		contacts->push_back(id);
+	}
+};
+
+status_t MSNProtocol::AuthRequest(list_types list,const char *passport, const char *displayname) {
+	BString reason = displayname;
+	reason << " wishes to add you to their list";
+
+	BMessage im_msg(IM::MESSAGE);
+	im_msg.AddInt32("im_what", IM::AUTH_REQUEST);
+	im_msg.AddString("protocol", kProtocolName);
+	im_msg.AddString("id", passport);
+	im_msg.AddString("message", reason);
+//	im_msg.AddInt32("charset",fEncoding);
+	
+	fMsgr.SendMessage(&im_msg);
+
+	return B_OK;
+};
+

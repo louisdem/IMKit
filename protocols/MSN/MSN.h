@@ -41,10 +41,16 @@ class MSNProtocol : public IM::Protocol, public MSNHandler
 		
 		virtual uint32 GetEncoding();
 		
+//		To Protocol
+			status_t	ContactList(list<BString> *contacts);
+//		From Protocol		
 			status_t	StatusChanged(const char *nick, online_types status);
 			status_t	MessageFromUser(const char *passport, const char *msg);
 			status_t	UserIsTyping(const char *nick, typing_notification type);
 			status_t 	SSIBuddies(list<BString> buddies);
+			status_t	AuthRequest(list_types list, const char *passport,
+								const char *displayname);
+			
 
 	private:
 			BString 	NormalizeNick(const char *nick);
