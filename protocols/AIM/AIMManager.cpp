@@ -4,6 +4,7 @@
 #include <libim/Constants.h>
 #include <libim/Helpers.h>
 #include <UTF8.h>
+#include <ctype.h>
 
 #include "AIMHandler.h"
 
@@ -70,6 +71,22 @@ void remove_html( char * msg )
 		{
 			case '<':
 				is_in_tag = true;
+				for (int j = i+1; msg[j]; j++) {
+					if (isspace(msg[j])) continue;
+					else if (tolower(msg[j]) == 'a') {
+						copy[copy_pos++] = '[';
+						copy[copy_pos++] = ' ';
+						for (; msg[j] && msg[j] != '=' /* This is horrible */; j++); j++;
+						for (; msg[j] && isspace(msg[j]); j++);
+						if (msg[j] == '\"') j++;
+						for (; msg[j] && !isspace(msg[j]) && msg[j] != '\"'; j++)
+								copy[copy_pos++] = msg[j];
+						copy[copy_pos++] = ' ';
+						copy[copy_pos++] = ']';
+						copy[copy_pos++] = ' ';
+					} else break;
+				}
+							
 				break;
 			case '>':
 				is_in_tag = false;
