@@ -17,27 +17,51 @@ BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
 	BBitmap *ret = NULL;
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
+ #if B_BEOS_VERSION > B_BEOS_VERSION_DANO
+  #ifndef B_ZETA_VERSION
+    // Zeta RC2 or early code.
 	BEntry entry(name, followSymlink);
-#ifndef B_ZETA_VERSION
-	entry_ref ref;
+    entry_ref ref;
 	BPath path;
 	
 	entry.GetRef(&ref);
 	BNode node(BPath(&ref).Path());
 
 	ret = GetTrackerIcon(node, size, NULL);
-#else
-	ret = new BBitmap(GetTrackerIcon(entry, size));
-#endif
-#else
-	if (size == kSmallIcon) {
-		ret = GetBitmapFromAttribute(name, BEOS_SMALL_ICON_ATTRIBUTE, 'MICN',
+  #else
+   // Zeta RC3 or later.
+	BEntry entry(name, followSymlink);
+    entry_ref ref;
+	BPath path;
+	
+	entry.GetRef(&ref);
+
+   ret = new BBitmap(GetTrackerIcon(entry, size));
+  #endif
+ #else
+  // Dano code.
+   if (size == kSmallIcon) {
+		ret = GetBitmapFromAttribute(name, BEOS_SMALL_ICON_ATTRIBUTE, 
+'MICN',
 			followSymlink);
 	} else {
-		ret = GetBitmapFromAttribute(name, BEOS_LARGE_ICON_ATTRIBUTE, 'ICON',
+		ret = GetBitmapFromAttribute(name, BEOS_LARGE_ICON_ATTRIBUTE, 
+'ICON',
 			followSymlink);
 	};
-#endif
+ #endif
+#else
+ // R5 code.
+ if (size == kSmallIcon) {
+		ret = GetBitmapFromAttribute(name, BEOS_SMALL_ICON_ATTRIBUTE, 
+'MICN',
+			followSymlink);
+	} else {
+		ret = GetBitmapFromAttribute(name, BEOS_LARGE_ICON_ATTRIBUTE, 
+'ICON',
+			followSymlink);
+	};
+ #endif
 	
 	return ret;
 
