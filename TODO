@@ -8,7 +8,7 @@ Things to fix
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * long message bug in LOG(), make buffer dunamic somehow?
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
-* Add "Send" button to client, for those poor souls who don't know that cmd-enter == send
+* Add "Send" button to client
 * Add option to client - multi/single line edit
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Change Merge contacts, or make a new one, so it can be used from the Terminal
@@ -19,11 +19,17 @@ Things to fix
 * Alt-C in client doesn't work
 * Option to disable logging (im_logger and LOG() output)
 * Extract Deskbar icon from im_server, let it live it's own life
-* Contact's BNode::SetTo crashes with invalid pointer sometimes?
+* Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to ICQ/BMessage bug?
 * Fix Preflet so it reads SVG icons(?)
 * Setting for im_server, log level
+* im_client: when settings are changed, make them apply to existing windows too
+* "Command sends message" settings description needs improvement
+* Scrollable settings are in preflet
+* MSN: Doesn't handle login+pass not set, crashes
 
 New features
+
+Icons in Info Popper status updates
 
 Invisibility
 
