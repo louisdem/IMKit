@@ -52,28 +52,31 @@ status_t Command::AddParam(const char *param, bool encode = false) {
 };
 
 const char *Command::Param(int32 index, bool decode = false) {
-	BString param = fParams[index];
-	if (decode == true) {
-		param.IReplaceAll("%20", " ");
-		param.IReplaceAll("%22", "\"");
-		param.IReplaceAll("%23", "#");
-		param.IReplaceAll("%40", "@");
-		param.IReplaceAll("%60", "`");
-		param.IReplaceAll("%3A", ":");
-		param.IReplaceAll("%3C", "<");
-		param.IReplaceAll("%3E", ">");
-		param.IReplaceAll("%5B", "[");
-		param.IReplaceAll("%5C", "\\");
-		param.IReplaceAll("%5D", "]");
-		param.IReplaceAll("%5E", "^");
-		param.IReplaceAll("%7B", "{");
-		param.IReplaceAll("%7C", "|");
-		param.IReplaceAll("%7D", "}");
-		param.IReplaceAll("%7E", "~");
-		param.IReplaceAll("%2F", "/");
-		param.IReplaceAll("%3D", "=");
-		param.IReplaceAll("%2B", "+");
-		param.IReplaceAll("%25", "%");
+	BString param = "";
+	if ((index >= 0) && (index <= Params())) {
+		param = fParams[index];
+		if (decode == true) {
+			param.IReplaceAll("%20", " ");
+			param.IReplaceAll("%22", "\"");
+			param.IReplaceAll("%23", "#");
+			param.IReplaceAll("%40", "@");
+			param.IReplaceAll("%60", "`");
+			param.IReplaceAll("%3A", ":");
+			param.IReplaceAll("%3C", "<");
+			param.IReplaceAll("%3E", ">");
+			param.IReplaceAll("%5B", "[");
+			param.IReplaceAll("%5C", "\\");
+			param.IReplaceAll("%5D", "]");
+			param.IReplaceAll("%5E", "^");
+			param.IReplaceAll("%7B", "{");
+			param.IReplaceAll("%7C", "|");
+			param.IReplaceAll("%7D", "}");
+			param.IReplaceAll("%7E", "~");
+			param.IReplaceAll("%2F", "/");
+			param.IReplaceAll("%3D", "=");
+			param.IReplaceAll("%2B", "+");
+			param.IReplaceAll("%25", "%");
+		};
 	};
 	
 	return param.String();
@@ -135,7 +138,7 @@ const char *Command::Flatten(int32 sequence) {
 	
 		fFlattened.WriteAt(offset, "\r\n", strlen("\r\n"));
 		offset += strlen("\r\n");
-		
+			
 		if (Payloads() > 0) {
 			payloadv::iterator i;
 
@@ -144,8 +147,9 @@ const char *Command::Flatten(int32 sequence) {
 				offset += i->BufferLength();
 			};
 		};
-		
+				
 		fDirty = false;
+		
 	};
 	
 	return (char *)fFlattened.Buffer();
@@ -200,7 +204,10 @@ void Command::Debug(void) {
 
 	if (Payloads() > 0) {
 		int32 size = 0;
-		for (j = fPayloads.begin(); j != fPayloads.end(); j++) size += j->BufferLength();
+		int32 c = 0;
+		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
+			size += j->BufferLength();
+		};
 		
 		printf(" %i", size);
 	};
@@ -211,7 +218,7 @@ void Command::Debug(void) {
 		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
 			char *buffer = (char *)j->Buffer();
 			for (int32 i = 0; i < j->BufferLength(); i++) {
-				if ((buffer[i] = '\r') || (buffer[i] == '\n'))
+				if ((buffer[i] == '\r') || (buffer[i] == '\n'))
 					printf("%c", buffer[i]);
 				else if ((buffer[i] < 0x20) || (buffer[i] > 0x7e))
 					printf("0x%02x ", buffer[i]);
