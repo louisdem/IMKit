@@ -86,6 +86,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fSendButton(NULL),
 	fProtocolHack(NULL)
 {
+
 	bool command, sendButton;
 	int32 iconBarSize;
 	
@@ -135,11 +136,10 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	}
 	
 	// sanity check for divider location
-	if ( inputDivider.y > windowRect.Height() - 50 )
-	{
+	if ( inputDivider.y > windowRect.Height() - 50 ) {
 		LOG("im_client", liLow, "Insane divider, fixed.");
 		inputDivider.y = windowRect.Height() - 50;
-	}
+	};
 	
 	// set size and position
 	MoveTo(windowRect.left, windowRect.top);
@@ -159,7 +159,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 #else
 	fDock->SetViewColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
 	fDock->SetLowColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
-//	fDock->SetHighColor( ui_color(B_PANEL_TEXT_COLOR) );
+	fDock->SetHighColor(0, 0, 0, 0);
 #endif
 	AddChild(fDock);
 	
@@ -230,26 +230,20 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	);
 	fDock->AddItem(btn);
 	gBubbles.SetHelp(btn, "Block messages from contact");
-	
-	// Auth icon
-/*	iconPath = iconDir;
-	iconPath.Append("GetAuth");
-	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
-	
-	btn = new ImageButton(
-		buttonRect,
-		"request_auth button",
-		new BMessage(AUTH),
-		B_FOLLOW_NONE,
-		B_WILL_DRAW,
-		icon,
-		NULL
-	);
+
+	entry_ref logAppRef;
+	if (be_roster->FindApp("application/x-vnd.BeClan.im_binlog_viewer", &logAppRef ) != B_OK )
+	{ // failed to get log icon, oopsie.
+		LOG("im_client", liMedium, "Failed to get log app icon");
+		emailAppRef = fEntry; // this isn't what we should be doing, but it might be better than nothing.
+	}
+	BPath logPath(&logAppRef);
+	icon = ReadNodeIcon(logPath.Path(), iconBarSize);
+	btn = new ImageButton(buttonRect, "log button", new BMessage(VIEW_LOG),
+		B_FOLLOW_NONE, B_WILL_DRAW, icon, NULL);
 	fDock->AddItem(btn);
-	gBubbles.SetHelp(btn, "Request permission to add contact");
-*/
-//	Done adding buttons
-	
+	gBubbles.SetHelp(btn, "View chat history for contact");
+		
 	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
 	textRect.bottom = inputDivider.y;
@@ -292,8 +286,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fInput->SetStylable(false);
 	fInput->MakeSelectable(true);
 	
-	if ( sendButton )
-	{
+	if ( sendButton ) {
 		BRect sendRect = fInputScroll->Frame();
 		sendRect.left = sendRect.right+1;
 		sendRect.right = Bounds().right;
@@ -760,6 +753,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 			be_roster->Launch( "application/x-vnd.Be-PEPL", &open_msg );
 		}	break;
 		
+		case VIEW_LOG: {
+			BMessage open(B_REFS_RECEIVED);
+			open.AddRef("refs", &fEntry);
+			be_roster->Launch("application/x-vnd.BeClan.im_binlog_viewer", &open);
+		} break;
+		
 		case EMAIL:
 		{
 			BMessage open_msg(B_REFS_RECEIVED);
@@ -1104,17 +1103,9 @@ void ChatWindow::BuildProtocolMenu(void) {
 	menu->SetFont(be_plain_font);
 	
 	fStatusBar->PositionViews();
-	
-/*	// resize fInfoView
-//	fInfoView->MoveTo( fProtocolMenu->MenuBar()->Frame().right + 5, 2 );
-	fInfoView->MoveTo( 200, 2 );
-*/
-	fInfoView->ResizeTo(
-//		fStatusBar->Bounds().Width() - fInfoView->Bounds().Width() - 2,
-//		fStatusBar->Bounds().Width() - 200 - 2,
-		fStatusBar->Bounds().Width() - fInfoView->Frame().left,
-		fInfoView->Bounds().Height()
-	);
+
+	fInfoView->ResizeTo(fStatusBar->Bounds().Width() - fInfoView->Frame().left,
+		fInfoView->Bounds().Height());
 };
 
 void

@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= im_binlogger
+NAME= im_binlog_viewer
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/clients
 
@@ -32,7 +32,9 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= logger.cpp $(TOPDIR)/common/IMKitUtilities.cpp
+SRCS= LogViewApp.cpp LogWin.cpp
+SRCS+= CLV/ColorTools.cpp CLV/ColumnListView.cpp CLV/ColumnTypes.cpp
+SRCS+= $(TOPDIR)/common/IMKitUtilities.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -136,13 +138,19 @@ ifeq ($(DEBUG_BUILD), true)
 
 endif
 
-
-
 #	Detect BONE
 ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
 	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
 	LIBS += socket bind
 	DEFINES += BONE
+endif
+
+#Detect Zeta
+ifeq ($(wildcard /boot/develop/headers/be/locale/Locale.h), )
+# BeOS
+else
+#Zeta
+  LIBS += zeta tracker
 endif
 
 INSTALL_DIR= $(TOPDIR)/build/clients
