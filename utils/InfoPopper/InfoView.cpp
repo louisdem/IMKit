@@ -199,6 +199,7 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 
 void InfoView::Draw(BRect drawBounds) {
 	BRect bound = Bounds();
+	BRect progRect;
 	
 	// draw progress background
 	
@@ -209,7 +210,7 @@ void InfoView::Draw(BRect drawBounds) {
 		be_plain_font->GetHeight(&fh);
 		float fontHeight = fh.ascent + fh.descent + fh.leading;
 
-		BRect progRect = Bounds();
+		progRect = Bounds();
 		progRect.InsetBy(kEdgePadding, kEdgePadding);
 		progRect.top = progRect.bottom - (kEdgePadding * 2) - fontHeight;
 				
@@ -253,6 +254,11 @@ void InfoView::Draw(BRect drawBounds) {
 		} else {
 			iy = (Bounds().Height() - fBitmap->Bounds().Height()) / 2.0;
 		};
+		
+		if (fType == InfoPopper::Progress) {
+			// move icon up by half progress bar height if it's present
+			iy -= progRect.Height() / 2.0;
+		}
 		
 		DrawBitmap(fBitmap,	BPoint(ix,iy));
 	}
@@ -375,6 +381,9 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	fLines.clear();
 	
 	// do the text thing
+	
+	// TODO: comment this mess!
+	
 	fApp = app;
 	fTitle = title;
 	fText = text;
@@ -390,7 +399,7 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	fontHeight = fh.leading + fh.descent + fh.ascent;
 	y += fontHeight;
 	
-	printf("Right: %.2f\n", iconRight);
+	//printf("Right: %.2f\n", iconRight);
 	
 	if (fParent->Layout() == AllTextRightOfIcon) {
 		appLine->location = BPoint(iconRight, y);
@@ -454,9 +463,10 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 			offset = spaces[i] + 1;
 			
 			fLines.push_front(tempLine);
-		} else if ((i+1 < count) &&
-			(StringWidth(text + offset, spaces[i+1] - offset) > maxWidth)) {
-			
+		} else if ( 
+			((i+1 < count) && (StringWidth(text + offset, spaces[i+1] - offset) > maxWidth)) ||
+			((i+1 == count) && (StringWidth(text + offset) > maxWidth))
+		) {
 			lineinfo *tempLine = new lineinfo;
 			tempLine->font = be_plain_font;
 			if (wasNewline == false) {
