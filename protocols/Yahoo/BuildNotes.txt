@@ -8,19 +8,19 @@ To get it to build you need to fiddle a bit with the makefile:
 
 	configure --prefix=/boot/home/config  --with-struct-callbacks
 
-Then edit src/makefile:
+Then edit src/Makefile:
 	
-	R5:
+	* R5:
 		Change the line:
 			LIBS =  $(GLIB_LIBS)
 		to
 			LIBS =  $(GLIB_LIBS) -lbind -lsocket
-	Zeta:
+	* Zeta:
 		where it says -lsocket, also add -lbind on the same line, right after -lsocket.
 	
-	remove -ansi from the CFLAGS line
+	* remove "-ansi -pedantic" from the CFLAGS line
 
-	change the line:
+	* change the line:
 		LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	to:
 		LINK = $(LIBTOOL) --mode=link $(CCLD) -no-undefined  $(AM_CFLAGS) $(CFLAGS) \

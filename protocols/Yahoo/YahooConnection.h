@@ -3,8 +3,8 @@
 
 #include <map>
 #include <OS.h>
-#include <libyahoo2/yahoo2.h>
-#include <libyahoo2/yahoo2_callbacks.h>
+#include <yahoo2.h>
+#include <yahoo2_callbacks.h>
 #include <List.h>
 #include <String.h>
 
