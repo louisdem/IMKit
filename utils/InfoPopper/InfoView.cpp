@@ -12,12 +12,7 @@
 
 const float kEdgePadding = 2.0;
 const float kCloseWidth = 10.0;
-const float kWidth = 300.0f;
 
-//InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
-InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
-
-// 
 property_info message_prop_list[] = {
 	{ "content", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
 	{ "title", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
@@ -25,13 +20,16 @@ property_info message_prop_list[] = {
 	0 // terminate list
 };
 
-InfoView::InfoView( info_type type, const char *app, const char *title,
-	const char * text, BMessage *details)
-:	BView( BRect(0,0,kWidth,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE|B_FRAME_EVENTS ),
+InfoView::InfoView(InfoWindow *win, info_type type,
+	const char *app, const char *title, const char * text, BMessage *details)
+
+:	BView( BRect(0,0,win->ViewWidth(),1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE|B_FRAME_EVENTS ),
+
 	fType(type),
 	fRunner(NULL),
 	fDetails(details),
-	fBitmap(NULL) {
+	fBitmap(NULL),
+	fParent(win) {
 	
 	BMessage iconMsg;
 	BBitmap *icon = NULL;
@@ -46,14 +44,14 @@ InfoView::InfoView( info_type type, const char *app, const char *title,
 		
 		entry_ref ref;
 		
-		if ( fDetails->FindRef("iconRef",&ref) == B_OK ) {
+		if ( fDetails->FindRef("iconRef", &ref) == B_OK ) {
 			// It's a ref.
 			BPath path(&ref);
 			
 			switch ( iconType )
 			{
 				case Attribute: {
-					icon = ReadNodeIcon(path.Path(),16);
+					icon = ReadNodeIcon(path.Path(), fParent->IconSize());
 				}	break;
 				case Contents: {
 					// ye ol' "create a bitmap from contens of file"
@@ -78,7 +76,6 @@ InfoView::InfoView( info_type type, const char *app, const char *title,
 		fMessageID = messageID;
 	}
 	if (fDetails->FindFloat("progress", &fProgress) != B_OK) fProgress = 0.0;
-	if (fDetails->FindInt32("timeout", &fTimeout) != B_OK) fTimeout = 5;
 	
 	SetText(app, title, text);
 	ResizeToPreferred();
@@ -109,12 +106,14 @@ InfoView::~InfoView(void) {
 }
 
 void
-InfoView::AttachedToWindow()
-{
+InfoView::AttachedToWindow() {
 	BMessage msg(REMOVE_VIEW);
 	msg.AddPointer("view", this);
-	
-	bigtime_t delay = fTimeout*1000*1000;
+	int32 timeout = -1;
+	if (fDetails->FindInt32("timeout", &timeout) != B_OK) {
+		timeout = fParent->DisplayTime();
+	};
+	bigtime_t delay = timeout*1000*1000;
 	
 	if ( delay > 0 )
 		fRunner = new BMessageRunner( BMessenger(Window()), &msg, delay, 1 );
@@ -187,7 +186,7 @@ void InfoView::MessageReceived(BMessage * msg) {
 };
 
 void InfoView::GetPreferredSize(float *w, float *h) {
-	*w = kWidth;
+	*w = fParent->ViewWidth();
 	*h = fHeight;
 	
 	if (fType == InfoPopper::Progress) {
@@ -249,7 +248,7 @@ void InfoView::Draw(BRect drawBounds) {
 		
 		float ix = kEdgePadding;
 		float iy = 0;
-		if (gLayout == TitleAboveIcon) {
+		if (fParent->Layout() == TitleAboveIcon) {
 			iy = kEdgePadding + title_bottom + (Bounds().Height() - title_bottom - fBitmap->Bounds().Height()) / 2;
 		} else {
 			iy = (Bounds().Height() - fBitmap->Bounds().Height()) / 2.0;
@@ -382,14 +381,18 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 
 	font_height fh;
 	float fontHeight = 0;
-	float iconRight = kEdgePadding + (fBitmap != NULL ? fBitmap->Bounds().right : 0) + kEdgePadding;
+	float iconRight = kEdgePadding + kEdgePadding;
 	float y = kEdgePadding;
+	if (fBitmap) iconRight += fBitmap->Bounds().right;
 
 	lineinfo *appLine = new lineinfo;
 	be_bold_font->GetHeight(&fh);
 	fontHeight = fh.leading + fh.descent + fh.ascent;
 	y += fontHeight;
-	if (gLayout == AllTextRightOfIcon) {
+	
+	printf("Right: %.2f\n", iconRight);
+	
+	if (fParent->Layout() == AllTextRightOfIcon) {
 		appLine->location = BPoint(iconRight, y);
 	} else {
 		appLine->location = BPoint(kEdgePadding, y);

@@ -15,9 +15,17 @@
 
 #include <libim/InfoPopper.h>
 
+class InfoWindow;
+
 enum {
 	REMOVE_VIEW = 'ReVi'
 };
+
+enum infoview_layout {
+	TitleAboveIcon = 0,
+	AllTextRightOfIcon = 1
+};
+
 
 typedef struct line_struct {
 	BFont font;
@@ -33,13 +41,8 @@ using namespace InfoPopper;
 
 class InfoView : public BView
 {
-	public:		
-		enum infoview_layout {
-			TitleAboveIcon,
-			AllTextRightOfIcon
-		};
-		
-		InfoView(info_type type, const char *app, const char *title,
+	public:				
+		InfoView(InfoWindow *win, info_type type, const char *app, const char *title, 
 			const char *text, BMessage *details);
 		~InfoView();
 		
@@ -52,9 +55,6 @@ class InfoView : public BView
 		
 		/**
 			Set the text to be displayed. Called by the constructor.
-			
-			The first line of the text is set to use be_bold_font, and the
-			rest of the lines are set to use be_plain_font.
 		*/
 		void SetText(const char *app, const char *title, const char *text, float newMaxWidth=-1);
 		
@@ -69,12 +69,12 @@ class InfoView : public BView
 		
 	private:
 		void			ScaleBitmap(BBitmap *source);
+		InfoWindow		*fParent;
 	
 		info_type		 fType;
 		BMessageRunner	*fRunner;
 		float			fProgress;
 		BString			fMessageID;
-		int32			fTimeout;
 		
 		BMessage		*fDetails;
 		BBitmap			*fBitmap;
@@ -86,6 +86,7 @@ class InfoView : public BView
 		BString			fText;
 		
 		float			fHeight;
+		infoview_layout	fLayout;
 };
 
 #endif

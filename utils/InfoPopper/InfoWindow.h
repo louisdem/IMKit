@@ -6,6 +6,9 @@
 #include <String.h>
 #include <Entry.h>
 #include <Application.h>
+#include <FindDirectory.h>
+#include <Directory.h>
+#include <Alert.h>
 
 #include <cmath>
 #include <vector>
@@ -36,10 +39,16 @@ class InfoWindow : public BWindow
 		BHandler * ResolveSpecifier(BMessage *, int32 , BMessage *, int32, const char *);
 		
 		int16	IconSize(void);
+		int32	DisplayTime(void);
+		infoview_layout Layout(void);
+		float	ViewWidth(void);
 		
 	private:
 		void	ResizeAll();
 		void	PopupAnimation(float, float);
+		void	WriteDefaultSettings(BNode *node, bool writeWidth = true,
+					bool writeIcon = true, bool writeTimeout = true,
+					bool writeLayout = true);
 		
 		vector<InfoView*>	fInfoViews;
 		deskbar_location	fDeskbarLocation;
@@ -49,8 +58,9 @@ class InfoWindow : public BWindow
 		BString				fMessageText;
 		
 		float				fWidth;
-		
 		int16				fIconSize;
+		int32				fDisplayTime;
+		infoview_layout		fLayout;
 };
 
 extern property_info main_prop_list[];

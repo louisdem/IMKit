@@ -2,12 +2,20 @@
 
 #include <algorithm>
 
-// 
 property_info main_prop_list[] = {
 	{ "message", {B_GET_PROPERTY, B_COUNT_PROPERTIES, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
 	{ "message", {B_CREATE_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "create a message"},
 	0 // terminate list
 };
+
+const float kDefaultWidth = 300.0f;
+const int16 kDefaultIconSize = 16;
+const int32 kDefaultDisplayTime = 10;
+const int16 kDefaultLayout = TitleAboveIcon;
+const char *kWidthName = "windowWidth";
+const char *kIconName = "iconSize";
+const char *kTimeoutName = "displayTime";
+const char *kLayoutName = "titlePosition";
 
 InfoWindow::InfoWindow()
 :	BWindow(BRect(10,10,20,20), "InfoWindow", B_BORDERED_WINDOW,
@@ -24,8 +32,62 @@ InfoWindow::InfoWindow()
 	
 	fDeskbarLocation = BDeskbar().Location();
 	
-	fWidth = 300.0f;
-	fIconSize = 16;
+	BPath path;
+	if (find_directory(B_USER_SETTINGS_DIRECTORY, &path, true, NULL) == B_OK) {
+		path.Append("BeClan/InfoPopper/settings");
+		BNode node(path.Path());
+		if (node.InitCheck() == B_OK) {
+			bool writeWidth = false;
+			bool writeIcon = false;
+			bool writeTimeout = false;
+			bool writeLayout = false;
+		
+			if (node.ReadAttr(kWidthName, B_FLOAT_TYPE, 0, (void *)&fWidth,
+				sizeof(fWidth)) < B_OK) {
+				writeWidth = true;
+				fWidth = kDefaultWidth;
+			};
+			
+			if (node.ReadAttr(kIconName, B_INT16_TYPE, 0, (void *)&fIconSize,
+				sizeof(fIconSize)) < B_OK) {
+				writeIcon = true;
+				fIconSize = kDefaultIconSize;
+			};
+			
+			if (node.ReadAttr(kTimeoutName, B_INT32_TYPE, 0, (void *)&fDisplayTime,
+				sizeof(fDisplayTime)) < B_OK) {
+				writeTimeout = true;
+				fDisplayTime = kDefaultDisplayTime;
+			};
+			
+			if (node.ReadAttr(kLayoutName, B_INT16_TYPE, 0, (void *)&fLayout,
+				sizeof(fLayout)) < B_OK) {
+				writeLayout = true;
+				fLayout = (infoview_layout)kDefaultLayout;
+			};
+			
+			WriteDefaultSettings(&node, writeWidth, writeIcon, writeTimeout,
+				writeLayout);
+		} else {
+//			Lets just assume it's because the file doesn't exist.
+			BPath parPath;
+			path.GetParent(&parPath);
+			create_directory(parPath.Path(), 0777);
+			
+			BFile file(path.Path(), B_READ_WRITE | B_CREATE_FILE);
+			
+			fWidth = kDefaultWidth;
+			fIconSize = kDefaultIconSize;
+			fDisplayTime = kDefaultDisplayTime;
+			
+			WriteDefaultSettings(reinterpret_cast<BNode *>(&file));
+		};
+	} else {
+		BAlert *alert = new BAlert("InfoPopper", "Couldn't find the settings "
+			" directory. This is very bad.", "Carp!");
+		alert->Go();
+		be_app_messenger.SendMessage(B_QUIT_REQUESTED);
+	};
 };
 
 InfoWindow::~InfoWindow(void) {
@@ -85,8 +147,8 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 				};
 			};
 			
-			InfoView *view = new InfoView((InfoPopper::info_type)type, app, title,
-				message, new BMessage(*msg));
+			InfoView *view = new InfoView(this, (InfoPopper::info_type)type, app,
+				title, message, new BMessage(*msg));
 			
 			fInfoViews.push_back(view);			
 			fBorder->AddChild(view);
@@ -116,6 +178,55 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 		};
 	};
 };
+
+BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
+	BPropertyInfo prop_info(main_prop_list);
+	printf("Looking for property %s\n", prop);
+	if ( strcmp(prop,"message") == 0 ) {
+		
+		printf("Matching specifier..\n");
+		
+		if ( msg->what == B_CREATE_PROPERTY )
+		{
+			printf("Create\n");
+			msg->PopSpecifier();
+			return this;
+		} else
+		{
+			int32 i;
+			if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
+		
+			if ( i >= 0 && i < fInfoViews.size() ) {
+				printf("Found message\n");
+				msg->PopSpecifier();
+				return fInfoViews[i];
+			}
+		
+			printf("Index out of range: %ld\n",i);
+			msg->PrintToStream();
+			return NULL;
+		}
+	}
+	return BWindow::ResolveSpecifier(msg, index, spec, form, prop);
+};
+
+int16 InfoWindow::IconSize(void) {
+	return fIconSize;
+};
+
+int32 InfoWindow::DisplayTime(void) {
+	return fDisplayTime;
+};
+
+infoview_layout InfoWindow::Layout(void) {
+	return fLayout;
+};
+
+float InfoWindow::ViewWidth(void) {
+	return fWidth;
+};
+
+//#pragma mark -
 
 void InfoWindow::ResizeAll(void) {
 	if (fInfoViews.size() == 0) {
@@ -208,37 +319,26 @@ void InfoWindow::PopupAnimation(float width, float height) {
 	};
 };
 
-BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
-	BPropertyInfo prop_info(main_prop_list);
-	printf("Looking for property %s\n", prop);
-	if ( strcmp(prop,"message") == 0 ) {
-		
-		printf("Matching specifier..\n");
-		
-		if ( msg->what == B_CREATE_PROPERTY )
-		{
-			printf("Create\n");
-			msg->PopSpecifier();
-			return this;
-		} else
-		{
-			int32 i;
-			if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
-		
-			if ( i >= 0 && i < fInfoViews.size() ) {
-				printf("Found message\n");
-				msg->PopSpecifier();
-				return fInfoViews[i];
-			}
-		
-			printf("Index out of range: %ld\n",i);
-			msg->PrintToStream();
-			return NULL;
-		}
-	}
-	return BWindow::ResolveSpecifier(msg, index, spec, form, prop);
-};
+void InfoWindow::WriteDefaultSettings(BNode *node, bool writeWidth = true,
+	bool writeIcon = true, bool writeTimeout = true, bool writeLayout = true) {
 
-int16 InfoWindow::IconSize(void) {
-	return fIconSize;
+	if (writeWidth) {
+		node->WriteAttr(kWidthName, B_FLOAT_TYPE, 0, (void *)&kDefaultWidth,
+			sizeof(kDefaultWidth));
+	};
+	
+	if (writeIcon) {
+		node->WriteAttr(kIconName, B_INT16_TYPE, 0, (void *)&kDefaultIconSize,
+			sizeof(kDefaultIconSize));
+	};
+	
+	if (writeTimeout) {
+		node->WriteAttr(kTimeoutName, B_INT32_TYPE, 0, (void *)&kDefaultDisplayTime,
+			sizeof(kDefaultDisplayTime));
+	};
+	
+	if (writeLayout) {
+		node->WriteAttr(kLayoutName, B_INT16_TYPE, 0, (void *)&kDefaultLayout,
+			sizeof(kDefaultLayout));
+	};
 };
