@@ -133,14 +133,16 @@ void SimpleClient::run() {
  * example the way gtkmm does it)
  */
 void SimpleClient::socket_cb(SocketEvent *ev) {
-
+  char some_text[512];
+  
   if (dynamic_cast<AddSocketHandleEvent*>(ev) != NULL) {
     // the library requests we start selecting on a socket
 
     AddSocketHandleEvent *cev = dynamic_cast<AddSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
-
-    cout << "connecting socket " << fd << endl;
+	
+	sprintf(some_text,"ICQ: connecting socket %ld", fd);
+	LOG(some_text);
 
     // register this socket with our Select object
     m_sockets[fd] =
@@ -161,7 +163,9 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     RemoveSocketHandleEvent *cev = dynamic_cast<RemoveSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 
-    cout << "disconnecting socket " << fd << endl;
+    sprintf(some_text,"ICQ: disconnecting socket %ld", fd);
+    LOG(some_text);
+    
     if (m_sockets.count(fd) == 0) {
       cerr << "Problem: file descriptor not connected" << endl;
     } else {
@@ -171,7 +175,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
 
   } else
   {
-  	LOG("Some other socket event that's not handled\n");
+  	LOG("ICQ: Some other socket event that's not handled\n");
   	exit_thread(1);
   }
 }
@@ -193,7 +197,7 @@ void SimpleClient::select_socket_cb(int fd, Select::SocketInputCondition cond)
  * called when the library has connected
  */
 void SimpleClient::connected_cb(ConnectedEvent *c) {
-  cout << "ickle-shell: Connected" << endl;
+  LOG("ICQ: Connected");
   
   icqclient.fetchServerBasedContactList();
   
@@ -211,32 +215,30 @@ void SimpleClient::connected_cb(ConnectedEvent *c) {
  */
 void SimpleClient::disconnected_cb(DisconnectedEvent *c) {
   if (c->getReason() == DisconnectedEvent::REQUESTED) {
-    cout << "ickle-shell: Disconnected as requested" << endl;
+    LOG("ICQ: Disconnected as requested");
   } else {
-    cout << "ickle-shell: Problem connecting: ";
     switch(c->getReason()) {
     case DisconnectedEvent::FAILED_LOWLEVEL:
-      cout << "Socket problems";
+      LOG("ICQ: Problem connecting: socket problems");
       break;
     case DisconnectedEvent::FAILED_BADUSERNAME:
-      cout << "Bad Username";
+      LOG("ICQ: Problem connecting: Bad Username");
       break;
     case DisconnectedEvent::FAILED_TURBOING:
-      cout << "Turboing";
+      LOG("ICQ: Problem connecting: Turboing");
       break;
     case DisconnectedEvent::FAILED_BADPASSWORD:
-      cout << "Bad Password";
+      LOG("ICQ: Problem connecting: Bad Password");
       break;
     case DisconnectedEvent::FAILED_MISMATCH_PASSWD:
-      cout << "Username and Password did not match";
+      LOG("ICQ: Problem connecting: Username and Password did not match");
       break;
     case DisconnectedEvent::FAILED_UNKNOWN:
-      cout << "Unknown";
+      LOG("ICQ: Problem connecting: Unknown");
       break;
     default:
       break;
     }
-    cout << endl;
   }
 
   BMessage msg(IM::MESSAGE);
@@ -257,7 +259,9 @@ void SimpleClient::message_cb(MessageEvent *c) {
   if (c->getType() == MessageEvent::Normal) {
 
     NormalMessageEvent *msg = static_cast<NormalMessageEvent*>(c);
-    cout << "ickle-shell: Message received: " << msg->getMessage() << " from " << msg->getSenderUIN() << endl;
+    char some_text[512];
+    sprintf(some_text, "ICQ: Message received: %s from %ld", msg->getMessage(), msg->getSenderUIN() );
+	LOG(some_text);
 	
 	char uin_string[100];
 	
@@ -386,7 +390,7 @@ SimpleClient::setEncoding( int32 encoding )
 int32
 client_thread( void * _data )
 {
-	LOG("ICQ client: running\n");
+	LOG("ICQ: client thread running");
 
 	SimpleClient * client = (SimpleClient*)_data;
 	
@@ -435,7 +439,7 @@ ICQProtocol::Shutdown()
 	
 	kill_thread( find_thread(ICQ_THREAD_NAME) );
 	
-	LOG("ICQProtocol::Shutdown() done\n");
+	LOG("ICQProtocol::Shutdown() done");
 	
 	return B_OK;
 }
@@ -479,7 +483,7 @@ ICQProtocol::Process( BMessage * msg )
 			
 					if ( find_thread(ICQ_THREAD_NAME) == B_NAME_NOT_FOUND )
 					{ // icq thread not running, start it
-						LOG("Starting thread 'ICQ client'\n");
+						LOG("ICQ: Starting thread 'ICQ client'");
 						
 						fThread = spawn_thread(
 							client_thread,

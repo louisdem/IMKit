@@ -38,7 +38,9 @@ _SEND_ERROR( const char * text, BMessage * msg )
 		msg->SendReply(&err);
 	} else
 	{ // no recipient for message replies, write to stdout
-		printf("ERROR: %s\n", text);
+		char some_text[512];
+		sprintf(some_text,"ERROR: %s",text);
+		LOG(some_text);
 	}
 }
 
@@ -203,7 +205,10 @@ Server::LoadAddons()
 	
 	// setup Directory to get list of files
 	BDirectory dir( path.Path() );
-	printf("add-on directory: %s\n", path.Path() );
+	char some_text[512];
+	
+	sprintf(some_text,"add-on directory: %s", path.Path() );
+	LOG(some_text);
 	
 	while( dir.GetNextEntry( (BEntry*)&entry, TRUE ) == B_NO_ERROR )
 	{ // continue until no more files
@@ -216,7 +221,8 @@ Server::LoadAddons()
 		image_id curr_image = load_add_on( path.Path() );
 		if( curr_image < 0 )
 		{
-			printf("load_add_on() fail, file [%s]\n", path.Path());
+			sprintf(some_text,"load_add_on() fail, file [%s]", path.Path());
+			LOG(some_text);
 			continue;
 		}
 		
@@ -231,7 +237,8 @@ Server::LoadAddons()
 		
 		if ( res != B_OK )
 		{
-			printf("get_image_symbol(load_protocol) fail, file [%s]\n", path.Path());
+			sprintf(some_text,"get_image_symbol(load_protocol) fail, file [%s]", path.Path());
+			LOG(some_text);
 			unload_add_on( curr_image );
 			continue;
 		}
@@ -240,11 +247,13 @@ Server::LoadAddons()
 		
 		if ( !protocol )
 		{
-			printf("load_protocol() fail, file [%s]\n", path.Path());
+			sprintf(some_text,"load_protocol() fail, file [%s]", path.Path());
+			LOG(some_text);
 			unload_add_on( curr_image );
 		}
 		
-		printf("Protocol loaded: [%s]\n", protocol->GetSignature() );
+		sprintf(some_text,"Protocol loaded: [%s]", protocol->GetSignature() );
+		LOG(some_text);
 		
 		// add to list
 		fProtocols[protocol->GetSignature()] = protocol;
@@ -272,7 +281,7 @@ Server::LoadAddons()
 		);
 		if ( num_read > 0 )
 		{
-			printf("Read %ld bytes of settings data\n", num_read);
+			LOG("Read settings data");
 			
 			BMessage settings_msg;
 			if ( settings_msg.Unflatten(settings) == B_OK )
@@ -304,7 +313,7 @@ Server::LoadAddons()
 		// we should care about the result here..
 		protocol->Init( BMessenger(this) );
 	}
-	printf("All add-ons loaded.\n");
+	LOG("All add-ons loaded.");
 }
 
 /**
@@ -431,7 +440,7 @@ Server::Broadcast( BMessage * msg )
 			(*i).SendMessage(msg);
 		} else
 		{
-			printf("Broadcast(): messenger local\n");
+			_ERROR("Broadcast(): messenger local");
 		}
 	}
 }
@@ -512,7 +521,9 @@ Server::FindContact( const char * proto_id )
 Contact
 Server::CreateContact( const char * proto_id )
 {
-	printf("Creating new contact for connection [%s]\n", proto_id);
+	char some_text[512];
+	sprintf(some_text,"Creating new contact for connection [%s]", proto_id);
+	LOG(some_text);
 	
 	Contact result;
 	
@@ -536,11 +547,13 @@ Server::CreateContact( const char * proto_id )
 	
 	if ( dir.FindEntry(filename,&entry) != B_OK )
 	{
-		printf("ERROR: While creating a new contact, dir.FindEntry() failed. filename was [%s]\n",filename);
+		sprintf(some_text,"While creating a new contact, dir.FindEntry() failed. filename was [%s]",filename);
+		_ERROR(some_text);
 		return result;
 	}
 	
-	printf("  created file [%s]\n", filename);
+	sprintf(some_text,"  created file [%s]", filename);
+	LOG(some_text);
 	
 	// file created. set type and add connection
 	if ( file.WriteAttr(
@@ -553,7 +566,7 @@ Server::CreateContact( const char * proto_id )
 		return result;
 	}
 	
-	printf("  wrote type\n");
+	LOG("  wrote type");
 	
 	// file created. set type and add connection
 	result.SetTo( entry );
@@ -563,14 +576,14 @@ Server::CreateContact( const char * proto_id )
 		return Contact();
 	}
 	
-	printf("  wrote connection\n");
+	LOG("  wrote connection");
 	
 	if ( result.SetStatus("offline") != B_OK )
 	{
 		return Contact();
 	}
 	
-	printf("  wrote status\n");
+	LOG("  wrote status");
 	
 	// post request info about this contact
 	BMessage msg(MESSAGE);
@@ -579,7 +592,7 @@ Server::CreateContact( const char * proto_id )
 	
 	PostMessage(&msg);
 	
-	printf("  done.\n");
+	LOG("  done.");
 	
 	return result;
 }
@@ -645,7 +658,7 @@ Server::ServerBasedContactList( BMessage * msg )
 		
 	if ( !protocol )
 	{
-		_ERROR("ERROR: Malformed SERVER_BASED_CONTACT_LIST message\n",msg);
+		_ERROR("ERROR: Malformed SERVER_BASED_CONTACT_LIST message",msg);
 		return;
 	}
 	
@@ -712,7 +725,7 @@ Server::GetSettings( BMessage * msg )
 		return;
 	}
 			
-	printf("Read %ld bytes of settings data\n", num_read);
+	LOG("Read settings data");
 			
 	BMessage settings;
 			
@@ -779,8 +792,6 @@ Server::SetSettings( BMessage * msg )
 		return;
 	}
 			
-	printf("Settings flattened size: %ld\n", data_size );
-			
 	char settings_path[512];
 	sprintf(
 		settings_path,
@@ -811,8 +822,7 @@ Server::SetSettings( BMessage * msg )
 			
 	if ( msg->ReturnAddress().IsValid() )
 	{
-		printf("Settings applied:\n");
-		settings.PrintToStream();
+		LOG("Settings applied",&settings);
 		msg->SendReply(ACTION_PERFORMED);
 	}
 }
@@ -1039,7 +1049,7 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	if ( !status )
 	{
-		_ERROR("Missing 'status' in STATUS_CHANGED message\n",msg);
+		_ERROR("Missing 'status' in STATUS_CHANGED message",msg);
 		return;
 	}
 	
@@ -1047,7 +1057,10 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	string new_status = status;
 	
-	printf("STATUS_CHANGED [%s] is now %s\n",proto_id.c_str(),new_status.c_str());
+	char some_text[512];
+	
+	sprintf(some_text,"STATUS_CHANGED [%s] is now %s",proto_id.c_str(),new_status.c_str());
+	LOG(some_text);
 	
 /*	for ( int i=0; i<contact.CountConnections(); i++ )
 	{ // calc total status
@@ -1120,6 +1133,7 @@ Server::SetAllOffline()
 	}
 	
 	char nickname[512], name[512], filename[512];
+	char some_text[512];
 	
 	Contact c;
 	for ( int i=0; msg.FindRef("contact",i,&entry) == B_OK; i++ )
@@ -1127,7 +1141,7 @@ Server::SetAllOffline()
 		c.SetTo(&entry);
 		
 		if ( c.InitCheck() != B_OK )
-			printf("Contact invalid\n");
+			_ERROR("SetAllOffline: Contact invalid");
 		
 		if ( c.GetNickname(nickname,sizeof(nickname)) != B_OK )
 			strcpy(nickname,"<no nick>");
@@ -1137,10 +1151,11 @@ Server::SetAllOffline()
 		if ( e.GetName(filename) != B_OK )
 			strcpy(filename,"<no filename?!>");
 		
-		printf("Setting %s (%s) offline, filename: %s\n", name, nickname, filename);
+		sprintf(some_text,"Setting %s (%s) offline, filename: %s", name, nickname, filename);
+		LOG(some_text);
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
-			printf("  error.");
+			LOG("  error.");
 	}
 }
 
