@@ -309,9 +309,11 @@ ChatWindow::ChatWindow( entry_ref & ref )
 		true
 	);
 
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fInput->SetViewColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
 	fInput->SetLowColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
 	fInput->SetHighColor(ui_color(B_CONTROL_TEXT_COLOR));
+#endif
 
 	AddChild(inputScroll);	
 	
@@ -323,10 +325,11 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fText->MakeEditable(false);
 	fText->SetStylable(true);
 
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fText->SetViewColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
 	fText->SetLowColor(ui_color(B_CONTROL_BACKGROUND_COLOR));
 	fText->SetHighColor(ui_color(B_CONTROL_TEXT_COLOR));
-	
+#endif	
 	BScrollView * scroll = new BScrollView(
 		"scroller", fText,
 		B_FOLLOW_ALL, 0,
