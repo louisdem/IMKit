@@ -5,8 +5,8 @@ const rgb_color kHighlight = {140, 140, 140, 255};
 
 IconTextItem::IconTextItem(const char *text, BBitmap *icon = NULL) 
 	: fIcon(NULL),
-	fIconWidth(0),
-	fIconHeight(0) {
+	fIconHeight(0),
+	fIconWidth(0) {
 
 	fText = text;
 	fIcon = icon;
@@ -56,7 +56,7 @@ const BBitmap *IconTextItem::Icon(void) const {
 	return fIcon;
 };
 
-void IconTextItem::Update(BView *owner, const BFont *font) {
+void IconTextItem::Update(BView */*owner*/, const BFont *font) {
 	font_height fontHeight;
 	font->GetHeight(&fontHeight);
 	fFontHeight = fontHeight.descent + fontHeight.leading + fontHeight.ascent;
