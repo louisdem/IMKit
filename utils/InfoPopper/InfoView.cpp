@@ -6,8 +6,18 @@
 #include <Window.h>
 #include <Messenger.h>
 #include <stdio.h>
+#include <PropertyInfo.h>
 
 const float kEdgePadding = 2.0;
+
+// 
+property_info message_prop_list[] = {
+	{ "content", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
+	{ "title", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
+//	{ "head", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get head"},
+//	{ "head", {B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "set head"},
+	0 // terminate list
+};
 
 InfoView::InfoView( info_type type, const char * text, BMessage *details )
 :	BView( BRect(0,0,1,1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW ),
@@ -106,6 +116,42 @@ InfoView::AttachedToWindow()
 
 void InfoView::MessageReceived(BMessage * msg) {
 	switch (msg->what) {
+		case B_GET_PROPERTY: {
+			msg->PrintToStream();
+			
+			BMessage specifier;
+			if ( msg->FindMessage("specifiers",0,&specifier) != B_OK )
+				return;
+			
+			const char * property;
+			if ( specifier.FindString("property",&property) != B_OK )
+				return;
+			
+			BMessage reply(B_REPLY);
+			
+			if ( strcmp(property, "content") == 0 ) {
+				BString content;
+				
+				for ( list<pair<BString,const BFont*> >::iterator i=fLines.begin(); i!=fLines.end(); i++ ) {
+					if ( i != fLines.begin() ) {
+						if ( content != "" )
+							content.Append("\n");
+						content.Append(i->first);
+					}
+				}
+				reply.AddString("result", content.String());
+			}
+			
+			if ( strcmp(property, "title") == 0 ) {
+				BString title;
+				title = fLines.begin()->first;
+				title.RemoveLast(":");
+				
+				reply.AddString("result", title.String());
+			}
+			
+			msg->SendReply(&reply);
+		}	break;
 		
 		case REMOVE_VIEW: {
 			BMessage remove(REMOVE_VIEW);
@@ -326,3 +372,20 @@ InfoView::HasMessageID( const char * id )
 {
 	return fMessageID == id;
 }
+
+BHandler * InfoView::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
+	BPropertyInfo prop_info(message_prop_list);
+	if (prop_info.FindMatch(msg, index, spec, form, prop) >= 0) {
+		msg->PopSpecifier();
+		return this;
+	}
+	return BView::ResolveSpecifier(msg, index, spec, form, prop);
+};
+
+status_t InfoView::GetSupportedSuites(BMessage *msg) {
+	msg->AddString("suites", "suite/x-vnd.beclan.InfoPopper-message");
+	BPropertyInfo prop_info(message_prop_list);
+	msg->AddFlat("messages", &prop_info);
+	return BView::GetSupportedSuites(msg); 		
+};
+

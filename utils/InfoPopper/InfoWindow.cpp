@@ -1,5 +1,14 @@
 #include "InfoWindow.h"
 
+#include <algorithm>
+
+// 
+property_info main_prop_list[] = {
+	{ "message", {B_GET_PROPERTY, B_COUNT_PROPERTIES, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
+	{ "message", {B_CREATE_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "create a message"},
+	0 // terminate list
+};
+
 InfoWindow::InfoWindow()
 :	BWindow(BRect(10,10,20,20), "InfoWindow", B_BORDERED_WINDOW,
 	B_AVOID_FRONT|B_AVOID_FOCUS) {
@@ -45,7 +54,7 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			const char *messageID;
 			if ( msg->FindString("messageID",&messageID) == B_OK )
 			{ // message ID present, remove current message if present
-				list<InfoView*>::iterator i;
+				vector<InfoView*>::iterator i;
 				
 				for ( i=fInfoViews.begin(); i!=fInfoViews.end(); i++ )
 				{
@@ -53,7 +62,7 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 					{
 						(*i)->RemoveSelf();
 						delete *i;
-						fInfoViews.remove(*i);
+						fInfoViews.erase(i);
 						break;
 					}
 				}
@@ -84,7 +93,8 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			
 			fBorder->RemoveChild(info);
 			
-			fInfoViews.remove(info);
+			vector<InfoView*>::iterator i = find(fInfoViews.begin(), fInfoViews.end(), info);
+			fInfoViews.erase(i);
 			
 			ResizeAll();
 		} break;
@@ -106,7 +116,7 @@ void InfoWindow::ResizeAll(void) {
 	
 	float curry = borderh - fBorder->BorderSize(), maxw = 250;
 
-	for (list<InfoView*>::iterator i = fInfoViews.begin(); i != fInfoViews.end();
+	for (vector<InfoView*>::iterator i = fInfoViews.begin(); i != fInfoViews.end();
 		i++) {
 		float pw,ph;
 		
@@ -183,4 +193,26 @@ void InfoWindow::PopupAnimation(float width, float height) {
 	if (IsHidden() && fInfoViews.size() != 0) {
 		Show();
 	};
+};
+
+BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
+	BPropertyInfo prop_info(main_prop_list);
+	printf("Looking for property %s\n", prop);
+	if ( strcmp(prop,"message") == 0 ) {
+		printf("Matching specifier\n");
+		
+		int32 i;
+		if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
+		
+		if ( i >= 0 && i < fInfoViews.size() ) {
+			printf("Found message\n");
+			msg->PopSpecifier();
+			return fInfoViews[i];
+		}
+		
+		printf("Index out of range: %ld\n",i);
+		msg->PrintToStream();
+		return NULL;
+	}
+	return BWindow::ResolveSpecifier(msg, index, spec, form, prop);
 };

@@ -11,6 +11,7 @@
 #include <storage/Entry.h>
 #include <Roster.h>
 #include <Path.h>
+#include <Message.h>
 
 #include <libim/InfoPopper.h>
 
@@ -46,6 +47,9 @@ class InfoView : public BView
 		bool HasMessageID( const char * );
 
 		void MouseDown(BPoint point);
+		
+		BHandler * ResolveSpecifier(BMessage *, int32 , BMessage *, int32, const char *);
+		status_t GetSupportedSuites(BMessage*);
 		
 	private:
 		info_type		 fType;
