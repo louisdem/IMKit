@@ -7,6 +7,7 @@
 #include <ctype.h>
 
 #include "AIMHandler.h"
+#include "htmlparse.h"
 
 void PrintHex(const unsigned char* buf, size_t size) {
 	if ( g_verbosity_level != liDebug ) {
@@ -56,73 +57,6 @@ void PrintHex(const unsigned char* buf, size_t size) {
 	}
 	
 	fprintf(stdout, "\n");
-}
-
-void remove_html( char * msg )
-{
-	bool is_in_tag = false;
-	int copy_pos = 0;
-	
-	char * copy = new char[strlen(msg)+1];
-	
-	for ( int i=0; msg[i]; i++ )
-	{
-		switch ( msg[i] )
-		{
-			case '<':
-				is_in_tag = true;
-				for (int j = i+1; msg[j]; j++) {
-					if (isspace(msg[j])) continue;
-					else if (tolower(msg[j]) == 'a') {
-						copy[copy_pos++] = '[';
-						copy[copy_pos++] = ' ';
-						for (; msg[j] && msg[j] != '=' /* This is horrible */; j++); j++;
-						for (; msg[j] && isspace(msg[j]); j++);
-						if (msg[j] == '\"') j++;
-						for (; msg[j] && !isspace(msg[j]) && msg[j] != '\"'; j++)
-								copy[copy_pos++] = msg[j];
-						copy[copy_pos++] = ' ';
-						copy[copy_pos++] = ']';
-						copy[copy_pos++] = ' ';
-					} else break;
-				}
-							
-				break;
-			case '>':
-				is_in_tag = false;
-				break;
-			case '&':
-				if (strncmp("&quot;",&msg[i],6) == 0) {
-					copy[copy_pos++] = '\"';
-					i += 5;
-					break;
-				}
-				if (strncmp("&lt;",&msg[i],4) == 0) {
-					copy[copy_pos++] = '<';
-					i += 3;
-					break;
-				}
-				if (strncmp("&gt;",&msg[i],4) == 0) {
-					copy[copy_pos++] = '>';
-					i += 3;
-					break;
-				}
-				if (strncmp("&amp;",&msg[i],5) == 0) {
-					copy[copy_pos++] = '&';
-					i += 4;
-					break;
-				}
-			default:
-				if ( !is_in_tag )
-				{
-					copy[copy_pos++] = msg[i];
-				}
-		}
-	}
-	
-	copy[copy_pos] = 0;
-	
-	strcpy(msg, copy);
 }
 
 AIMManager::AIMManager(AIMHandler *handler) {	
@@ -571,7 +505,7 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 									msg[tlvlen - 3] = '\0';
 								}
 								
-								remove_html( msg );
+								parse_html( msg );
 								
 								LOG(kProtocolName, liHigh, "AIMManager: Got message from %s: \"%s\"",
 									nick, msg);
@@ -829,14 +763,16 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 
 	TLV *msgData = new TLV(0x0002);
 	msgData->AddTLV(new TLV(0x0501, "", 0));
-
-	uint16 messageLen = strlen(message);
+	
+	BString msg_encode(message);
+	encode_html(msg_encode);
+	uint16 messageLen = msg_encode.Length();
 	char *buffer = (char *)calloc(messageLen + 4, sizeof(char));
 	buffer[0] = 0x00;
 	buffer[1] = 0x00;
 	buffer[2] = 0xff;
 	buffer[3] = 0xff;
-	memcpy((void *)(buffer + 4), message, messageLen);
+	memcpy((void *)(buffer + 4), msg_encode.String(), messageLen);
 	msgData->AddTLV(new TLV(0x101, buffer, messageLen + 4));
 	
 	free(buffer);
