@@ -60,7 +60,7 @@ ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
 # Is a BeOS build
 else
 # Zeta build
-LIBS += zeta
+LIBS += zeta icon
 endif
 
 #	specify additional paths to directories following the standard
