@@ -49,7 +49,7 @@ status_t AIMReqConn::HandleServiceControl(BMessage *msg) {
 				newCaps.AddInt16("family", s);
 			};
 			
-			fManMsgr.SendMessage(newCaps);
+			fManMsgr.SendMessage(&newCaps);
 			
 			if (State() == AMAN_CONNECTING) {
 				Flap *f = new Flap(SNAC_DATA);
