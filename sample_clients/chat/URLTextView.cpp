@@ -2,6 +2,7 @@
 
 #include <Roster.h>
 #include <stdio.h>
+#include <string.h>
 
 URLTextView::URLTextView(BRect r, const char * name, BRect text_rect, uint32 follow, uint32 flags)
 :	BTextView(r, name, text_rect, follow, flags)
