@@ -1,0 +1,20 @@
+Compiling the code
+
+First of all, a few notes: 
+
+* Running make will create a dir src/build where binaries are placed. Just so
+you know where to look for it.
+
+* When running "make install" the Tracker add-ons will be installed directly 
+in ~/config/add-ons/Tracker where they belong.
+
+* To compile the ICQ add-on you first need to download and install libsigc++ and
+libicq2000 from http://libsgic.sourceforge.net and http://libicq2000.sourceforge.net
+Get version 1.0.4 of libsigc++, I don't think 1.2.x will compile on BeOS.
+Configure both with --prefix=/boot/home/config and "make install" them.
+If you don't want to make it, remove it from src/protocols/makefile.
+
+Now, on to the making:
+
+To compile the Kit do this: Open a Terminal, change to the imkit/src folder. 
+Run "make", then run "make install". Simple enough.
