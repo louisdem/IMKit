@@ -17,7 +17,8 @@ class InfoWindow : public BWindow
 		
 		bool	QuitRequested();
 		void	MessageReceived( BMessage * );
-	
+		void 	WorkspaceActivated( int32, bool );
+		
 	private:
 		void	ResizeAll();
 		void	PopupAnimation(float, float);

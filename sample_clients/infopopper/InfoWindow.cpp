@@ -41,6 +41,15 @@ InfoWindow::QuitRequested()
 }
 
 void
+InfoWindow::WorkspaceActivated( int32, bool active )
+{
+	if ( active )
+	{ // move to correct position
+		ResizeAll();
+	}
+}
+
+void
 InfoWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
@@ -203,8 +212,7 @@ InfoWindow::PopupAnimation(float width, float height) {
 	
 	MoveTo(x, y);
 	
-	if (IsHidden()) {
+	if (IsHidden() && fInfoViews.size() != 0) {
 		Show();
 	}
-	
 }
