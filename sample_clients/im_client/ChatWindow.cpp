@@ -343,6 +343,9 @@ ChatWindow::ChatWindow(entry_ref & ref, int32 iconBarSize = kLargeIcon)
 	// get contact info
 	reloadContact();
 
+	// set up timer for clearing typing view
+	fTypingTimer = NULL;
+//	startTypingTimer();
 }
 
 ChatWindow::~ChatWindow()
@@ -572,22 +575,26 @@ ChatWindow::MessageReceived( BMessage * msg )
 					fText->ScrollToSelection();
 
 					if (!IsActive()) startNotify();
-
+					
+					stopTypingTimer();
 				}	break;
 				
 				case IM::CONTACT_STARTED_TYPING: {	
 					IM::Contact c(&fEntry);
 	
-					char nick[512];
+/*					char nick[512];
 					c.GetNickname(nick, sizeof(nick));
 					
 					BString text = nick;
 					text << " is typing!";
 					fTypingView->SetText(text.String());
+					*/
+					startTypingTimer();
 				} break;
 				
 				case IM::CONTACT_STOPPED_TYPING: {
-					fTypingView->SetText("");
+				//	fTypingView->SetText("");
+					stopTypingTimer();
 				} break;
 				
 			}
@@ -794,6 +801,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 			fInput->ScrollToOffset(fInput->TextLength());
 		} break;
 		
+		case CLEAR_TYPING:
+			//fTypingView->SetText("");
+			stopTypingTimer();
+			break;
 		
 		default:
 			BWindow::MessageReceived(msg);
@@ -946,3 +957,28 @@ void ChatWindow::BuildProtocolMenu(void) {
 	
 	menu->SetFont(be_plain_font);
 };
+
+void
+ChatWindow::startTypingTimer()
+{
+	if ( fTypingTimer )
+		delete fTypingTimer;
+	
+	BMessage clearTyping(CLEAR_TYPING);
+	fTypingTimer = new BMessageRunner( BMessenger(this), &clearTyping, 7*1000*1000, 1 );
+	if ( fTypingTimer->InitCheck() != B_OK )
+		LOG("im_client", liHigh, "InitCheck fail on typing timer");
+	
+	fTypingView->SetText("User is typing..");
+}
+
+void
+ChatWindow::stopTypingTimer()
+{
+	fTypingView->SetText("");
+	
+	if ( fTypingTimer )
+		delete fTypingTimer;
+	
+	fTypingTimer = NULL;
+}

@@ -23,6 +23,7 @@
 #include <StringView.h>
 #include <Roster.h>
 #include <Bitmap.h>
+#include <MessageRunner.h>
 
 #include "IconMenuItem.h"
 #include "StatusBar.h"
@@ -83,14 +84,18 @@ class ChatWindow : public BWindow
 		
 	private:
 		void BuildProtocolMenu(void);
-	
+		void startTypingTimer();
+		void stopTypingTimer();
+		
 		enum { 
 			SEND_MESSAGE	= 1,
 			
 			SHOW_INFO		= 100,
 			BLOCK,
 			EMAIL,
-			AUTH
+			AUTH,
+			
+			CLEAR_TYPING	= 1000
 		 };
 		
 		entry_ref	fEntry;
@@ -117,6 +122,9 @@ class ChatWindow : public BWindow
 		BMenuField		*fProtocolMenu;
 		StatusBar		*fStatusBar;
 		BStringView		*fTypingView;
+		
+		BMessageRunner	*fTypingTimer;
 };
 
 #endif
+
