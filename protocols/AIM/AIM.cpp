@@ -59,8 +59,9 @@ status_t AIMProtocol::Process(BMessage * msg) {
 			switch (im_what) {
 				case IM::REGISTER_CONTACTS:
 				{
+					type_code garbage;
 					int32 count = 0;
-					msg->GetInfo("id", NULL, &count);
+					msg->GetInfo("id", &garbage, &count);
 								
 					if (count > 0) {
 						list<char *> buddies;
