@@ -140,7 +140,7 @@ status_t InfoPopperDisplay::ProcessMailMessage
 	BString dest;
 	if ( io_headers->FindString("DESTINATION") )
 	{
-		dest = io_headers->FindString("DESKTIONATION");
+		dest = io_headers->FindString("DESTIONATION");
 	} else
 	{
 		dest = fPath;
