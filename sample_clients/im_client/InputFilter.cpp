@@ -1,5 +1,7 @@
 #include "InputFilter.h"
 
+#include <libim/Constants.h>
+
 InputFilter::InputFilter (BTextView *owner, BMessage *msg) 
 	: BMessageFilter (B_ANY_DELIVERY, B_ANY_SOURCE),
 	fParent(owner),
@@ -41,6 +43,9 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 	switch (keyStroke[0]) {
 		case B_RETURN: {				
 			if (keyModifiers & B_COMMAND_KEY) {
+				BMessage *typing = new BMessage(IM::USER_STOPPED_TYPING);
+				fParent->Window()->PostMessage(typing);			
+			
 				fParent->Window()->PostMessage(fMessage);
 				return B_SKIP_MESSAGE;
 			};
@@ -49,10 +54,11 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 		case B_ESCAPE: {
 		} break;
 	
-//		default: {
+		default: {
+			fParent->Window()->PostMessage(new BMessage(IM::USER_STARTED_TYPING));
 //			filter_result result (B_DISPATCH_MESSAGE);
 //			return result;
-//		} break;
+		} break;
 	};
 
 	return B_DISPATCH_MESSAGE;

@@ -36,7 +36,7 @@ status_t AIMProtocol::Init(BMessenger msgr) {
 	
 	fManager = new AIMManager(dynamic_cast<AIMHandler *>(this));
 	fManager->Run();
-
+	
 	return B_OK;
 }
 

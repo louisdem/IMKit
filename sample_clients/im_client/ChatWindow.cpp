@@ -80,7 +80,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	ImageButton * btn;
 	BBitmap * icon;
 	
-	icon = GetBitmapFromAttribute("/boot/beos/apps"
+	icon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
 		"/People", "BEOS:L:STD_ICON");
 	btn = new ImageButton(
 		BRect(2,2,2+kButtonWidth,2+kButtonHeight),
@@ -376,6 +376,18 @@ ChatWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case IM::USER_STOPPED_TYPING: {
+			BMessage im_msg(IM::MESSAGE);
+			im_msg.AddInt32("im_what",IM::USER_STOPPED_TYPING);
+			im_msg.AddRef("contact",&fEntry);
+			fMan->SendMessage(&im_msg);
+		} break;
+		case IM::USER_STARTED_TYPING: {
+			BMessage im_msg(IM::MESSAGE);
+			im_msg.AddInt32("im_what", IM::USER_STARTED_TYPING);
+			im_msg.AddRef("contact", &fEntry);
+			fMan->SendMessage(&im_msg);
+		} break;
 		case IM::DESKBAR_ICON_CLICKED:
 		{ // deskbar icon clicked, move to current workspace and activate
 			SetWorkspaces( 1 << current_workspace() );
@@ -457,6 +469,11 @@ ChatWindow::MessageReceived( BMessage * msg )
 						startNotify();
 					}
 				}	break;
+				
+				case IM::CONTACT_STARTED_TYPING: {
+					msg->PrintToStream();
+					printf("User started typing! Tis a miracle, kind sir\n");
+				};
 			}
 			
 /*

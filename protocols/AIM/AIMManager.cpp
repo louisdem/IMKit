@@ -117,18 +117,23 @@ status_t AIMManager::Send(Flap *f) {
 			LOG("AIM", LOW, "No connections handle SNAC (0x%04x) requesting service",
 				family);
 			AIMConnection *con = fConnections.front();
+			if (con == NULL) {
+				LOG("AIM", HIGH, "No available connections to send SNAC");
+			} else {
 			
-			Flap *newService = new Flap(SNAC_DATA);
-			newService->AddSNAC(new SNAC(SERVICE_CONTROL, REQUEST_NEW_SERVICE,
-				0x00, 0x00, 0x00000000));
+				Flap *newService = new Flap(SNAC_DATA);
+				newService->AddSNAC(new SNAC(SERVICE_CONTROL, REQUEST_NEW_SERVICE,
+					0x00, 0x00, 0x00000000));
+					
+				uchar highF = (family & 0xff00) >> 8;
+				uchar lowF = (family & 0x00ff);
+				newService->AddRawData((uchar *)&highF, sizeof(highF));
+				newService->AddRawData((uchar *)&lowF, sizeof(lowF));
+				con->Send(newService);
+
+				fWaitingSupport.push_back(f);
 				
-			uchar highF = (family & 0xff00) >> 8;
-			uchar lowF = (family & 0x00ff);
-			newService->AddRawData((uchar *)&highF, sizeof(highF));
-			newService->AddRawData((uchar *)&lowF, sizeof(lowF));
-			con->Send(newService);
-			
-			fWaitingSupport.push_back(f);
+			};
 		};
 	} else {
 		AIMConnection *con = fConnections.front();
@@ -235,6 +240,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			fConnections.push_back(con);
 			
 			con->Send(srvCookie);
+
 		} break;
 		
 		case AMAN_CLOSED_CONNECTION: {
@@ -248,7 +254,10 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				con->Lock();
 				con->Quit();
 				LOG("AIM", LOW, "After close we have %i connections",
-					fConnections.size());					
+					fConnections.size());
+					
+				if (fConnections.size() == 0) fHandler->StatusChanged(fOurNick,
+					AMAN_OFFLINE);
 			};
 		} break;
 
