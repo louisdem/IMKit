@@ -26,6 +26,11 @@ using namespace InfoPopper;
 class InfoView : public BView
 {
 	public:		
+		enum infoview_layout {
+			TitleAboveIcon,
+			AllTextRightOfIcon
+		};
+		
 		InfoView( info_type, const char * text, BMessage *details );
 		~InfoView();
 		
@@ -63,6 +68,5 @@ class InfoView : public BView
 		BMessage		*fDetails;
 		BBitmap			*fBitmap;
 };
-
 
 #endif

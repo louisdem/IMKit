@@ -10,6 +10,9 @@
 
 const float kEdgePadding = 2.0;
 
+//InfoView::infoview_layout gLayout = InfoView::AllTextRightOfIcon;
+InfoView::infoview_layout gLayout = InfoView::TitleAboveIcon;
+
 // 
 property_info message_prop_list[] = {
 	{ "content", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
@@ -148,14 +151,14 @@ void InfoView::MessageReceived(BMessage * msg) {
 			}
 			
 			if ( strcmp(property, "icon") == 0 ) {
-				if ( fBitmap )
+/*				if ( fBitmap )
 				{
 					int32 bitmap_size = fBitmap->FlattenedSize();
 					char * bitmap_data = malloc( bitmap_size );
 					if ( fBitmap->Flatten(bitmap_data, bitmap_size) == B_OK )
 						reply.AddData("result", bitmap_data, bitmap_size);
 				}
-			}
+*/			}
 
 			msg->SendReply(&reply);
 		}	break;
@@ -198,45 +201,63 @@ void InfoView::MessageReceived(BMessage * msg) {
 };
 
 void InfoView::GetPreferredSize(float *w, float *h) {
-	BFont font;
-
 	*h = kEdgePadding;
-	*w = 0;
+	*w = 0.0f;
 	
-	float first_line_height = 0.0;
+	// figure out height of title
+	SetFont( fTitle.second );
+	
+	BFont font;
+	GetFont(&font);
+	
+	font_height fh;
+	font.GetHeight( &fh );
+	float title_bottom = fh.ascent + fh.leading + fh.descent;
+	*h += title_bottom;
+	
+	*w = kEdgePadding * 2 + StringWidth( fTitle.first.String() );
 	
 	for (list<pair<BString,const BFont*> >::iterator i = fContent.begin(); i !=fContent.end(); i++) {
 		// height
 		SetFont(i->second);
 		GetFont(&font);
 		
-		font_height fh;
 		font.GetHeight( &fh );
 		
 		float line_height = fh.ascent + fh.descent + fh.leading;
 		
-		if ( i == fContent.begin() )
-			first_line_height = line_height;
-		
 		*h += line_height;
 		
 		// width
-		float width = StringWidth( (i->first).String() );
+		float width = kEdgePadding * 2 + StringWidth( (i->first).String() );
 		
-		if ( width > *w ) *w = width + kEdgePadding;
+		if ( width > *w ) *w = width;
 	};
+	
+	*h += kEdgePadding;
 	
 	if ( fBitmap )
 	{
-		if (*h < fBitmap->Bounds().Height() + first_line_height) 
-			*h = fBitmap->Bounds().Height() + (kEdgePadding * 2) + first_line_height;
-		*w += fBitmap->Bounds().Width() + (kEdgePadding * 2) + 3;
+		switch ( gLayout )
+		{
+			case TitleAboveIcon:
+				if (*h < fBitmap->Bounds().Height() + kEdgePadding * 2 + title_bottom) 
+					*h = fBitmap->Bounds().Height() + kEdgePadding * 2 + title_bottom;
+				*w += fBitmap->Bounds().Width() + kEdgePadding*2;
+				break;
+			case AllTextRightOfIcon:
+				if (*h < fBitmap->Bounds().Height() + kEdgePadding * 2) 
+					*h = fBitmap->Bounds().Height() + kEdgePadding * 2;
+				*w += fBitmap->Bounds().Width() + kEdgePadding*2;
+				break;
+		}
 	}
 };
 
 void InfoView::Draw(BRect drawBounds) {
 	BRect bound = Bounds();
 	
+	// draw progress background
 	if (fProgress > 0.0) {
 		bound.right *= fProgress;
 		
@@ -247,55 +268,48 @@ void InfoView::Draw(BRect drawBounds) {
 	
 	SetDrawingMode( B_OP_ALPHA );
 	
-	if ( fBitmap )
-	{
-		// figure out height of title
-		SetFont( fTitle.second );
-		
-		BFont font;
-		GetFont(&font);
-		
-		font_height fh;
-		font.GetHeight( &fh );
-		float line_height = fh.ascent + fh.leading + fh.descent;
-		
-		// draw icon
-		DrawBitmap(fBitmap,
-			BPoint(
-				kEdgePadding,
-				kEdgePadding + line_height + (Bounds().Height() - kEdgePadding - line_height - fBitmap->Bounds().Height()) / 2
-			)
-		);
-	}
+	float title_bottom = 0.0;
+	float icon_right = 0.0;
+	
+	// figure out height of title
+	SetFont( fTitle.second );
 	
 	BFont font;
+	GetFont(&font);
 	
-	float y = 0.0f;
-
-	// Draw title
-	// set font
+	font_height fh;
+	font.GetHeight( &fh );
+	title_bottom = fh.ascent + fh.leading + fh.descent;
+	
+	// draw icon
+	if ( fBitmap )
 	{
+		icon_right = kEdgePadding + fBitmap->Bounds().right + kEdgePadding;
+		
+		float ix = kEdgePadding;
+		float iy;
+		if ( gLayout == TitleAboveIcon )
+			iy = kEdgePadding + title_bottom + (Bounds().Height() - title_bottom - fBitmap->Bounds().Height()) / 2;
+		else
+			iy = (Bounds().Height() - fBitmap->Bounds().Height()) / 2.0;
+		
+		DrawBitmap(fBitmap,	BPoint(ix,iy));
+	}
+	
+	// Draw title
+	{
+		float tx = kEdgePadding;
+		if ( gLayout == AllTextRightOfIcon )
+			tx = icon_right + kEdgePadding;
+		float ty = kEdgePadding+fh.ascent;
+		
 		SetFont( fTitle.second );
-			
-		GetFont(&font);
-			
-		font_height fh;
-		font.GetHeight( &fh );
-		float line_height = fh.ascent;
-			
-		y += line_height;
-			
-		// figure out text position
-		float tx = (kEdgePadding * 2) + (fBitmap != NULL && i != fContent.begin() ? fBitmap->Bounds().Width() + 3: 0);
-		float ty = kEdgePadding + y;
-			
-		// draw the text
 		DrawString(fTitle.first.String(),BPoint(tx,ty));
-			
-		y += fh.leading + fh.descent;
 	}
 	
 	// draw content
+	float y = title_bottom;
+	
 	list<pair<BString,const BFont*> >::iterator i;
 	for (i = fContent.begin(); i !=fContent.end(); i++) {
 		// set font
@@ -305,20 +319,15 @@ void InfoView::Draw(BRect drawBounds) {
 		
 		font_height fh;
 		font.GetHeight( &fh );
-		float line_height = fh.ascent;
-		
-		y += line_height;
 		
 		// figure out text position
-		float tx = kEdgePadding * 2;
-		if ( fBitmap != NULL )
-			tx = fBitmap->Bounds().right + 3;
-		float ty = kEdgePadding + y;
+		float tx = icon_right + kEdgePadding;
+		float ty = y + kEdgePadding + fh.ascent;
 		
 		// draw the text
 		DrawString(i->first.String(),BPoint(tx,ty));
 		
-		y += fh.leading + fh.descent;
+		y += fh.leading + fh.descent + fh.ascent;
 	}
 }
 
