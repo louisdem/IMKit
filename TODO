@@ -15,6 +15,7 @@ Fixes
 * Add option to client - multi/single line edit
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Change Merge contacts, or make a new one, so it can be used from the Terminal
+* Client: not scrolling correctly in conversation when opening a conversation with a history
 
 New features
 
