@@ -44,13 +44,18 @@ enum queuestyle {
 class MSNSBConnection;
 class MSNConnection;
 class MSNHandler;
+class Command;
 
 #include "Command.h"
 #include "MSNConnection.h"
+#include "MSNSBConnection.h"
 
 typedef map<BString, MSNConnection *> switchboardmap;
 typedef map<int32, Command *> tridmap;
-typedef map<int32, BString> waitingcon;
+
+// Confusing data structures, Ahoy! This is a map of TrIDs to the user the Command is targetted.
+typedef map<int32, pair<BString, Command *> > waitingmsgmap;
+
 typedef map<BString, int8> waitingauth;
 
 class MSNManager : public BLooper {
@@ -88,7 +93,7 @@ class MSNManager : public BLooper {
 		MSNHandler		*Handler(void) { return fHandler; };
 	private:
 		tridmap			fTrIDs;
-		waitingcon		fWaitingSBs;
+		waitingmsgmap	fWaitingSBs;
 		
 		waitingauth		fWaitingAuth;	// For people requesting OUR auth
 		waitingauth		fWantsAuth;		// For people whose auth WE want

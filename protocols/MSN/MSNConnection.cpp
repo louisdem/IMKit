@@ -25,9 +25,7 @@ MSNConnection::MSNConnection(const char *server, uint16 port, MSNManager *man)
 	fPort = port;
 	
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
-//		new BMessage(msnmsgPulse), 100000, -1);
 		new BMessage(msnmsgPulse), 500000, -1);
-//		new BMessage(msnmsgPulse), 1000000, -1);
 
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(msnmsgPing), 60000000, -1);

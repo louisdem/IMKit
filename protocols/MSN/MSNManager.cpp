@@ -216,7 +216,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			};
 			
 			if (strcmp(type, "SB") == 0) {
-				MSNConnection *con = new MSNConnection(host, port, this);
+				MSNSBConnection *con = new MSNSBConnection(host, port, this);
 				tridmap::iterator origCommand = fTrIDs.find(msg->FindInt32("trid"));
 				if (origCommand != fTrIDs.end()) {
 
@@ -227,6 +227,20 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					command->AddParam(authString);
 					
 					con->Send(command);
+
+					tridmap::iterator it = fWaitingSB.find(msg->FindInt32("trid");
+					if (it != fWaitingSB.end()) {
+						Command *message = it->second->first;
+						BString passport = it->second->second;
+
+						Command *invite = new Command("CAL");
+						cal->AddParam(passport.String());
+						
+						con->Send(cal, qsOnline);
+						con->Send(message, qsOnline);
+						
+						fWaitingSB.erase(msg->FindInt32("trid"));
+					};
 				};
 			};
 		} break;
@@ -271,22 +285,25 @@ void MSNManager::MessageReceived(BMessage *msg) {
 // -- Interface
 
 status_t MSNManager::MessageUser(const char *passport, const char *message) {
-printf("Connection state: %i\n", fConnectionState);
 	if ((fConnectionState != otOffline) && (fConnectionState != otConnecting)) {
 		if (fNoticeCon == NULL) return B_ERROR;
-
+		
+		bool needSB = false;
 		switchboardmap::iterator it = fSwitchBoard.find(passport);
+		Command *sbReq = NULL;
+		
+
 		if (it == fSwitchBoard.end()) {
 			LOG(kProtocolName, liHigh, "Could not message \"%s\" - no connection established",
 				passport);
 
-			Command *sbReq = new Command("XFR");
 			sbReq->AddParam("SB");	// Request a SB connection;
 
 			fNoticeCon->Send(sbReq, qsImmediate);	
-			fTrIDs[sbReq->TransactionID()] = sbReq;
 
-			return B_ERROR;
+			needSB = true;
+
+			return 1;
 		};
 		
 		Command *msg = new Command("MSG");
@@ -298,7 +315,11 @@ printf("Connection state: %i\n", fConnectionState);
 		
 		msg->AddPayload(format.String(), format.Length());
 		
-		it->second->Send(msg);
+		if (needSB) {
+			fWaitingSBs[sbReq->TransactionID()] = pair(passport, msg);
+		} else {
+			it->second->Send(msg);
+		};
 		
 		return B_OK;
 	};
