@@ -62,13 +62,20 @@ class Jabber : public IM::Protocol, public JabberManager, public JabberHandler
 		BString		fServer;
 		BString		fPassword;
 		
-		bool		fRostered; //we got the roster :)
+		//temp?
+		bool 	fAuth;
+		bool 	fRostered;
+		bool 	fAgent;
+		float	fPerc;
+		bool	fFullLogged;
 						
 		void Progress( const char * id, const char * message, float progress );
 		
 		JabberContact*	getContact(const char* id);
 		void			SendContactInfo(const char* id);
 		void			AddStatusString(JabberPresence* who ,BMessage* to);	
+		
+		void			CheckLoginStatus();
 		
 	//Callbacks from JabberHandler
 	protected:
