@@ -74,6 +74,27 @@ void remove_html( char * msg )
 			case '>':
 				is_in_tag = false;
 				break;
+			case '&':
+				if (strncmp("&quot;",&msg[i],6) == 0) {
+					copy[copy_pos++] = '\"';
+					i += 5;
+					break;
+				}
+				if (strncmp("&lt;",&msg[i],4) == 0) {
+					copy[copy_pos++] = '<';
+					i += 3;
+					break;
+				}
+				if (strncmp("&gt;",&msg[i],4) == 0) {
+					copy[copy_pos++] = '>';
+					i += 3;
+					break;
+				}
+				if (strncmp("&amp;",&msg[i],5) == 0) {
+					copy[copy_pos++] = '&';
+					i += 4;
+					break;
+				}
 			default:
 				if ( !is_in_tag )
 				{
@@ -487,11 +508,7 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 
 //							We only support plain text channels currently									
 			switch (channel) {
-				case PLAIN_TEXT:
-				case AUTO_AWAY:
-				case AUTO_BUSY:
-				case AUTO_NA:
-				case AUTO_DND: {
+				case PLAIN_TEXT: {
 					//offset--;
 					uint16 msgkind = (data[++offset] << 8) + data[++offset];
 					if (msgkind == 0x04)
