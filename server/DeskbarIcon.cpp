@@ -769,7 +769,7 @@ void IM_DeskbarIcon::AboutRequested(void) {
 		<<     "  - Mikael \"m_eiman\" Eiman\n"
 		<<     "  - Mikael \"tic\" Jansson\n"
 		<<     "  - B \"Lazy Sod ;)\" GA\n"
-		<<     "  - Andrea \"xeD\" Anzani\n";
+		<<     "  - Andrea \"xeD\" Anzani\n"
 		<<     "  - Oliver \"OliverH\" Hartmann\n";
 
 	BAlert *alert = new BAlert("About",
