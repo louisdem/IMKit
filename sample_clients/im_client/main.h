@@ -14,7 +14,6 @@
 #include <BeBuild.h>
 #include <Window.h>
 #include <Beep.h>
-#include <ObjectList.h>
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
@@ -23,6 +22,7 @@
 #include <iterator>
 #include <map>
 
+#include "ObjectList.h"
 
 void
 setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value);

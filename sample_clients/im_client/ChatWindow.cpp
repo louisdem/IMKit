@@ -1,6 +1,6 @@
 #include "ChatWindow.h"
 
-#include "URLTextView.h"
+//#include "URLTextView.h"
 
 const char *kImNewMessageSound = "IM Message Received";
 
