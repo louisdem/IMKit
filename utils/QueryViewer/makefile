@@ -34,7 +34,7 @@ TYPE= APP
 #	in folder names do not work well with this makefile.
 SRCS= main.cpp QueryApp.cpp QueryWindow.cpp QueryColumnListView.cpp
 SRCS+= IconCountItem.cpp
-SRCS+=Hash.cpp SVGCache.cpp
+SRCS+=Hash.cpp
 SRCS+= CLV/ColorTools.cpp CLV/ColumnListView.cpp CLV/ColumnTypes.cpp MenuColumns.cpp
 SRCS+= $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/IconMenuItem.cpp
 
@@ -152,6 +152,7 @@ else
     DEFINES += GET_NODE_ICON
   endif
   LIBS += zeta tracker
+  SRCS += SVGCache.cpp
 endif
 
 INSTALL_DIR= $(TOPDIR)/build/utils

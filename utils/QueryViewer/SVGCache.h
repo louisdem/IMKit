@@ -1,3 +1,5 @@
+#ifdef B_ZETA_VERSION
+
 #ifndef SVG_CACHE_H
 #define SVG_CACHE_H
 
@@ -53,5 +55,11 @@ class CacheTimer
 			active = false;
 		}
 };
+
+#endif
+
+#else
+
+#define getBitmap ReadNodeIcon
 
 #endif

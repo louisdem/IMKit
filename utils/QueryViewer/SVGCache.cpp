@@ -1,3 +1,5 @@
+#ifdef B_ZETA_VERSION
+
 #include <sys_apps/Tracker/Icons.h>
 #include <Bitmap.h>
 #include <string.h>
@@ -168,3 +170,5 @@ int main222( int numArg, const char ** argv )
 	return 0;
 }
 */
+
+#endif

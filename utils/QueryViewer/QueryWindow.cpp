@@ -57,7 +57,11 @@ QueryWindow::QueryWindow(BRect rect)
 		fCurrentQView = NULL;
 		BMessage msg(qwQuerySelected);
 		msg.AddInt32("index", 1);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
 		BMessenger(this).SendMessage(msg);
+#else
+		BMessenger(this).SendMessage(&msg);
+#endif
 	};
 };
 

@@ -109,8 +109,12 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 			if ((fNotify) && (fNotify->IsValid()) && (fMessage)) {
 				BMessage send(*fMessage);
 				send.AddInt32("qclvCount", fResults.size());
-				
+
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
 				fNotify->SendMessage(send);
+#else
+				fNotify->SendMessage(&send);
+#endif
 			};
 		} break;
 				
@@ -318,9 +322,12 @@ status_t QueryColumnListView::AddRowByRef(entry_ref *ref) {
 		} else {
 			switch (info.type) {
 				case B_CHAR_TYPE: {
-					field = new BStringField(value);
+					char buffer[] = { value[0], '\0' };
+					field = new BStringField(buffer);
 				} break;
 				case B_STRING_TYPE: {
+					value = (char *)realloc(value, sizeof(char) * (read + 1));
+					value[read] = '\0';
 					field = new BStringField((char *)value);
 				} break;
 	
@@ -736,7 +743,11 @@ int32 QueryColumnListView::BackgroundAdder(void *arg) {
 	while (self->fSelfMsgr->IsValid()) {
 		BMessage getPending(qclvRequestPending);
 		BMessage pending;
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
 		if (self->fSelfMsgr->SendMessage(getPending, &pending) == B_OK) {
+#else
+		if (self->fSelfMsgr->SendMessage(&getPending, &pending) == B_OK) {
+#endif
 			entry_ref ref;
 			bool updatedAny = false;
 			
@@ -778,7 +789,11 @@ int32 QueryColumnListView::BackgroundAdder(void *arg) {
 						BMessage send(*self->fMessage);
 						send.AddInt32("qclvCount", self->fResults.size());
 						
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
 						self->fNotify->SendMessage(send);
+#else
+						self->fNotify->SendMessage(&send);
+#endif
 					};
 				};
 				self->UnlockLooper();
