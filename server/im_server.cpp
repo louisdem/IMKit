@@ -38,9 +38,7 @@ _SEND_ERROR( const char * text, BMessage * msg )
 		msg->SendReply(&err);
 	} else
 	{ // no recipient for message replies, write to stdout
-		char some_text[512];
-		sprintf(some_text,"ERROR: %s",text);
-		LOG(some_text);
+		LOG("ERROR: %s",text);
 	}
 }
 
@@ -205,10 +203,8 @@ Server::LoadAddons()
 	
 	// setup Directory to get list of files
 	BDirectory dir( path.Path() );
-	char some_text[512];
 	
-	sprintf(some_text,"add-on directory: %s", path.Path() );
-	LOG(some_text);
+	LOG("add-on directory: %s", path.Path());
 	
 	while( dir.GetNextEntry( (BEntry*)&entry, TRUE ) == B_NO_ERROR )
 	{ // continue until no more files
@@ -221,8 +217,7 @@ Server::LoadAddons()
 		image_id curr_image = load_add_on( path.Path() );
 		if( curr_image < 0 )
 		{
-			sprintf(some_text,"load_add_on() fail, file [%s]", path.Path());
-			LOG(some_text);
+			LOG("load_add_on() fail, file [%s]", path.Path());
 			continue;
 		}
 		
@@ -237,8 +232,7 @@ Server::LoadAddons()
 		
 		if ( res != B_OK )
 		{
-			sprintf(some_text,"get_image_symbol(load_protocol) fail, file [%s]", path.Path());
-			LOG(some_text);
+			LOG("get_image_symbol(load_protocol) fail, file [%s]", path.Path());
 			unload_add_on( curr_image );
 			continue;
 		}
@@ -247,13 +241,11 @@ Server::LoadAddons()
 		
 		if ( !protocol )
 		{
-			sprintf(some_text,"load_protocol() fail, file [%s]", path.Path());
-			LOG(some_text);
+			LOG("load_protocol() fail, file [%s]", path.Path());
 			unload_add_on( curr_image );
 		}
 		
-		sprintf(some_text,"Protocol loaded: [%s]", protocol->GetSignature() );
-		LOG(some_text);
+		LOG("Protocol loaded: [%s]", protocol->GetSignature());
 		
 		// add to list
 		fProtocols[protocol->GetSignature()] = protocol;
@@ -521,9 +513,7 @@ Server::FindContact( const char * proto_id )
 Contact
 Server::CreateContact( const char * proto_id )
 {
-	char some_text[512];
-	sprintf(some_text,"Creating new contact for connection [%s]", proto_id);
-	LOG(some_text);
+	LOG("Creating new contact for connection [%s]", proto_id);
 	
 	Contact result;
 	
@@ -547,13 +537,11 @@ Server::CreateContact( const char * proto_id )
 	
 	if ( dir.FindEntry(filename,&entry) != B_OK )
 	{
-		sprintf(some_text,"While creating a new contact, dir.FindEntry() failed. filename was [%s]",filename);
-		_ERROR(some_text);
+		LOG("Error: While creating a new contact, dir.FindEntry() failed. filename was [%s]",filename);
 		return result;
 	}
 	
-	sprintf(some_text,"  created file [%s]", filename);
-	LOG(some_text);
+	LOG("  created file [%s]", filename);
 	
 	// file created. set type and add connection
 	if ( file.WriteAttr(
@@ -1057,10 +1045,7 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	string new_status = status;
 	
-	char some_text[512];
-	
-	sprintf(some_text,"STATUS_CHANGED [%s] is now %s",proto_id.c_str(),new_status.c_str());
-	LOG(some_text);
+	LOG("STATUS_CHANGED [%s] is now %s",proto_id.c_str(),new_status.c_str());
 	
 /*	for ( int i=0; i<contact.CountConnections(); i++ )
 	{ // calc total status
@@ -1133,7 +1118,6 @@ Server::SetAllOffline()
 	}
 	
 	char nickname[512], name[512], filename[512];
-	char some_text[512];
 	
 	Contact c;
 	for ( int i=0; msg.FindRef("contact",i,&entry) == B_OK; i++ )
@@ -1151,8 +1135,7 @@ Server::SetAllOffline()
 		if ( e.GetName(filename) != B_OK )
 			strcpy(filename,"<no filename?!>");
 		
-		sprintf(some_text,"Setting %s (%s) offline, filename: %s", name, nickname, filename);
-		LOG(some_text);
+		LOG("Setting %s (%s) offline, filename: %s", name, nickname, filename);
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
 			LOG("  error.");

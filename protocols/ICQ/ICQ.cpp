@@ -133,7 +133,6 @@ void SimpleClient::run() {
  * example the way gtkmm does it)
  */
 void SimpleClient::socket_cb(SocketEvent *ev) {
-  char some_text[512];
   
   if (dynamic_cast<AddSocketHandleEvent*>(ev) != NULL) {
     // the library requests we start selecting on a socket
@@ -141,8 +140,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     AddSocketHandleEvent *cev = dynamic_cast<AddSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 	
-	sprintf(some_text,"ICQ: connecting socket %ld", fd);
-	LOG(some_text);
+	LOG("ICQ: connecting socket %ld", fd);
 
     // register this socket with our Select object
     m_sockets[fd] =
@@ -163,11 +161,10 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     RemoveSocketHandleEvent *cev = dynamic_cast<RemoveSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 
-    sprintf(some_text,"ICQ: disconnecting socket %ld", fd);
-    LOG(some_text);
+    LOG("ICQ: disconnecting socket %ld", fd);
     
     if (m_sockets.count(fd) == 0) {
-      cerr << "Problem: file descriptor not connected" << endl;
+      LOG("ICQ: Problem: file descriptor not connected");
     } else {
       m_sockets[fd].disconnect();
       m_sockets.erase(fd);
@@ -259,9 +256,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
   if (c->getType() == MessageEvent::Normal) {
 
     NormalMessageEvent *msg = static_cast<NormalMessageEvent*>(c);
-    char some_text[512];
-    sprintf(some_text, "ICQ: Message received: %s from %ld", msg->getMessage(), msg->getSenderUIN() );
-	LOG(some_text);
+	LOG("ICQ: Message received: %s from %ld", msg->getMessage(), msg->getSenderUIN());
 	
 	char uin_string[100];
 	
