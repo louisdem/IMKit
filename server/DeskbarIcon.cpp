@@ -168,14 +168,10 @@ IM_DeskbarIcon::getProtocolStates()
 
 	fTipText = "Online Status:";
 	
-	LOG("deskbar", liHigh, "status message", &protStatus);
-	
 	for ( int i=0; protStatus.FindString("protocol",i); i++ ) {
 		const char *protocol = protStatus.FindString("protocol",i);
 		const char *userfriendly = protStatus.FindString("userfriendly",i);
 		const char *status = protStatus.FindString("status", i);
-		
-		LOG("deskbar", liHigh, "protocol: %s, friendly: %s", protocol, userfriendly);
 		
 		fStatuses[protocol] = status;
 		fFriendlyNames[protocol] = userfriendly;
