@@ -1271,7 +1271,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 
 status_t AIMManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
-	if (buddy == NULL) {
+	if (buddy != NULL) {
 		LOG(kProtocolName, liLow, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
 		fBuddy[buddy] = NULL;
 		
