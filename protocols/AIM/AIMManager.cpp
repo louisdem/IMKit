@@ -341,9 +341,17 @@ void AIMManager::MessageReceived(BMessage *msg) {
 //							and make a note. We aren't going to, we'll just
 //							carry on.
 
+							LOG(kProtocolName, LOW, "Got server supported SNACs");
+							offset++;
+							while (offset < bytes) {
+								LOG(kProtocolName, LOW, "Server supports: 0x%0x "
+									"0x%0x", data[++offset], data[++offset]);
+							};
+
+							
 							Flap *f = new Flap(SNAC_DATA);
 							f->AddSNAC(new SNAC(SERVICE_CONTROL,
-								REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));														
+								REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
 							Send(f);
 						} break;
 						
@@ -382,8 +390,10 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							Flap *cap = new Flap(SNAC_DATA);
 							cap->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION,
 								0x00, 0x00, ++fRequestID));
-							cap->AddTLV(0x0005, "", 0);
-							
+//							cap->AddTLV(0x0005, "", 0);
+							cap->AddTLV(0x0005, (char []) { 0x09, 0x46, 0x13, 0x46,
+								0x4c, 0x7f, 0x11, 0xd1, 0x82, 0x22, 0x44, 0x45, 0x53,
+								0x54, 0x00, 0x00}, 16);							
 							Send(cap);
 							
 							
@@ -391,11 +401,9 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS, 0x00,
 								0x00, ++fRequestID));
 							icbm->AddRawData((uchar []){0x00, 0x01}, 2); // Plain text?
-//							Capabilities - (LSB) 0b----t-om;
-//								Typing notifications
-//								Offline Messages
-//								Channel allowed
-							icbm->AddRawData((uchar []){0xff, 0xff, 0xff, 0xff}, 4);
+//							Capabilities - (LSB) Typing Notifications, Missed Calls,
+//								Unknown, Messages allowed
+							icbm->AddRawData((uchar []){0xff, 0x00, 0x00, 0xff}, 4);
 							icbm->AddRawData((uchar []){0x1f, 0x40}, 2);// Max SNAC
 							icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - send
 							icbm->AddRawData((uchar []){0x03, 0xe7}, 2);// Max Warn - Recv
@@ -419,8 +427,11 @@ void AIMManager::MessageReceived(BMessage *msg) {
 								0x01, 0x10, 0x07, 0x39}, 8);
 							cready->AddRawData((uchar []){0x00, 0x08, 0x00, 0x01,
 								0x01, 0x04, 0x00, 0x01}, 8);
-//							cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
-//								0x01, 0x10, 0x07, 0x39}, 8);
+							cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
+								0x01, 0x10, 0x07, 0x39}, 8);
+//							Possibly remove.
+							cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
+								0x01, 0x10, 0x07, 0x39}, 8);
 							cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
 								0x01, 0x10, 0x07, 0x39}, 8);
 
@@ -436,6 +447,21 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							fConnectionState = AMAN_ONLINE;
 						
 						} break;
+						case SERVER_FAMILY_VERSIONS: {
+							LOG(kProtocolName, LOW, "Supported SNAC families for "
+								"this server");
+							while (offset < bytes) {
+								LOG(kProtocolName, LOW, "\tSupported family: 0x%x "
+									" 0x%x, Version: 0x%x 0x%x", data[++offset],
+									data[++offset], data[++offset], data[++offset]);
+							};
+						} break;
+						
+						default: {
+							LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
+								"family 0x0001 (Service Control). Subtype 0x%04x",
+								subtype);						
+						}
 					};
 				} break;
 				
@@ -449,14 +475,36 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							memcpy(nick, (void *)(data + 17), nickLen);
 							nick[nickLen] = '\0';
 						
-							LOG("AIM", LOW, "AIMManager: \"%s\" is online", nick);
-							
+							offset += nickLen + 3;
+							uint16 tlvs = (data[++offset] << 8) + data[++offset];
+						
 							BMessage *msg = new BMessage(IM::MESSAGE);
 							msg->AddInt32("im_what", IM::STATUS_CHANGED);
 							msg->AddString("protocol", kProtocolName);
 							msg->AddString("id", nick);
-							msg->AddString("status", ONLINE_TEXT);
-							
+
+							while (offset < bytes) {
+								uint16 tlvtype = (data[++offset] << 8) + data[++offset];
+								uint16 tlvlen = (data[++offset] << 8) + data[++offset];
+								
+								if (tlvtype == 0x0001) {
+									uint16 userclass = (data[++offset] << 8) +
+										data[++offset];
+
+									if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
+										LOG(kProtocolName, LOW, "\"%s\" is AWAY ("
+											"0x%04x)", nick, userclass);
+										msg->AddString("status", AWAY_TEXT);
+									} else {
+										LOG(kProtocolName, LOW, "\"%s\" is ONLINE"
+											" (0x%04x)", nick, userclass);
+										msg->AddString("status", ONLINE_TEXT);
+									};
+								} else {
+									offset += tlvlen;
+								};
+							};
+
 							fIMKit.SendMessage(msg);
 
 							free(nick);
@@ -479,11 +527,22 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							free(nick);
 							
 						} break;
+						default: {
+							LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
+								"family 0x0003 (Buddy List). Subtype 0x%04x",
+								subtype);						
+						}
+
 					};
 				} break;
 				
 				case ICBM: {
 					switch (subtype) {
+						case ERROR: {
+							LOG(kProtocolName, MEDIUM, "GOT SERVER ERROR 0x%x "
+								"0x%x", data[++offset], data[++offset]);
+						} break;
+						
 						case MESSAGE_FROM_SERVER: {
 							
 							uint16 channel = (data[24] << 8) + data[25];
@@ -520,7 +579,8 @@ void AIMManager::MessageReceived(BMessage *msg) {
 									offset += 2; // hack, hack. slaad should look at this :9
 									uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
 									offset += 2;
-									LOG("AIM", HIGH, "AIMManager: PLAIN_TEXT message, content length: %i (0x%0.4X", contentLen-offset, contentLen-offset);
+									LOG("AIM", HIGH, "AIMManager: PLAIN_TEXT "
+										"message, content length: %i (0x%0.4X)", contentLen-offset, contentLen-offset);
 									
 									PrintHex(data, bytes );
 									
@@ -590,25 +650,24 @@ void AIMManager::MessageReceived(BMessage *msg) {
 						} break;
 						
 						case TYPING_NOTIFICATION: {
-							LOG(kProtocolName, LOW, "Got typing Notification");
 							PrintHex((uchar *)data, bytes);
-							offset += 8; // Skip notification ID cookie
+							offset += 8;
 							uint16 channel = (data[++offset] << 8) + data[++offset];
-							printf("Channel: 0x%04x\n", channel);
 							uint8 nickLen = data[++offset];
-							printf("Nick Len: %i\n", nickLen);
 							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
 							memcpy(nick, (char *)(data + offset + 1), nickLen);
 							nick[nickLen] = '\0';
-							printf("Nick: \"%s\"\n", nick);
 							offset += nickLen;
-							printf("Offset: %i\n", offset);
 							uint16 typingType = (data[++offset] << 8) + data[++offset];
-							printf("Typing type: 0x%04x\n", typingType);
 							
+							LOG(kProtocolName, LOW, "Got typing notification "
+								"(0x%04x) for \"%s\"", typingType, nick);
+								
 							BMessage im_msg(IM::MESSAGE);
 							im_msg.AddString("protocol", kProtocolName);
 							im_msg.AddString("id", nick);
+							
+							free(nick);
 							
 							switch (typingType) {
 								case STILL_TYPING:
@@ -625,8 +684,17 @@ void AIMManager::MessageReceived(BMessage *msg) {
 							
 							fIMKit.SendMessage(&im_msg);						
 						} break;
+						default: {
+							LOG(kProtocolName, LOW, "Got unhandled SNAC of family "
+								"0x0004 (ICBM) of subtype 0x%04x", subtype);
+						};
 					};
 				} break;
+				
+				default: {
+					LOG(kProtocolName, LOW, "Got unhandled family. SNAC(0x%04x, "
+						"0x%04x)", family, subtype);
+				};
 			};
 		} break;
 				

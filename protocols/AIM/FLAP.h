@@ -43,6 +43,8 @@ enum snac_family {
 };
 
 enum snac_subtype {
+	ERROR = 0x0001,						// This is the same for all SNAC families
+
 //	Family 1 - Service
 
 	CLIENT_READY = 0x0002,
@@ -51,11 +53,11 @@ enum snac_subtype {
 	RATE_LIMIT_RESPONSE = 0x0007,
 	RATE_LIMIT_ACK = 0x0008,
 	SET_PRIVACY_FLAGS = 0x0014,
+	SERVER_FAMILY_VERSIONS = 0x0018,
 	UPDATE_STATUS = 0x001e,
 	VERIFICATION_REQUEST = 0x001f,		// Evil AOLsses, we hateses them, we do.
 
 //	Family 2 - Location
-	CLIENT_SERVER_ERROR = 0x0001,
 	REQUEST_LIMITATIONS = 0x0002,
 	LIMITIATIONS_RESPONSE = 0x0003,
 	SET_USER_INFORMATION = 0x0004,
@@ -88,6 +90,17 @@ enum icbm_channel {
 	PLAIN_TEXT = 0x0001,
 	RTF_RENDEZVOUS = 0x0002,
 	TYPED_OLD_STYLE = 0x0004
+};
+
+enum user_class {
+	CLASS_UNCONFIRMED = 0x0001,
+	CLASS_ADMINISTRATOR = 0x0002,
+	CLASS_AOL = 0x0004,
+	CLASS_COMMERCIAL = 0x0008,
+	CLASS_FREE = 0x0010,
+	CLASS_AWAY = 0x0020,
+	CLASS_ICQ = 0x0040,
+	CLASS_WIRELESS = 0x0080,
 };
 
 class Flap {
