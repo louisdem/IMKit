@@ -1,0 +1,33 @@
+# Zeta locale file for im_client [jaJP]
+
+# ChatApp.cpp
+"Really quit?"		"終了しますか？"
+"Do you really want to quit im_client and stop getting messages?"	"IM クライアントを終了し、メッセージの受信を止めまてもよろしいですか？"
+"Yes"	"はい"
+"No"		"いいえ"
+
+# ChatWindow.cpp
+"Show contact in People"	"People で個人情報を表示する"
+"Send email to contact"	"相手にメールを送る"
+"Block messages from contact"		"相手からのメッセージをブロックする"
+"View chat history for contact"		"チャット経歴を見る"
+"Send"	"送信"
+"* You "		"* You "
+"You say: "	"You say: "
+"Error: im_server not running, can't send message\n"	"エラー: IM サーバが起動してないので、メッセージが送れません\n"
+"Unknown name"		"名前不明"
+"no nick"		"ハンドル名無し"
+"Unknown status"		"接続状態不明"
+"Any Protocol"		"全プロトコル"
+"Available"		"オンライン"
+"Away"		"不在"
+"Offline"		"オフライン"
+"User is typing.."		"相手がメッセージ入力中..."
+
+# RunView.cpp
+"Lookup (Dictionary)"		"辞書で検索 (Dictionary)"
+"Lookup (Google)"		"ウエブで検索 (Google)"
+"Lookup (Acronym Finder)"	"頭字語辞書で検索 (Acronym Finder)"
+"Copy"	"コピー"
+"Select All"	"すべて選択"
+"Clear"	"切り取り"

@@ -1,0 +1,24 @@
+# Zeta locale file for InstantMessaging [jaJP]
+
+# PWindow.cpp
+"Save"	"保存"
+"Revert"		"元に戻す"
+
+# The strings below need to be updated, whenever a new preferences
+# setting is added to an im_kit application.
+
+# preferences: im_client
+"Auto-start"	"自動的に起動する"
+"Application signature"	"アプリケーション署名"
+"Menubar Icon Size"		"メニューバーのアイコンサイズ"
+"Show 'Send' button"		"「送信」ボタンを表示する"
+"Send messages with CMD-Enter instead of Enter"	"「Enter」の代わりに「CMD-Enter」でメッセージを送信する"
+
+# preferences: im_server
+"Blink Deskbar icon"	"Deskbar アイコンを点滅させる"
+"Auto-start im_server"		"IM サーバを自動的に起動する"
+"Show icon in Deskbar"	"Deskbar にアイコンを表示する"
+"Debug log threshold"		"デバグログの設定"
+"Away Message"		"不在メッセージ"
+"Person handler"		"Person ハンドラー"
+"Application signature"	"アプリケーション署名"
