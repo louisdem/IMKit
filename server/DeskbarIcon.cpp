@@ -3,6 +3,7 @@
 
 #include <libim/Constants.h>
 #include <libim/Manager.h>
+#include <libim/Helpers.h>
 #include <Message.h>
 #include <stdio.h>
 #include <Roster.h>
@@ -17,7 +18,7 @@
 BView *
 instantiate_deskbar_item()
 {
-	printf("IM: Instantiating Deskbar item\n");
+	LOG("IM: Instantiating Deskbar item");
 	return new IM_DeskbarIcon();
 }
 
@@ -26,7 +27,7 @@ IM_DeskbarIcon::Instantiate( BMessage * archive )
 {
 	if ( !validate_instantiation(archive,"IM_DeskbarIcon") )
 	{
-		printf("IM_DeskbarIcon::Instantiate(): Invalid archive\n");
+		LOG("IM_DeskbarIcon::Instantiate(): Invalid archive");
 		return NULL;
 	}
 	
@@ -58,7 +59,7 @@ IM_DeskbarIcon::~IM_DeskbarIcon()
 void
 IM_DeskbarIcon::_init()
 {
-	printf("IM: _init\n");
+//	printf("IM: _init\n");
 	
 	// load resources
 	entry_ref ref;
@@ -80,6 +81,10 @@ IM_DeskbarIcon::_init()
 	fFlashCount = 0;
 	fBlink = 0;
 	fMsgRunner = NULL;
+	
+	fSettingsWindow = NULL;
+	
+	fShouldBlink = true;
 }
 
 void
@@ -103,7 +108,7 @@ IM_DeskbarIcon::Draw( BRect rect )
 status_t
 IM_DeskbarIcon::Archive( BMessage * msg, bool deep )
 {
-	printf("IM_DeskbarIcon::Archive()\n");
+//	printf("IM_DeskbarIcon::Archive()\n");
 	status_t res = BView::Archive(msg,deep);
 	
 	msg->AddString("add_on", IM_SERVER_SIG );
@@ -111,7 +116,7 @@ IM_DeskbarIcon::Archive( BMessage * msg, bool deep )
 	
 	msg->AddString("class", "IM_DeskbarIcon");
 	
-	printf("~IM_DeskbarIcon::Archive() returns %ld\n", res);
+//	printf("~IM_DeskbarIcon::Archive() returns %ld\n", res);
 	
 	return res;
 }
@@ -121,11 +126,21 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case SETTINGS_WINDOW_CLOSED:
+		{
+			fSettingsWindow = NULL;
+		}	break;
+		
+		case RELOAD_SETTINGS:
+		{ // settings have been updated, reload from im_server
+			reloadSettings();
+		}	break;
+		
 		case 'blnk':
 		{ // blink icon
 			BBitmap * oldIcon = fCurrIcon;
 			
-			if ( (fFlashCount > 0) && (fBlink++ % 2) )
+			if ( (fFlashCount > 0) && ((fBlink++ % 2) || !fShouldBlink))
 			{
 				fCurrIcon = fFlashIcon;
 			} else
@@ -152,7 +167,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				BMessage msg('blnk');
 				fMsgRunner = new BMessageRunner( BMessenger(this), &msg, 200*1000 );
 			}
-			printf("IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
 		case 'stop':
 		{	
@@ -163,7 +178,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 			
 			fFlashCount--;
-			printf("IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("IM: fFlashCount: %ld\n", fFlashCount);
 			
 			if ( fFlashCount == 0 )
 			{
@@ -176,7 +191,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			if ( fFlashCount < 0 )
 			{
 				fFlashCount = 0;
-				printf("IM: fFlashCount below zero, fixing\n");
+				LOG("IM: fFlashCount below zero, fixing\n");
 			}
 		}	break;
 		
@@ -200,17 +215,22 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		
 		case OPEN_SETTINGS:
 		{
-			bool settings_found = false;
-			
-			for ( int i=0; be_app->WindowAt(i); i++ )
-				if ( strcmp(be_app->WindowAt(i)->Title(), "IM Settings") == 0 )
-					settings_found = true;
-			
-			if ( !settings_found )
-			{
-				SettingsWindow * win = new SettingsWindow;
-				win->Show();
+			if ( !fSettingsWindow )
+			{ // create new settings window
+				fSettingsWindow = new SettingsWindow( BMessenger(this) );
+				fSettingsWindow->Show();
+			} else
+			{ // show existing settings window
+				fSettingsWindow->SetWorkspaces( 1 << current_workspace() );
+				fSettingsWindow->Show();
 			}
+		}	break;
+		
+		case IM::SETTINGS:
+		{
+			msg->FindBool("blink_db", &fShouldBlink );
+			
+			LOG("IM: Settings applied");
 		}	break;
 		
 		default:
@@ -227,23 +247,23 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 	if ( buttons & B_SECONDARY_MOUSE_BUTTON )
 	{
 		BPopUpMenu * menu = new BPopUpMenu("im_db_menu");
-
+		
 		// set status
 		BMenu * status = new BMenu("Set status");
 		status->AddItem( new BMenuItem("Online", new BMessage(SET_ONLINE)) );	
 		status->AddItem( new BMenuItem("Away", new BMessage(SET_AWAY)) );	
 		status->AddItem( new BMenuItem("Offline", new BMessage(SET_OFFLINE)) );	
 		status->SetTargetForItems( this );
-	
+		
 		menu->AddItem(status);
-	
+		
 		menu->AddSeparatorItem();
-	
+		
 		// settings
 		menu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
-	
+		
 		menu->SetTargetForItems( this );
-	
+		
 		menu->Go(
 			ConvertToScreen(p),
 			true // delivers message
@@ -262,6 +282,25 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 		}
 	}
 }
+
+void
+IM_DeskbarIcon::AttachedToWindow()
+{
+	// give im_server a chance to start up
+	snooze(500*1000);
+	
+	reloadSettings();
+}
+
+void
+IM_DeskbarIcon::DetachedFromWindow()
+{
+	if ( fSettingsWindow )
+	{
+		fSettingsWindow->PostMessage( B_QUIT_REQUESTED );
+	}
+}
+
 
 // Some code borrowed from CKJ <cedric-vincent@wanadoo.fr>
 // originally in USB Deskbar View <http://www.bebits.com/app/3497>
@@ -297,4 +336,19 @@ IM_DeskbarIcon::GetBitmap( const char * name )
 	
 	// done!
 	return bitmap;
+}
+
+void
+IM_DeskbarIcon::reloadSettings()
+{
+	LOG("IM: Requesting settings");
+	
+	BMessage request( IM::GET_SETTINGS ), settings;
+	request.AddString("protocol","");
+	
+	BMessenger msgr(IM_SERVER_SIG);
+	
+	msgr.SendMessage(&request, this );
+	
+	LOG("IM: Settings requested");
 }

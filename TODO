@@ -5,12 +5,20 @@ Fixes
 * Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
 * Add status changes to im_logger?
 * Smart protocol selection, if contact is online on any service, use that etc
+* Deskbar icon. show current status in Set status menu
+* convert_to_utf8() on names etc, ICQ add-on
+* UIN set as nickname?
+* ChatWindow - resize problems with textview?
 
 New features
 
+More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
+
+"Autostart clients" in im_server (shut them down, too)
+
 Log in invisible for ICQ
 
-File transfers - need new icqlib
+File transfers - need new icqlib?
 
 Search for contacts
 

@@ -66,13 +66,12 @@ Server::Server()
 	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
 		LOG("Error removing deskbar icon (this is ok..)");
 	
-	
 	IM_DeskbarIcon * i = new IM_DeskbarIcon();
 	
 	if ( db.AddItem( i ) != B_OK )
 	{ // couldn't add BView, try entry_ref
 		entry_ref ref;
-	
+		
 		if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
 		{
 			if ( db.AddItem( &ref ) != B_OK )
@@ -623,31 +622,33 @@ Server::GetSettingsTemplate( BMessage * msg )
 			
 	if ( !p )
 	{
-		_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Protocol not specified",msg);
-		return;
-	}
-			
-	if ( strlen(p) == 0 )
-	{
-		_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Zero length protocol",msg);
-		return;
-	}
-			
-	if ( fProtocols.find(p) == fProtocols.end() )
-	{
-		_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Protocol not loaded",msg);
-		return;
+		p = "";
 	}
 	
-	Protocol * protocol = fProtocols[p];
+	BMessage t;
 	
+	if ( strlen(p) > 0 )
+	{ // protocol settings
+		if (fProtocols.find(p) == fProtocols.end() )
+		{
+			_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Protocol not loaded",msg);
+			return;
+		}
+		
+		Protocol * protocol = fProtocols[p];
 			
-	BMessage t = protocol->GetSettingsTemplate();
-			
-	if ( msg->ReturnAddress().IsValid() )
-	{
-		msg->SendReply( &t );
+		t = protocol->GetSettingsTemplate();
+	} else
+	{ // im_server settings
+		t = GenerateSettingsTemplate();
 	}
+	
+	if ( !msg->ReturnAddress().IsValid() )
+	{
+		_ERROR("Invalid return address in GetSettingsTemplate()", msg);
+	}
+
+	msg->SendReply( &t );
 }
 
 void
@@ -699,40 +700,42 @@ Server::ServerBasedContactList( BMessage * msg )
 void
 Server::GetSettings( BMessage * msg )
 {
-	msg->PrintToStream();
 	const char * p = msg->FindString("protocol");
-			
+	
 	if ( !p )
 	{
-		_SEND_ERROR("ERROR: GET_SETTINGS: Protocol not specified",msg);
-		return;
+		p = "";
 	}
-			
-	if ( strlen(p) == 0 )
-	{
-		_SEND_ERROR("ERROR: GET_SETTINGS: Protocol is zero-length",msg);
-		return;
-	}
-			
-	if ( fProtocols.find(p) == fProtocols.end() )
-	{
-		_SEND_ERROR("ERROR: GET_SETTINGS: Protocol not loaded",msg);
-		return;
-	}
-			
-	Protocol * protocol = fProtocols[p];
-			
-	char data[1024*1024];
-			
+	
 	char settings_path[512];
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-		fAddOnInfo[protocol].signature
-	);
+	
+	// get path to settings file
+	if ( strlen(p) == 0 )
+	{ // im_server settings
+		strcpy(settings_path,"/boot/home/config/settings/im_kit/im_server.settings");
+	} else
+	{ // protocol settings
+		if ( fProtocols.find(p) == fProtocols.end() )
+		{
+			_SEND_ERROR("ERROR: GET_SETTINGS: Protocol not loaded",msg);
+			return;
+		}
+		
+		Protocol * protocol = fProtocols[p];
+		
+		sprintf(
+			settings_path,
+			"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
+			fAddOnInfo[protocol].signature
+		);
+	}
+	
+	char data[1024*1024];
+	
+	LOG("Reading settings from file: %s", settings_path);
 	
 	BNode node( settings_path );
-			
+	
 	int32 num_read = node.ReadAttr(
 		"im_settings", B_RAW_TYPE, 0,
 		data, sizeof(data)
@@ -743,20 +746,24 @@ Server::GetSettings( BMessage * msg )
 		_SEND_ERROR("ERROR: GET_SETTINGS: Error reading settings",msg);
 		return;
 	}
-			
-	LOG("Read settings data");
-			
+	
+//	LOG("Read settings data");
+	
 	BMessage settings;
-			
+	
 	if ( settings.Unflatten(data) != B_OK )
 	{
 		_SEND_ERROR("ERROR: GET_SETTINGS: Error unflattening settings",msg);
 		return;
 	}
-			
+	
 	if ( msg->ReturnAddress().IsValid() )
 	{
+//		LOG("Sending settings");
 		msg->SendReply(&settings);
+	} else
+	{
+		_ERROR("Invalid return address");
 	}
 }
 
@@ -767,20 +774,13 @@ Server::SetSettings( BMessage * msg )
 			
 	if ( !p )
 	{
-		_SEND_ERROR("ERROR: SET_SETTINGS: Protocol not specified", msg);
-		return;
+		p = "";
 	}
-			
-	if ( fProtocols.find(p) == fProtocols.end() )
-	{
-		_SEND_ERROR("ERROR: GET_SETTINGS: Protocol not loaded",msg);
-		return;
-	}
-			
-	Protocol * protocol = fProtocols[p];
 			
 	BMessage settings;
-			
+	status_t res = B_ERROR;
+	char settings_path[512];
+		
 	if ( msg->FindMessage("settings",&settings) != B_OK )
 	{
 		_SEND_ERROR("ERROR: SET_SETTINGS: Settings not specified", msg);
@@ -793,30 +793,48 @@ Server::SetSettings( BMessage * msg )
 		return;
 	}
 			
-	status_t res = protocol->UpdateSettings(settings);
+	// check settings and get path to settings file
+	if ( strlen(p) == 0 )
+	{ // im_server settings
+		res = UpdateOwnSettings(settings);
+		
+		strcpy(settings_path,"/boot/home/config/settings/im_kit/im_server.settings");
+	} else
+	{ // protocol settings
+		if ( fProtocols.find(p) == fProtocols.end() )
+		{
+			_SEND_ERROR("ERROR: GET_SETTINGS: Protocol not loaded",msg);
+			return;
+		}
 			
+		Protocol * protocol = fProtocols[p];
+			
+		res = protocol->UpdateSettings(settings);
+			
+		sprintf(
+			settings_path,
+			"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
+			fAddOnInfo[protocol].signature
+		);
+	}
+	
+	// check if settings are ok
 	if ( res != B_OK )
 	{
 		_SEND_ERROR("ERROR: SET_SETTINGS: Protocol says settings not valid", msg);
 		return;
 	}
-			
+
 	// save settings
 	char data[1024*1024];
 	int32 data_size=settings.FlattenedSize();
-			
+	
 	if ( settings.Flatten(data,data_size) != B_OK )
 	{ // error flattening message
 		_SEND_ERROR("ERROR: SET_SETTINGS: Error flattening settings message", msg);
 		return;
 	}
-			
-	char settings_path[512];
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-		fAddOnInfo[protocol].signature
-	);
+	
 	BDirectory dir;
 	dir.CreateFile(settings_path,NULL,true);
 
@@ -1180,7 +1198,7 @@ Server::SetAllOffline()
 		if ( e.GetName(filename) != B_OK )
 			strcpy(filename,"<no filename?!>");
 		
-		LOG("Setting %s (%s) offline, filename: %s", name, nickname, filename);
+//		LOG("Setting %s (%s) offline, filename: %s", name, nickname, filename);
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
 			LOG("  error.");
@@ -1231,4 +1249,26 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 			msg->AddString("id",id);
 		}
 	}
+}
+
+BMessage
+Server::GenerateSettingsTemplate()
+{
+	BMessage main_msg(SETTINGS_TEMPLATE);
+	
+	BMessage blink_db;
+	blink_db.AddString("name", "blink_db");
+	blink_db.AddString("description", "Blink Deskbar icon");
+	blink_db.AddInt32("type", B_BOOL_TYPE );
+	blink_db.AddBool("default", true );
+	
+	main_msg.AddMessage("setting", &blink_db);
+	
+	return main_msg;
+}
+
+status_t
+Server::UpdateOwnSettings( BMessage settings )
+{
+	return B_OK;
 }

@@ -46,6 +46,9 @@ class Server : public BApplication
 		void	GetSettings(BMessage*);
 		void	SetSettings(BMessage*);
 		
+		BMessage	GenerateSettingsTemplate();
+		status_t	UpdateOwnSettings( BMessage );
+		
 		void	MessageToProtocols(BMessage*);
 		void	MessageFromProtocols(BMessage*);
 		

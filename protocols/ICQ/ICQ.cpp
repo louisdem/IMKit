@@ -303,7 +303,10 @@ void SimpleClient::contact_userinfo_change_cb( UserInfoChangeEvent * e )
 	if ( contact->getEmail().length() > 0 )
 		msg->AddString("email", contact->getEmail().c_str() );
 	if ( contact->getAlias().length() > 0 )
+	{
+		// add test to see if alias == UIN and skip if it is
 		msg->AddString("nick", contact->getAlias().c_str() );
+	}
 	
 	fMsgr.SendMessage( msg );
 	delete msg;

@@ -4,11 +4,12 @@
 #include <Window.h>
 #include <Message.h>
 #include <libim/Manager.h>
+#include <Box.h>
 
 class SettingsWindow : public BWindow
 {
 	public:
-		SettingsWindow();
+		SettingsWindow( BMessenger );
 		~SettingsWindow();
 		
 		void MessageReceived( BMessage * );
@@ -24,6 +25,8 @@ class SettingsWindow : public BWindow
 		};
 		BMessage	fTemplate;
 		char		fProtocol[128];
+		BBox		* fBox;
+		BMessenger	fDeskbarIcon;
 		
 		IM::Manager	* fMan;
 };

@@ -12,16 +12,31 @@
 #include <stdlib.h>
 #include <Button.h>
 #include <stdio.h>
+#include <string>
+#include <CheckBox.h>
 
 //// SETTINGS WINDOW
 
-SettingsWindow::SettingsWindow()
+SettingsWindow::SettingsWindow( BMessenger deskbaricon )
 :	BWindow(
 		BRect(150,150,350,100), "IM Settings", 
 		B_TITLED_WINDOW, B_ASYNCHRONOUS_CONTROLS|B_NOT_RESIZABLE|B_NOT_ZOOMABLE
 	),
+	fDeskbarIcon( deskbaricon ),
 	fMan( new IM::Manager(BMessenger(this)) )
 {
+	BView * bg = new BView( Bounds(), NULL, B_FOLLOW_ALL, B_WILL_DRAW );
+	bg->SetViewColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
+	
+	AddChild(bg);
+
+	BRect bounds = Bounds();
+	bounds.InsetBy(3,3);
+	
+	fBox = new BBox( bounds, NULL, B_FOLLOW_ALL );
+	
+	bg->AddChild( fBox );
+	
 	strcpy(fProtocol,"");
 	rebuildUI();
 }
@@ -35,6 +50,9 @@ SettingsWindow::~SettingsWindow()
 bool
 SettingsWindow::QuitRequested()
 {
+	// tell Deskbar icon we're closing
+	fDeskbarIcon.SendMessage('swcl');
+	
 	return true;
 }
 
@@ -46,9 +64,12 @@ SettingsWindow::MessageReceived( BMessage * msg )
 		case SELECT_PROTOCOL:
 		{
 			if ( msg->FindString("protocol") == NULL || strlen(msg->FindString("protocol")) == 0 )
-				return;
-			
-			strcpy( fProtocol, msg->FindString("protocol") );
+			{
+				strcpy(fProtocol,"");
+			} else
+			{
+				strcpy( fProtocol, msg->FindString("protocol") );
+			}
 			
 			rebuildUI();
 		}	break;
@@ -94,7 +115,8 @@ SettingsWindow::MessageReceived( BMessage * msg )
 							return;
 					}
 				} else
-				{
+				if ( dynamic_cast<BMenuField*>(FindView(name)) )
+				{ // one-of-provided
 					BMenuField * ctrl = (BMenuField*)FindView(name);
 					
 					BMenuItem * item = ctrl->Menu()->FindMarked();
@@ -117,6 +139,15 @@ SettingsWindow::MessageReceived( BMessage * msg )
 							LOG("Unhandled settings type!");
 							return;
 					}
+				} else
+				if ( dynamic_cast<BCheckBox*>(FindView(name)) )
+				{ // bool
+					BCheckBox * box = (BCheckBox*)FindView(name);
+					
+					if ( box->Value() == B_CONTROL_ON )
+						settings.AddBool(name,true);
+					else
+						settings.AddBool(name,false);
 				}
 			}
 			
@@ -130,6 +161,10 @@ SettingsWindow::MessageReceived( BMessage * msg )
 			
 			fMan->SendMessage( &to_send, &reply );
 			
+			if ( reply.what == IM::ACTION_PERFORMED )
+			{ // settings ok, notify deskbar icon
+				fDeskbarIcon.SendMessage( 'upse' );
+			}
 			//LOG("apply settings, reply",&reply);
 		}	break;
 		
@@ -146,11 +181,17 @@ SettingsWindow::rebuildUI()
 	LOG(some_text);
 	
 	// delete old UI
-	while ( CountChildren() > 0 )
+	LOG("  deleting old views");
+	fBox->SetLabel( (BView*)NULL );
+	while ( fBox->CountChildren() > 0 )
 	{
-		BView * view = ChildAt(0);
-		RemoveChild(view);
-		delete view;
+		BView * view = fBox->ChildAt(0);
+		
+		if ( view != fBox->LabelView() )
+		{
+			fBox->RemoveChild(view);
+			delete view;
+		}
 	}
 	
 	// get list of available protocols
@@ -161,7 +202,9 @@ SettingsWindow::rebuildUI()
 	
 	if ( protocols.what == IM::ACTION_PERFORMED )
 	{ // got list of protocols. yay!
-		protocolMenu = new BMenu("Loaded protocols");
+		LOG("  Creating protocol menu");
+		
+		protocolMenu = new BMenu("Select module");
 		
 		for ( int i=0; protocols.FindString("protocol",i); i++ )
 		{
@@ -170,8 +213,17 @@ SettingsWindow::rebuildUI()
 			BMessage * msg = new BMessage(SELECT_PROTOCOL);
 			msg->AddString("protocol",p);
 			
-			protocolMenu->AddItem( new BMenuItem(p,msg) );
+			string item_text( string(p) + string(" settings") );
+			
+			protocolMenu->AddItem( new BMenuItem(item_text.c_str(),msg) );
 		}
+		
+		protocolMenu->AddSeparatorItem();
+		
+		// done with protocols, add im_server too
+		BMessage * msg = new BMessage(SELECT_PROTOCOL);
+		// don't add protocol name => im_server settings
+		protocolMenu->AddItem( new BMenuItem("IM Server", msg) );
 	} else
 	{
 		LOG("Error: Failed to get list of protocols");
@@ -179,10 +231,12 @@ SettingsWindow::rebuildUI()
 	}
 	
 	BMenuField * protoSelect = new BMenuField(
-		BRect(0,0,200,20), "", "Select protocol:", protocolMenu
+		BRect(0,0,200,20), "", NULL, protocolMenu
 	);
 	
-	AddChild( protoSelect );
+//	AddChild( protoSelect );
+	
+	fBox->SetLabel( protoSelect );
 	
 	// get template from im_server
 	BMessage req_template(IM::GET_SETTINGS_TEMPLATE);
@@ -193,6 +247,7 @@ SettingsWindow::rebuildUI()
 	
 	BMessage templ, settings;
 	
+	LOG("  Getting template and settings from im_server");
 	fMan->SendMessage( &req_template, &fTemplate );
 	fMan->SendMessage( &req_settings, &settings );
 	
@@ -207,7 +262,8 @@ SettingsWindow::rebuildUI()
 	LOG("Settings", &settings);
 */		
 	BMessage curr;
-		
+	
+	LOG("  Creating views");
 	for ( int i=0; fTemplate.FindMessage("setting",i,&curr) == B_OK; i++ )
 	{
 		char temp[512];
@@ -225,6 +281,7 @@ SettingsWindow::rebuildUI()
 		bool is_free_text = true;
 		bool is_secret = false;
 		BMenu * menu = NULL;
+		BView * control = NULL;
 		
 		switch ( type )
 		{ // get value from settings if available
@@ -291,29 +348,46 @@ SettingsWindow::rebuildUI()
 						is_secret = false;
 				}
 			}	break;
+			case B_BOOL_TYPE:
+			{
+				LOG("  bool setting");
+				
+				bool active;
+				
+				if ( settings.FindBool(name, &active) != B_OK )
+					curr.FindBool("default", &active);
+				
+				control = new BCheckBox( BRect(0,0,200,20), name, desc, NULL );
+				
+				if ( active )
+					((BCheckBox*)control)->SetValue(B_CONTROL_ON);
+			}	break;
 		}
 		
 		if ( !value )
 			value = "";
 		
 		LOG("  creating control");
-		// create control
-		BView * ctrl;
-		if ( is_free_text )
-		{ // free-text setting
-			ctrl = new BTextControl( BRect(0,0,200,20), name, desc, value, NULL	);
-		} else
-		{ // select-one-of-provided setting
-			ctrl = new BMenuField( BRect(0,0,200,20), name, desc, menu );
-		}
-		if (is_secret)
+		// create control if needed
+		if ( !control )
 		{
-			((BTextControl *)ctrl)->TextView()->HideTyping(true);
-			((BTextControl *)ctrl)->SetText(value); // err.. Why does HideTyping remove the text?
+			if ( is_free_text )
+			{ // free-text setting
+				control = new BTextControl( BRect(0,0,200,20), name, desc, value, NULL	);
+			} else
+			{ // select-one-of-provided setting
+				control = new BMenuField( BRect(0,0,200,20), name, desc, menu );
+			}
+			if (is_secret)
+			{
+				((BTextControl *)control)->TextView()->HideTyping(true);
+				((BTextControl *)control)->SetText(value); // err.. Why does HideTyping remove the text?
+			}
 		}
-		AddChild( ctrl );
-		ctrl->MoveTo(0, 25+i*21);
-		ResizeTo( 200, 25+(i+1)*21 );
+		
+		fBox->AddChild( control );
+		control->MoveTo(10, 25+i*21);
+		ResizeTo( 220, 45+(i+1)*21 );
 		
 		LOG("  done.");
 	}
@@ -325,25 +399,34 @@ SettingsWindow::rebuildUI()
 	BButton * apply = new BButton(
 		BRect(0,0,40,25), "", "Apply", new BMessage(APPLY_SETTINGS)
 	);
-	apply->MoveTo( 0, Bounds().Height()-apply->Bounds().Height() );
-	AddChild( apply );
+	apply->MoveTo( 10, Bounds().Height()-apply->Bounds().Height()-10 );
+	fBox->AddChild( apply );
 	
-	// set online
-	/*
-	BButton * online = new BButton(
-		BRect(0,0,40,25), "", "Online", new BMessage(SET_ONLINE)
-	);
-	*/
-	BMenu * statusMenu = new BPopUpMenu("");
-	BMessage * onlineMsg = new BMessage(ALTER_STATUS);	onlineMsg->AddString("status","available");
-	BMessage * awayMsg = new BMessage(ALTER_STATUS);	awayMsg->AddString("status","away");
-	BMessage * offlineMsg = new BMessage(ALTER_STATUS);	offlineMsg->AddString("status","offline");
+	// "set status" menu
+	if ( strlen(fProtocol) > 0 )
+	{
+		BMenu * statusMenu = new BPopUpMenu("");
+		BMessage * onlineMsg = new BMessage(ALTER_STATUS);	onlineMsg->AddString("status","available");
+		BMessage * awayMsg = new BMessage(ALTER_STATUS);	awayMsg->AddString("status","away");
+		BMessage * offlineMsg = new BMessage(ALTER_STATUS);	offlineMsg->AddString("status","offline");
 	
-	statusMenu->AddItem( new BMenuItem("online", onlineMsg) );
-	statusMenu->AddItem( new BMenuItem("away", awayMsg) );
-	statusMenu->AddItem( new BMenuItem("offline", offlineMsg) );
+		statusMenu->AddItem( new BMenuItem("online", onlineMsg) );
+		statusMenu->AddItem( new BMenuItem("away", awayMsg) );
+		statusMenu->AddItem( new BMenuItem("offline", offlineMsg) );
 	
-	BMenuField * online = new BMenuField( BRect(0,0,100,25), "_new_status", "Set status:", statusMenu );
-	online->MoveTo( Bounds().Width()-online->Bounds().Width(), Bounds().Height()-apply->Bounds().Height() );
-	AddChild( online );
+		BMenuField * online = new BMenuField( BRect(0,0,100,25), "_new_status", "Set status:", statusMenu );
+		online->MoveTo( Bounds().Width()-online->Bounds().Width()+10, Bounds().Height()-apply->Bounds().Height()-10 );
+		fBox->AddChild( online );
+	}
+	
+	// update window title to reflect selected page
+	if ( strlen(fProtocol) > 0 )
+	{
+		char title[512];
+		sprintf(title,"IM: %s settings", fProtocol);
+		SetTitle( title );
+	} else
+	{
+		SetTitle("IM: IM Server settings");
+	}
 }

@@ -24,17 +24,24 @@ class _EXPORT IM_DeskbarIcon : public BView
 		
 		virtual void MouseDown( BPoint );
 		
+		virtual void AttachedToWindow();
+		virtual void DetachedFromWindow();
+		
 	private:
 		enum {
 			SET_ONLINE		= 'set1',
 			SET_AWAY		= 'set2',
 			SET_OFFLINE		= 'set3',
 			
-			OPEN_SETTINGS	= 'opse'
+			OPEN_SETTINGS	= 'opse',
+			RELOAD_SETTINGS = 'upse',
+			
+			SETTINGS_WINDOW_CLOSED = 'swcl'
 		};
 		
 		void			_init();
 		BBitmap *		GetBitmap( const char * name );
+		void			reloadSettings();
 		
 		BResources		fResource;
 		BBitmap *		fCurrIcon;
@@ -46,6 +53,11 @@ class _EXPORT IM_DeskbarIcon : public BView
 		int					fFlashCount, fBlink;
 		list<BMessenger>	fMsgrs;
 		BMessageRunner *	fMsgRunner;
+		
+		BWindow *			fSettingsWindow;
+		
+		// settings
+		bool		fShouldBlink;
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();
