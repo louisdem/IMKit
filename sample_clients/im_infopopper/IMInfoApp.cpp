@@ -41,7 +41,7 @@ IMInfoApp::IMInfoApp(void)
 
 IMInfoApp::~IMInfoApp(void) {
 	fManager->StopListening();
-	delete fManager;
+	BMessenger(fManager).SendMessage(B_QUIT_REQUESTED);
 };
 
 void IMInfoApp::MessageReceived(BMessage *msg) {
@@ -119,8 +119,8 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 						shortMessage.Append("...");
 					}
 					
-					if ( shortMessage.Length() > 30 ) {
-						shortMessage.Truncate(27);
+					if ( shortMessage.Length() > 60 ) {
+						shortMessage.Truncate(57);
 						shortMessage.Append("...");
 					}
 					
@@ -142,49 +142,33 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					}
 				}	break;
 				
-//				case IM::PROGRESS: {
-//					const char * progID = msg->FindString("progressID");
-//					
-//					if ( !progID )
-//						break;
-//					
-//					InfoView * view = NULL;
-//					
-//					for ( list<InfoView*>::iterator i=fInfoViews.begin(); i!=fInfoViews.end(); i++ )
-//					{
-//						if ( (*i)->HasProgressID(progID) )
-//							view = *i;
-//					}
-//					
-//					if ( view )
-//					{
-//						view->MessageReceived(msg);
-//						
-//						ResizeAll();
-//					} else 
-//					{
-//						if ( !msg->FindString("message") )
-//							break;
-//						
-//						float progress = 0.0;
-//						
-//						if ( msg->FindFloat("progress", &progress) != B_OK )
-//							break;
-//						
-////						view = new InfoView( 
-////							InfoPopper::Progress, 
-////							msg->FindString("message"),
-////							progID,
-////							progress
-////						);
-////						
-////						fInfoViews.push_back( view );
-////						
-////						fBorder->AddChild( view );
-////						
-////						ResizeAll();
-//					}
-//				}	return; // Yes, return here. Progress is a special case.
+				case IM::PROGRESS: {
+					printf("Displaying message <%s>\n", text.String() );
+					
+					float progress;
+					if (msg->FindFloat("progress", &progress) != B_OK) progress=0.0f;
+					const char * messageID;
+					if (msg->FindString("progressID", &messageID) != B_OK) messageID=NULL;
+					const char * message;
+					if (msg->FindString("message", &message) != B_OK) message=NULL;
+					
+					BMessage pop_msg(InfoPopper::AddMessage);
+					pop_msg.AddString("title", "IM Kit");
+					pop_msg.AddInt8("type", InfoPopper::Progress);
+					pop_msg.AddFloat("progress",progress);
+					if ( messageID )
+						pop_msg.AddString("messageID",messageID);
+					if ( message )
+						pop_msg.AddString("content",messageID);
+					
+					if (icon) {
+						BMessage image;
+						icon->Archive(&image);
+						pop_msg.AddMessage("icon", &image);
+					};
+					
+					BMessenger(InfoPopperAppSig).SendMessage(pop_msg);				
+				}	return; // yes, return. Progress is a special case.
 			};
 			
 			text.ReplaceAll("\\n", "\n");
@@ -198,21 +182,21 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			if ( text != "" ) {
 				printf("Displaying message <%s>\n", text.String() );
 				
-				BMessage msg(InfoPopper::AddMessage);
-				msg.AddString("title", "IM Kit");
-				msg.AddString("content", text);
-				msg.AddInt8("type", (int8)type);
+				BMessage pop_msg(InfoPopper::AddMessage);
+				pop_msg.AddString("title", "IM Kit");
+				pop_msg.AddString("content", text);
+				pop_msg.AddInt8("type", (int8)type);
 	
 				if (icon) {
 					BMessage image;
 					icon->Archive(&image);
-					msg.AddMessage("icon", &image);
+					pop_msg.AddMessage("icon", &image);
 				};
-	
-				msg.AddString("onClickApp", "application/x-person");
-				msg.AddRef("onClickRef", &ref);
+				
+				pop_msg.AddString("onClickApp", "application/x-person");
+				pop_msg.AddRef("onClickRef", &ref);
 
-				BMessenger(InfoPopperAppSig).SendMessage(msg);				
+				BMessenger(InfoPopperAppSig).SendMessage(pop_msg);				
 			};
 		} break;
 		

@@ -43,6 +43,6 @@ int main(int argc, char *argv[]) {
 	tmplate.AddMessage("setting", &msg);
 	
 	im_save_client_template("IM-InfoPopper", &tmplate);
-
+	
 	app.Run();
 }

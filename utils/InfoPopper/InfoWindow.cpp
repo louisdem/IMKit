@@ -102,7 +102,7 @@ void InfoWindow::ResizeAll(void) {
 	float borderw, borderh;
 	fBorder->GetPreferredSize(&borderw, &borderh);
 	
-	float curry = borderh - fBorder->BorderSize(), maxw = 150;
+	float curry = borderh - fBorder->BorderSize(), maxw = 250;
 
 	for (list<InfoView*>::iterator i = fInfoViews.begin(); i != fInfoViews.end();
 		i++) {
