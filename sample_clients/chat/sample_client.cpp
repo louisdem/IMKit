@@ -15,6 +15,7 @@
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
+#include <libim/Helpers.h>
 
 int main(void)
 {
@@ -35,13 +36,13 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 	
 	if ( node.InitCheck() != B_OK )
 	{
-		printf("Invalid entry_ref\n");
+		LOG("Invalid entry_ref");
 		return;
 	}
 	
 	if ( node.ReadAttr(attr,B_STRING_TYPE,0,data,sizeof(data)) > 1 )
 	{
-//		printf("  value already present\n");
+//		LOG("  value already present");
 		return;
 	}
 	
@@ -55,7 +56,7 @@ setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 		printf("Error writing attribute %s (%s)\n",attr,value);
 	} else
 	{
-		//printf("Attribute set\n");
+		//LOG("Attribute set");
 	}
 }
 
@@ -116,8 +117,7 @@ MyApp::MessageReceived( BMessage * msg )
 			{
 				case IM::CONTACT_INFO:
 				{ // handle contact info updates
-//					printf("Got contact info:\n");
-//					msg->PrintToStream();
+//					LOG("Got contact info:",msg);
 					
 					const char * first_name = msg->FindString("first name");
 					const char * last_name = msg->FindString("last name");
@@ -169,7 +169,7 @@ MyApp::MessageReceived( BMessage * msg )
 			
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED || msg->what == 'newc') )
 			{ // open new window on message received or user request
-				printf("Creating new window to handle message\n");
+				LOG("Creating new window to handle message");
 				win = new ChatWindow(ref);
 				win->Lock();
 				win->Show();
@@ -185,7 +185,6 @@ MyApp::MessageReceived( BMessage * msg )
 					win->Show();
 				}
 				win->Unlock();
-//				printf("Handled by window [%s]\n", win->Title() );
 			}
 		}	break;
 		default:
@@ -374,8 +373,6 @@ ChatWindow::MessageReceived( BMessage * msg )
 		
 		case SEND_MESSAGE:
 		{
-			//printf("Send message: %s\n", fInput->Text() );
-			
 			BMessage im_msg(IM::MESSAGE);
 			im_msg.AddInt32("im_what",IM::SEND_MESSAGE);
 			im_msg.AddRef("contact",&fEntry);
@@ -384,7 +381,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( fMan->SendMessage(&im_msg) == B_OK )
 				fInput->SetText("");
 			else
-				printf("Error sending message to im_server\n");
+				LOG("Error sending message to im_server");
 		}	break;
 		
 		case B_NODE_MONITOR:
@@ -414,7 +411,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BEntry entry(&fEntry);
 					if ( !entry.Exists() )
 					{
-						printf("Error: New entry invalid\n");
+						LOG("Error: New entry invalid");
 					}
 				}	break;
 				case B_STAT_CHANGED:
@@ -571,7 +568,7 @@ SettingsWindow::MessageReceived( BMessage * msg )
 							settings.AddInt32(name, atoi(ctrl->Text()) );
 							break;
 						default:
-							printf("Unhandled settings type!\n");
+							LOG("Unhandled settings type!");
 							return;
 					}
 				} else
@@ -582,7 +579,7 @@ SettingsWindow::MessageReceived( BMessage * msg )
 					
 					if ( !item )
 					{
-						printf("Error: No selection in setting\n");
+						LOG("Error: No selection in setting");
 						return;
 					}
 					
@@ -595,26 +592,23 @@ SettingsWindow::MessageReceived( BMessage * msg )
 							settings.AddInt32(name, atoi(item->Label()) );
 							break;
 						default:
-							printf("Unhandled settings type!\n");
+							LOG("Unhandled settings type!");
 							return;
 					}
 				}
 			}
 			
-			//printf("SETTINGS message:\n");
-			//settings.PrintToStream();
+			//LOG("SETTINGS message", &settings);
 			
 			BMessage to_send(IM::SET_SETTINGS), reply;
 			to_send.AddString("protocol", fProtocol);
 			to_send.AddMessage("settings", &settings);
 			
-			//printf("SET_SETTINGS message:\n");
-			//to_send.PrintToStream();
+			//LOG("SET_SETTINGS message:",&to_send);
 			
 			fMan->SendMessage( &to_send, &reply );
 			
-			//printf("apply settings, reply:\n");
-			//reply.PrintToStream();
+			//LOG("apply settings, reply",&reply);
 		}	break;
 		
 		default:
@@ -625,7 +619,9 @@ SettingsWindow::MessageReceived( BMessage * msg )
 void
 SettingsWindow::rebuildUI()
 {
-	printf("Rebuilding GUI with protocol [%s]\n", fProtocol);
+	char some_text[512];
+	sprintf(some_text,"Rebuilding GUI with protocol [%s]", fProtocol);
+	LOG(some_text);
 	
 	// delete old UI
 	while ( CountChildren() > 0 )
@@ -656,7 +652,7 @@ SettingsWindow::rebuildUI()
 		}
 	} else
 	{
-		printf("Error: Failed to get list of protocols\n");
+		LOG("Error: Failed to get list of protocols");
 		return;
 	}
 	
@@ -680,15 +676,13 @@ SettingsWindow::rebuildUI()
 	
 	if ( fTemplate.what == IM::ERROR )
 	{ // got template, construct GUI
-		printf("SettingsWindow construction failed: Couldn't get template\n");
+		LOG("SettingsWindow construction failed: Couldn't get template");
 		return;
 	}
 	
-/*	printf("Template:\n");
-	fTemplate.PrintToStream();
+/*	LOG("Template", &fTemplate);
 		
-	printf("Settings:\n");
-	settings.PrintToStream();
+	LOG("Settings", &settings);
 */		
 	BMessage curr;
 		
@@ -703,20 +697,21 @@ SettingsWindow::rebuildUI()
 		int32 type=-1;
 		curr.FindInt32("type",&type);
 		
-		printf("Setting %s [%s]\n", desc, name );
+		sprintf(some_text,"Setting %s [%s]", desc, name );
+		LOG(some_text);
 		
 		bool is_free_text = true;
-		bool is_secret_text = false;
+		bool is_secret = false;
 		BMenu * menu = NULL;
 		
 		switch ( type )
 		{ // get value from settings if available
 			case B_STRING_TYPE:
 			{
-				printf("  string setting\n");
+				LOG("  string setting");
 				if ( curr.FindString("valid_value") )
 				{ // one-of-provided
-					printf("  one-of-provided\n");
+					LOG("  one-of-provided");
 					is_free_text = false;
 					
 					menu = new BPopUpMenu(name);
@@ -732,20 +727,20 @@ SettingsWindow::rebuildUI()
 						menu->FindItem(value)->SetMarked(true);
 				} else
 				{ // free-text
-					printf("  free-text\n");
+					LOG("  free-text");
 					value = settings.FindString(name);
 					if ( !value )
 						value = curr.FindString("default");
-					if (curr.FindBool("is_secret"))
-						is_secret_text = curr.FindBool("is_secret");
+					if ( curr.FindBool("is_secret",&is_secret) != B_OK )
+						is_secret = false;
 				}
 			}	break;
 			case B_INT32_TYPE:
 			{
-				printf("  int32 setting\n");
+				LOG("  int32 setting");
 				if ( curr.FindInt32("valid_value") )
 				{ // one-of-provided
-					printf("  one-of-provided\n");
+					LOG("  one-of-provided");
 					is_free_text = false;
 					
 					menu = new BPopUpMenu(name);
@@ -758,7 +753,7 @@ SettingsWindow::rebuildUI()
 					}
 				} else
 				{ // free-text
-					printf("  free-text\n");
+					LOG("  free-text");
 					int32 v=0;
 					if ( settings.FindInt32(name,&v) == B_OK )
 					{
@@ -770,6 +765,8 @@ SettingsWindow::rebuildUI()
 						sprintf(temp,"%ld",v);
 						value = temp;
 					}
+					if ( curr.FindBool("is_secret",&is_secret) != B_OK )
+						is_secret = false;
 				}
 			}	break;
 		}
@@ -777,23 +774,26 @@ SettingsWindow::rebuildUI()
 		if ( !value )
 			value = "";
 		
-		printf("  creating control\n");
+		LOG("  creating control");
 		// create control
 		BView * ctrl;
 		if ( is_free_text )
 		{ // free-text setting
 			ctrl = new BTextControl( BRect(0,0,200,20), name, desc, value, NULL	);
-			if (is_secret_text)
-				((BTextControl *)ctrl)->TextView()->HideTyping(true);
 		} else
 		{ // select-one-of-provided setting
 			ctrl = new BMenuField( BRect(0,0,200,20), name, desc, menu );
+		}
+		if (is_secret)
+		{
+			((BTextControl *)ctrl)->TextView()->HideTyping(true);
+			((BTextControl *)ctrl)->SetText(value); // err.. Why does HideTyping remove the text?
 		}
 		AddChild( ctrl );
 		ctrl->MoveTo(0, 25+i*21);
 		ResizeTo( 200, 25+(i+1)*21 );
 		
-		printf("  done.\n");
+		LOG("  done.");
 	}
 	
 	// add space for buttons

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <String.h>
+#include <Message.h>
 
 class Tracer
 {
