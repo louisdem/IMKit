@@ -176,8 +176,8 @@ Contact::SaveConnections()
 	
 	if ( node.WriteAttr(
 		"IM:connections", B_STRING_TYPE, 0,
-		attr, strlen(attr)
-	) != (int32)strlen(attr) )
+		attr, strlen(attr) + 1
+	) != (int32)strlen(attr) + 1)
 	{ // error writing
 		return B_ERROR;
 	}
