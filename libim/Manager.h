@@ -17,7 +17,7 @@ class Manager : public BLooper
 		void StopListening();
 		
 		static status_t OneShotMessage( BMessage * msg );
-
+		
 		status_t SendMessage( BMessage * msg, BMessage * reply=NULL );
 		
 		void FlashDeskbar( BMessenger );
@@ -25,6 +25,8 @@ class Manager : public BLooper
 		
 		// 
 		void MessageReceived( BMessage * );
+		
+		status_t	InitCheck();
 		
 	private:
 		void AddEndpoint( BMessenger );

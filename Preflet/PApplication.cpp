@@ -5,7 +5,7 @@ PApplication::PApplication(void)
 };
 
 PApplication::~PApplication(void) {
-	delete fWindow;
+//	delete fWindow;
 };
 
 void PApplication::ReadyToRun(void) {

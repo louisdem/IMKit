@@ -22,18 +22,18 @@ class Tracer
 		};
 };
 
-enum VERBOSITY_LEVEL {
-	DEBUG = 0,		// debug
-	HIGH = 1,		// lots and lots of messages
-	MEDIUM = 2,		// enough to follow what's happening
-	LOW = 3,		// general idea
-	QUIET = 100		// quiet. Don't say a word.
+enum log_importance {
+	liDebug = 0,	// debug
+	liLow,			// lots and lots of messages
+	liMedium,		// enough to follow what's happening
+	liHigh,			// general idea
+	liQuiet = 100	// Don't say a word. Don't use this when calling LOG(), it's for reducing output.
 };
 
-extern void LOG( const char * module, VERBOSITY_LEVEL level, const char * msg, const BMessage *, ...);
-extern void LOG( const char * module, VERBOSITY_LEVEL level, const char * msg, ...);
+extern void LOG( const char * module, log_importance level, const char * msg, const BMessage *, ...);
+extern void LOG( const char * module, log_importance level, const char * msg, ...);
 
 // if level < g_verbosity_level then LOG() doesn't print the msg
-extern VERBOSITY_LEVEL g_verbosity_level;
+extern log_importance g_verbosity_level;
 
 #endif

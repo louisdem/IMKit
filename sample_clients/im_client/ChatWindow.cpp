@@ -59,7 +59,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	if ( inputDivider.y > windowRect.Height() - 50 )
 	{
-		LOG("im_client", LOW, "Insane divider, fixed.");
+		LOG("im_client", liLow, "Insane divider, fixed.");
 		inputDivider.y = windowRect.Height() - 50;
 	}
 	
@@ -122,7 +122,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	entry_ref emailAppRef;
 	if ( be_roster->FindApp( "text/x-email", &emailAppRef ) != B_OK )
 	{ // failed to get email icon, oopsie.
-		LOG("im_client", LOW, "Failed to get email app icon");
+		LOG("im_client", liMedium, "Failed to get email app icon");
 		emailAppRef = fEntry; // this isn't what we should be doing, but it might be better than nothing.
 	}
 	
@@ -310,7 +310,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	font_height height;
 	be_plain_font->GetHeight(&height);
 	fFontHeight = height.ascent + height.descent + height.leading;
-	LOG("im_client", HIGH, "Font Height: %.2f\n", fFontHeight);
+	LOG("im_client", liDebug, "Font Height: %.2f\n", fFontHeight);
 }
 
 ChatWindow::~ChatWindow()
@@ -379,16 +379,16 @@ ChatWindow::SaveSettings(void) {
 	char *buffer = (char *)calloc(size, sizeof(char));
 
 	if (fWindowSettings.Flatten(buffer, size) != B_OK) {
-		LOG("im_client", LOW, "Could not flatten window settings");
+		LOG("im_client", liHigh, "Could not flatten window settings");
 	} else {
-		LOG("im_client", LOW, "Window settings flattened");
+		LOG("im_client", liLow, "Window settings flattened");
 		BNode peopleNode(&fEntry);
 		
 		if (peopleNode.WriteAttr("IM:ChatSettings", B_MESSAGE_TYPE, 0, buffer, 
 			(size_t)size) == size) {
-			LOG("im_client", LOW, "Window Settings saved to disk");
+			LOG("im_client", liLow, "Window Settings saved to disk");
 		} else {
-			LOG("im_client", LOW, "WIndow settings could not be written to disk");
+			LOG("im_client", liHigh, "Window settings could not be written to disk");
 		};	
 	};
 
@@ -414,17 +414,17 @@ ChatWindow::LoadSettings(void) {
 //				fWindowSettings.PrintToStream();
 				return B_OK;
 			} else {
-				LOG("im_client", LOW, "Could not unflatten settings messsage");
+				LOG("im_client", liLow, "Could not unflatten settings messsage");
 				return B_ERROR;
 			};
 
 			free(buffer);
 		} else {
-			LOG("im_client", LOW, "Could not read chat attribute");
+			LOG("im_client", liLow, "Could not read chat attribute");
 			return B_ERROR;
 		};
 	} else {
-		LOG("im_client", LOW, "Could not load chat settings");
+		LOG("im_client", liLow, "Could not load chat settings");
 		return B_ERROR;
 	};
 	
@@ -560,7 +560,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( fMan->SendMessage(&im_msg) == B_OK ) {
 				fInput->SetText("");
 			} else {
-				LOG("im_client", LOW, "Error sending message to im_server");
+				LOG("im_client", liHigh, "Error sending message to im_server");
 			};
 		}	break;
 		
@@ -601,7 +601,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			{
 				if ( contact.SetStatus(BLOCKED_TEXT) != B_OK )
 				{
-					LOG("im_client", LOW, "Error setting contact status");
+					LOG("im_client", liHigh, "Block: Error setting contact status");
 				}
 			}
 		}	break;
@@ -633,7 +633,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BEntry entry(&fEntry);
 					if ( !entry.Exists() )
 					{
-						LOG("im_client", LOW, "Error: New entry invalid");
+						LOG("im_client", liHigh, "Entry moved: New entry invalid");
 					}
 				}	break;
 				case B_STAT_CHANGED:

@@ -102,7 +102,7 @@ uint32 Flap::FlattenedSize(void) {
 
 const char *Flap::Flatten(uint16 seqNum) {
 	if (fDirty) {
-		LOG("AIM", DEBUG, "Sequence 0x%0x: Need to allocate %i bytes...",
+		LOG("AIM", liDebug, "Sequence 0x%0x: Need to allocate %i bytes...",
 			/*(seqNum & 0xff00) >> 8, seqNum & 0x00ff*/seqNum, FlattenedSize());
 		fFlat = (char *)realloc(fFlat, FlattenedSize());
 		if (fFlat == NULL) return NULL;

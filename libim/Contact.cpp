@@ -170,7 +170,7 @@ Contact::SaveConnections()
 status_t
 Contact::AddConnection( const char * proto_id )
 {
-	LOG("Contact", HIGH, "Adding connection %s\n", proto_id);
+	LOG("Contact", liLow, "Adding connection %s\n", proto_id);
 	
 	if ( fConnections.CountItems() == 0 )
 		LoadConnections();
@@ -187,7 +187,7 @@ Contact::AddConnection( const char * proto_id )
 status_t
 Contact::RemoveConnection( const char * proto_id )
 {
-	LOG("Contact", HIGH, "Removing connection %s\n", proto_id);
+	LOG("Contact", liLow, "Removing connection %s\n", proto_id);
 	
 	if ( fConnections.CountItems() == 0 )
 		LoadConnections();

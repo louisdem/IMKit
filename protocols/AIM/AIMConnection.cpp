@@ -46,7 +46,7 @@ AIMConnection::~AIMConnection(void) {
 
 int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	if (hostname == NULL) {
-		LOG("AIM", LOW, "ConnectTo() called with NULL hostname - probably"
+		LOG("AIM", liLow, "ConnectTo() called with NULL hostname - probably"
 			" not authorised to login at this time");
 		return B_ERROR;
 	};
@@ -55,15 +55,15 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	struct sockaddr_in their_addr;
 	int32 sock = 0;
 
-	LOG("AIM", LOW, "AIMConn::ConnectTo(%s, %i)", hostname, port);
+	LOG("AIM", liLow, "AIMConn::ConnectTo(%s, %i)", hostname, port);
 
 	if ((he = gethostbyname(hostname)) == NULL) {
-		LOG("AIM", LOW, "AIMConn::ConnectTo: Couldn't get Server name (%s)", hostname);
+		LOG("AIM", liMedium, "AIMConn::ConnectTo: Couldn't get Server name (%s)", hostname);
 		return B_ERROR;
 	};
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG("AIM", LOW, "AIMConn::ConnectTo(%s, %i): Couldn't create socket",
+		LOG("AIM", liMedium, "AIMConn::ConnectTo(%s, %i): Couldn't create socket",
 			hostname, port);	
 		return B_ERROR;
 	};
@@ -74,7 +74,7 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	memset(&(their_addr.sin_zero), 0, 8);
 
 	if (connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1) {
-		LOG("AIM", LOW, "AIMConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
+		LOG("AIM", liMedium, "AIMConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
 		return B_ERROR;
 	};
 	
@@ -113,7 +113,7 @@ int32 AIMConnection::Receiver(void *con) {
 	int32 socket = 0;
 
 	if ( !connection->fSockMsgr->IsValid() ) {
-		LOG("AIM", LOW, "%s:%i: Messenger wasn't valid!", kHost, kPort);
+		LOG("AIM", liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
 		return B_ERROR;
 	}
 
@@ -125,12 +125,12 @@ int32 AIMConnection::Receiver(void *con) {
 	{
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
 		{
-			LOG("AIM", LOW, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
+			LOG("AIM", liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
 			return B_ERROR;
 		}
 	} else 
 	{
-		LOG("AIM", LOW, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
+		LOG("AIM", liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
 		return B_ERROR;
 	}
 	
@@ -154,7 +154,7 @@ int32 AIMConnection::Receiver(void *con) {
 
 			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
 				if (FD_ISSET(socket, &error)) {
-					LOG(kProtocolName, LOW, "%s:%i: Got socket error", kHost, kPort);
+					LOG(kProtocolName, liLow, "%s:%i: Got socket error", kHost, kPort);
 					snooze(kSleep);
 					continue;
 				};
@@ -169,7 +169,7 @@ int32 AIMConnection::Receiver(void *con) {
 						} else {
 							if (kMsgr->IsValid() == false) return B_OK;
 
-							LOG(kProtocolName, LOW, "%s:%i: Socket got less than 0",
+							LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0",
 								kHost, kPort);
 							perror("SOCKET ERROR");
 							
@@ -193,7 +193,7 @@ int32 AIMConnection::Receiver(void *con) {
 		uchar *flapContents;
 		
 		if (flapHeader[0] != COMMAND_START) {
-			LOG(kProtocolName, HIGH, "%s:%i: Packet header doesn't start with 0x2a "
+			LOG(kProtocolName, liHigh, "%s:%i: Packet header doesn't start with 0x2a "
 				" - discarding!", kHost, kPort);
 			continue;
 		};
@@ -228,7 +228,7 @@ int32 AIMConnection::Receiver(void *con) {
 						} else {
 							if (kMsgr->IsValid() == false) return B_OK;
 						
-							LOG("AIM", LOW, "%s:%i. Got socket error:",
+							LOG("AIM", liLow, "%s:%i. Got socket error:",
 								connection->Server(), connection->Port());
 							perror("SOCKET ERROR");
 							
@@ -261,7 +261,7 @@ int32 AIMConnection::Receiver(void *con) {
 				dataReady.what = AMAN_FLAP_CLOSE_CON;
 			} break;
 			default: {
-				LOG(kProtocolName, HIGH, "%s:%i Got an unsupported FLAP channel",
+				LOG(kProtocolName, liHigh, "%s:%i Got an unsupported FLAP channel",
 					kHost, kPort);
 				continue;
 			};
@@ -273,7 +273,7 @@ int32 AIMConnection::Receiver(void *con) {
 		dataReady.AddData("data", B_RAW_TYPE, flapContents, flapLen);
 
 if (connection->fUberDebug) {
-	LOG(kProtocolName, LOW, "%s:%i\n", kHost, kPort);
+	LOG(kProtocolName, liLow, "%s:%i\n", kHost, kPort);
 	dataReady.PrintToStream();
 }
 
@@ -299,14 +299,14 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 				Flap *f = fOutgoing.front();
 				if (f->Channel() == SNAC_DATA) {
 if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
-					LOG("AIM", LOW, "Connection %s:%i 0x%04x / 0x%04x", Server(),
+					LOG("AIM", liLow, "Connection %s:%i 0x%04x / 0x%04x", Server(),
 						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
 				};
 				const char * data = f->Flatten(++fOutgoingSeqNum);
 				int32 data_size = f->FlattenedSize();
 				int32 sent_data = 0;
 				
-				LOG("AIM", DEBUG, "Sending %ld bytes of data", data_size);
+				LOG("AIM", liDebug, "Sending %ld bytes of data", data_size);
 				
 				while ( sent_data < data_size )
 				{
@@ -315,21 +315,21 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 					if ( sent < 0 ) 
 					{
 						delete f;
-						LOG("AIM", LOW, "AIMConn::MessageReceived: Couldn't send packet");
+						LOG("AIM", liLow, "AIMConn::MessageReceived: Couldn't send packet");
 						perror("Socket error");
 						return;
 					}
 					
 					if ( sent == 0 )
 					{
-						LOG("AIM", HIGH, "send() returned 0, is this bad?");
+						LOG("AIM", liHigh, "send() returned 0, is this bad?");
 						snooze(1*1000*1000);
 					}
 					
 					sent_data += sent;
 				}
 				
-				LOG("AIM", DEBUG, "Sent %ld bytes of data", data_size);
+				LOG("AIM", liDebug, "Sent %ld bytes of data", data_size);
 				
 				fOutgoing.pop_front();
 				delete f;
@@ -355,7 +355,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-			LOG(kProtocolName, LOW, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
+			LOG(kProtocolName, liLow, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
 				Port());
 		} break;
 		
@@ -374,7 +374,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
 				(data[++offset] << 8) + data[++offset];
 
-			LOG(kProtocolName, LOW, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
+			LOG(kProtocolName, liLow, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
 				Server(), Port(), family, subtype);
 			
 			if (family != SERVICE_CONTROL) {
@@ -382,16 +382,16 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 			} else {
 				switch (subtype) {
 					case VERIFICATION_REQUEST: {
-						LOG("AIM", LOW, "AIMConn: AOL sent us a client verification");
+						LOG("AIM", liLow, "AIMConn: AOL sent us a client verification");
 						PrintHex((uchar *)data, bytes);
 					} break;
 						
 					case SERVER_SUPPORTED_SNACS: {
-						LOG(kProtocolName, LOW, "Got server supported SNACs");
+						LOG(kProtocolName, liLow, "Got server supported SNACs");
 	
 						while (offset < bytes) {
 							uint16 s = (data[++offset] << 8) + data[++offset];
-							LOG(kProtocolName, LOW, "Server supports 0x%04x", s);
+							LOG(kProtocolName, liLow, "Server supports 0x%04x", s);
 							fSupportedSNACs.push_back(s);
 						};
 	
@@ -406,7 +406,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 					} break;
 					
 					case SERVICE_REDIRECT: {
-						LOG("AIM", LOW, "Got service redirect SNAC");
+						LOG("AIM", liLow, "Got service redirect SNAC");
 						uint16 tlvType = 0;
 						uint16 tlvLen = 0;
 						char *tlvValue = NULL;
@@ -415,7 +415,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 						
 						if (data[4] & 0x80) {
 							uint16 skip = (data[10] << 8) + data[11];
-							LOG("AIM", LOW, "Skipping %i bytes", skip);
+							LOG("AIM", liLow, "Skipping %i bytes", skip);
 							offset += skip + 2;
 						};
 						
@@ -443,7 +443,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 								} break;
 								
 								case 0x0005: {	// Server Details
-									LOG("AIM", LOW, "Server details: %s\n", tlvValue);
+									LOG("AIM", liLow, "Server details: %s\n", tlvValue);
 	
 									if (strchr(tlvValue, ':')) {
 										pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
@@ -464,7 +464,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 									printf("\n");
 								
 								
-									LOG("AIM", LOW, "Cookie");
+									LOG("AIM", liLow, "Cookie");
 									service.AddData("cookie", B_RAW_TYPE, tlvValue,
 										tlvLen);
 								};
@@ -583,10 +583,10 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 					
 					} break;
 					case SERVER_FAMILY_VERSIONS: {
-						LOG(kProtocolName, LOW, "Supported SNAC families for "
+						LOG(kProtocolName, liLow, "Supported SNAC families for "
 							"this server");
 						while (offset < bytes) {
-							LOG(kProtocolName, LOW, "\tSupported family: 0x%x "
+							LOG(kProtocolName, liLow, "\tSupported family: 0x%x "
 								" 0x%x, Version: 0x%x 0x%x", data[++offset],
 								data[++offset], data[++offset], data[++offset]);
 						};
@@ -637,7 +637,7 @@ printf("\n\n\n\nRaw details: %s\n", value);
 							pair<char *, uint16> serv = ExtractServerDetails(value);
 							server = serv.first;
 							port = serv.second;
-							LOG("AIM", LOW, "Need to reconnect to: %s:%i", server, port);
+							LOG("AIM", liLow, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {

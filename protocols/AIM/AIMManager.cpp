@@ -110,18 +110,18 @@ status_t AIMManager::Send(Flap *f) {
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
 				AIMConnection *con = (*i);
 				if (con->Supports(family) == true) {
-					LOG("AIM", LOW, "Sending SNAC (0x%04x) via %s:%i", family,
+					LOG("AIM", liLow, "Sending SNAC (0x%04x) via %s:%i", family,
 						con->Server(), con->Port());
 					con->Send(f);
 					return B_OK;
 				};
 			}
 			
-			LOG("AIM", LOW, "No connections handle SNAC (0x%04x) requesting service",
+			LOG("AIM", liMedium, "No connections handle SNAC (0x%04x) requesting service",
 				family);
 			AIMConnection *con = fConnections.front();
 			if (con == NULL) {
-				LOG("AIM", HIGH, "No available connections to send SNAC");
+				LOG("AIM", liHigh, "No available connections to send SNAC");
 			} else {
 			
 				Flap *newService = new Flap(SNAC_DATA);
@@ -252,13 +252,13 @@ printf("Is icon: %i\n", icon);
 			AIMConnection *con = NULL;
 			msg->FindPointer("connection", (void **)&con);
 			if (con != NULL) {
-				LOG("AIM", LOW, "Connection (%s:%i) closed", con->Server(),
+				LOG("AIM", liLow, "Connection (%s:%i) closed", con->Server(),
 					con->Port());
 					
 				fConnections.remove(con);
 				con->Lock();
 				con->Quit();
-				LOG("AIM", LOW, "After close we have %i connections",
+				LOG("AIM", liLow, "After close we have %i connections",
 					fConnections.size());
 					
 				if (fConnections.size() == 0) {
@@ -273,7 +273,7 @@ printf("Is icon: %i\n", icon);
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-			LOG(kProtocolName, LOW, "Got FLAP_OPEN_CON packet\n");
+			LOG(kProtocolName, liLow, "Got FLAP_OPEN_CON packet\n");
 			PrintHex((uchar *)data, bytes);
 		} break;
 		
@@ -289,11 +289,11 @@ printf("Is icon: %i\n", icon);
 			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
 				(data[++offset] << 8) + data[++offset];
 
-			LOG("AIM", LOW, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
+			LOG("AIM", liLow, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
 			
 			switch(family) {
 				case SERVICE_CONTROL: {
-					LOG(kProtocolName, LOW, "Got an unhandled SNAC of "
+					LOG(kProtocolName, liMedium, "Got an unhandled SNAC of "
 						"family 0x0001 (Service Control). Subtype 0x%04x",
 						subtype);
 					if (subtype == 0x0021) {
@@ -312,7 +312,7 @@ printf("Is icon: %i\n", icon);
 				case ICBM: {
 					switch (subtype) {
 						case ERROR: {
-							LOG(kProtocolName, MEDIUM, "GOT SERVER ERROR 0x%x "
+							LOG(kProtocolName, liMedium, "GOT SERVER ERROR 0x%x "
 								"0x%x", data[++offset], data[++offset]);
 						} break;
 						
@@ -353,7 +353,7 @@ printf("Is icon: %i\n", icon);
 									offset += 2; // hack, hack. slaad should look at this :9
 									uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
 									offset += 2;
-									LOG("AIM", HIGH, "AIMManager: PLAIN_TEXT "
+									LOG("AIM", liHigh, "AIMManager: PLAIN_TEXT "
 										"message, content length: %i (0x%0.4X)", contentLen-offset, contentLen-offset);
 									
 									PrintHex(data, bytes );
@@ -368,7 +368,7 @@ printf("Is icon: %i\n", icon);
 												tlvlen = (data[++offset] << 8) + data[++offset];
 												//if ( tlvlen == 1 )
 												//	tlvlen = 0;
-												LOG("AIM", DEBUG, "Ignoring Client Features, %ld bytes", tlvlen);
+												LOG("AIM", liDebug, "Ignoring Client Features, %ld bytes", tlvlen);
 											} break;
 											case 0x0101: { // Message Len
 												
@@ -393,7 +393,7 @@ printf("Is icon: %i\n", icon);
 												
 												remove_html( msg );
 												
-												LOG("AIM", LOW, "AIMManager: Got message from %s: \"%s\"",
+												LOG("AIM", liLow, "AIMManager: Got message from %s: \"%s\"",
 													nick, msg);
 								
 												fHandler->MessageFromUser(nick, msg);
@@ -402,7 +402,7 @@ printf("Is icon: %i\n", icon);
 											} break;
 											
 											default:
-												LOG("AIM", DEBUG, "Unknown msgtype: %.04x", msgtype);
+												LOG("AIM", liDebug, "Unknown msgtype: %.04x", msgtype);
 										}
 										offset += tlvlen;
 										//i += 4 + tlvlen;
@@ -424,7 +424,7 @@ printf("Is icon: %i\n", icon);
 							offset += nickLen;
 							uint16 typingType = (data[++offset] << 8) + data[++offset];
 							
-							LOG(kProtocolName, LOW, "Got typing notification "
+							LOG(kProtocolName, liLow, "Got typing notification "
 								"(0x%04x) for \"%s\"", typingType, nick);
 								
 							fHandler->UserIsTyping(nick, (typing_notification)typingType);
@@ -432,14 +432,14 @@ printf("Is icon: %i\n", icon);
 							
 						} break;
 						default: {
-							LOG(kProtocolName, LOW, "Got unhandled SNAC of family "
+							LOG(kProtocolName, liMedium, "Got unhandled SNAC of family "
 								"0x0004 (ICBM) of subtype 0x%04x", subtype);
 						};
 					};
 				} break;
 				
 				default: {
-					LOG(kProtocolName, LOW, "Got unhandled family. SNAC(0x%04x, "
+					LOG(kProtocolName, liLow, "Got unhandled family. SNAC(0x%04x, "
 						"0x%04x)", family, subtype);
 				};
 			};
@@ -485,7 +485,7 @@ printf("Is icon: %i\n", icon);
 							strncpy(server, value, colon - value);
 							server[(colon - value)] = '\0';
 							
-							LOG("AIM", LOW, "Need to reconnect to: %s:%i", server, port);
+							LOG("AIM", liLow, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {
@@ -560,7 +560,7 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 					} break;
 					
 					case 0x001d: {	// Icon / available message
-						LOG("AIM", LOW, "User %s has icon / available message.",
+						LOG("AIM", liLow, "User %s has icon / available message.",
 							nick);
 						uint16 type;
 						uint8 index;
@@ -614,14 +614,14 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 			memcpy(nick, (void *)(data + offset), nickLen);
 			nick[nickLen] = '\0';
 								
-			LOG("AIM", LOW, "AIMManager: \"%s\" went offline", nick);
+			LOG("AIM", liLow, "AIMManager: \"%s\" went offline", nick);
 			
 			fHandler->StatusChanged(nick, AMAN_OFFLINE);
 			free(nick);
 			
 		} break;
 		default: {
-			LOG(kProtocolName, LOW, "Got an unhandled SNAC of family 0x0003 "
+			LOG(kProtocolName, liMedium, "Got an unhandled SNAC of family 0x0003 "
 				"(Buddy List). Subtype 0x%04x", subtype);						
 		}
 	};
@@ -654,8 +654,8 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 			uint8 ssiVersion = data[++offset];
 			uint16 itemCount = (data[++offset] << 8) + data[++offset];
 
-			LOG(kProtocolName, DEBUG, "SSI Version 0x%x", ssiVersion);
-			LOG(kProtocolName, LOW, "%i SSI items", itemCount);
+			LOG(kProtocolName, liDebug, "SSI Version 0x%x", ssiVersion);
+			LOG(kProtocolName, liLow, "%i SSI items", itemCount);
 
 			for (uint16 i = 0; i < itemCount; i++) {
 				
@@ -674,7 +674,7 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 				uint16 type = (data[++offset] << 8) + data[++offset];
 				uint16 len = (data[++offset] << 8) + data[++offset];
 				
-				LOG(kProtocolName, LOW, "SSI item %i is of type 0x%04x (%i bytes)",
+				LOG(kProtocolName, liLow, "SSI item %i is of type 0x%04x (%i bytes)",
 					 i, type, len);
 
 				switch (type) {
@@ -693,12 +693,12 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 						
 			uint32 checkOut = (data[++offset] << 24) + (data[++offset] << 16) +
 				(data[++offset] << 8) + data[++offset];	
-			LOG(kProtocolName, LOW, "Last checkout of SSI list 0x%08x", checkOut);
+			LOG(kProtocolName, liLow, "Last checkout of SSI list 0x%08x", checkOut);
 
 			fHandler->SSIBuddies(contacts);
 		} break;
 		default: {
-			LOG(kProtocolName, LOW, "Got an unhandles SSI SNAC (0x0013 / 0x%04x)",
+			LOG(kProtocolName, liLow, "Got an unhandles SSI SNAC (0x0013 / 0x%04x)",
 				subtype);
 		} break;
 	};
@@ -709,7 +709,7 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 // -- Interface
 
 status_t AIMManager::MessageUser(const char *screenname, const char *message) {
-	LOG("AIM", LOW, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
+	LOG("AIM", liLow, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
@@ -747,7 +747,7 @@ status_t AIMManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
 	if (buddy == NULL) return B_ERROR;
 //	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
-		LOG("AIM", LOW, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
+		LOG("AIM", liLow, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
 		fBuddy.push_back(BString(buddy));
 	
 		Flap *addBuddy = new Flap(SNAC_DATA);
@@ -802,13 +802,13 @@ status_t AIMManager::LogOff(void) {
 	if (fConnectionState != AMAN_OFFLINE) {
 		fConnectionState = AMAN_OFFLINE;
 		
-		LOG("AIM", LOW, "%i connection(s) to kill", fConnections.size());
+		LOG("AIM", liLow, "%i connection(s) to kill", fConnections.size());
 		list <AIMConnection *>::iterator i;
 		
 		for (i = fConnections.begin(); i != fConnections.end(); i++) {
 			AIMConnection *con = (*i);
 			if (con == NULL) continue;
-			LOG("AIM", LOW, "Killing connection to %s:%i", con->Server(),
+			LOG("AIM", liLow, "Killing connection to %s:%i", con->Server(),
 				con->Port());
 			con->Lock();
 			con->Quit();	
@@ -822,7 +822,7 @@ status_t AIMManager::LogOff(void) {
 };
 
 status_t AIMManager::RequestBuddyIcon(const char *buddy) {
-	LOG(kProtocolName, DEBUG, "Requesting buddy icon for \"%s\"", buddy);
+	LOG(kProtocolName, liDebug, "Requesting buddy icon for \"%s\"", buddy);
 	Flap *icon = new Flap(SNAC_DATA);
 //	icon->AddSNAC(new SNAC(0x0010, 0x0004, 0x00, 0x00, ++fRequestID));
 	uchar slen = strlen(buddy);
@@ -839,7 +839,7 @@ status_t AIMManager::RequestBuddyIcon(const char *buddy) {
 };
 
 status_t AIMManager::TypingNotification(const char *buddy, uint16 typing) {
-	LOG(kProtocolName, LOW, "Sending typing notification (0x%04x) to \"%s\"",
+	LOG(kProtocolName, liLow, "Sending typing notification (0x%04x) to \"%s\"",
 		typing, buddy);
 	
 	Flap *notify = new Flap(SNAC_DATA);

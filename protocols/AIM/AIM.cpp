@@ -34,7 +34,7 @@ AIMProtocol::~AIMProtocol() {
 
 status_t AIMProtocol::Init(BMessenger msgr) {
 	fMsgr = msgr;
-	LOG("AIM", MEDIUM, "AIMProtocol::Init() start");
+	LOG("AIM", liMedium, "AIMProtocol::Init() start");
 	
 	fManager->Run();
 	
@@ -45,7 +45,7 @@ status_t AIMProtocol::Shutdown() {
 	fManager->LogOff();
 	if (fManager->Lock()) fManager->Quit();
 	
-	LOG("AIM", MEDIUM, "AIMProtocol::Shutdown() done");
+	LOG("AIM", liMedium, "AIMProtocol::Shutdown() done");
 		
 	return B_OK;
 }
@@ -79,7 +79,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				
 				case IM::SET_STATUS: {
 					const char *status = msg->FindString("status");
-					LOG("AIM", HIGH, "Set status to %s", status);
+					LOG("AIM", liMedium, "Set status to %s", status);
 					
 					if (strcmp(status, OFFLINE_TEXT) == 0) {
 						fManager->LogOff();
@@ -88,7 +88,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						if (fManager->ConnectionState() == (uchar)AMAN_ONLINE) {
 							const char *away_msg = msg->FindString("away_msg");
 							if (away_msg != NULL) {
-								LOG("AIM", LOW, "Setting away message: %s", away_msg);
+								LOG("AIM", liMedium, "Setting away message: %s", away_msg);
 								fManager->SetAway(away_msg);
 							}
 						};
@@ -102,13 +102,13 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						};
 					} else
 					{
-						LOG("AIM", LOW, "Invalid status when setting status: '%s'", status);
+						LOG("AIM", liHigh, "Invalid status when setting status: '%s'", status);
 					}
 				} break;
 
 				case IM::GET_CONTACT_INFO:
 				{
-					LOG("AIM", HIGH, "Getting contact info");
+					LOG("AIM", liLow, "Getting contact info");
 					const char * id = ReNick(msg->FindString("id")).String();
 					
 					BMessage *infoMsg = new BMessage(IM::MESSAGE);
@@ -382,7 +382,7 @@ status_t AIMProtocol::SSIBuddies(list<BString> buddies) {
 	serverBased.AddString("protocol", "AIM");
 
 	for (i = buddies.begin(); i != buddies.end(); i++) {
-		LOG("AIM", LOW, "Got server side buddy %s", ReNick(i->String()).String());
+		LOG("AIM", liLow, "Got server side buddy %s", ReNick(i->String()).String());
 		serverBased.AddString("id", ReNick(i->String()));
 	};
 			

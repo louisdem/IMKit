@@ -35,19 +35,19 @@ ChatApp::QuitRequested()
 			BWindow *win = rv->Window();
 
 			if (win != NULL) {
-				LOG("im_client", LOW, "RunView for %s has a Parent(), Lock()ing and "
+				LOG("im_client", liLow, "RunView for %s has a Parent(), Lock()ing and "
 					"RemoveSelf()ing.", key.String());
 				win->Lock();
 				rv->RemoveSelf();
 				win->Unlock();
 			} else {
-				LOG("im_client", LOW, "RunView for %s doesn't have a Parent()", key.String());
+				LOG("im_client", liLow, "RunView for %s doesn't have a Parent()", key.String());
 				rv->RemoveSelf();
 			};
 			
 			delete rv;
 		} else {
-			LOG("im_client", LOW, "RunView for %s was already NULL", key.String());
+			LOG("im_client", liLow, "RunView for %s was already NULL", key.String());
 		};
 	};
 
@@ -81,7 +81,7 @@ ChatApp::RefsReceived( BMessage * msg )
 				hasValidRefs = true;
 			}
 		} else {
-			LOG("im_client", LOW, "Got a ref that wasn't a People file");
+			LOG("im_client", liLow, "Got a ref that wasn't a People file");
 		};
 		free(type);
 	};
@@ -117,7 +117,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			{
 				case IM::CONTACT_INFO:
 				{ // handle contact info updates
-					//LOG("sample_client", DEBUG, "Got contact info:",msg);
+					//LOG("sample_client", liDebug, "Got contact info:",msg);
 					
 					const char * first_name = msg->FindString("first name");
 					const char * last_name = msg->FindString("last name");
@@ -170,7 +170,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			
 			if ( !win && (im_what == IM::MESSAGE_RECEIVED) )
 			{ // open new window on message received or user request
-				LOG("im_client", MEDIUM, "Creating new window to handle message");
+				LOG("im_client", liMedium, "Creating new window to handle message");
 				win = new ChatWindow(ref);
 				_msgr = BMessenger(win);
 				if ( _msgr.LockTarget() )
@@ -191,9 +191,8 @@ ChatApp::MessageReceived( BMessage * msg )
 					};
 				} else
 				{
-					LOG("im_client", LOW, "This is a fatal error that should never occur. Lock fail on new win.");
+					LOG("im_client", liHigh, "This is a fatal error that should never occur. Lock fail on new win.");
 				}
-				
 			} else
 			{
 				if (_msgr.LockTarget() )
@@ -209,7 +208,7 @@ ChatApp::MessageReceived( BMessage * msg )
 					win->Unlock();
 				} else
 				{
-					LOG("im_client", LOW, "This is a fatal error that should never occur. Lock fail on old win.");
+					LOG("im_client", liHigh, "This is a fatal error that should never occur. Lock fail on old win.");
 				}
 			}
 		}	break;
@@ -247,7 +246,7 @@ ChatApp::NoFlash( BMessenger msgr )
 
 status_t
 ChatApp::StoreRunView(const char *id, RunView *rv) {
-	LOG("im_client", LOW, "Setting RunView for %s to %p", id, rv);
+	LOG("im_client", liLow, "Setting RunView for %s to %p", id, rv);
 	
 	BString nick = id;
 	fRunViews[nick] = rv;
@@ -259,7 +258,7 @@ RunView *
 ChatApp::GetRunView(const char *id) {
 	BString nick = id;
 	
-	LOG("im_client", LOW, "RunView for %s is %p", id, fRunViews[nick]);
+	LOG("im_client", liLow, "RunView for %s is %p", id, fRunViews[nick]);
 	
 	return fRunViews[nick];
 }

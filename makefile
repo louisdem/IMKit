@@ -5,7 +5,8 @@ SUBDIRS = \
 	server \
 	sample_clients \
 	protocols \
-	utils
+	utils \
+	Preflet
 
 default .DEFAULT :
 	# These two lines shouldn't be here. They should be in libim/makefile somehow.

@@ -20,7 +20,7 @@
 BView *
 instantiate_deskbar_item()
 {
-	LOG("deskbar", MEDIUM, "IM: Instantiating Deskbar item");
+	LOG("deskbar", liMedium, "IM: Instantiating Deskbar item");
 	return new IM_DeskbarIcon();
 }
 
@@ -29,7 +29,7 @@ IM_DeskbarIcon::Instantiate( BMessage * archive )
 {
 	if ( !validate_instantiation(archive,"IM_DeskbarIcon") )
 	{
-		LOG("deskbar", LOW, "IM_DeskbarIcon::Instantiate(): Invalid archive");
+		LOG("deskbar", liHigh, "IM_DeskbarIcon::Instantiate(): Invalid archive");
 		return NULL;
 	}
 	
@@ -188,11 +188,11 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				BMessage msg('blnk');
 				fMsgRunner = new BMessageRunner( BMessenger(this), &msg, 200*1000 );
 			}
-			LOG("deskbar", HIGH, "IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("deskbar", liDebug, "IM: fFlashCount: %ld\n", fFlashCount);
 		}	break;
 		case IM::STOP_FLASHING:
 		{	
-			LOG("deskbar", HIGH, "Stopping teh flash\n");
+			LOG("deskbar", liLow, "Stopping teh flash\n");
 			BMessenger msgr;
 			if ( msg->FindMessenger("messenger", &msgr) == B_OK )
 			{
@@ -200,7 +200,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 			
 			fFlashCount--;
-			LOG("deskbar", HIGH, "IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("deskbar", liDebug, "IM: fFlashCount: %ld\n", fFlashCount);
 			
 			if ( fFlashCount == 0 )
 			{
@@ -213,7 +213,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			if ( fFlashCount < 0 )
 			{
 				fFlashCount = 0;
-				LOG("deskbar", MEDIUM, "IM: fFlashCount below zero, fixing\n");
+				LOG("deskbar", liMedium, "IM: fFlashCount below zero, fixing\n");
 			}
 		}	break;
 		
@@ -249,14 +249,15 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		}	break;
 		
 		case CLOSE_IM_SERVER: {
-			LOG("deskbar", LOW, "Got Quit message");
+			LOG("deskbar", liHigh, "Got Quit message");
 			BMessenger msgr(IM_SERVER_SIG);
 			msgr.SendMessage(B_QUIT_REQUESTED);
 		} break;
 		
 		case OPEN_SETTINGS:
 		{
-			if ( !fSettingsWindow )
+			be_roster->Launch("application/x-vnd.beclan.preflet");
+			/*if ( !fSettingsWindow )
 			{ // create new settings window
 				fSettingsWindow = new SettingsWindow( BMessenger(this) );
 				fSettingsWindow->Show();
@@ -264,20 +265,20 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			{ // show existing settings window
 				fSettingsWindow->SetWorkspaces( 1 << current_workspace() );
 				fSettingsWindow->Activate();
-			}
+			}*/
 		}	break;
 		
 		case IM::SETTINGS:
 		{
 			msg->FindBool("blink_db", &fShouldBlink );
 			
-			LOG("deskbar", MEDIUM, "IM: Settings applied");
+			LOG("deskbar", liMedium, "IM: Settings applied");
 		}	break;
 		
 		case IM::MESSAGE: {
 			int32 im_what;
 			msg->FindInt32("im_what", &im_what);
-			LOG("deskbar", LOW, "Got IM what of %i", im_what);
+			LOG("deskbar", liLow, "Got IM what of %i", im_what);
 			
 			switch (im_what) {
 				case IM::STATUS_SET: {			
@@ -286,7 +287,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				
 					const char *status = msg->FindString("total_status");
 								
-					LOG("deskbar", LOW, "Status set to %s", status);
+					LOG("deskbar", liMedium, "Status set to %s", status);
 					if (strcmp(status, ONLINE_TEXT) == 0) {
 						fStatus = 0;
 						fModeIcon = fOnlineIcon;
@@ -361,7 +362,7 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 	{
 		if (fDirtyMenu) {
 			delete fMenu;
-			fMenu = new BPopUpMenu("im_db_menu", false);
+			fMenu = new BPopUpMenu("im_db_menu", false, false);
 			fMenu->SetFont(be_plain_font);
 			
 			// set status
@@ -446,9 +447,7 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 		
 		BMessenger tracker("application/x-vnd.Be-TRAK");
 		tracker.SendMessage(&openPeople);
-	};
-
-		
+	}
 }
 
 void
@@ -459,7 +458,7 @@ IM_DeskbarIcon::AttachedToWindow()
 	reloadSettings();
 	
 	// register with im_server
-	LOG("deskbar", DEBUG, "Registering with im_server");
+	LOG("deskbar", liDebug, "Registering with im_server");
 	BMessage msg(IM::REGISTER_DESKBAR_MESSENGER);
 	msg.AddMessenger( "msgr", BMessenger(this) );
 	
@@ -478,7 +477,7 @@ IM_DeskbarIcon::DetachedFromWindow()
 void
 IM_DeskbarIcon::reloadSettings()
 {
-	LOG("deskbar", HIGH, "IM: Requesting settings");
+	LOG("deskbar", liLow, "IM: Requesting settings");
 	
 	BMessage request( IM::GET_SETTINGS ), settings;
 	request.AddString("protocol","");
@@ -487,5 +486,5 @@ IM_DeskbarIcon::reloadSettings()
 	
 	msgr.SendMessage(&request, this );
 	
-	LOG("deskbar", HIGH, "IM: Settings requested");
+	LOG("deskbar", liLow, "IM: Settings requested");
 }

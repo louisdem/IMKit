@@ -7,7 +7,6 @@ Things to fix
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * long message bug in LOG(), make buffer dunamic somehow?
-* Add link to im_server in Be menu or in Preferences?
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
 * Add "Send" button to client, for those poor souls who don't know that cmd-enter == send
 * Add option to client - multi/single line edit
@@ -21,6 +20,7 @@ Things to fix
 * Alt-C in client doesn't work
 * Option to disable logging (im_logger and LOG() output)
 * Extract Deskbar icon from im_server, let it live it's own life
+* Change Preflet so it can run when im_server isn't running, and also start im_server
 
 New features
 

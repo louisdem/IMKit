@@ -146,7 +146,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     AddSocketHandleEvent *cev = dynamic_cast<AddSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 	
-	LOG("icq", MEDIUM, "ICQ: connecting socket %ld", fd);
+	LOG("icq", liMedium, "ICQ: connecting socket %ld", fd);
 
     // register this socket with our Select object
     m_sockets[fd] =
@@ -167,10 +167,10 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     RemoveSocketHandleEvent *cev = dynamic_cast<RemoveSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 
-    LOG("icq", MEDIUM, "ICQ: disconnecting socket %ld", fd);
+    LOG("icq", liMedium, "ICQ: disconnecting socket %ld", fd);
     
     if (m_sockets.count(fd) == 0) {
-      LOG("icq", LOW, "ICQ: Problem: file descriptor not connected");
+      LOG("icq", liHigh, "ICQ: Problem: file descriptor not connected");
     } else {
       m_sockets[fd].disconnect();
       m_sockets.erase(fd);
@@ -178,7 +178,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
 
   } else
   {
-  	LOG("icq", LOW, "ICQ: Some other socket event that's not handled\n");
+  	LOG("icq", liHigh, "ICQ: Some other socket event that's not handled\n");
   	exit_thread(1);
   }
 }
@@ -200,7 +200,7 @@ void SimpleClient::select_socket_cb(int fd, Select::SocketInputCondition cond)
  * called when the library has connected
  */
 void SimpleClient::connected_cb(ConnectedEvent *c) {
-  LOG("icq", LOW, "Connected");
+  LOG("icq", liHigh, "Connected");
   
   icqclient.fetchServerBasedContactList();
   
@@ -218,26 +218,26 @@ void SimpleClient::connected_cb(ConnectedEvent *c) {
  */
 void SimpleClient::disconnected_cb(DisconnectedEvent *c) {
   if (c->getReason() == DisconnectedEvent::REQUESTED) {
-    LOG("icq", MEDIUM, "Disconnected as requested");
+    LOG("icq", liMedium, "Disconnected as requested");
   } else {
     switch(c->getReason()) {
     case DisconnectedEvent::FAILED_LOWLEVEL:
-      LOG("icq", LOW, "Problem connecting: socket problems");
+      LOG("icq", liHigh, "Problem connecting: socket problems");
       break;
     case DisconnectedEvent::FAILED_BADUSERNAME:
-      LOG("icq", LOW, "Problem connecting: Bad Username");
+      LOG("icq", liHigh, "Problem connecting: Bad Username");
       break;
     case DisconnectedEvent::FAILED_TURBOING:
-      LOG("icq", LOW, "Problem connecting: Turboing");
+      LOG("icq", liHigh, "Problem connecting: Turboing");
       break;
     case DisconnectedEvent::FAILED_BADPASSWORD:
-      LOG("icq", LOW, "Problem connecting: Bad Password");
+      LOG("icq", liHigh, "Problem connecting: Bad Password");
       break;
     case DisconnectedEvent::FAILED_MISMATCH_PASSWD:
-      LOG("icq", LOW, "Problem connecting: Username and Password did not match");
+      LOG("icq", liHigh, "Problem connecting: Username and Password did not match");
       break;
     case DisconnectedEvent::FAILED_UNKNOWN:
-      LOG("icq", LOW, "Problem connecting: Unknown");
+      LOG("icq", liHigh, "Problem connecting: Unknown");
       break;
     default:
       break;
@@ -262,7 +262,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
   if (c->getType() == MessageEvent::Normal) {
 
     NormalMessageEvent *msg = static_cast<NormalMessageEvent*>(c);
-	LOG("icq", MEDIUM, "Message received: %s from %ld", msg->getMessage().c_str(), msg->getSenderUIN());
+	LOG("icq", liMedium, "Message received: %s from %ld", msg->getMessage().c_str(), msg->getSenderUIN());
 	
 	char uin_string[100];
 	
@@ -278,7 +278,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
 	fMsgr.SendMessage(&im_msg);
   } else if (c->getType() == MessageEvent::AuthReq) {
   	AuthReqEvent *msg = static_cast<AuthReqEvent*>(c);
-  	LOG("icq", MEDIUM, "Authorization request received: %s from %ld", msg->getMessage().c_str(), msg->getSenderUIN());
+  	LOG("icq", liMedium, "Authorization request received: %s from %ld", msg->getMessage().c_str(), msg->getSenderUIN());
   	
   	char uin_string[100];
   	
@@ -417,7 +417,7 @@ void SimpleClient::self_status_change_cb(StatusChangeEvent *ev)
 	msg.AddString("status",status);
 	fMsgr.SendMessage( &msg );
 	
-	LOG("icq", HIGH, "Self status changed to %s", status);
+	LOG("icq", liLow, "Self status changed to %s", status);
 }
 
 /**
@@ -469,7 +469,7 @@ SimpleClient::setAwayMessage( string msg )
 int32
 client_thread( void * _data )
 {
-	LOG("icq", HIGH, "client thread running");
+	LOG("icq", liLow, "client thread running");
 
 	SimpleClient * client = (SimpleClient*)_data;
 	
@@ -519,7 +519,7 @@ ICQProtocol::Shutdown()
 	
 	kill_thread( find_thread(ICQ_THREAD_NAME) );
 	
-	LOG("icq", MEDIUM, "ICQProtocol::Shutdown() done");
+	LOG("icq", liMedium, "ICQProtocol::Shutdown() done");
 	
 	return B_OK;
 }
@@ -563,7 +563,7 @@ ICQProtocol::Process( BMessage * msg )
 			
 					if ( find_thread(ICQ_THREAD_NAME) == B_NAME_NOT_FOUND )
 					{ // icq thread not running, start it
-						LOG("icq", HIGH, "Starting thread 'ICQ client'");
+						LOG("icq", liLow, "Starting thread 'ICQ client'");
 						
 						fThread = spawn_thread(
 							client_thread,
@@ -672,10 +672,10 @@ ICQProtocol::Process( BMessage * msg )
 					int32 button = msg->FindInt32("which");
 					
 					if (button == 0) {
-						LOG("icq", DEBUG, "Authorization granted to %s", id);
+						LOG("icq", liDebug, "Authorization granted to %s", id);
 						authreply = true;												
 					} else {
-						LOG("icq", DEBUG, "Authorization rejected to %s", id);
+						LOG("icq", liDebug, "Authorization rejected to %s", id);
 						authreply = false;					
 					}
 						

@@ -118,19 +118,19 @@ Manager::AddEndpoint( BMessenger msgr )
 		case B_OK:
 			break;
 		case B_TIMED_OUT:
-			LOG("Manager", LOW, "Manager::AddEndpoint: B_TIMED_OUT\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_TIMED_OUT\n");
 			break;
 		case B_WOULD_BLOCK:
-			LOG("Manager", LOW, "Manager::AddEndpoint: B_WOULD_BLOCK\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_WOULD_BLOCK\n");
 			break;
 		case B_BAD_PORT_ID:
-			LOG("Manager", LOW, "Manager::AddEndpoint: B_BAD_PORT_ID\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_BAD_PORT_ID\n");
 			break;
 		case B_NO_MORE_PORTS:
-			LOG("Manager", LOW, "Manager::AddEndpoint: B_NO_MORE_PORTS\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: B_NO_MORE_PORTS\n");
 			break;
 		default:
-			LOG("Manager", LOW, "Manager::AddEndpoint: Other error\n");
+			LOG("Manager", liHigh, "Manager::AddEndpoint: Other error\n");
 	}
 }
 
@@ -158,7 +158,7 @@ Manager::OneShotMessage( BMessage * msg )
 	
 	if ( !msgr.IsValid() )
 	{
-		LOG("Manager", LOW, "Manager::SendMessage: fMsgr invalid\n");
+		LOG("Manager", liHigh, "Manager::SendMessage: fMsgr invalid\n");
 		return B_ERROR;
 	}
 	
@@ -173,7 +173,7 @@ Manager::SendMessage( BMessage * msg, BMessage * reply = NULL )
 {
 	if ( !fMsgr.IsValid() )
 	{
-		LOG("Manager", LOW, "Manager::SendMessage: fMsgr invalid\n");
+		LOG("Manager", liHigh, "Manager::SendMessage: fMsgr invalid\n");
 		return B_ERROR;
 	}
 	
@@ -197,15 +197,6 @@ Manager::FlashDeskbar( BMessenger msgr )
 	msg.AddMessenger("messenger",msgr);
 	
 	SendMessage(&msg);
-	
-/*	msg.AddSpecifier("View", "IM_DeskbarIcon");
-	msg.AddSpecifier("View", "Status");
-	msg.AddSpecifier("View", "");
-	msg.AddSpecifier("View", "BarView");
-	msg.AddSpecifier("Window", "Deskbar");
-	
-	BMessenger("application/x-vnd.Be-TSKB").SendMessage(&msg, &reply);
-*/
 }
 
 void
@@ -215,13 +206,16 @@ Manager::StopFlashingDeskbar( BMessenger msgr )
 	msg.AddMessenger("messenger",msgr);
 	
 	SendMessage(&msg);
-	
-/*	msg.AddSpecifier("View", "IM_DeskbarIcon");
-	msg.AddSpecifier("View", "Status");
-	msg.AddSpecifier("View", "");
-	msg.AddSpecifier("View", "BarView");
-	msg.AddSpecifier("Window", "Deskbar");
-	
-	BMessenger("application/x-vnd.Be-TSKB").SendMessage(&msg, &reply);
+}
+
+/**
+	Returns B_OK if im_server is running.
 */
+status_t
+Manager::InitCheck()
+{
+	if ( fMsgr.IsValid() )
+		return B_OK;
+	
+	return B_ERROR;
 }

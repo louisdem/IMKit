@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-VERBOSITY_LEVEL g_verbosity_level = MEDIUM;
+log_importance g_verbosity_level = liMedium;
 
 #if 0
 // Use this to add unlimited buffer size to LOG()
@@ -64,7 +64,7 @@ check_for_tty()
 // Note: if you change something in this LOG,
 // make sure to change the LOG below as the code
 // unfortunately isn't shared. :/
-void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, const BMessage *msg, ...) {
+void LOG(const char * module, log_importance level, const char *message, const BMessage *msg, ...) {
 	va_list varg;
 	va_start(varg, msg);
 	char buffer[2048];
@@ -89,7 +89,7 @@ void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, const 
 	fsync(STDOUT_FILENO);
 }
 
-void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, ...) {
+void LOG(const char * module, log_importance level, const char *message, ...) {
 	va_list varg;
 	va_start(varg, message);
 	char buffer[2048];

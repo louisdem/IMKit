@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= preflet
+NAME= InstantMessaging
 
 # specify the type of binary
 #	APP:	Application
@@ -151,6 +151,6 @@ ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot
 	DEFINES += BONE
 endif
 
-INSTALL_DIR= /boot/home/config/servers
+INSTALL_DIR= /boot/home/config/be/Preferences
 
 include $(BUILDHOME)/etc/makefile-engine.IMkit

@@ -30,7 +30,7 @@ using namespace IM;
 void
 _ERROR( const char * error, BMessage * msg )
 {
-	LOG("im_server", LOW, error, msg);
+	LOG("im_server", liHigh, error, msg);
 }
 
 void
@@ -49,7 +49,7 @@ _SEND_ERROR( const char * text, BMessage * msg )
 		msg->SendReply(&err);
 	} else
 	{ // no recipient for message replies, write to stdout
-		LOG("im_server", LOW, "ERROR: %s",text);
+		LOG("im_server", liHigh, "ERROR: %s",text);
 	}
 }
 
@@ -80,7 +80,7 @@ Server::Server()
 	BDeskbar db;
 
 	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
-		LOG("im_server", DEBUG, "Error removing deskbar icon (this is ok..)");
+		LOG("im_server", liDebug, "Error removing deskbar icon (this is ok..)");
 	
 	IM_DeskbarIcon * i = new IM_DeskbarIcon();
 	
@@ -91,10 +91,10 @@ Server::Server()
 		if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
 		{
 			if ( db.AddItem( &ref ) != B_OK )
-				LOG("im_server", LOW, "Error adding icon to deskbar!");
+				LOG("im_server", liHigh, "Error adding icon to deskbar!");
 		} else
 		{
-			LOG("im_server", LOW, "be_roster->FindApp() failed");
+			LOG("im_server", liHigh, "be_roster->FindApp() failed");
 		}
 	}
 	
@@ -393,7 +393,7 @@ Server::LoadAddons()
 		(rc=path.Append("im_kit/add-ons/protocols")) != B_OK ||
 		(rc=settingsDir.SetTo(path.Path())) != B_OK)
 	{ // we couldn't access the settings directory for the protocols!
-		LOG("im_server", HIGH, "cannot access protocol settings directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
+		LOG("im_server", liHigh, "cannot access protocol settings directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
 		return rc;
 	}
 	
@@ -402,7 +402,7 @@ Server::LoadAddons()
 		(rc=path.Append("im_kit/protocols")) != B_OK ||
 		(rc=addonsDir.SetTo(path.Path())) != B_OK)
 	{ // we couldn't access the addons directory for the protocols!
-		LOG("im_server", HIGH, "cannot access protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
+		LOG("im_server", liHigh, "cannot access protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc, strerror(rc));
 		return rc;
 	}
 
@@ -425,7 +425,7 @@ Server::LoadAddons()
 		image_id curr_image = load_add_on( path.Path() );
 		if( curr_image < 0 )
 		{
-			LOG("im_server", LOW, "load_add_on() fail, file [%s]", path.Path());
+			LOG("im_server", liHigh, "load_add_on() fail, file [%s]", path.Path());
 			continue;
 		}
 		
@@ -440,7 +440,7 @@ Server::LoadAddons()
 		
 		if ( res != B_OK )
 		{
-			LOG("im_server", MEDIUM, "get_image_symbol(load_protocol) fail, file [%s]", path.Path());
+			LOG("im_server", liHigh, "get_image_symbol(load_protocol) fail, file [%s]", path.Path());
 			unload_add_on( curr_image );
 			continue;
 		}
@@ -449,12 +449,12 @@ Server::LoadAddons()
 		
 		if ( !protocol )
 		{
-			LOG("im_server", LOW, "load_protocol() fail, file [%s]", path.Path());
+			LOG("im_server", liHigh, "load_protocol() fail, file [%s]", path.Path());
 			unload_add_on( curr_image );
 			continue;
 		}
 		
-		LOG("im_server", MEDIUM, "Protocol loaded: [%s]", protocol->GetSignature());
+		LOG("im_server", liHigh, "Protocol loaded: [%s]", protocol->GetSignature());
 		
 		// try to read settings from protocol attribute
 		BNode node(&settingsDir,protocol->GetSignature());
@@ -470,7 +470,7 @@ Server::LoadAddons()
 				char* settings = new char[info.size]; // FIXME: does new[] throw when memory exhausted?
 				node.ReadAttr("im_settings", info.type, 0, settings, info.size);
 
-				LOG("im_server", HIGH, "Read settings data");
+				LOG("im_server", liLow, "Read settings data");
 				
 				BMessage settings_msg;
 				if ( settings_msg.Unflatten(settings) == B_OK )
@@ -492,7 +492,7 @@ Server::LoadAddons()
 
 		if ((rc=protocol->Init( BMessenger(this) )) != B_OK)
 		{
-			LOG("im_server", HIGH, "Error initializing protocol '%s' (error 0x%ld/%s)!", protocol->GetSignature(), rc, strerror(rc));
+			LOG("im_server", liHigh, "Error initializing protocol '%s' (error 0x%ld/%s)!", protocol->GetSignature(), rc, strerror(rc));
 			//FIXME: does protocol->Shutdown() have to be called?
 			delete protocol;
 			unload_add_on( curr_image );
@@ -512,7 +512,7 @@ Server::LoadAddons()
 		}
 	} // while()
 	
-	LOG("im_server", MEDIUM, "All add-ons loaded.");
+	LOG("im_server", liMedium, "All add-ons loaded.");
 	
 	return B_OK;
 }
@@ -543,7 +543,7 @@ Server::UnloadAddons()
 void
 Server::AddEndpoint( BMessenger msgr )
 {
-	LOG("im_server", DEBUG, "Endpoint added");
+	LOG("im_server", liDebug, "Endpoint added");
 	fMessengers.push_back(msgr);
 }
 
@@ -553,7 +553,7 @@ Server::AddEndpoint( BMessenger msgr )
 void
 Server::RemoveEndpoint( BMessenger msgr )
 {
-	LOG("im_server", DEBUG, "Endpoint removed");
+	LOG("im_server", liDebug, "Endpoint removed");
 	fMessengers.remove(msgr);
 }
 
@@ -715,7 +715,6 @@ Server::FindContact( const char * proto_id )
 			continue;
 		
 		vol.GetName(volName);
-		//LOG("im_server", DEBUG, "FindContact: Looking for contacts on %s", volName);
 		
 		BQuery query;
 		
@@ -746,7 +745,7 @@ Server::FindContact( const char * proto_id )
 Contact
 Server::CreateContact( const char * proto_id )
 {
-	LOG("im_server", LOW, "Creating new contact for connection [%s]", proto_id);
+	LOG("im_server", liHigh, "Creating new contact for connection [%s]", proto_id);
 	
 	Contact result;
 	
@@ -770,11 +769,11 @@ Server::CreateContact( const char * proto_id )
 	
 	if ( dir.FindEntry(filename,&entry) != B_OK )
 	{
-		LOG("im_server", LOW, "Error: While creating a new contact, dir.FindEntry() failed. filename was [%s]",filename);
+		LOG("im_server", liHigh, "Error: While creating a new contact, dir.FindEntry() failed. filename was [%s]",filename);
 		return result;
 	}
 	
-	LOG("im_server", HIGH, "  created file [%s]", filename);
+	LOG("im_server", liDebug, "  created file [%s]", filename);
 	
 	// file created. set type and add connection
 	if ( file.WriteAttr(
@@ -787,7 +786,7 @@ Server::CreateContact( const char * proto_id )
 		return result;
 	}
 	
-	LOG("im_server", DEBUG, "  wrote type");
+	LOG("im_server", liDebug, "  wrote type");
 	
 	// file created. set type and add connection
 	result.SetTo( entry );
@@ -797,14 +796,14 @@ Server::CreateContact( const char * proto_id )
 		return Contact();
 	}
 	
-	LOG("im_server", DEBUG, "  wrote connection");
+	LOG("im_server", liDebug, "  wrote connection");
 	
 	if ( result.SetStatus(OFFLINE_TEXT) != B_OK )
 	{
 		return Contact();
 	}
 	
-	LOG("im_server", DEBUG, "  wrote status");
+	LOG("im_server", liDebug, "  wrote status");
 	
 	// post request info about this contact
 	BMessage msg(MESSAGE);
@@ -813,7 +812,7 @@ Server::CreateContact( const char * proto_id )
 	
 	PostMessage(&msg);
 	
-	LOG("im_server", DEBUG, "  done.");
+	LOG("im_server", liDebug, "  done.");
 	
 	return result;
 }
@@ -868,7 +867,7 @@ Server::GetSettings( const char * protocol_sig, BMessage * settings )
 		return B_ERROR;
 	}
 	
-	LOG("im_server", DEBUG, "Read settings from file: %s", settings_path);
+	LOG("im_server", liDebug, "Read settings from file: %s", settings_path);
 	
 	return B_OK;
 }
@@ -952,7 +951,7 @@ Server::SetSettings( const char * protocol_sig, BMessage * settings )
 		return B_ERROR;
 	}
 
-	LOG("im_server", DEBUG, "Wrote settings to file: %s", settings_path);
+	LOG("im_server", liDebug, "Wrote settings to file: %s", settings_path);
 	
 	return B_OK;			
 }
@@ -1078,7 +1077,7 @@ Server::MessageToProtocols( BMessage * msg )
 	
 	if ( msg->FindString("protocol") == NULL )
 	{ // no protocol specified, send to all?
-		LOG("im_server", HIGH, "No protocol specified");
+		LOG("im_server", liLow, "No protocol specified");
 		
 		int32 im_what=-1;
 		msg->FindInt32("im_what", &im_what);
@@ -1087,7 +1086,7 @@ Server::MessageToProtocols( BMessage * msg )
 		{ // send these messages to all loaded protocols
 			case SET_STATUS:
 			{
-				LOG("im_server", HIGH, "  SET_STATUS - Sending to all protocols");
+				LOG("im_server", liLow, "  SET_STATUS - Sending to all protocols");
 				map<string,Protocol*>::iterator i;
 				
 				for ( i=fProtocols.begin(); i != fProtocols.end(); i++ )
@@ -1287,12 +1286,12 @@ Server::MessageFromProtocols( BMessage * msg )
 			
 			if ( strcmp(status,BLOCKED_TEXT) == 0 )
 			{ // contact blocked, dropping message!
-				LOG("im_server", LOW, "Dropping message from blocked contact [%s:%s]", protocol, id);
+				LOG("im_server", liHigh, "Dropping message from blocked contact [%s:%s]", protocol, id);
 				return;
 			}
 			
 			fPreferredProtocol[contact] = protocol;
-			LOG("im_server", DEBUG, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
+			LOG("im_server", liLow, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
 		}
 	}
 	
@@ -1307,7 +1306,7 @@ Server::MessageFromProtocols( BMessage * msg )
 	}
 	
 	if ( im_what == CONTACT_AUTHORIZED && protocol != NULL ) {
-		LOG("im_server", DEBUG, "Creating new contact on authorization. ID : %s", id);
+		LOG("im_server", liLow, "Creating new contact on authorization. ID : %s", id);
 	} else {
 		// send it
 		Broadcast(msg);
@@ -1338,7 +1337,7 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	
 	string new_status = status;
 	
-	LOG("im_server", MEDIUM, "STATUS_CHANGED [%s] is now %s",proto_id.c_str(),new_status.c_str());
+	LOG("im_server", liMedium, "STATUS_CHANGED [%s] is now %s",proto_id.c_str(),new_status.c_str());
 	
 	// update status
 	fStatus[proto_id] = new_status;
@@ -1378,7 +1377,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		}
 	}
 	
-	//LOG("im_server", MEDIUM, "STATUS_CHANGED total status is now %s", new_status.c_str());
+	//LOG("im_server", liMedium, "STATUS_CHANGED total status is now %s", new_status.c_str());
 
 	// update status attribute
 	BNode node(contact);
@@ -1419,7 +1418,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		
 		if ( fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&small)) != B_OK )
 		{
-			LOG("im_server", DEBUG, "Couldn't find large icon..");
+			LOG("im_server", liDebug, "Couldn't find large icon..");
 		}
 		
 		pointerName = status;
@@ -1427,14 +1426,14 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		
 		if ( fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&large)) != B_OK )
 		{
-			LOG("im_server", DEBUG, "Couldn't find small icon..");
+			LOG("im_server", liDebug, "Couldn't find small icon..");
 		}
 		
 		if (large != NULL) {
 			if ( node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
 					large->BitsLength()) != large->BitsLength() )
 			{
-				LOG("im_server", DEBUG, "Couldn't write large icon..");
+				LOG("im_server", liDebug, "Couldn't write large icon..");
 			}
 		} else {
 			node.RemoveAttr(BEOS_LARGE_ICON_ATTRIBUTE);
@@ -1444,7 +1443,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 			if ( node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
 				small->BitsLength()) != small->BitsLength() )
 			{
-				LOG("im_server", DEBUG, "Couldn't write small icon..");
+				LOG("im_server", liDebug, "Couldn't write small icon..");
 			}
 		} else {
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
@@ -1478,7 +1477,7 @@ Server::SetAllOffline()
 			continue;
 		
 		vol.GetName(volName);
-		LOG("im_server", LOW, "SetAllOffline: Getting contacts on %s", volName);
+		LOG("im_server", liLow, "SetAllOffline: Getting contacts on %s", volName);
 		
 		BQuery query;
 		
@@ -1515,15 +1514,15 @@ Server::SetAllOffline()
 		{
 			if ( strcmp(status, BLOCKED_TEXT) == 0 )
 			{
-				LOG("im_server", DEBUG, "Skipping blocked contact %s (%s), filename: %s", name, nickname, filename);
+				LOG("im_server", liDebug, "Skipping blocked contact %s (%s), filename: %s", name, nickname, filename);
 				continue;
 			}
 		}
 		
-		LOG("im_server", DEBUG, "Setting %s (%s) offline, filename: %s", name, nickname, filename);
+		LOG("im_server", liDebug, "Setting %s (%s) offline, filename: %s", name, nickname, filename);
 		
 		if ( c.SetStatus(OFFLINE_TEXT) != B_OK )
-			LOG("im_server", DEBUG, "  error.");
+			LOG("im_server", liDebug, "  error.");
 		
 		BNode node(&entry);
 		
@@ -1572,7 +1571,7 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 			continue;
 		
 		vol.GetName(volName);
-		LOG("im_server", LOW, "GetContactsForProtocol: Looking for contacts on %s", volName);
+		LOG("im_server", liLow, "GetContactsForProtocol: Looking for contacts on %s", volName);
 		query.PushAttr("IM:connections");
 		query.PushString(protocol);
 		query.PushOp(B_CONTAINS);
@@ -1694,7 +1693,7 @@ Server::StartAutostartApps()
 	
 	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
 	{
-		LOG("im_server", LOW, "Starting app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
+		LOG("im_server", liLow, "Starting app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 		be_roster->Launch( settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 	}
 }
@@ -1711,7 +1710,7 @@ Server::StopAutostartApps()
 	
 	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
 	{
-		LOG("im_server", LOW, "Stopping app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
+		LOG("im_server", liLow, "Stopping app [%s]", settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 		BMessenger msgr( settings.FindString(AUTOSTART_APPSIG_SETTING,i) );
 		msgr.SendMessage( B_QUIT_REQUESTED );
 	}
@@ -1726,15 +1725,15 @@ Server::handleDeskbarMessage( BMessage * msg )
 	switch ( msg->what )
 	{
 		case REGISTER_DESKBAR_MESSENGER:
-			LOG("im_server", DEBUG, "Got Deskbar messenger");
+			LOG("im_server", liDebug, "Got Deskbar messenger");
 			msg->FindMessenger("msgr", &fDeskbarMsgr);
 			break;
 		
 		default:
-			LOG("im_server", DEBUG, "Forwarding message to Deskbar");
+			LOG("im_server", liDebug, "Forwarding message to Deskbar");
 			if ( fDeskbarMsgr.SendMessage(msg) != B_OK )
 			{
-				LOG("im_server", LOW, "Error sending message to Deskbar");
+				LOG("im_server", liMedium, "Error sending message to Deskbar");
 			}
 			break;
 	}
@@ -1821,7 +1820,7 @@ Server::handle_STATUS_SET( BMessage * msg )
 	}
 	
 	msg->AddString("total_status", total_status.c_str() );
-	LOG("im_server", HIGH, "Total status changed to %s", total_status.c_str() );
+	LOG("im_server", liMedium, "Total status changed to %s", total_status.c_str() );
 	// end 'Find out total status'
 	
 	handleDeskbarMessage(msg);
@@ -1863,7 +1862,7 @@ Server::reply_GET_CONTACT_STATUS( BMessage * msg )
 	Get list of current own online status per protocol
 */
 void Server::reply_GET_OWN_STATUSES(BMessage *msg) {
-	LOG("im_server", LOW, "Got own status request. There are %i statuses",
+	LOG("im_server", liLow, "Got own status request. There are %i statuses",
 		fStatus.size());
 	BMessage reply(B_REPLY);
 
@@ -1903,7 +1902,7 @@ Server::reply_ADD_AUTOSTART_APPSIG( BMessage * msg )
 		if ( strcmp( new_appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) == 0 )
 		{ // app-sig already present, don't add again
 			msg->SendReply(ACTION_PERFORMED);
-			LOG("im_server", HIGH, "Auto-start app already present [%s]", new_appsig);
+			LOG("im_server", liLow, "Auto-start app already present [%s]", new_appsig);
 			return;
 		}
 	}
@@ -1914,7 +1913,7 @@ Server::reply_ADD_AUTOSTART_APPSIG( BMessage * msg )
 	
 	msg->SendReply(ACTION_PERFORMED);
 	
-	LOG("im_server", HIGH, "Auto-start app added [%s]", new_appsig);
+	LOG("im_server", liLow, "Auto-start app added [%s]", new_appsig);
 }
 
 /**
@@ -1953,7 +1952,7 @@ Server::reply_REMOVE_AUTOSTART_APPSIG( BMessage * msg )
 
 	msg->SendReply(ACTION_PERFORMED);
 	
-	LOG("im_server", HIGH, "Auto-start app removed [%s]", appsig);
+	LOG("im_server", liLow, "Auto-start app removed [%s]", appsig);
 }
 
 /**

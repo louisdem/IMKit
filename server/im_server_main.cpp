@@ -41,23 +41,23 @@ int main( int numarg, const char ** argv )
 			}
 			if ( strcmp(argv[curr+1], "debug") == 0 )
 			{
-				g_verbosity_level = DEBUG;
+				g_verbosity_level = liDebug;
 			} else
 			if ( strcmp(argv[curr+1], "high") == 0 )
 			{
-				g_verbosity_level = HIGH;
+				g_verbosity_level = liHigh;
 			} else
 			if ( strcmp(argv[curr+1], "medium") == 0 )
 			{
-				g_verbosity_level = MEDIUM;
+				g_verbosity_level = liMedium;
 			} else
 			if ( strcmp(argv[curr+1], "low") == 0 )
 			{
-				g_verbosity_level = LOW;
+				g_verbosity_level = liLow;
 			} else
 			if ( strcmp(argv[curr+1], "quiet") == 0 )
 			{
-				g_verbosity_level = QUIET;
+				g_verbosity_level = liQuiet;
 			} else
 			{ // unknown v-level
 				printf("Unknown verbosity level\n");
