@@ -94,18 +94,24 @@ void InfoView::MessageReceived(BMessage * msg) {
 
 void InfoView::GetPreferredSize(float *w, float *h) {
 	BFont font;
-	GetFont(&font);
-	
-	font_height fh;
-	font.GetHeight( &fh );
-	
-	float line_height = fh.ascent + fh.descent + fh.leading;
-	
-	*h = line_height * fLines.size() + kEdgePadding;
+
+	*h = kEdgePadding;
 	*w = 0;
 	
-	for (list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++) {
-		float width = StringWidth( (*i).String() );
+	for (list<pair<BString,const BFont*> >::iterator i = fLines.begin(); i !=fLines.end(); i++) {
+		// height
+		SetFont(i->second);
+		GetFont(&font);
+		
+		font_height fh;
+		font.GetHeight( &fh );
+		
+		float line_height = fh.ascent + fh.descent + fh.leading;
+	
+		*h += line_height;
+		
+		// width
+		float width = StringWidth( (i->first).String() );
 		
 		if ( width > *w ) *w = width + kEdgePadding;
 	};
@@ -134,21 +140,29 @@ void InfoView::Draw(BRect drawBounds) {
 	);
 	
 	BFont font;
-	GetFont(&font);
 	
-	font_height fh;
-	font.GetHeight( &fh );
-	float line_height = fh.ascent + fh.descent + fh.leading;
-	
-	int y = 1;
-	for (list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++) {
-		DrawString(i->String(),
+	float y = 0.0f;
+	for (list<pair<BString,const BFont*> >::iterator i = fLines.begin(); i !=fLines.end(); i++) {
+		// set font
+		SetFont( i->second );
+		
+		GetFont(&font);
+		
+		font_height fh;
+		font.GetHeight( &fh );
+		float line_height = fh.ascent;
+		
+		y += line_height;
+		
+		// draw the text
+		DrawString(i->first.String(),
 			BPoint(
 				(kEdgePadding * 2) + fBitmap->Bounds().Width(),
-				kEdgePadding + y * line_height - fh.leading - fh.descent
+				kEdgePadding + y 
 			)
 		);
-		y++;
+		
+		y += fh.leading + fh.descent;
 	}
 }
 
@@ -220,6 +234,8 @@ InfoView::SetText(const char * _text)
 	
 	fLines.clear();
 	
+	const BFont * font = be_bold_font;
+	
 	while ( text.Length() > 0 )
 	{
 		int32 nl;
@@ -227,12 +243,14 @@ InfoView::SetText(const char * _text)
 		{ // found a newline
 			BString line;
 			text.CopyInto(line, 0, nl);
-			fLines.push_back(line);
+			fLines.push_back( pair<BString,const BFont*>(line,font) );
 			
 			text.Remove(0,nl+1);
+			
+			font = be_plain_font;
 		} else
 		{
-			fLines.push_back( text );
+			fLines.push_back( pair<BString,const BFont*>(text,font) );
 			text = "";
 		}
 	}

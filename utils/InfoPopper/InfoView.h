@@ -35,6 +35,12 @@ class InfoView : public BView
 		
 		void Draw( BRect );
 		
+		/**
+			Set the text to be displayed. Called by the constructor.
+			
+			The first line of the text is set to use be_bold_font, and the
+			rest of the lines are set to use be_plain_font.
+		*/
 		void SetText( const char * );
 		
 		bool HasProgressID( const char * );
@@ -45,7 +51,7 @@ class InfoView : public BView
 	private:
 		info_type		 fType;
 		BMessageRunner	* fRunner;
-		list<BString>	fLines;
+		list<pair<BString,const BFont*> >	fLines;
 		float			fProgress;
 		BString			fProgressID;
 		
