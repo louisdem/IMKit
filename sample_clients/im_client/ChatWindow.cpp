@@ -51,16 +51,35 @@ ChatWindow::ChatWindow( entry_ref & ref )
 
 	// create views
 	BRect textRect = Bounds();
-	BRect text2Rect;
 	BRect inputRect = Bounds();
+	BRect dockRect = Bounds();
+	
+	dockRect.bottom = 20;
+	fDock = new BView(dockRect, "Dock", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW);
+#if B_BEOS_VERSION > B_BEOS_VERSION_5
+	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
+	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
+	fDock->SetHighUIColor(B_UI_PANEL_TEXT_COLOR);
+#else
+	fDock->SetViewColor(B_PANEL_BACKGROUND_COLOR);
+	fDock->SetLowColor(B_PANEL_BACKGROUND_COLOR);
+	fDock->SetHighColor(B_PANEL_TEXT_COLOR);
+#endif
+	AddChild(fDock);
+
+	BBitmap *infoIcon = GetBitmapFromAttribute("/boot/home/config/settings/im_kit/icons"
+		"/GetStatusInfo", "BEOS:M:STD_ICON");
+	printf("Info icon: %p\n", infoIcon);
+	fDock->MovePenTo(5.0, 1.0);
+	fDock->DrawBitmap(infoIcon);
+	fDock->DrawString("Hi?");
+	fDock->Flush();
 
 	textRect.InsetBy(2,2);
+	textRect.top = 20;
 	textRect.bottom = inputDivider.y;
 	textRect.right -= B_V_SCROLL_BAR_WIDTH;
-	
-	text2Rect = textRect;
-	text2Rect.OffsetTo(0,0);
-	
+
 	inputRect.InsetBy(2.0, 2.0);
 	inputRect.top = inputDivider.y + 5;
 	inputRect.right -= B_V_SCROLL_BAR_WIDTH;
@@ -214,6 +233,11 @@ ChatWindow::~ChatWindow()
 	if (fResize) {
 		fResize->RemoveSelf();
 		delete fResize;
+	};
+
+	if (fDock) {
+		fDock->RemoveSelf();
+		delete fDock;
 	};
 
 	fMan->Lock();
@@ -588,4 +612,55 @@ ChatWindow::stopNotify()
 	fChangedNotActivated = false;
 	SetTitle(fTitleCache);
 	((ChatApp*)be_app)->NoFlash( BMessenger(this) );
+}
+
+BBitmap *
+ChatWindow::GetBitmapFromAttribute(const char *name, const char *attribute, 
+	type_code type = 'BBMP') {
+	BBitmap 	*bitmap = NULL;
+	size_t 		len = 0;
+	status_t 	error;	
+
+	if ((name == NULL) || (attribute == NULL)) return NULL;
+
+	BNode node(name);
+	
+	if (node.InitCheck() != B_OK) {
+		return NULL;
+	};
+	
+	attr_info info;
+		
+	if (node.GetAttrInfo(attribute, &info) != B_OK) {
+		node.Unset();
+		return NULL;
+	};
+		
+	char *data = (char *)calloc(info.size, sizeof(char));
+	len = (size_t)info.size;
+		
+	if (node.ReadAttr(attribute, 'BBMP', 0, data, len) != len) {
+		node.Unset();
+		free(data);
+	
+		return NULL;
+	};
+	
+//	Icon is a square, so it's right / bottom co-ords are the root of the bitmap length
+//	Offset is 0
+	BRect bound = BRect(0, 0, 0, 0);
+	bound.right = sqrt(len) - 1;
+	bound.bottom = bound.right;
+	
+	bitmap = new BBitmap(bound, B_COLOR_8_BIT);
+	bitmap->SetBits(data, len, 0, B_COLOR_8_BIT);
+
+//	make sure it's ok
+	if(bitmap->InitCheck() != B_OK) {
+		free(data);
+		delete bitmap;
+		return NULL;
+	};
+	
+	return bitmap;
 }

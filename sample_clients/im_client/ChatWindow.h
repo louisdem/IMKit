@@ -18,6 +18,7 @@
 #include <Beep.h>
 #include <String.h>
 #include <Roster.h>
+#include <Bitmap.h>
 
 #include <be/kernel/fs_attr.h>
 
@@ -72,6 +73,9 @@ class ChatWindow : public BWindow
 		status_t LoadSettings(void);
 		
 	private:
+		BBitmap			*GetBitmapFromAttribute(const char *name, const char *attribute,
+							type_code type = 'BBMP');
+	
 		enum { SEND_MESSAGE = 1 };
 		
 		entry_ref	fEntry;
@@ -91,6 +95,8 @@ class ChatWindow : public BWindow
 
 		BMessage		fWindowSettings;
 		Theme			*fTheme;
+		
+		BView			*fDock;
 };
 
 #endif

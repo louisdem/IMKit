@@ -68,8 +68,32 @@ void
 ChatApp::RefsReceived( BMessage * msg )
 {
 	entry_ref ref;
-	for ( int i=0; msg->FindRef("refs", i, &ref ) == B_OK; i++ )
-		msg->AddRef("contact", &ref);
+	BNode node;
+	attr_info info;
+	bool hasValidRefs = false;
+	
+	for ( int i=0; msg->FindRef("refs", i, &ref ) == B_OK; i++ ) {
+		node = BNode(&ref);
+		if (node.GetAttrInfo("BEOS:TYPE", &info) == B_OK) {
+			char *type = (char *)calloc(info.size, sizeof(char));
+			if (node.ReadAttr("BEOS:TYPE", info.type, 0, (void *)type, info.size) ==
+				info.size) {
+
+				if (strcmp(type, "application/x-person") == 0) {	
+					if (node.GetAttrInfo("IM:connections", &info) == B_OK) {
+						msg->AddRef("contact", &ref);
+						hasValidRefs = true;
+					};
+				} else {
+					LOG("im_client", LOW, "Got a ref that wasn't a People file");
+				};
+			};
+			
+			free(type);
+		};
+	};
+	
+	if (hasValidRefs == false) return;
 	
 	msg->what = IM::MESSAGE;
 	msg->AddInt32("im_what", IM::MESSAGE_RECEIVED);
