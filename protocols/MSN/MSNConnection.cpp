@@ -897,7 +897,9 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		reply->AddParam("S");
 		reply->AddParam(ticket.String());
 		Send(reply);
-	};
+	} else {
+		return B_ERROR;
+	}
 		
 	return B_OK;
 }
