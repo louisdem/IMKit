@@ -328,7 +328,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fStatusBar->SetHighColor(0, 0, 0, 0);
 #endif
 	
-	BPopUpMenu *pop = new BPopUpMenu("Templates", true, true);
+	BPopUpMenu *pop = new BPopUpMenu("Protocols", true, true);
 	fProtocolMenu = new BMenuField(
 		BRect(kPadding, kPadding, Bounds().bottom - kPadding, 100),
 		"Field", NULL, pop);
@@ -353,7 +353,8 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	
 	// need to build the menu here since it fiddles with fInfoView
 	BuildProtocolMenu();
-	pop->ItemAt(0)->SetMarked(true);
+	BMenuItem *first = pop->ItemAt(0);
+	if (first) first->SetMarked(true);
 
 	BRect resizeRect = Bounds();
 	resizeRect.top = inputDivider.y + 1;
@@ -1103,37 +1104,29 @@ void ChatWindow::BuildProtocolMenu(void) {
 	BMessage getStatus(IM::GET_CONTACT_STATUS);
 	getStatus.AddRef("contact", &fEntry);
 	BMessage statusMsg;
-	
-	if ( fMan->SendMessage(&getStatus, &statusMsg) != B_OK )
-	{
-		LOG("im_client", liHigh, "Failed to get contact statues");
+
+	BMenu *menu = fProtocolMenu->Menu();
+	if (menu == NULL) {
+		LOG("im_client", liHigh, "BuildProtocolMenu(): fProtocolMenu is NULL.");
 		return;
 	}
+
+//	You have to do this twice... buggered if I know why...
+	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
+	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
+
+	menu->AddItem(new IconMenuItem(NULL, _T("Any Protocol"), NULL,
+		new BMessage(PROTOCOL_SELECTED)));
+	
+	if (fMan->SendMessage(&getStatus, &statusMsg) != B_OK) {
+		LOG("im_client", liHigh, "Failed to get contact statues");
+		return;
+	};
 	
 	BPath iconDir;
 	find_directory(B_USER_ADDONS_DIRECTORY, &iconDir, true);
 	iconDir.Append("im_kit/protocols");
-	
-	BMenu *menu = fProtocolMenu->Menu();
-	if (menu == NULL) 
-	{
-		LOG("im_client", liHigh, "BuildProtocolMenu(): fProtocolMenu is NULL.");
-		return;
-	}
-	
-//	You have to do this twice... buggered if I know why...
-	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
-	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
-	
-	menu->AddItem(
-		new IconMenuItem(
-			NULL, 
-			_T("Any Protocol"), 
-			NULL, 
-//			NULL,
-			new BMessage(PROTOCOL_SELECTED)
-		)
-	);
+			
 	menu->AddSeparatorItem();
 	
 	for (int32 i = 0; statusMsg.FindString("connection", i); i++) {
