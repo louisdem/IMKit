@@ -442,6 +442,8 @@ Jabber::LoggedIn()
 	
 	fFullLogged=true;
 	
+	LOG("Jabber", liDebug, "Starting fLaterBuddyList");
+	
 	while (fLaterBuddyList->size() != 0)
 	{
 		BString id = *(fLaterBuddyList->begin());
@@ -453,6 +455,8 @@ Jabber::LoggedIn()
 			BuddyStatusChanged(id.String(),OFFLINE_TEXT);
 		}	
 	}
+	
+	LOG("Jabber", liDebug, "Ending fLaterBuddyList");
 }
 
 void
@@ -577,16 +581,16 @@ Jabber::getContact(const char* id)
 {
 	RosterList *rl=getRosterList();
 	JabberContact* contact=NULL;
-	LOG(kProtocolName, liDebug, "getContact %s", id);
+	//LOG(kProtocolName, liDebug, "getContact %s", id);
 	
 	for(int i=0;i<rl->CountItems();i++)
 	{
 		contact=reinterpret_cast<JabberContact*>(getRosterList()->ItemAt(i));
-		LOG(kProtocolName, liDebug, "getContact [%3d] GetJID %s", i,contact->GetJid().String());
+		//LOG(kProtocolName, liDebug, "getContact [%3d] GetJID %s", i,contact->GetJid().String());
 		
 		if(contact->GetJid().Compare(id)==0)
 		{
-			LOG(kProtocolName, liDebug, "getContact found!");
+			//LOG(kProtocolName, liDebug, "getContact found!");
 			return contact;								
 		}								
 	}
@@ -612,12 +616,14 @@ void
 Jabber::Authorized()
 {
 	SetAway(false);
-	//LoggedIn();
+	
 	fPerc +=0.3333;
 	fAuth=true;
 	Progress("Jabber Login", "Jabber: Authorized", fPerc);
-	JabberHandler::Authorized();
+	LOG(kProtocolName, liDebug, "Jabber:Login %f - Authorized",fPerc) ;
 	CheckLoginStatus();
+	
+	JabberHandler::Authorized();
 }
 
 void
@@ -686,7 +692,8 @@ Jabber::Presence(JabberPresence * presence){
 void
 Jabber::Roster(RosterList * roster){
 
-	//debugger("Roster");
+	// Fix me! (Roster message can arrive at different times)
+	
 	BMessage serverBased(IM::SERVER_BASED_CONTACT_LIST);
 	serverBased.AddString("protocol", kProtocolName);
 	JabberContact* contact;
@@ -699,10 +706,13 @@ Jabber::Roster(RosterList * roster){
 	fServerMsgr.SendMessage(&serverBased);		
 	
 	//fRostered=true;
+	if(!fRostered){ //here the case when more than one roster message has arrived!
+		fPerc +=0.3333;
+		fRostered = true;
+		Progress("Jabber Login", "Jabber: Roster", fPerc);
+	}
 	
-	fPerc +=0.3333;
-	fRostered = true;
-	Progress("Jabber Login", "Jabber: Roster", fPerc);
+	LOG(kProtocolName, liDebug, "Jabber:Login %f - Rostered",fPerc) ;
 	CheckLoginStatus();
 	
 }
@@ -712,6 +722,7 @@ Jabber::Agents(AgentList * agents){
 	fPerc +=0.3333;
 	fAgent = true;
 	Progress("Jabber Login", "Jabber: Agents", fPerc);
+	LOG(kProtocolName, liDebug, "Jabber:Login %f - Agents",fPerc) ;
 	CheckLoginStatus();
 }
 
@@ -768,8 +779,8 @@ Jabber::Registration(JabberRegistration * registration){
 void
 Jabber::CheckLoginStatus()
 {
-	if(fAuth && fRostered &&  fAgent) LoggedIn();
-	
+	if(fAuth && fRostered &&  fAgent && !fFullLogged) 
+		LoggedIn();
 		
 }
 
