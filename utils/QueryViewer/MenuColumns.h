@@ -80,4 +80,19 @@ class MenuDateColumn : public BDateColumn {
 			BPopUpMenu		*fMenu;
 };
 
+class MenuBitmapColumn : public BBitmapColumn {
+	public:
+							MenuBitmapColumn(const char *title, float width,
+								float MaxWidth, float minWidth,
+								alignment align = B_ALIGN_LEFT);
+							~MenuBitmapColumn(void);
+
+		virtual void		MouseDown(BColumnListView *parent, BRow *row,
+								BField *field, BRect field_rect, BPoint point,
+								uint32 buttons);
+
+	private:
+			BPopUpMenu		*fMenu;
+};
+
 #endif

@@ -34,7 +34,7 @@ QueryWindow::QueryWindow(BRect rect)
 	fListRect.InsetBy(kEdgeSpacer, kEdgeSpacer);
 	fListRect.left = outline.right + kEdgeSpacer + B_V_SCROLL_BAR_WIDTH + kEdgeSpacer;
 	
-	fRootItem = new IconCountItem("Queries", ReadNodeIcon(kQueryDir));
+	fRootItem = new IconCountItem("Queries", "", ReadNodeIcon(kQueryDir));
 	fQueryList->AddItem(fRootItem);
 	
 	entry_ref ref;
@@ -79,10 +79,7 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 			fQueryList->Invalidate();
 			
 			if (fQueryList->CountItemsUnder(item, false) == 0) {
-				BString name = item->Text();
-				
-				cl_map::iterator cIt = fLeafViews.begin();
-				cIt = fLeafViews.find(name.String());
+				cl_map::iterator cIt = fQueryViews.find(item->Path());
 				if (cIt == fLeafViews.end()) return;
 
 				if (fCurrentQView) fCurrentQView->Hide();
@@ -148,7 +145,7 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 					BEntry entry(&ref);
 					BPath path(&ref);
 					struct stat s;
-					IconCountItem *item = new IconCountItem(path.Leaf(),
+					IconCountItem *item = new IconCountItem(path.Leaf(), path.Path(), 
 						ReadNodeIcon(path.Path()));
 					
 					entry.GetStat(&s);
@@ -204,7 +201,7 @@ void QueryWindow::CreateGroups(BDirectory dir, BListItem *under, BRect rect) {
 		BPath path;
 		entry.GetPath(&path);
 		BBitmap *icon = ReadNodeIcon(path.Path());
-		IconCountItem *item = new IconCountItem(path.Leaf(), icon);
+		IconCountItem *item = new IconCountItem(path.Leaf(), path.Path(), icon);
 		
 		if (S_ISDIR(s.st_mode)) {
 			entry_ref ref;

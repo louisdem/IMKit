@@ -62,9 +62,7 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case qclvAddRow: {
 			entry_ref ref;
-			if (msg->FindRef("ref", &ref) == B_OK) {
-				AddRowByRef(&ref);
-			};
+			if (msg->FindRef("ref", &ref) == B_OK) AddRowByRef(&ref);
 		} break;
 		
 		case B_QUERY_UPDATE: {
@@ -133,13 +131,17 @@ void QueryColumnListView::MessageReceived(BMessage *msg) {
 		} break;
 		
 		case qclvInvoke: {
-			msg->PrintToStream();
 			BRow *row = FocusRow();
 			if (row) {
-				BStringField *field = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
-				if (field) {
+				BStringField *pathField = reinterpret_cast<BStringField *>(row->GetField(kPathIndex));
+				BStringField *nameField = reinterpret_cast<BStringField *>(row->GetField(kNameIndex));
+				
+				if ((pathField != NULL) && (nameField != NULL)) {					
+					BPath path = pathField->String();
+					path.Append(nameField->String());
+				
 					entry_ref ref;
-					if (get_ref_for_path(field->String(), &ref) == B_OK) {
+					if (get_ref_for_path(path.Path(), &ref) == B_OK) {
 					
 						entry_ref actionRef = ActionFor(&ref);
 						BPath t(&actionRef);
@@ -323,29 +325,29 @@ status_t QueryColumnListView::AddRowByRef(entry_ref *ref) {
 				} break;
 	
 				case B_INT8_TYPE: {
-					int8 *intValue = (int8 *)&value;
+					int8 *intValue = (int8 *)value;
 					field = new BIntegerField(*intValue);
 				} break;
 				case B_INT16_TYPE: {
-					int16 *intValue = (int16 *)&value;
+					int16 *intValue = (int16 *)value;
 					field = new BIntegerField(*intValue);
 				} break;
 				case B_INT32_TYPE: {
-					int32 *intValue = (int32 *)&value;
+					int32 *intValue = (int32 *)value;
 					field = new BIntegerField(*intValue);
 				} break;
 				case B_INT64_TYPE: {
-					int64 *intValue = (int64 *)&value;
+					int64 *intValue = (int64 *)value;
 					field = new BIntegerField(*intValue);
 				} break;
 				
 				case B_SIZE_T_TYPE: {
-					size_t *sizeValue = (size_t *)&value;
+					size_t *sizeValue = (size_t *)value;
 					field = new BSizeField(*sizeValue);
 				} break;
 				
 				case B_TIME_TYPE: {
-					time_t *timeValue = (time_t *)&value;
+					time_t *timeValue = (time_t *)value;
 					field = new BDateField(timeValue);
 				} break;
 				
@@ -566,7 +568,7 @@ status_t QueryColumnListView::AddStatColumns(void) {
 	int32 index = 0;
 	col_info *colInfo = NULL;
 
-	BBitmapColumn *icon = new BBitmapColumn("", 20, 20, 20, B_ALIGN_CENTER);
+	MenuBitmapColumn *icon = new MenuBitmapColumn("", 20, 20, 20, B_ALIGN_CENTER);
 	icon->SetShowHeading(false);
 	AddColumn(icon, index++);
 

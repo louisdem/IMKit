@@ -193,3 +193,34 @@ void MenuDateColumn::MouseDown(BColumnListView *parent, BRow *row, BField *field
 	};	
 };
 
+//#pragma mark -
+
+MenuBitmapColumn::MenuBitmapColumn(const char *title, float width, float maxWidth,
+	float minWidth, alignment align = B_ALIGN_LEFT)
+	: BBitmapColumn(title, width, maxWidth, minWidth, align) {
+
+	fMenu = NULL;
+};
+
+MenuBitmapColumn::~MenuBitmapColumn(void) {
+	delete fMenu;
+};
+
+void MenuBitmapColumn::MouseDown(BColumnListView *parent, BRow *row, BField *field,
+	BRect field_rect, BPoint point, uint32 buttons) {
+
+	BMessage *msg = parent->Window()->CurrentMessage();
+	msg->FindInt32("buttons", (int32 *)&buttons);
+	
+	switch (buttons) {
+		case B_SECONDARY_MOUSE_BUTTON: {
+			BPoint p2 = parent->ScrollView()->ConvertToScreen(point);
+			p2.x -= 5.0;
+			p2.y -= 5.0;
+
+			delete fMenu;
+			fMenu = generate_menu(row, parent);
+			if (fMenu) fMenu->Go(p2, true, true, true);
+		} break;
+	};	
+};

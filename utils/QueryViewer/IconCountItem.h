@@ -9,14 +9,15 @@
 class IconCountItem : public BListItem {
 	public:
 	
-						IconCountItem(const char *text, BBitmap *icon = NULL, bool
-							isNew = false);
+						IconCountItem(const char *text, const char *path,
+							BBitmap *icon = NULL, bool isNew = false);
 						~IconCountItem(void);
 						
 		virtual void	DrawItem(BView *owner, BRect frame, bool complete);
 		virtual void	Update(BView *owner, const BFont *font);
 		const char 		*Text(void) const;
-		const BBitmap	*Icon(void) const;
+		const BBitmap	*Icon(void) const;		
+		const char		*Path(void);
 		
 				int32	Count(void);
 				void	Count(int32 count);
@@ -35,6 +36,7 @@ class IconCountItem : public BListItem {
 		
 		int32			fCount;
 		bool			fNew;
+		BString			fPath;
 };
 
 #endif

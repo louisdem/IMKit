@@ -5,7 +5,8 @@
 const float kEdgeOffset = 2.0;
 const rgb_color kHighlight = {140, 140, 140, 255};
 
-IconCountItem::IconCountItem(const char *text, BBitmap *icon = NULL, bool isNew = false) 
+IconCountItem::IconCountItem(const char *text, const char *path,
+	BBitmap *icon = NULL, bool isNew = false) 
 	: fIcon(NULL),
 	fIconHeight(0),
 	fIconWidth(0) {
@@ -13,6 +14,7 @@ IconCountItem::IconCountItem(const char *text, BBitmap *icon = NULL, bool isNew 
 	fNew = isNew;
 	fText = text;
 	fIcon = icon;
+	fPath = path;
 	fCount = 0;
 };
 
@@ -106,4 +108,8 @@ bool IconCountItem::IsNew(void) {
 
 void IconCountItem::IsNew(bool isnew) {
 	fNew = isnew;
+};
+
+const char *IconCountItem::Path(void) {
+	return fPath.String();
 };
