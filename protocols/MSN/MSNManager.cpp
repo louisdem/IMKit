@@ -278,6 +278,22 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			};
 		} break;
 		
+		case msnmsgRemoveConnection: {
+			MSNConnection *con = NULL;
+			msg->FindPointer("connection", (void **)&con);
+			
+			if (con != NULL) {
+				connectionlist::iterator i = find(fConnections.begin(), fConnections.end(), con);
+				
+				if ( i != fConnections.end() )
+				{ // don't call anything in con, it's already deleted.
+					LOG(kProtocolName, liLow, "Connection removed");
+					
+					fConnections.erase( i );
+				}
+			};
+		} break;
+		
 		case msnAuthRequest: {
 			BString display = msg->FindString("displayname");
 			BString passport = msg->FindString("passport");

@@ -46,6 +46,11 @@ MSNConnection::~MSNConnection(void) {
 	StopReceiver();
 	
 	if (fSock > 0) close(fSock);
+
+	BMessage removeCon(msnmsgRemoveConnection);
+	removeCon.AddPointer("connection", this);
+			
+	fManMsgr.SendMessage(&removeCon);
 };
 
 bool MSNConnection::QuitRequested() {
@@ -820,7 +825,7 @@ status_t MSNConnection::handleMSG( Command * command ) {
 	if ( type )
 	{ // we have a type, handle it.
 		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
-			LOG(kProtocolName, liHigh, "Got a private message [%s] from <%s>\n", http.Content(), command->Param(0) );
+			LOG(kProtocolName, liHigh, "Got a private message [%s] from <%s>", http.Content(), command->Param(0) );
 			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
 		} else
 		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
@@ -828,11 +833,11 @@ status_t MSNConnection::handleMSG( Command * command ) {
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
 		} else
 		if (strcmp(type, "text/x-msmsgsinitialemailnotification; charset=UTF-8") == 0) {
-			LOG(kProtocolName, liHigh, "HotMail number of message in Inbox\n" );
+			LOG(kProtocolName, liHigh, "HotMail number of message in Inbox" );
 			// Ignore this. It just tells us how many emails are in the Hotmail inbox.
 		} else
 		if (strcmp(type, "text/x-msmsgsprofile; charset=UTF-8") == 0) {
-			LOG(kProtocolName, liHigh, "Profile message\n" );
+			LOG(kProtocolName, liHigh, "Profile message" );
 			// Maybe we should process this, it's a profile message.
 		} else
 		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {

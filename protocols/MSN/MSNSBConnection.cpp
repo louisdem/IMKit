@@ -51,7 +51,7 @@ status_t
 MSNSBConnection::handleJOI( Command * cmd )
 {
 	// someone new in chat
-	LOG(kProtocolName, liDebug, "Processing JOI (SB)");
+	LOG(kProtocolName, liDebug, "Processing JOI (SB): %s", cmd->Param(0));
 	
 	fParticipants.push_back( cmd->Param(0) );
 	
@@ -62,7 +62,7 @@ status_t
 MSNSBConnection::handleIRO( Command * cmd )
 {
 	// List of those already in chat
-	LOG(kProtocolName, liDebug, "Processing IRO (SB)");
+	LOG(kProtocolName, liDebug, "Processing IRO (SB): %s", cmd->Param(2));
 
 	fParticipants.push_back( cmd->Param(2) );
 	
@@ -73,7 +73,7 @@ status_t
 MSNSBConnection::handleBYE( Command * cmd )
 {
 	// Someone left the conversation
-	LOG(kProtocolName, liDebug, "Processing BYE (SB)");
+	LOG(kProtocolName, liDebug, "Processing BYE (SB): %s left.", cmd->Param(0));
 	
 	fParticipants.remove( cmd->Param(0) );
 	
@@ -84,7 +84,10 @@ MSNSBConnection::handleBYE( Command * cmd )
 		
 		Send( reply, qsImmediate );
 		
-		BMessenger(this).SendMessage(B_QUIT_REQUESTED);
+		BMessage closeCon(msnmsgCloseConnection);
+		closeCon.AddPointer("connection", this);
+		
+		fManMsgr.SendMessage(&closeCon);
 	}
 	
 	return B_OK;

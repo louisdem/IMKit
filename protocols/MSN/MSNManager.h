@@ -32,7 +32,8 @@ enum {
 	msnmsgGetSocket = 'msn6',
 	msnmsgStatusChanged = 'msn7',
 	msnMessageRecveived = 'msn8',
-	msnAuthRequest = 'msn9'
+	msnAuthRequest = 'msn9',
+	msnmsgRemoveConnection = 'msna'
 };
 
 enum queuestyle {
