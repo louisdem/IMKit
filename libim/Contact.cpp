@@ -9,6 +9,7 @@
 using namespace IM;
 
 Contact::Contact()
+	: fEntry(-1,-1, "")
 {
 }
 
