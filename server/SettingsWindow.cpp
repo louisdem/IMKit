@@ -159,7 +159,9 @@ SettingsWindow::MessageReceived( BMessage * msg )
 			
 			LOG("settings window", DEBUG, "SET_SETTINGS message:",&to_send);
 			
+			to_send.PrintToStream();
 			fMan->SendMessage( &to_send, &reply );
+			reply.PrintToStream();
 			
 			if ( reply.what == IM::ACTION_PERFORMED )
 			{ // settings ok, notify deskbar icon

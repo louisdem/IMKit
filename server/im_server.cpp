@@ -839,6 +839,9 @@ Server::reply_GET_LOADED_PROTOCOLS( BMessage * msg )
 	for ( i = fProtocols.begin(); i != fProtocols.end(); i++ )
 	{
 		reply.AddString("protocol", i->second->GetSignature() );
+		entry_ref ref;
+		get_ref_for_path(fAddOnInfo[i->second].path.String(), &ref);
+		reply.AddRef("ref", &ref);
 	}
 	
 	msg->SendReply( &reply );

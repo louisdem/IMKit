@@ -55,7 +55,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 			int32 im_what=0;
 			
 			msg->FindInt32("im_what",&im_what);
-			
+		
 			switch (im_what) {
 				case IM::REGISTER_CONTACTS:
 				{
@@ -92,7 +92,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 							}
 						};
 					} else
-					if (strcmp(status, ONLINE_TEXT) == 0) {	
+					if (strcmp(status, ONLINE_TEXT) == 0) {
 						fManager->Login("login.oscar.aol.com", (uint16)5190,
 							fScreenName, fPassword);
 					} else
@@ -219,10 +219,19 @@ BMessage AIMProtocol::GetSettingsTemplate() {
 	enc_msg.AddString("valid_value", "Shift-JIS");
 	enc_msg.AddString("valid_value", "EUC");
 	enc_msg.AddString("default", "ISO 8859-1");
-	
+
+	BMessage profile;
+	profile.AddString("name", "profile");
+	profile.AddString("description", "User Profile");
+	profile.AddInt32("type", B_STRING_TYPE);
+	profile.AddString("default", "IM Kit: AIM user");
+	profile.AddBool("multi_line", true);
+
+		
 	main_msg.AddMessage("setting",&user_msg);
 	main_msg.AddMessage("setting",&pass_msg);
 	main_msg.AddMessage("setting",&enc_msg);
+	main_msg.AddMessage("setting", &profile);
 	
 	return main_msg;
 }
@@ -231,12 +240,14 @@ status_t AIMProtocol::UpdateSettings( BMessage & msg ) {
 	const char * screenname = NULL;
 	const char * password = NULL;
 	const char * encoding = NULL;
+	const char *profile = NULL;
 	
 	msg.FindString("screenname", &screenname);
 	password = msg.FindString("password");
 	encoding = msg.FindString("encoding");
+	profile = msg.FindString("profile");
 	
-	if ( screenname == NULL || password == NULL || encoding == NULL )
+	if ( screenname == NULL || password == NULL || encoding == NULL || profile == NULL)
 		// invalid settings, fail
 		return B_ERROR;
 	

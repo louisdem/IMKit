@@ -89,9 +89,13 @@ AIMManager::AIMManager(AIMHandler *handler) {
 	
 	fHandler = handler;
 	fOurNick = NULL;
+	fProfile = NULL;
 };
 
 AIMManager::~AIMManager(void) {
+	free(fOurNick);
+	free(fProfile);
+
 	LogOff();
 }
 
@@ -759,4 +763,27 @@ status_t AIMManager::SetAway(const char *message) {
 
 	fHandler->StatusChanged(fOurNick, AMAN_AWAY);
 
+};
+
+status_t AIMManager::SetProfile(const char *profile) {
+	free(fProfile);
+	fProfile = NULL;
+	if (profile != NULL) fProfile = strdup(profile);
+
+	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
+		Flap *profile = new Flap(SNAC_DATA);
+		profile->AddSNAC(new SNAC(LOCATION, SET_USER_INFORMATION, 0x00, 0x00,
+			0x00000000));
+		
+		if (fProfile != NULL) {
+			profile->AddTLV(new TLV(0x0001, "text/aolrtf; charset=\"us-ascii\"",
+				strlen("text/aolrtf; charset=\"us-ascii\"")));
+			profile->AddTLV(new TLV(0x0002, fProfile, strlen(fProfile)));
+		};
+		
+		Send(profile); 
+	};
+//			if (fConnectionState == AMAN_AWAY) {
+				
+	return B_OK;
 };

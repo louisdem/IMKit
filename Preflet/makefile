@@ -7,14 +7,14 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= AIM
+NAME= preflet
 
 # specify the type of binary
 #	APP:	Application
 #	SHARED:	Shared library or add-on
 #	STATIC:	Static library archive
 #	DRIVER: Kernel Driver
-TYPE= SHARED
+TYPE= APP
 
 #	add support for new Pe and Eddie features
 #	to fill in generic makefile
@@ -30,11 +30,11 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= AIM.cpp FLAP.cpp TLV.cpp AIMManager.cpp SNAC.cpp AIMConnection.cpp
+SRCS=  main.cpp PApplication.cpp PWindow.cpp IconTextItem.cpp  ../common/IMKitUtilities.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS= aim.rsrc
+RSRCS= preflet.rsrc
 
 # @<-src@ 
 #%}
@@ -51,7 +51,15 @@ RSRCS= aim.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im stdc++.r4 _APP_
+LIBS= be translation im stdc++.r4 textencoding
+
+# Zeta needs find_directory_r() which is in libzeta, do a check
+ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
+# Is a BeOS build
+else
+# Zeta build
+LIBS += zeta
+endif
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -59,7 +67,7 @@ LIBS= be im stdc++.r4 _APP_
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= /boot/home/config/lib ../../build
+LIBPATHS= /boot/home/config/lib
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
@@ -96,10 +104,10 @@ SYMBOLS = TRUE
 #	specify debug settings
 #	if TRUE will allow application to be run from a source-level
 #	debugger.  Note that this will disable all optimzation.
-DEBUGGER = TRUE 
+DEBUGGER = 
 
 #	specify additional compiler flags for all files
-#COMPILER_FLAGS = -g -fcheck-memory-usage -D_NO_INLINE_ASM=1
+COMPILER_FLAGS =
 
 #	specify additional linker flags
 LINKER_FLAGS =
@@ -143,6 +151,6 @@ ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot
 	DEFINES += BONE
 endif
 
-INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
+INSTALL_DIR= /boot/home/config/servers
 
 include $(BUILDHOME)/etc/makefile-engine.IMkit
