@@ -1474,43 +1474,59 @@ Server::SetAllOffline()
 void
 Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 {
-	BVolumeRoster 	vroster;
-	BVolume			boot_volume;
-	
-	vroster.GetBootVolume(&boot_volume);
-	
+	BVolumeRoster vroster;
+	BVolume	vol;
 	Contact result;
-	
 	BQuery query;
+	list <entry_ref> refs;
+	char volName[B_FILE_NAME_LENGTH];
+
+	vroster.Rewind();
+
+	while (vroster.GetNextVolume(&vol) == B_OK) {
+		if ((vol.InitCheck() == B_OK) && (vol.KnowsQuery() == true)) {
+			vol.GetName(volName);
+			LOG("im_server", LOW, "Querying for Contacts on %s", volName);
+			query.PushAttr("IM:connections");
+			query.PushString(protocol);
+			query.PushOp(B_CONTAINS);
 	
-	char pred[256];
+			query.SetVolume(&vol);
+			
+			query.Fetch();
+			
+			entry_ref entry;
+			
+			while (query.GetNextRef(&entry) == B_OK) {
+				refs.push_back(entry);
+			};
+			
+			query.Clear();
+		};
+	};
 	
-	sprintf(pred,"IM:connections=*%s*",protocol);
+	refs.sort();
+	refs.unique();
 	
-	query.SetPredicate( pred );
-	query.SetVolume( &boot_volume );
-	query.Fetch();
-	
-	entry_ref entry;
-	
-	while ( query.GetNextRef(&entry) == B_OK )
-	{
-		Contact c(&entry);
+	list <entry_ref>::iterator iter;
+	for (iter = refs.begin(); iter != refs.end(); iter++) {
+		Contact c(*iter);
 		char conn[256];
-		char * id = NULL;
+		char *id = NULL;
 		
-		if ( c.FindConnection(protocol,conn) == B_OK )
-		{
-			for ( int i=0; conn[i]; i++ )
-				if ( conn[i] == ':' )
-				{
+		if (c.FindConnection(protocol, conn) == B_OK) {
+			for (int i = 0; conn[i]; i++) {
+				if (conn[i] == ':') {
 					id = &conn[i+1];
 					break;
-				}
-			
-			msg->AddString("id",id);
-		}
-	}
+				};
+			};
+
+			msg->AddString("id", id);
+		};
+	};
+
+	refs.clear();
 }
 
 BMessage
