@@ -18,7 +18,7 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details,
 	fFilter(NULL),
 	fProgress(prog),
 	fDetails(details) {
-
+	
 	if ( progID ) fProgressID = progID;
 	
 	BMessage iconMsg;
@@ -28,7 +28,7 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details,
 		fBitmap = new BBitmap(BRect(0, 0, 15, 15), B_RGBA32);
 		int32 *bits = (int32 *)fBitmap->Bits();
 		
-		for (int32 i = 0; i < fBitmap->BitsLength(); i++) {
+		for (int32 i = 0; i < fBitmap->BitsLength()/4; i++) {
 			bits[i] = B_TRANSPARENT_MAGIC_RGBA32;
 		};
 	};
@@ -158,6 +158,8 @@ void InfoView::Draw(BRect drawBounds) {
 		SetHighColor(0, 0, 0);
 	}
 	
+	SetDrawingMode( B_OP_ALPHA );
+	
 	DrawBitmap(fBitmap,
 		BPoint(
 			kEdgePadding,
@@ -171,8 +173,6 @@ void InfoView::Draw(BRect drawBounds) {
 	font_height fh;
 	font.GetHeight( &fh );
 	float line_height = fh.ascent + fh.descent + fh.leading;
-	
-	SetDrawingMode( B_OP_ALPHA );
 	
 	int y = 1;
 	for (list<BString>::iterator i = fLines.begin(); i !=fLines.end(); i++) {
