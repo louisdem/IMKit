@@ -96,7 +96,7 @@ class ChatWindow : public BWindow
 		BMessage		fWindowSettings;
 		Theme			*fTheme;
 		
-		BView			*fDock;
+//		BView			*fDock;
 };
 
 #endif

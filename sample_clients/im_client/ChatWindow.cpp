@@ -53,7 +53,8 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	BRect textRect = Bounds();
 	BRect inputRect = Bounds();
 	BRect dockRect = Bounds();
-	
+
+/*	
 	dockRect.bottom = 20;
 	fDock = new BView(dockRect, "Dock", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
@@ -74,9 +75,9 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	fDock->DrawBitmap(infoIcon);
 	fDock->DrawString("Hi?");
 	fDock->Flush();
-
+*/
 	textRect.InsetBy(2,2);
-	textRect.top = 20;
+//	textRect.top = 20;
 	textRect.bottom = inputDivider.y;
 	textRect.right -= B_V_SCROLL_BAR_WIDTH;
 
@@ -234,12 +235,12 @@ ChatWindow::~ChatWindow()
 		fResize->RemoveSelf();
 		delete fResize;
 	};
-
+/*
 	if (fDock) {
 		fDock->RemoveSelf();
 		delete fDock;
 	};
-
+*/
 	fMan->Lock();
 	fMan->Quit();
 }
