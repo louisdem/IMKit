@@ -1,5 +1,7 @@
 #include "InfoView.h"
+#include "IconUtils.h"
 
+#include <TranslationUtils.h>
 #include <StringView.h>
 #include <Window.h>
 #include <Messenger.h>
@@ -17,14 +19,37 @@ InfoView::InfoView( info_type type, const char * text, BMessage *details )
 	if (fDetails->FindMessage("icon", &iconMsg) == B_OK) {
 		fBitmap = new BBitmap(&iconMsg);
 	} else {
-		/*fBitmap = new BBitmap(BRect(0, 0, 15, 15), B_RGBA32);
-		int32 *bits = (int32 *)fBitmap->Bits();
-		
-		for (int32 i = 0; i < fBitmap->BitsLength()/4; i++) {
-			bits[i] = 0xff8888ff;//B_TRANSPARENT_MAGIC_RGBA32;
-		};
-		*/
 		fBitmap = NULL;
+		
+		int32 iconType;
+		if ( fDetails->FindInt32("iconType", &iconType) != B_OK )
+			iconType = Attribute;
+		
+		entry_ref ref;
+		
+		if ( fDetails->FindRef("iconRef",&ref) == B_OK )
+		{ // It's a ref.
+			BPath path(&ref);
+			
+			switch ( iconType )
+			{
+				case Attribute: {
+					fBitmap = ReadNodeIcon(path.Path(),16);
+				}	break;
+				case Contents: {
+					// ye ol' "create a bitmap from contens of file"
+					fBitmap = BTranslationUtils::GetBitmapFile(path.Path());
+					if ( !fBitmap ) {
+						printf("Error reading bitmap\n");
+					} else {
+						// we should re-scale the bitmap to our preferred size here, I suppose
+					}
+				}	break;
+				default:
+					// Eek! Invalid icon type!
+					break;
+			}
+		}
 	};
 	
 	const char * messageID = NULL;
