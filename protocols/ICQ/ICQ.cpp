@@ -51,6 +51,7 @@
 #include "ICQ.h"
 
 #include <libim/Constants.h>
+#include <libim/Helpers.h>
 
 #include <UTF8.h>
 
@@ -170,7 +171,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
 
   } else
   {
-  	printf("Some other socket event that's not handled\n");
+  	LOG("Some other socket event that's not handled\n");
   	exit_thread(1);
   }
 }
@@ -385,7 +386,7 @@ SimpleClient::setEncoding( int32 encoding )
 int32
 client_thread( void * _data )
 {
-	printf("ICQ client: running\n");
+	LOG("ICQ client: running\n");
 
 	SimpleClient * client = (SimpleClient*)_data;
 	
@@ -434,7 +435,7 @@ ICQProtocol::Shutdown()
 	
 	kill_thread( find_thread(ICQ_THREAD_NAME) );
 	
-	printf("ICQProtocol::Shutdown() done\n");
+	LOG("ICQProtocol::Shutdown() done\n");
 	
 	return B_OK;
 }
@@ -478,7 +479,7 @@ ICQProtocol::Process( BMessage * msg )
 			
 					if ( find_thread(ICQ_THREAD_NAME) == B_NAME_NOT_FOUND )
 					{ // icq thread not running, start it
-						printf("Starting thread 'ICQ client'\n");
+						LOG("Starting thread 'ICQ client'\n");
 						
 						fThread = spawn_thread(
 							client_thread,

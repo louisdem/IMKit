@@ -11,16 +11,36 @@
 #include <VolumeRoster.h>
 #include <Volume.h>
 #include <UTF8.h>
-#include "Helpers.h"
+#include <libim/Helpers.h>
 
 using namespace IM;
+
+
+void
+LOG( const char * message, const BMessage * msg )
+{
+	char timestr[64];
+	time_t now = time(NULL);
+	strftime(timestr,sizeof(timestr),"%F %H:%M", localtime(&now) );
+	
+	printf("%s: %s\n", timestr, message);
+	if ( msg )
+	{
+		printf("BMessage for last message:\n");
+		msg->PrintToStream();
+	}
+}
+
+void
+LOG( const char * message )
+{
+	LOG(message,NULL);
+}
 
 void
 _ERROR( const char * error, BMessage * msg )
 {
-	printf("%s\n", error);
-	if ( msg )
-		msg->PrintToStream();
+	LOG(error,msg);
 }
 
 void

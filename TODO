@@ -2,7 +2,7 @@ Fixes
 
 * SET_STATUS - If no protocol is provided, send to all loaded protocols.
 * Strangeness when getting the server based contact list. Contact info messages duplicated?
-* Getting name, nick etc doesn't always work, it seems. Look into this.
+* Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
 * Add status changes to logger?
 * Smart protocol selection, if contact is online on any service, use that etc
 * Put something like & in the title of chat windows if they receive a message when not active

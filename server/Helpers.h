@@ -21,4 +21,7 @@ class Tracer
 		};
 };
 
+extern void LOG( const char * );
+extern void LOG( const char *, const BMessage * );
+
 #endif
