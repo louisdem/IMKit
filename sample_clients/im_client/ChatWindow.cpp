@@ -1,5 +1,7 @@
 #include "ChatWindow.h"
 
+#include "URLTextView.h"
+
 const char *kImNewMessageSound = "IM Message Received";
 
 ChatWindow::ChatWindow( entry_ref & ref )
@@ -17,17 +19,33 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	BPoint inputDivider(0, 150);
 
 	if (LoadSettings() != B_OK) {
-		fWindowSettings.AddRect("windowrect", BRect(100, 100, 400, 400));
-		fWindowSettings.AddPoint("inputdivider", BPoint(0, 300));
+//		fWindowSettings.AddRect("windowrect", windowRect);
+//		fWindowSettings.AddPoint("inputdivider", inputDivider);
 	} else {
+		bool was_ok = true;
+		
 		if (fWindowSettings.FindRect("windowrect", &windowRect) != B_OK) {
-			windowRect = BRect(100, 100, 400, 300);
-		};
+			was_ok = false;
+		}
 		if (fWindowSettings.FindPoint("inputdivider", &inputDivider) != B_OK) {
-			inputDivider = BPoint(0, 150);
-		};
-	};
-
+			was_ok = false;
+		}
+		
+		if ( !was_ok )
+		{
+			windowRect = BRect(100, 100, 400, 300);
+			inputDivider = BPoint(0, 200);
+		}
+	}
+	
+	if ( inputDivider.y > windowRect.Height() - 50 )
+	{
+		LOG("sample_client", LOW, "Insane divider, fixed.");
+		inputDivider.y = windowRect.Height() - 50;
+	}
+	
+	windowRect.PrintToStream();
+	inputDivider.PrintToStream();
 	
 	MoveTo(windowRect.left, windowRect.top);
 	ResizeTo(windowRect.Width(), windowRect.Height());
@@ -50,15 +68,12 @@ ChatWindow::ChatWindow( entry_ref & ref )
 
 	BRect inputTextRect = inputRect;
 	inputTextRect.OffsetTo(0, 0);
-
+	
 	fInput = new BTextView(
 		inputRect, "input", inputTextRect,
 		B_FOLLOW_ALL,
 		B_WILL_DRAW
 	);
-	fInput->SetWordWrap(true);
-	fInput->SetStylable(false);
-	fInput->MakeSelectable(true);
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fInput->SetViewUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
@@ -79,6 +94,10 @@ ChatWindow::ChatWindow( entry_ref & ref )
 
 	AddChild(fInputScroll);	
 
+	fInput->SetWordWrap(true);
+	fInput->SetStylable(false);
+	fInput->MakeSelectable(true);
+	
 	BRect resizeRect = Bounds();
 	resizeRect.top = inputDivider.y + 1;
 	resizeRect.bottom = inputDivider.y + 4;
@@ -156,7 +175,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	);
 	AddChild(fTextScroll);
 
-fText->Show();
+	fText->Show();
 
 	fInput->MakeFocus();
 
@@ -218,7 +237,7 @@ ChatWindow::SaveSettings(void) {
 	};
 	
 	BRect resizeRect = fResize->Frame();
-	BPoint resize(0, resizeRect.top);
+	BPoint resize(0, resizeRect.top-1);
 	
 	if (fWindowSettings.ReplacePoint("inputdivider", resize) != B_OK) {
 		fWindowSettings.AddPoint("inputdivider", resize);
@@ -241,6 +260,8 @@ ChatWindow::SaveSettings(void) {
 		};	
 	};
 
+	fWindowSettings.PrintToStream();
+
 	free(buffer);
 }
 
@@ -258,6 +279,7 @@ ChatWindow::LoadSettings(void) {
 			buffer, (size_t)info.size) == info.size) {
 			
 			if (fWindowSettings.Unflatten(buffer) == B_OK) {
+				fWindowSettings.PrintToStream();
 				return B_OK;
 			} else {
 				LOG("sample_client", LOW, "Could not unflatten settings messsage");
@@ -273,6 +295,8 @@ ChatWindow::LoadSettings(void) {
 		LOG("sample_client", LOW, "Could not load chat settings");
 		return B_ERROR;
 	};
+	
+	fWindowSettings.PrintToStream();
 	
 	return B_OK;
 }
@@ -455,7 +479,7 @@ ChatWindow::FrameResized( float w, float h )
 //	fText->SetTextRect( fText->Bounds() );
 //	fText->ScrollToSelection();
 	
-//	fInput->SetTextRect(fInput->Bounds());
+	fInput->SetTextRect(fInput->Bounds());
 //	fInput->ScrollToSelection();
 }
 

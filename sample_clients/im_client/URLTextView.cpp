@@ -22,6 +22,9 @@ is_whitespace( const char c )
 void
 URLTextView::MouseUp( BPoint where )
 {
+	BTextView::MouseUp(where);
+	return;
+
 	int32 sel_start, sel_end;
 	
 	GetSelection( &sel_start, &sel_end );
@@ -81,6 +84,13 @@ URLTextView::MouseUp( BPoint where )
 	delete[] word;
 	
 	BTextView::MouseUp(where);
+}
+
+void
+URLTextView::FrameResized( float w, float h )
+{
+	printf("Frame event.\n");
+	SetTextRect( Bounds() );
 }
 
 void

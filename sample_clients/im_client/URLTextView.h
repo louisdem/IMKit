@@ -14,6 +14,8 @@ class URLTextView : public BTextView
 		
 		virtual void MouseUp( BPoint );
 		
+		virtual void FrameResized( float w, float h );
+		
 		virtual void MakeFocus( bool );
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 		virtual status_t UISettingsChanged(const BMessage *changes, uint32 flags);
