@@ -6,6 +6,14 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+IM_HAVE_OPENSSL=
+ifneq ($(wildcard /boot/develop/headers/openssl/ssl.h),)
+	IM_HAVE_OPENSSL:=1
+endif
+ifneq ($(wildcard /boot/home/config/include/openssl/ssl.h),)
+	IM_HAVE_OPENSSL:=1
+endif
+
 ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
 
 .PHONY: default
@@ -14,6 +22,14 @@ default:
 
 else
 
+ifeq ($(IM_HAVE_OPENSSL),)
+
+.PHONY: default
+default:
+	@echo The AIM add-on requires OpenSSL. Ignoring AIM add-on.
+
+
+else 
 # specify the name of the binary
 NAME= AIM
 SVG_ICON=AIM.svg
@@ -161,5 +177,7 @@ $(TARGET): _APP_
 
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
+
+endif   #OpenSSL check.
 
 endif   #Bone check.

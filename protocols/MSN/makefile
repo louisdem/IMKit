@@ -6,6 +6,14 @@
 
 ## Application Specific Settings ---------------------------------------------
 
+IM_HAVE_OPENSSL=
+ifneq ($(wildcard /boot/develop/headers/openssl/ssl.h),)
+	IM_HAVE_OPENSSL:=1
+endif
+ifneq ($(wildcard /boot/home/config/include/openssl/ssl.h),)
+	IM_HAVE_OPENSSL:=1
+endif
+
 ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
 
 .PHONY: default
@@ -14,7 +22,7 @@ default:
 
 else
 
-ifeq ($(wildcard /boot/develop/headers/openssl/ssl.h),)
+ifeq ($(IM_HAVE_OPENSSL),)
 
 .PHONY: default
 default:
