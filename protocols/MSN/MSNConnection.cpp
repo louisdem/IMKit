@@ -3,6 +3,7 @@
 #include <UTF8.h>
 
 #include <DataIO.h>
+#include <sys/select.h>
 
 const char *kClientVer = "0x0409 win 4.10 i386 MSNMSGR 6.0.0602 MSMSGS";
 const char *kProtocolsVers = "MSNP10 MSNP9 CVR0";

@@ -72,9 +72,10 @@ Server::Server()
 			dir.CreateDirectory("im_kit/icons", &dir);
 			dir.CreateDirectory("im_kit/add-ons", &dir);
 			dir.CreateDirectory("im_kit/add-ons/protocols", &dir);
+			dir.CreateDirectory("im_kit/clients", &dir);
 		}
 	}
-	
+
 	InitSettings();
 	
 	LoadAddons();

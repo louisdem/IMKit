@@ -28,10 +28,13 @@ clean:
 	done
 
 symlinks:
-	ln -s "`pwd`/build/libim.so" /boot/home/config/lib
+	ln -sf "`pwd`/build/lib/libim.so" /boot/home/config/lib
 	mkdir -p /boot/home/config/servers
-	ln -s "`pwd`/build/im_server" /boot/home/config/servers
-	ln -s "`pwd`/build/protocols" /boot/home/config/add-ons/imkit
+	ln -sf "`pwd`/build/im_server" /boot/home/config/servers
+	ln -sf "`pwd`/build/protocols" /boot/home/config/add-ons/im_kit
+	ln -sf "`pwd`/build/tracker-addons/IM_Merge_contacts" /boot/home/config/add-ons/Tracker
+	ln -sf "`pwd`/build/tracker-addons/IM_Start_conversation" /boot/home/config/add-ons/Tracker
+	ln -sf "`pwd`/build/settings/InstantMessaging" /boot/home/config/be/Preferences
 	
 dist: all
 	mkdir -p "$(DIST)"

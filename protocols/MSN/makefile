@@ -149,4 +149,4 @@ endif
 
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
 
-include $(BUILDHOME)/etc/makefile-engine.IMkit
+include $(TOPDIR)/makefile-engine.IMkit
