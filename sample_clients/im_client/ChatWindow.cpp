@@ -19,13 +19,6 @@ BubbleHelper gBubbles;
 const char *kImNewMessageSound = "IM Message Received";
 const float kPadding = 2.0;
 
-/*const char *kWidestButtonText = "Show Info";
-
-float kButtonWidth = 50;
-float kButtonHeight = 50;
-float kButtonDockHeight = 50;
-*/
-
 /*
 #include <libbsvg/SVGView.h>
 
@@ -50,6 +43,7 @@ render_SVG( const char * path, float width, float height = -1.0 )
 	view->SetScaleToFit( true );
 	view->SetFitContent( true );
 	view->SetViewColor( B_TRANSPARENT_COLOR );
+	view->SetSampleSize(3);
 	
 	bmp->AddChild( view );
 	
@@ -64,6 +58,7 @@ render_SVG( const char * path, float width, float height = -1.0 )
 		return NULL;
 	}
 	
+	view->FrameResized( view->Bounds().Width(), view->Bounds().Height() );
 	view->Draw( view->Bounds() );
 	view->Sync();
 	bmp->Unlock();
@@ -117,15 +112,6 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	be_plain_font->GetHeight(&height);
 	fFontHeight = height.ascent + height.descent + height.leading;
 	
-/*	kButtonWidth = iconBarSize;
-	float temp = be_plain_font->StringWidth(kWidestButtonText);
-	
-	if (temp > kButtonWidth) kButtonWidth = temp;
-	kButtonWidth += kPadding * 2;
-	
-	kButtonHeight = iconBarSize + fFontHeight + (kPadding * 3);
-	kButtonDockHeight = kButtonHeight + (kPadding * 3);
-*/	
 	// default window size
 	BRect windowRect(100, 100, 400, 300);
 	BPoint inputDivider(0, 150);
@@ -165,7 +151,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	BRect dockRect = Bounds();
 
 	dockRect.bottom = iconBarSize+12;
-	fDock = new IconBar(dockRect);//, "Dock", B_FOLLOW_LEFT_RIGHT, 0);
+	fDock = new IconBar(dockRect);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -232,6 +218,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	iconPath.Append("Block");
 	
 	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
+	//icon = render_SVG("/boot/home/config/settings/im_kit/svg/blocked.svg", iconBarSize );
 	btn = new ImageButton(
 		buttonRect,
 		"email button",
