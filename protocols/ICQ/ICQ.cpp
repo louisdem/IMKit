@@ -256,7 +256,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
   if (c->getType() == MessageEvent::Normal) {
 
     NormalMessageEvent *msg = static_cast<NormalMessageEvent*>(c);
-	LOG("ICQ: Message received: %s from %ld", msg->getMessage(), msg->getSenderUIN());
+	LOG("ICQ: Message received: %s from %ld", msg->getMessage().c_str(), msg->getSenderUIN());
 	
 	char uin_string[100];
 	

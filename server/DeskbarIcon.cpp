@@ -126,14 +126,25 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 	switch ( msg->what )
 	{
 		case 'flsh':
+		{
+			BMessenger msgr;
+			if ( msg->FindMessenger("messenger", &msgr) == B_OK )
+			{
+				fMsgrs.push_back( msgr );
+			}
 			fFlashCount++;
 			fBlink = 0;
 			Pulse();
-			break;
+		}	break;
 		case 'stop':
+		{	BMessenger msgr;
+			if ( msg->FindMessenger("messenger", &msgr) == B_OK )
+			{
+				fMsgrs.remove( msgr );
+			}
 			fFlashCount--;
 			Pulse();
-			break;
+		}	break;
 		
 		case SET_ONLINE:
 		case SET_AWAY:
