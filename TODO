@@ -12,8 +12,11 @@ Fixes
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * add support for setting the verbosity level on startup, now defaults to DEBUG which is a bit chatty
+* long message bug in LOG(), make buffer dunamic somehow?
 
 New features
+
+Status notification client, like in MSN (and BeMSN! :)
 
 More attributes for info like timezone, location, etc?
 
