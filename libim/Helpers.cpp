@@ -7,7 +7,7 @@
 #include <Node.h>
 #include <Entry.h>
 
-log_importance g_verbosity_level = liDebug;
+log_importance g_verbosity_level = liHigh;
 
 #if 0
 // Use this to add unlimited buffer size to LOG()
@@ -63,6 +63,45 @@ check_for_tty()
 	}
 }
 
+bool _has_loaded_log_level = false;
+
+void
+load_log_level()
+{
+	if ( _has_loaded_log_level )
+		return;
+	
+	_has_loaded_log_level = true;
+	
+	BMessage settings;
+	if ( im_load_client_settings("im_server", &settings) != B_OK )
+	{
+		printf("load_log_level: im_server settings nog found\n");
+		return;
+	}
+	
+	const char * level=NULL;
+	if ( settings.FindString("log_level", &level) == B_OK )
+	{
+		// check for the various levels..
+		if ( strcmp(level, "Debug") == 0 ) {
+			g_verbosity_level = liDebug;
+		} else
+		if ( strcmp(level, "Low") == 0 ) {
+			g_verbosity_level = liLow;
+		} else
+		if ( strcmp(level, "Medium") == 0 ) {
+			g_verbosity_level = liMedium;
+		} else
+		if ( strcmp(level, "High") == 0 ) {
+			g_verbosity_level = liHigh;
+		} else
+		if ( strcmp(level, "Quiet") == 0 ) {
+			g_verbosity_level = liQuiet;
+		} else
+			g_verbosity_level = liHigh;
+	}
+}
 
 // Note: if you change something in this LOG,
 // make sure to change the LOG below as the code
@@ -72,6 +111,8 @@ void LOG(const char * module, log_importance level, const char *message, const B
 	va_start(varg, msg);
 	char buffer[2048];
 	vsprintf(buffer, message, varg);
+	
+	load_log_level();
 	
 	if ( level < g_verbosity_level )
 		return;
@@ -97,7 +138,9 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 	va_start(varg, message);
 	char buffer[2048];
 	vsprintf(buffer, message, varg);
-
+	
+	load_log_level();
+	
 	if ( level < g_verbosity_level )
 		return;
 	

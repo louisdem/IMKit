@@ -1544,6 +1544,19 @@ Server::GenerateSettingsTemplate()
 		
 	main_msg.AddMessage("setting", &auto_start);
 	
+	BMessage log_level;
+	log_level.AddString("name", "log_level");
+	log_level.AddString("description", "Debug log threshold");
+	log_level.AddInt32("type", B_STRING_TYPE );
+	log_level.AddString("valid_value", "Debug");
+	log_level.AddString("valid_value", "Low");
+	log_level.AddString("valid_value", "Medium");
+	log_level.AddString("valid_value", "High");
+	log_level.AddString("valid_value", "Quiet");
+	log_level.AddBool("default", "Debug" );
+	
+	main_msg.AddMessage("setting", &log_level);
+	
 	BMessage default_away;
 	default_away.AddString("name", "default_away");
 	default_away.AddString("description", "Away Message");
@@ -1972,11 +1985,14 @@ Server::InitSettings()
 	// Make sure default settings are there
 	BMessage settings;
 	bool temp;
+	const char * str;
 	im_load_client_settings("im_server", &settings);
 	if ( !settings.FindString("app_sig") )
 		settings.AddString("app_sig", IM_SERVER_SIG);
 	if ( settings.FindBool("auto_start", &temp) != B_OK )
 		settings.AddBool("auto_start", false );
+	if ( settings.FindString("log_level", &str) != B_OK )
+		settings.AddString("log_level", "High" );
 	im_save_client_settings("im_server", &settings);
 	// done with template and settings.
 }
