@@ -2,6 +2,7 @@
 #define IM_PROTOCOL_H
 
 #include <OS.h>
+#include <BMessage.h>	
 
 namespace IM {
 
