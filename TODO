@@ -13,6 +13,8 @@ Fixes
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed. Not needed?
 * Add "Send" button to client, for those poor souls who don't know that cmd-enter == send
 * Add option to client - multi/single line edit
+* Don't use BAlert in Merge contacts, it doesn't play well with long filenames
+* Change Merge contacts, or make a new one, so it can be used from the Terminal
 
 New features
 
