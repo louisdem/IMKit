@@ -34,7 +34,7 @@ SRCS= Select.cpp ICQ.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS=
+RSRCS= icq.rsrc
 
 # @<-src@ 
 #%}

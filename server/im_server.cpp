@@ -857,7 +857,7 @@ Server::GetSettings( const char * protocol_sig, BMessage * settings )
 	
 	if ( num_read <= 0 )
 	{
-		_ERROR("ERROR: GET_SETTINGS: Error reading settings");
+		LOG("AIM", liLow, "GET_SETTINGS: Error reading settings (reverting to default settings)");
 		return B_ERROR;
 	}
 	
@@ -976,6 +976,7 @@ Server::FindBestProtocol( Contact & contact )
 		{
 			if ( fStatus[connection] == AWAY_TEXT || fStatus[connection] == ONLINE_TEXT )
 			{
+				LOG("im_server", liDebug, "Using preferred protocol %s", protocol.c_str() );
 				return protocol;
 			}
 		}
@@ -999,6 +1000,10 @@ Server::FindBestProtocol( Contact & contact )
 	if ( protocol == "" )
 	{ // no online protocol found, look for one capable of offline messaging
 		protocol = "ICQ";
+		LOG("im_server", liDebug, "Using offline protocol %s", protocol.c_str() );
+	} else
+	{
+		LOG("im_server", liDebug, "Using online protocol %s", protocol.c_str() );
 	}
 	
 	return protocol;
@@ -1024,22 +1029,6 @@ Server::MessageToProtocols( BMessage * msg )
 		
 		if ( msg->FindString("protocol") == NULL )
 		{ // no protocol specified, figure one out
-			/*char connection[255];
-			
-			if ( contact.ConnectionAt(0,connection) != B_OK )
-			{ // trying to send to a Contact with no connections
-				_SEND_ERROR("Target contact has no connections", msg);
-				return;
-			}
-			
-			// truncate id part of protocol:id pair to get protocol
-			for ( int i=0; connection[i]; i++ )
-				if ( connection[i] == ':' )
-				{
-					connection[i] = 0;
-					break;
-				}
-			*/
 			msg->AddString("protocol", FindBestProtocol(contact).c_str() );
 		} // done chosing protocol
 		

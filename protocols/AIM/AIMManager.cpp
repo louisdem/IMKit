@@ -2,6 +2,7 @@
 
 #include <libim/Protocol.h>
 #include <libim/Constants.h>
+#include <libim/Helpers.h>
 #include <UTF8.h>
 
 #include "AIMHandler.h"
@@ -10,6 +11,11 @@ const char kThreadName[] = "IMKit: AIM Protocol";
 const char kProtocolName[] = "AIM";
 
 void PrintHex(const unsigned char* buf, size_t size) {
+	if ( g_verbosity_level != liDebug ) {
+		// only print this stuff in debug mode
+		return;
+	}
+	
 	int i = 0;
 	int j = 0;
 	int breakpoint = 0;
@@ -148,7 +154,7 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 	const char *password) {
 	
 	if ((username == NULL) || (password == NULL)) {
-		LOG("AIM", liDebug, "AIMManager::Login: username or password not set");
+		LOG("AIM", liHigh, "AIMManager::Login: username or password not set");
 		return B_ERROR;
 	}
 	
@@ -316,7 +322,7 @@ printf("Is icon: %i\n", icon);
 				case ICBM: {
 					switch (subtype) {
 						case ERROR: {
-							LOG(kProtocolName, liMedium, "GOT SERVER ERROR 0x%x "
+							LOG(kProtocolName, liHigh, "GOT SERVER ERROR 0x%x "
 								"0x%x", data[++offset], data[++offset]);
 						} break;
 						
@@ -357,7 +363,7 @@ printf("Is icon: %i\n", icon);
 									offset += 2; // hack, hack. slaad should look at this :9
 									uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
 									offset += 2;
-									LOG("AIM", liHigh, "AIMManager: PLAIN_TEXT "
+									LOG("AIM", liLow, "AIMManager: PLAIN_TEXT "
 										"message, content length: %i (0x%0.4X)", contentLen-offset, contentLen-offset);
 									
 									PrintHex(data, bytes );
@@ -375,13 +381,6 @@ printf("Is icon: %i\n", icon);
 												LOG("AIM", liDebug, "Ignoring Client Features, %ld bytes", tlvlen);
 											} break;
 											case 0x0101: { // Message Len
-												
-												/*if ( data[offset+1] == 1 )
-												{ // message from BeMSN
-													offset++;
-													tlvlen = (data[++offset] << 8) + data[++offset];
-												} else												
-												*/	
 												tlvlen = (data[++offset] << 8) + data[++offset];
 												
 												if ( tlvlen == 0 )
@@ -397,7 +396,7 @@ printf("Is icon: %i\n", icon);
 												
 												remove_html( msg );
 												
-												LOG("AIM", liLow, "AIMManager: Got message from %s: \"%s\"",
+												LOG("AIM", liHigh, "AIMManager: Got message from %s: \"%s\"",
 													nick, msg);
 								
 												fHandler->MessageFromUser(nick, msg);
@@ -489,7 +488,7 @@ printf("Is icon: %i\n", icon);
 							strncpy(server, value, colon - value);
 							server[(colon - value)] = '\0';
 							
-							LOG("AIM", liLow, "Need to reconnect to: %s:%i", server, port);
+							LOG("AIM", liHigh, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {

@@ -56,11 +56,11 @@ IM_DeskbarIcon::IM_DeskbarIcon( BMessage * archive )
 
 IM_DeskbarIcon::~IM_DeskbarIcon()
 {
+	delete fTip;
 	delete fAwayIcon;
 	delete fOnlineIcon;
 	delete fOfflineIcon;
 	delete fFlashIcon;
-	delete fTip;
 	delete fMenu;
 }
 
@@ -257,15 +257,6 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		case OPEN_SETTINGS:
 		{
 			be_roster->Launch("application/x-vnd.beclan.preflet");
-			/*if ( !fSettingsWindow )
-			{ // create new settings window
-				fSettingsWindow = new SettingsWindow( BMessenger(this) );
-				fSettingsWindow->Show();
-			} else
-			{ // show existing settings window
-				fSettingsWindow->SetWorkspaces( 1 << current_workspace() );
-				fSettingsWindow->Activate();
-			}*/
 		}	break;
 		
 		case IM::SETTINGS:
@@ -336,10 +327,10 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 			}
 			
 			fDirtyStatus = false;
+
+			fTip->SetHelp(Parent(), (char *)fTipText.String());
+			fTip->EnableHelp();
 		};
-	
-		fTip->SetHelp(Parent(), (char *)fTipText.String());
-		fTip->EnableHelp();
 	};		
 };
 

@@ -14,8 +14,7 @@ Things to fix
 * Change Merge contacts, or make a new one, so it can be used from the Terminal
 * Client: not scrolling correctly in conversation when opening a conversation with a history
 * When running Zeta: reused message from sending message is corrupted somewhere along the line. Fixed?
-* Crash in BubbleHelper, ...( FindView( WindowAt() ) ). Remove Bubblehelper on quit?
-* Only warn about not being able to read settingsfiles when there's cause for concern
+* Crash in BubbleHelper, ...( FindView( WindowAt() ) ). Does this still happen?
 * Add check for Blocked everywhere we change status: status update, connect, disconnect, etc. Fixed?
 * Alt-C in client doesn't work
 * Option to disable logging (im_logger and LOG() output)

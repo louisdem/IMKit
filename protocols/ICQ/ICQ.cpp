@@ -146,7 +146,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     AddSocketHandleEvent *cev = dynamic_cast<AddSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 	
-	LOG("icq", liMedium, "ICQ: connecting socket %ld", fd);
+	LOG("icq", liLow, "ICQ: connecting socket %ld", fd);
 
     // register this socket with our Select object
     m_sockets[fd] =
@@ -167,7 +167,7 @@ void SimpleClient::socket_cb(SocketEvent *ev) {
     RemoveSocketHandleEvent *cev = dynamic_cast<RemoveSocketHandleEvent*>(ev);
     int fd = cev->getSocketHandle();
 
-    LOG("icq", liMedium, "ICQ: disconnecting socket %ld", fd);
+    LOG("icq", liLow, "ICQ: disconnecting socket %ld", fd);
     
     if (m_sockets.count(fd) == 0) {
       LOG("icq", liHigh, "ICQ: Problem: file descriptor not connected");

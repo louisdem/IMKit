@@ -633,7 +633,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 						} break;
 						
 						case 0x0005: {	// New Server:IP
-printf("\n\n\n\nRaw details: %s\n", value);
+LOG("AIM", liDebug, "\n\n\n\nRaw details: %s\n", value);
 							pair<char *, uint16> serv = ExtractServerDetails(value);
 							server = serv.first;
 							port = serv.second;
@@ -659,7 +659,7 @@ printf("\n\n\n\nRaw details: %s\n", value);
 				fOutgoing.empty();
 
 PrintHex((uchar *)data, bytes);				
-printf("Attempting connection to %s:%i\n", server, port);
+LOG("AIM", liDebug, "Attempting connection to %s:%i\n", server, port);
 				fSock = ConnectTo(server, port);
 
 				free(fServer);

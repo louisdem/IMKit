@@ -318,7 +318,7 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	BMessage msg(IM::MESSAGE);
 	msg.AddString("protocol", "AIM");
 
-printf("StatChanged: %s vs %s\n", nick, NormalizeNick(nick).String());
+	//LOG("AIM", liMedium, "StatusChanged: %s vs %s\n", nick, NormalizeNick(nick).String());
 
 	if (strcmp(nick, fScreenName) == 0) {
 		msg.AddInt32("im_what", IM::STATUS_SET);
@@ -411,7 +411,7 @@ BString AIMProtocol::NormalizeNick(const char *nick) {
 		fNickMap[string(normal.String())] = BString(nick);
 	}
 	
-	LOG("AIM", liDebug, "Screen (%s) to ncreen (%s)", nick, normal.String() );
+	LOG("AIM", liDebug, "Screen (%s) to normal (%s)", nick, normal.String() );
 	
 	return normal;
 };
