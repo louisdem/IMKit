@@ -13,7 +13,7 @@ SUBDIRS = \
 
 IMKIT_HEADERS=$(addprefix /boot/home/config/include/, $(wildcard libim/*.h))
 
-.PHONY: default clean install dist icons index attributes
+.PHONY: default clean install dist index attributes
 
 default .DEFAULT : /boot/home/config/include/libim $(IMKIT_HEADERS)
 	-@for f in $(SUBDIRS) ; do \
@@ -30,7 +30,10 @@ COMMON_SERVERS:=$(shell finddir B_COMMON_SERVERS_DIRECTORY)
 COMMON_ADDONS:=$(shell finddir B_COMMON_ADDONS_DIRECTORY)
 BUILD:=$(shell pwd)/build
 
-symlinks: icons index attributes
+#Using the icons directory to know if we need to unzip new icons.
+ICONS=/boot/home/config/settings/im_kit/icons
+
+symlinks: $(ICONS) index attributes
 	ln -sf "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
 	mkdir -p "$(COMMON_SERVERS)"; 
 	
@@ -43,7 +46,7 @@ symlinks: icons index attributes
 	ln -sf "$(BUILD)/settings/InstantMessaging" /boot/home/config/be/Preferences
 
 
-install: icons index attributes
+install: $(ICONS) index attributes
 	copyattr --data --move "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
 	rmdir "$(BUILD)/lib"
 	
@@ -76,12 +79,12 @@ attributes:
 	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public
 	
 
-icons:
+$(ICONS): server/Icons.zip
 	# Unpack the Server icons.
-	-mkdir -p /boot/home/config/settings/im_kit	# Yes, it won't work if it does not exist.
-	-unzip -n server/Icons.zip -d /boot/home/config/settings/im_kit/icons
+	-mkdir -p "$(ICONS)"	# Yes, it won't work if it does not exist.
+	-unzip -n server/Icons.zip -d "$(ICONS)"
+	-touch "$(ICONS)"
 	
-
 dist: all
 	mkdir -p "$(DIST)"
 	copyattr --data --recursive build/* "$(DIST)"
