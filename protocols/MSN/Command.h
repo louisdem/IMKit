@@ -5,6 +5,28 @@
 #include <String.h>
 #include <map.h>
 
+typedef struct {
+	char *contents;
+	int32 length;
+} clpair;
+
+/**
+	Class to manage encoding and decoding of MSN commands.
+	
+	Decoding:
+		Command cmd("");
+		cmd.MakeObject( myStringFromMSN );
+		...
+		
+	Encoding:
+		Command cmd("CMD");
+		cmd.AddParam("123");
+		cmd.AddPayload(myData, myDataSize);
+		
+		const char * toNetwork = cmd.Flatten( nextTrID );
+		
+		send_to_network( toNetwork, cmd.FlattenedSize() );
+*/
 class Command {
 	public:
 					Command(const char *type);
@@ -21,7 +43,7 @@ class Command {
 		
 		int32		TransactionID(void) { return fTrID; };
 
-		status_t	AddPayload(const char *payload, uint32 length, bool encode = true);
+		status_t	AddPayload(const char *payload, int32 length = -1, bool encode = true);
 		const char	*Payload(int32 index);
 		int32		Payloads(void) { return fPayloads.size(); };
 
@@ -37,14 +59,14 @@ class Command {
 		int32		fTrID;
 		bool		fUseTrID;
 		bool		fDirty;
-		BString		fFlattened;
+		int32		fFlattenedSize;
+		char		*fFlattened;
 
 		BString		fType;
 		vector<BString>
 					fParams;
-		vector<BString>
+		vector<clpair *>
 					fPayloads;
-		
 
 		map<BString, bool>
 					gExpectsPayload;

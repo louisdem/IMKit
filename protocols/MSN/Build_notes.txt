@@ -1,11 +1,3 @@
-Fetch Cryptlib (http://www.bebits.com/app/3682).
+To build the MSN add-on you need to fetch, build and install OpenSSL: http://www.openssl.org/
 
-To compile cryptlib on Zeta (BONE systems?) you need to follow the steps details in the Talkback section
-(http://www.bebits.com/talkback/3682). Specifically you need add "-lbind -lsocket" to line 1203 of the 
-Makefile. Then do a make shared
-
-Copy the resulting libcl.so to ~/config/lib.
-
-Copy the headers (crypt.h, cryptacd.h etc) to ~/config/include/cryptlib
-
-The addon should then compile
+The prebuilt version on BeBits, http://www.bebits.com/app/1020 , should also work.

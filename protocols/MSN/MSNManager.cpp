@@ -298,6 +298,7 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					fHandler->StatusChanged(Passport(), otOffline);
 					
 					fNoticeCon = NULL;
+					fConnectionState = otOffline;
 					LOG(kProtocolName, liDebug, "  Unset fNoticeCon");
 				};
 				
@@ -345,7 +346,8 @@ void MSNManager::MessageReceived(BMessage *msg) {
 					fHandler->StatusChanged(Passport(), otOffline);
 					
 					fNoticeCon = NULL;
-
+					fConnectionState = otOffline;
+					
 					LOG(kProtocolName, liDebug, "  Unset fNoticeCon");
 				}
 			};

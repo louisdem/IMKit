@@ -2,20 +2,30 @@
 
 #include <stdio.h>
 
-
 Command::Command(const char *type)
 	: fDirty(true),
-	fFlattened(""),
+	fFlattened( (char*)malloc(1) ),
 	fType(type),
 	fTrID(-1),
 	fUseTrID(true) {
-	
+		
 	fType.ToUpper();
 
 	gExpectsPayload["MSG"] = true;
 };
 
 Command::~Command(void) {
+	if (Payloads() > 0) {
+		vector<clpair *>::iterator i;
+		
+		for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
+			clpair *payload = *i;
+			free(payload->contents);
+			delete payload;
+		};
+	};
+	
+	if (fFlattened) free(fFlattened);
 };
 
 status_t Command::AddParam(const char *param, bool encode = false) {
@@ -42,6 +52,9 @@ status_t Command::AddParam(const char *param, bool encode = false) {
 		added.ReplaceAll ("|",  "%7C");
 		added.ReplaceAll ("}",  "%7D");
 		added.ReplaceAll ("~",  "%7E");
+		added.ReplaceAll ("/",  "%2F");
+		added.ReplaceAll ("=",  "%3D");
+		added.ReplaceAll ("+",  "%2B");
 		
 	};
 	
@@ -69,63 +82,134 @@ const char *Command::Param(int32 index, bool decode = false) {
 		param.IReplaceAll("%7C", "|");
 		param.IReplaceAll("%7D", "}");
 		param.IReplaceAll("%7E", "~");
+		param.IReplaceAll("%2F", "/");
+		param.IReplaceAll("%3D", "=");
+		param.IReplaceAll("%2B", "+");
 		param.IReplaceAll("%25", "%");
 	};
 	
 	return param.String();
 };
 
-status_t Command::AddPayload(const char *payload, uint32 length, bool encode = true) {
+status_t Command::AddPayload(const char *payload, int32 length = -1, bool encode = true) {
 	fDirty = true;
-	fPayloads.push_back(payload);
 
+	if (length == -1) length = strlen(payload);
+
+	clpair *content = new clpair();
+	content->length = length;
+	content->contents = (char *)calloc(length, sizeof(char));
+	memcpy(content->contents, payload, length);
+	
+	fPayloads.push_back(content);
+	
 	return B_OK;
 };
 
 const char *Command::Payload(int32 index) {
-	return fPayloads[index].String();
+	return fPayloads[index]->contents;
 }
 
 const char *Command::Flatten(int32 sequence) {
-	if ((fDirty == false) && (sequence == fTrID)) {
-	} else {
+	if ((fDirty == true) || (fTrID != sequence)) {
+		int32 offset = 0;
+		BString temp = "";
 		fTrID = sequence;
+		FlattenedSize();
+		
+		fFlattened = (char *)realloc(fFlattened, sizeof(char) * fFlattenedSize);
+		
+		memcpy(fFlattened, fType.String(), fType.Length());
+		offset += fType.Length();
 
-		fFlattened = fType;
-		
-		if (fUseTrID) fFlattened << " " << fTrID;
-		fFlattened << " ";
-		
-		vector<BString>::iterator i;
-		
-		for (i = fParams.begin(); i != fParams.end(); i++) {
-			fFlattened << i->String() << " ";
+		if (fUseTrID) {
+			temp << " " << fTrID;
+			memcpy((fFlattened + offset), temp.String(), temp.Length());
+			offset += temp.Length();
 		};
 		
-//		Ditch the trailing space.
-		fFlattened.Truncate(fFlattened.Length() - 1);
+		if (Params() > 0) {
+			vector<BString>::iterator i;
+			for (i = fParams.begin(); i != fParams.end(); i++) {
+				fFlattened[offset++] = ' ';
+				memcpy((fFlattened + offset), i->String(), i->Length());
+				offset += i->Length();
+			};
+		};
 		
 		if (Payloads() > 0) {
-			int32 size = 0;
+			vector<clpair *>::iterator i;
+			int32 payload = 0;
+			temp = " ";
+			
 			for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-				size += i->Length();
+				payload += (*i)->length;
 			};
 			
-			fFlattened << " " << size;
+			temp << payload;
+			memcpy((fFlattened + offset), temp.String(), temp.Length());
+			offset += temp.Length();
 		};
 		
-		fFlattened << "\r\n";
+		memcpy((fFlattened + offset), "\r\n", strlen("\r\n"));
+		offset += strlen("\r\n");
 		
 		if (Payloads() > 0) {
+			vector<clpair *>::iterator i;
+
 			for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-				fFlattened += i->String();
+				memcpy((fFlattened + offset), (*i)->contents, (*i)->length);
+				offset += (*i)->length;
 			};
 		};
 		
 		fDirty = false;
 	};
 	
-	return fFlattened.String();
+	return fFlattened;
+};
+
+int32 Command::FlattenedSize(void) {
+	if (fDirty) {
+		int32 payloadSize = 0;
+		int32 size = 0;
+		BString temp = "";
+		
+		size += fType.Length();
+
+		if (fUseTrID) {
+			size++; // Space
+			temp << fTrID;
+			size += temp.Length();
+		};
+		if (Params() > 0) {
+			vector<BString>::iterator i;
+			for (i = fParams.begin(); i != fParams.end(); i++) 
+				size += i->Length() + 1;
+			size--; // Ditch trailing space.
+		} else {
+			size--;
+		}
+		
+		if (Payloads() > 0 ) {
+			vector<clpair*>::iterator i;
+			for (i = fPayloads.begin(); i != fPayloads.end(); i++) 
+				payloadSize += (*i)->length;
+			
+			temp = "";
+			temp << payloadSize;
+			size += temp.Length() + 1;
+		};
+		
+		size += strlen("\r\n");
+		
+		if (Payloads() > 0) 
+			size += payloadSize;
+		
+		fFlattenedSize = size+1;
+	};
+	
+	return fFlattenedSize;
 };
 
 void Command::Debug(void) {
@@ -133,22 +217,25 @@ void Command::Debug(void) {
 	vector<BString>::iterator i;
 	for (i = fParams.begin(); i != fParams.end(); i++) printf(" %s", i->String());
 	
+	vector<clpair *>::iterator j;
+
 	if (Payloads() > 0) {
 		int32 size = 0;
-		for (i = fPayloads.begin(); i != fPayloads.end(); i++) size += i->Length();
+		for (j = fPayloads.begin(); j != fPayloads.end(); j++) size += (*j)->length;
 		
 		printf(" %i", size);
 	};
 	
 	printf("\r\n");
 	
-	if (Payloads() >? 0) {
-		for (i = fPayloads.begin(); i != fPayloads.end(); i++) printf("%s\r\n", i->String());
+	if (Payloads() > 0) {
+		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
+			clpair *p = (*j);
+			for (int32 i = 0; i < p->length; i++) printf("0x%02x ", p->contents[i]);
+		};
 	};
-};
-
-int32 Command::FlattenedSize(void) {
-	return fFlattened.Length();
+	
+	printf("\r\n");
 };
 
 status_t Command::MakeObject(const char *string) {
