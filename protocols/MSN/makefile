@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= MSN
+SVG_ICON=MSN.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/protocols
 
