@@ -26,14 +26,15 @@ void print_usage()
 	printf("usage: mimetype_attribute <options>\n\n");
 	printf("Required options:\n");
 	printf("   --mime <MIME type to edit, e.g. application/x-person>\n");
-	printf("   --internal <internal name, e.g. IM:connections>\n");
-	printf("   --public <public name, e.g. 'IM Connections'>\n");
+	printf("   --internal-name <internal name, e.g. IM:connections>\n");
+	printf("   --public-name <public name, e.g. 'IM Connections'>\n");
 	printf("   --type <attr type, one of [string, bool, int32, float]>\n");
 	printf("Not required options:\n");
 	printf("   --width <width in pixels>, sets the width of the attribute column in Tracker, default 60\n");
 	printf("   --editable, --not-editable, sets attribute as user editable or not, editable by default.\n");
 	printf("   --public, --private, sets attribute as public or private, public by default.\n");
 	printf("   --viewable, --non-viewable, sets attribute as viewable or non-viewable, viewable by default.\n");
+	printf("   --extra, --non-extra, sets attribute as extra or non-extra, non-extra by default.\n");
 }
 
 int main( int numarg, const char * argv[] )
@@ -46,6 +47,8 @@ int main( int numarg, const char * argv[] )
 	bool isEditable = true;
 	bool isPublic = true;
 	bool isViewable = true;
+	bool isExtra = false;
+	
 	int displayWidth=60;
 	
 	// decode arguments
@@ -57,7 +60,7 @@ int main( int numarg, const char * argv[] )
 			}
 		}
 
-		if (strcasecmp(argv[i], "--internal") == 0) {
+		if (strcasecmp(argv[i], "--internal-name") == 0) {
 			// internal name
 			if ( i != numarg - 1 )
 			{
@@ -65,21 +68,21 @@ int main( int numarg, const char * argv[] )
 			}
 		}
 		
-		if ( strcasecmp(argv[i], "--public") == 0 ) {
+		if ( strcasecmp(argv[i], "--public-name") == 0 ) {
 			// public name
 			if ( i != numarg - 1 )
 			{
 				attributePublic = argv[++i];
 			}
 		}
-
+		
 		if (strcasecmp(argv[i], "--type") == 0) {
 			// type
 			if (i != numarg - 1) {
 				attributeType = argv[++i];
 			}
 		}
-
+		
 		if (strcasecmp(argv[i], "--width") == 0) {
 			// width
 			if (i != numarg - 1) {
@@ -95,6 +98,9 @@ int main( int numarg, const char * argv[] )
 		
 		if (strcasecmp(argv[i], "--viewable") == 0) isViewable = true;
 		if (strcasecmp(argv[i], "--non-viewable") == 0) isViewable = false;
+		
+		if (strcasecmp(argv[i], "--extra") == 0) isExtra = true;
+		if (strcasecmp(argv[i], "--non-extra") == 0) isExtra = false;
 	}
 	
 	// check arguments
@@ -141,6 +147,15 @@ int main( int numarg, const char * argv[] )
 		}
 	}
 	
+	printf("Adding attribute [%s] to MIME type [%s]\n", attributeInternal.String(), mimeType.String() );
+	printf("Pretty name: [%s]\n", attributePublic.String() );
+	printf("Type: [%s] (%X)\n", attributeType.String(), attributeTypeConst );
+	printf("Display width: %ld\n", displayWidth );
+	printf("Editable: %s\n", isEditable ? "true" : "false" );
+	printf("Public: %s\n", isPublic ? "true" : "false" );
+	printf("Viewable: %s\n", isViewable ? "true" : "false" );
+	printf("Extra: %s\n", isExtra ? "true" : "false" );
+	
 	// Ok, let's add it.
 	msg.AddString("attr:name", attributeInternal.String() );
 	msg.AddString("attr:public_name", attributePublic.String() );
@@ -149,6 +164,8 @@ int main( int numarg, const char * argv[] )
 	msg.AddBool("attr:editable", isEditable );
 	msg.AddBool("attr:public", isPublic );
 	msg.AddBool("attr:viewable", isViewable );
+	msg.AddBool("attr:extra", isExtra );
+	msg.AddInt32("attr:alignment", 0 /* left */ );
 	
 	status_t setStatus = mime.SetAttrInfo(&msg);
 	if (setStatus != B_OK) {
