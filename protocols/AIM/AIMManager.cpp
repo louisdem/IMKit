@@ -123,7 +123,7 @@ AIMManager::AIMManager(OSCARHandler *handler) {
 	
 	fHandler = handler;
 	fOurNick = NULL;
-	fProfile.SetTo("Mikey?");
+	fProfile.SetTo("IMKit AIM");
 	
 	fIcon = NULL;
 	fIconSize = -1;
@@ -1235,9 +1235,9 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	msgFragment[2] = 0xff;
 	msgFragment[3] = 0xff;
 	strncpy(msgFragment + 4, html.String(), html.Length());
-	msgFragment[html.Length() + 4] = '\0';
+//	msgFragment[html.Length() + 4] = '\0';
 	
-	msgData->AddTLV(new TLV(0x0101, msgFragment, html.Length() + 5));
+	msgData->AddTLV(new TLV(0x0101, msgFragment, html.Length() + 4));
 	
 	free(msgFragment);
 	msg->AddTLV(msgData);
