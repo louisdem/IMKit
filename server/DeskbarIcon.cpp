@@ -910,7 +910,7 @@ status_t IM_DeskbarIcon::ExtractVolumes(BNode *node, vollist *volumes) {
 		BVolume vol;
 		
 		while (roster.GetNextVolume(&vol) == B_NO_ERROR) {
-			volumes->push_back(vol);
+			if (vol.KnowsQuery() == true) volumes->push_back(vol);
 		};
 	} else {
 		BMessage msg;
