@@ -16,6 +16,8 @@ extern "C" IM::Protocol * load_protocol()
 }
 
 
+
+
 Jabber::Jabber()
 :	IM::Protocol( IM::Protocol::MESSAGES | IM::Protocol::SERVER_BUDDY_LIST | IM::Protocol::OFFLINE_MESSAGES),
 	JabberHandler("jabberHandler"),
@@ -23,7 +25,7 @@ Jabber::Jabber()
 	fServer(""),
 	fPassword("")
 {
-	fRostered=false;
+		
 }
 
 Jabber::~Jabber()
@@ -33,6 +35,11 @@ status_t
 Jabber::Init( BMessenger msgr )
 {
 	fServerMsgr = msgr;
+	fAuth=false;
+	fRostered=false;
+	fAgent=false;
+	fFullLogged=false;
+	fPerc=0.0;
 	return B_OK;
 }
 
@@ -84,6 +91,18 @@ Jabber::Process( BMessage * msg )
 					else 
 					if (strcmp(status, ONLINE_TEXT) == 0) 
 					{
+							if(!IsAuthorized())
+							{
+								if(fUsername == "")
+									Error("Empty Username!",NULL);
+								if(fServer == "")
+									Error("Empty Server!",NULL);
+								if(fPassword == "")
+									Error("Empty Password!",NULL);
+								
+								Progress("Jabber Login", "Jabber: Connecting..", 0.0);
+										
+							}
 							
 							SetStatus(S_ONLINE,ONLINE_TEXT); //do the login!
 							if(IsAuthorized()) SetAway(false); 
@@ -133,7 +152,7 @@ Jabber::Process( BMessage * msg )
 					
 						
 					if (count > 0 ) {
-						list<char *> buddies;
+						//list<char *> buddies;
 						for ( int i=0; msg->FindString("id",i); i++ )
 						{
 							const char * id = msg->FindString("id",i);
@@ -142,6 +161,13 @@ Jabber::Process( BMessage * msg )
 								  BuddyStatusChanged(contact);
 							else
 							{
+								//Are we on-line?
+								// send auth req?
+								if(fFullLogged=true)
+									Error(id,id);
+								//else
+								// we add to a temp list.
+								
 								//Here is not easy to understand!
 								//msg->PrintToStream();
 								//if(fRostered){
@@ -201,7 +227,7 @@ Jabber::Process( BMessage * msg )
 					//debugger("Get Contact Info! ;)");
 					SendContactInfo(msg->FindString("id"));
 				break;
-				
+								
 				case IM::SEND_AUTH_ACK:
 				{
 					if(!IsAuthorized())
@@ -394,6 +420,8 @@ Jabber::LoggedIn()
 	msg.AddString("status", ONLINE_TEXT);
 	
 	fServerMsgr.SendMessage( &msg );
+	
+	fFullLogged=true;
 }
 
 void
@@ -421,7 +449,11 @@ Jabber::LoggedOut()
 	msg.AddString("protocol", kProtocolName);
 	msg.AddString("status", OFFLINE_TEXT);
 	fServerMsgr.SendMessage( &msg );
-	
+	fFullLogged=false;
+	fAuth=false;
+	fRostered=false;
+	fAgent=false;
+	fPerc=0.0;
 }
 
 void
@@ -544,8 +576,12 @@ void
 Jabber::Authorized()
 {
 	SetAway(false);
-	LoggedIn();
-	JabberHandler::Authorized();;
+	//LoggedIn();
+	fPerc +=0.3333;
+	fAuth=true;
+	Progress("Jabber Login", "Jabber: Authorized", fPerc);
+	JabberHandler::Authorized();
+	CheckLoginStatus();
 }
 
 void
@@ -626,17 +662,33 @@ Jabber::Roster(RosterList * roster){
 	}	
 	fServerMsgr.SendMessage(&serverBased);		
 	
-	fRostered=true;
+	//fRostered=true;
+	
+	fPerc +=0.3333;
+	fRostered = true;
+	Progress("Jabber Login", "Jabber: Roster", fPerc);
+	CheckLoginStatus();
 	
 }
 void
 Jabber::Agents(AgentList * agents){
-	//debugger("Agents");
+	fPerc +=0.3333;
+	fAgent = true;
+	Progress("Jabber Login", "Jabber: Agents", fPerc);
+	CheckLoginStatus();
 }
 void
 Jabber::Disconnected(const BString & reason){
-	//debugger("Disconnected");	
+
+
 	LoggedOut();
+	
+	if(reason == "") return; // what else should I say?
+	
+	Error(reason.String(),NULL);
+	
+	
+	
 }
 void
 Jabber::SubscriptionRequest(JabberPresence * presence){
@@ -673,5 +725,12 @@ Jabber::Registration(JabberRegistration * registration){
 	// or we have ack of a registration? ack of registartion!
 	debugger("Registration");
 	registration->PrintToStream();
+}
+
+void
+Jabber::CheckLoginStatus()
+{
+	if(fAuth && fRostered &&  fAgent) LoggedIn();
+		
 }
 
