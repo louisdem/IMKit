@@ -18,7 +18,7 @@ const float kDividerWidth = 100;
 BubbleHelper gHelper;
 
 PWindow::PWindow(void)
-	: BWindow(BRect(25, 25, 480, 285), "Instant Messaging", B_TITLED_WINDOW,
+	: BWindow(BRect(5, 25, 480, 285), "Instant Messaging", B_TITLED_WINDOW,
 	 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS) {
 #ifdef ZETA
 	app_info ai;
@@ -40,7 +40,8 @@ PWindow::PWindow(void)
 	
 	fManager = new IM::Manager(BMessenger(this));
 	
-	fLastIndex = 0;
+	fCurrentIndex = 0;
+	fCurrentView = NULL;
 	fBox = NULL;
 	fView = NULL;
 	fSave = NULL;
@@ -66,8 +67,8 @@ PWindow::PWindow(void)
 	frame.left = kEdgeOffset;
 	frame.top = kEdgeOffset;
 	frame.bottom = Bounds().bottom - kEdgeOffset;
-	frame.right = 100;
-	fListView = new BListView(frame, "LISTVIEW", B_SINGLE_SELECTION_LIST);
+	frame.right = 120;
+	fListView = new BOutlineListView(frame, "LISTVIEW", B_SINGLE_SELECTION_LIST);
 
 	font_height fontHeight;
 	be_bold_font->GetHeight(&fontHeight);
@@ -86,16 +87,17 @@ PWindow::PWindow(void)
 	frame.top += fFontHeight;
 	frame.right -= B_V_SCROLL_BAR_WIDTH + 2;
 	// PROTOCOLS
+
+	IconTextItem *protoItem = new IconTextItem(_T("Protocols"), NULL);
+	fListView->AddItem(protoItem);
 	
 	BMessage protocols;
 	im_get_protocol_list(&protocols);
 	
-	protocols.PrintToStream();
-	
 	if (protocols.FindString("protocol")) {
+		const char *protocol = NULL;
 //		FIX ME: Find the location of the im_server programmatically (By app signature?)
-		for (int16 i = 0; protocols.FindString("protocol", i); i++) {
-			const char *protocol = protocols.FindString("protocol", i);
+		for (int16 i = 0; protocols.FindString("protocol", i, &protocol) == B_OK; i++) {
 			entry_ref ref;
 			//protocols.FindRef("ref", i, &ref);	
 			
@@ -109,11 +111,9 @@ PWindow::PWindow(void)
 			im_load_protocol_settings( protocol, &protocol_settings );
 			im_load_protocol_template( protocol, &protocol_template );
 			
-			//printf("Getting icon from %s\n", BPath(&ref).Path() );
-
 			BBitmap *icon = ReadNodeIcon(protoPath.String(), kSmallIcon, true);
-
-			fListView->AddItem(new IconTextItem(protocol, icon));
+			IconTextItem *item = new IconTextItem(protocol, icon);
+			fListView->AddUnder(item, protoItem);
 			
 			protocol_template.AddString("protocol", protocol); // for identification when saving
 			
@@ -147,13 +147,17 @@ PWindow::PWindow(void)
 			scroller->ScrollBar(B_VERTICAL)->SetRange(0, diff);
 
 			view = scroller;
-			
-			fPrefView.AddItem(view);
+					
+			fPrefViews[protocol] = view;
 			fBox->AddChild(view);
-			if ( fBox->CountChildren() > 1 )
+			if ( fBox->CountChildren() > 1 ) {
 				view->Hide();
-			else
+			} else {
 				fBox->SetLabel(protocol);
+				fCurrentView = view;
+				fCurrentIndex = fListView->IndexOf(item);
+				fListView->Select(fCurrentIndex);
+			};
 		};
 	}
 	
@@ -162,15 +166,15 @@ PWindow::PWindow(void)
 	
 	BMessage clients;
 	im_get_client_list(&clients);
-	
-	clients.PrintToStream();
+
+	IconTextItem *clientItem = new IconTextItem(_T("Clients"), NULL);
+	fListView->AddItem(clientItem);
 	
 	if (clients.FindString("client")) {
-		printf("Adding clients\n");
+		const char *client = NULL;
+		
 //		FIX ME: Find the location of the im_server programmatically (By app signature?)
-		for (int16 i = 0; clients.FindString("client", i); i++) {
-			const char *client = clients.FindString("client", i);
-			printf("Adding client %s\n", client);
+		for (int16 i = 0; clients.FindString("client", i, &client) == B_OK; i++) {
 			entry_ref ref;
 			//protocols.FindRef("ref", i, &ref);	
 			
@@ -182,13 +186,18 @@ PWindow::PWindow(void)
 			
 			if ( client_settings.FindString("app_sig") ) {
 				be_roster->FindApp( client_settings.FindString("app_sig"), &ref );
-				printf("Client path: %s\n", BPath(&ref).Path() );
 			}
 
 			BBitmap *icon = ReadNodeIcon(BPath(&ref).Path(), kSmallIcon, true);
-			printf("Loading icon from %s\n", BPath(&ref).Path());
-			
-			fListView->AddItem(new IconTextItem(client, icon));
+			IconTextItem *item = new IconTextItem(client, icon);
+
+			if (strcmp(client, "im_server") == 0) {
+				IconTextItem *server = new IconTextItem(_T("Server"), icon);
+				fListView->AddItem(server, 0);
+				fListView->AddUnder(item, server);
+			} else {
+				fListView->AddUnder(item, clientItem);
+			};
 			
 			client_template.AddString("client", client); // for identification when saving
 			
@@ -222,22 +231,23 @@ PWindow::PWindow(void)
 			scroller->ScrollBar(B_VERTICAL)->SetRange(0, diff);
 
 			view = scroller;
-			
-			fPrefView.AddItem(view);
+				
+			fPrefViews[client] = view;
 			fBox->AddChild(view);
-			if ( fBox->CountChildren() > 1 )
+			if (fBox->CountChildren() > 1 ) {
 				view->Hide();
-			else
+			} else {
 				fBox->SetLabel(client);
+				fCurrentView = view;
+				fCurrentIndex = fListView->IndexOf(item);
+				fListView->Select(fCurrentIndex);
+			};
 		};
 	}
 	
 	BScrollView *scroller = new BScrollView("list scroller", fListView, B_FOLLOW_LEFT |
 		B_FOLLOW_BOTTOM, 0, false, true);
 	fView->AddChild(scroller);
-
-	fListView->Select(0);
-	fListView->MakeFocus();
 
 	frame = fView->Frame();
 	frame.InsetBy(kEdgeOffset, kEdgeOffset);
@@ -256,19 +266,19 @@ PWindow::PWindow(void)
 	fRevert = new BButton(frame, "Revert", _T("Revert"), new BMessage(REVERT));
 	fView->AddChild(fRevert);
 	fRevert->SetEnabled(false);
-	
-	Show();
-	fView->Show();
-	
+
+	fListView->MakeFocus();
 	fListView->SetSelectionMessage(new BMessage(LISTCHANGED));
 	fListView->SetTarget(this);
 	
-	
+	Show();
+	fView->Show();	
 };
 
 bool PWindow::QuitRequested(void) {
-	for (int32 i = 0; i < fPrefView.CountItems(); i++) {
-		BView *view = fPrefView.RemoveItemAt(i);
+	view_map::iterator vIt;
+	for (vIt = fPrefViews.begin(); vIt != fPrefViews.end(); vIt++) {
+		BView *view = vIt->second;
 		if (!view) continue;
 		
 		for (int32 j = 0; j < view->CountChildren(); j++) {
@@ -282,6 +292,7 @@ bool PWindow::QuitRequested(void) {
 		view->RemoveSelf();
 		delete view;
 	};
+	fPrefViews.clear();
 
 	if (fSave) fSave->RemoveSelf();
 	delete fSave;
@@ -298,32 +309,27 @@ bool PWindow::QuitRequested(void) {
 	if (fView != NULL) fView->RemoveSelf();
 	delete fView;
 	
-	BMessenger(be_app).SendMessage(B_QUIT_REQUESTED);
+	be_app_messenger.SendMessage(B_QUIT_REQUESTED);
 	
 	return true;
 };
 
 void PWindow::DispatchMessage( BMessage * msg, BHandler * target )
 {
-	switch ( msg->what )
-	{
-		case B_MOUSE_WHEEL_CHANGED:
-			if ( target != fListView )
-			{
+	switch (msg->what) {
+		case B_MOUSE_WHEEL_CHANGED: {
+			if (target != fListView) {
 				float delta_y=0.0f;
 				
 				msg->FindFloat("be:wheel_delta_y", &delta_y);
 				
-				BView * protocol = fPrefView.ItemAt(fLastIndex)->ChildAt(0);
-//				printf("Scroll settings.. view name: %s\n", protocol->Name() );
-//				msg->PrintToStream();
-				protocol->ScrollBy(0, delta_y*10);
+				fCurrentView->ScrollBy(0, delta_y * 10);
 				return;
 			}
-			break;
+		} break;
 			
-		default:
-			break;
+		default: {
+		}; break;
 	}
 
 	BWindow::DispatchMessage(msg,target);
@@ -335,31 +341,29 @@ void PWindow::MessageReceived(BMessage *msg) {
 			int32 index = msg->FindInt32("index");
 			if (index < 0) return;
 			
-			BView *last = fPrefView.ItemAt(fLastIndex);
-			last->Hide();
+			IconTextItem *item = (IconTextItem *)fListView->ItemAt(index);
+			if (item == NULL) return;
 			
-			BView *current = fPrefView.ItemAt(index);
-			current->Show();
+			view_map::iterator vIt = fPrefViews.find(item->Text());
+			if (vIt == fPrefViews.end()) {
+				fListView->Select(fCurrentIndex);
+				return;
+			};
 			
-			IconTextItem *item = ((IconTextItem *)fListView->ItemAt(index));
+			if (fCurrentView) fCurrentView->Hide();
+
+			fCurrentView = vIt->second;
+			fCurrentView->Show();
+			fCurrentIndex = index;
 			fBox->SetLabel(item->Text());
-
-			fLastIndex = index;
-			fView->Invalidate();			
-		} break;
-
-		case REVERT: {
-//			fOrigSettings->Save();
-//			fSettings->Load();
-				
 			
-//			fSpeedBox->Revert();
-//			fButtonBox->Revert();
-//			fSettings->SetSave(false);
+			fView->Invalidate();
 		} break;
+
+//		case REVERT: {
+//		} break;
 		
 		case SAVE: {
-//			BMessage outSettings(IM::SET_SETTINGS);
 			BMessage cur;
 			BMessage tmplate;
 			BMessage settings;
@@ -374,9 +378,7 @@ void PWindow::MessageReceived(BMessage *msg) {
 			IconTextItem *item = (IconTextItem *)fListView->ItemAt(current);
 			pair<BMessage, BMessage> p = fAddOns[item->Text()];
 			
-			tmplate = p.second;
-			tmplate.PrintToStream();
-			
+			tmplate = p.second;			
 			BView * panel = FindView(item->Text());
 			
 			for (int i = 0; tmplate.FindMessage("setting", i, &cur) == B_OK; i++) {
@@ -432,25 +434,8 @@ void PWindow::MessageReceived(BMessage *msg) {
 					BTextView *view = (BTextView *)panel->FindView(name);
 					settings.AddString(name, view->Text());
 				};
-				
-				settings.PrintToStream();
-			};
-			/*
-			if (current == 0) {
-				outSettings.AddString("protocol", "");
-			} else {
-				outSettings.AddString("protocol", item->Text());
-			};
-			outSettings.AddMessage("settings", &settings);
-			outSettings.PrintToStream();
-			
-			fManager->SendMessage(&outSettings, &reply);
-			reply.PrintToStream();
-			if (reply.what != IM::ACTION_PERFORMED) {
-				printf("Error applying settings\n");
 			};
 
-			*/
 			status_t res = B_ERROR;
 			BMessage updMessage(IM::SETTINGS_UPDATED);
 			
@@ -576,9 +561,7 @@ float PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view) {
 			
 				control = new BCheckBox(BRect(0, 0, kControlWidth, fFontHeight),
 					name, _T(desc), NULL);
-				printf("%s is Active? %i\n", name, active);
 				if (active) ((BCheckBox*)control)->SetValue(B_CONTROL_ON);
-				settings.PrintToStream();
 			} break;			
 			default: {
 				continue;

@@ -9,11 +9,11 @@
 #include <Button.h>
 #include <CheckBox.h>
 #include <Entry.h>
-#include <ListView.h>
 #include <Menu.h>
 #include <MenuItem.h>
 #include <MenuField.h>
 #include "ObjectList.h"
+#include <OutlineListView.h>
 #include <Path.h>
 #include <PopUpMenu.h>
 #include <ScrollView.h>
@@ -32,9 +32,9 @@
 #include <map>
 
 class BWindow;
-//class PButtonBox;
-//class PSpeedBox;
 class BButton;
+
+typedef map<BString, BView *> view_map;
 
 class PWindow : public BWindow {
 	enum {
@@ -59,11 +59,12 @@ class PWindow : public BWindow {
 		BView					*fView;
 		BButton					*fSave;
 		BButton					*fRevert;
-		BListView				*fListView;
+		BOutlineListView		*fListView;
 		BBox					*fBox;
 
-		BObjectList<BView>		fPrefView;		
-		int32					fLastIndex;
+		view_map				fPrefViews;		
+		BView					*fCurrentView;
+		int32					fCurrentIndex;
 
 		IM::Manager				*fManager;
 		
