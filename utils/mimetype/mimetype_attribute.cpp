@@ -116,10 +116,18 @@ int main( int numarg, const char * argv[] )
 		};
 	}
 	
-	if ( attributeTypeConst == B_ANY_TYPE )
-	{
-		print_usage();
-		return 1;
+	if ( attributeTypeConst == B_ANY_TYPE) {
+		if (attributeType.Length() == 4) {
+			attributeTypeConst = (attributeType[0] << 24) + (attributeType[1] << 16) +
+				(attributeType[2] << 8) + attributeType[3];
+				
+			printf("Attribute type was non standard, presuming character "
+				"representation: %s -> %i\n", attributeType.String(),
+				attributeTypeConst);
+		} else {
+			print_usage();
+			return 1;
+		};
 	}
 
 	// args ok, fetch current attributes
@@ -129,6 +137,13 @@ int main( int numarg, const char * argv[] )
 		printf("Invalid MIME type\n");
 		return 2;
 	}
+
+	if (mime.IsInstalled() == false) {
+		printf("MIME type is not installed, installing...");
+		status_t status = mime.Install();
+		if (status != B_OK) printf("%s", strerror(status));
+		printf("\n");
+	};
 
 	BMessage msg;
 	
