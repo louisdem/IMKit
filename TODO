@@ -1,0 +1,28 @@
+Fixes
+
+* SET_STATUS - If no protocol is provided, send to all loaded protocols.
+* Strangeness when getting the server based contact list. Contact info messages duplicated?
+* Getting name, nick etc doesn't always work, it seems. Look into this.
+* Add status changes to logger?
+* Smart protocol selection, if contact is online on any service, use that etc
+* Put something like & in the title of chat windows if they receive a message when not active
+
+New features
+
+Log in invisible for ICQ
+
+File transfers
+
+Search for contacts
+
+New client: Relay station
+* Forward all messages received from !relay_target to relay_target
+
+Deskbar replicant
+* Flash on new messages
+* Popup with latest message?
+
+Features in sample_client
+* Smileys
+
+Setting away messages
