@@ -2103,6 +2103,8 @@ Server::InitSettings()
 		settings.AddBool("auto_start", false );
 	if ( settings.FindString("log_level", &str) != B_OK )
 		settings.AddString("log_level", "High" );
+	if (!settings.FindString("default_away"))
+		settings.AddString("default_away", "I'm not here right now");	
 	im_save_client_settings("im_server", &settings);
 	// done with template and settings.
 }

@@ -36,8 +36,6 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 #else
 	fView->SetViewColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
 	fView->SetLowColor( ui_color(B_PANEL_BACKGROUND_COLOR) );
-	// XXX bga : R5 has no B_PANEL_TEXT_COLOR, I am guessing it is supposed
-	// to be black as default so I am setting this to black. 
 	fView->SetHighColor(0, 0, 0, 255);
 #endif	
 	AddChild(fView);
@@ -85,9 +83,11 @@ AwayMessageWindow::AwayMessageWindow(const char *protocol = NULL)
 
 	BMessage settings;
 	im_load_client_settings("im_server", &settings);
-	
-	if ( settings.FindString("default_away") )
-		fTextView->SetText(settings.FindString("default_away"));
+
+	BString	awayMsg = "I'm not here";
+		
+	if (settings.FindString("default_away", &awayMsg) == B_OK)
+		fTextView->SetText(awayMsg.String());
 	
 	fTextView->MakeFocus(true);
 }
