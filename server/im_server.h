@@ -70,6 +70,8 @@ class Server : public BApplication
 		
 		virtual void MessageReceived( BMessage * );
 		
+		virtual void ReadyToRun();
+		
 	private:
 		void	StartQuery();
 		void	HandleContactUpdate( BMessage * );
@@ -79,6 +81,7 @@ class Server : public BApplication
 		Contact			CreateContact( const char * proto_id , const char *namebase );
 		
 		void		RegisterSoundEvents();
+		void		CheckIndexes();
 		status_t	LoadAddons();
 		void		LoadAddonsFromDir( BDirectory* addonsDir, BDirectory* settingsDir );
 		void		UnloadAddons();

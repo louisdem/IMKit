@@ -10,7 +10,7 @@ ___ Things to fix
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Extract Deskbar icon from im_server, let it live it's own life
-* Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to Zeta bug?
+* Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to Zeta bug? Fixed?
 * im_client: when settings are changed, make them apply to existing windows too
 * MSN and AIM: Add support for UNREGISTER_CONTACTS message
 * Change 'command sends message' option to a one-of-two menu
@@ -22,11 +22,11 @@ ___ Things to fix
 * binlog viewer: auto-wrap long lines, if we support variable height list items?
 * Add to readme/documentation, german docs: http://besly.mittilgart.de
 * im_server: ContactMonitor_Modified, merging "online" > "offline". Several AIM.
-* im_server: move "no indexes" BAlert to after BApplication is ReadyToRun
+* im_server: what happens in the index test if we have a read-only BFS volume mounted?
 
 ___ New features
 
-Re-add libbsvg code
+Re-add libbsvg code for R5 SVG support
 
 Setting something so ICQ displays as online with it's webfeatures
 
@@ -35,6 +35,7 @@ Connect on startup, per protocol setting
 Show im_client on all workspaces option
 
 Support for wide char encodings (utf-16 etc)?
+	Need to move all text to data fields instead of string ones, lots of work.
 
 Per connection encoding setting
 
