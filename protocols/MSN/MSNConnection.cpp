@@ -19,6 +19,21 @@ extern const char *kClientIDCode = "Q1P7W2E4J9R8U3S5";
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
 
+void MD5(unsigned char *text, char * digest)
+{
+	MD5state_st state;
+	unsigned char md5data[32];
+	
+	MD5_Init(&state);
+	MD5_Update(&state, text, (unsigned short)strlen((const char*)text));
+	MD5_Final(md5data, &state);
+	
+	int i;
+	for (i=0; i<MD5_DIGEST_LENGTH; i++)
+		sprintf(&(digest[i*2]),"%02x",md5data[i]);
+}
+
+
 MSNConnection::MSNConnection(const char *server, uint16 port, MSNManager *man)
 : BLooper("MSNConnection looper") {
 	fTrID = 0;
@@ -694,30 +709,18 @@ status_t MSNConnection::handleXFR( Command * command ) {
 status_t MSNConnection::handleCHL( Command * command ) {
 	LOG(kProtocolName, liDebug, "Processing CHL");
 	BString chal = command->Param(0);
-
+	chal << kClientIDCode;
+	
 	Command *reply = new Command("QRY");
 	reply->AddParam(kClientIDString);
 
-/*	MD5 *md5 = new MD5();
-	md5->update((uchar *)chal.String(), (uint16)chal.Length());
-	md5->update((uchar *)kClientIDCode, (uint16)strlen(kClientIDCode));
-	md5->finalize();
-
-	reply->AddPayload(md5->hex_digest(), 32);
-*/
-	MD5state_st state;
-	char digest[128];
+	char digest[33];
 	
-	MD5_Init(&state);
-//	MD5((uchar *)chal.String(), (uint16)chal.Length(), (unsigned char*)digest);
-	MD5_Update(&state, (uchar *)chal.String(), (uint16)chal.Length());
-	MD5_Final((unsigned char*)digest, &state);
+	MD5( (uchar*)chal.String(), digest );
 	
 	reply->AddPayload(digest, 32);
 	
 	Send(reply);
-	
-//	delete md5;	
 
 	return B_OK;
 }
