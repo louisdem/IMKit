@@ -111,8 +111,7 @@ InfoView::AttachedToWindow()
 	BMessage msg(REMOVE_VIEW);
 	msg.AddPointer("view", this);
 	
-//	bigtime_t delay = fTimeout*1000*1000;
-bigtime_t delay = 10 * 1000 * 1000;
+	bigtime_t delay = fTimeout*1000*1000;
 	
 	if ( delay > 0 )
 		fRunner = new BMessageRunner( BMessenger(Window()), &msg, delay, 1 );
@@ -431,9 +430,9 @@ void InfoView::SetText(const char *app, const char *title, const char *text) {
 	tempLine->text.Append(text + offset, strlen(text) - offset);
 	tempLine->font = be_plain_font;
 	if (wasNewline) {
-		tempLine->location = BPoint(10, y);
+		tempLine->location = BPoint(iconRight, y);
 	} else {
-		tempLine->location = BPoint(0, y);
+		tempLine->location = BPoint(iconRight + (kEdgePadding * 2), y);
 	};
 	fLines.push_front(tempLine);
 	
