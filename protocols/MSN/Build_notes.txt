@@ -1,0 +1,7 @@
+Fetch and compile cryptlib.
+
+rename the cryptlib folder and place it in ~/config/include
+
+copy libcl.a to ~/config/lib
+
+Then MSN should compile.
