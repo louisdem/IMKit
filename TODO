@@ -1,9 +1,9 @@
 Fixes
 
 * SET_STATUS - If no protocol is provided, send to all loaded protocols.
-* Strangeness when getting the server based contact list. Contact info messages duplicated?
+* Strangeness when getting the server based contact list. Contact info messages duplicated? Not indexed?
 * Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
-* Add status changes to logger?
+* Add status changes to im_logger?
 * Smart protocol selection, if contact is online on any service, use that etc
 * Fix ICQ add-on 'message received' string
 
@@ -11,7 +11,7 @@ New features
 
 Log in invisible for ICQ
 
-File transfers
+File transfers - need new icqlib
 
 Search for contacts
 
