@@ -1,11 +1,12 @@
 #include "AIMReqConn.h"
 
+extern void PrintHex(const uchar *buff, size_t size, bool override = false);
+
 AIMReqConn::AIMReqConn(const char *server, uint16 port,	AIMManager *man)
 	: AIMConnection(server, port, man, "AIMReqConn") {
 	
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
-	fState = AMAN_CONNECTING;
 };
 
 AIMReqConn::~AIMReqConn(void) {
@@ -32,22 +33,25 @@ status_t AIMReqConn::HandleServiceControl(BMessage *msg) {
 
 	switch (subtype) {
 		case ERROR: {
-			LOG(kProtocolName, liHigh, "AIMReqConn (%s:%i) got an error", Server(),
+			LOG(ConnName(), liHigh, "AIMReqConn (%s:%i) got an error", Server(),
 				Port());
 			ret = kUnhandled;
 		} break;
 		case SERVER_SUPPORTED_SNACS: {
-			LOG(kProtocolName, liLow, "Got server supported SNACs");
+			LOG(ConnName(), liLow, "Got server supported SNACs");
+
+			BMessage newCaps(AMAN_NEW_CAPABILITIES);
 
 			while (offset < bytes) {
 				uint16 s = (data[++offset] << 8) + data[++offset];
-				LOG(kProtocolName, liLow, "Server supports 0x%04x", s);
+				LOG(ConnName(), liLow, "Server supports 0x%04x", s);
 				Support(s);
+				newCaps.AddInt16("family", s);
 			};
-
-			fManMsgr.SendMessage(AMAN_NEW_CAPABILITIES);
 			
-			if (fState == AMAN_CONNECTING) {
+			fManMsgr.SendMessage(newCaps);
+			
+			if (State() == AMAN_CONNECTING) {
 				Flap *f = new Flap(SNAC_DATA);
 				f->AddSNAC(new SNAC(SERVICE_CONTROL,
 					FAMILY_VERSIONS, 0x00, 0x00, 0x00000000));
@@ -153,9 +157,7 @@ status_t AIMReqConn::HandleServiceControl(BMessage *msg) {
 
 			Send(cready);
 			
-			fState = AMAN_ONLINE;
-			
-			printf("AIMReqConn: %s:%i is online! Wooooo!\n", Server(), Port());
+			SetState(AMAN_ONLINE);
 		} break;
 		
 		case EXTENDED_STATUS: {
@@ -171,5 +173,7 @@ status_t AIMReqConn::HandleServiceControl(BMessage *msg) {
 };
 
 status_t AIMReqConn::HandleBuddyIcon(BMessage *msg) {
-	return kUnhandled;
+	status_t ret = kUnhandled;
+
+	return ret;
 };

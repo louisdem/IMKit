@@ -8,6 +8,9 @@ class AIMReqConn : public AIMConnection {
 						AIMReqConn(const char *server, uint16 port,
 							AIMManager *man);
 						~AIMReqConn(void);
+		virtual inline
+			const char	*ConnName(void) const { return "AIMReqConn"; };
+
 				
 	private:
 		virtual status_t	HandleServiceControl(BMessage *msg);
@@ -16,7 +19,6 @@ class AIMReqConn : public AIMConnection {
 			AIMManager	*fManager;
 			BMessenger	fManMsgr;
 			
-		vector<uint16>	fSupportedSNACs;
 		uint8			fState;
 };
 

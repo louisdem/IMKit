@@ -26,7 +26,13 @@
 #include "TLV.h"
 #include "Buddy.h"
 
+class AIMConnection;
+class AIMReqConn;
+class AIMHandler;
+
 typedef map<BString, Buddy *> buddymap;
+typedef map<uint16, AIMConnection *> pfc_map; // Pending family / connection map
+typedef list<Flap *> flap_stack;
 
 enum {
 	AMAN_PULSE = 'ampu',
@@ -42,10 +48,6 @@ enum {
 	AMAN_STATUS_CHANGED = 'amsc',
 	AMAN_NEW_CAPABILITIES = 'amna'
 };
-
-class AIMConnection;
-class AIMReqConn;
-class AIMHandler;
 
 //const char kEncoding[] = "text/aolrtf; charset=\"us-ascii\"";
 const char kEncoding[] = "text/aolrtf; charset=\"utf-8\"";
@@ -116,8 +118,9 @@ class AIMManager : public BLooper {
 			
 			buddymap	fBuddy;
 		list<AIMConnection *>
-						fConnections;	
-		list<Flap *>	fWaitingSupport;
+						fConnections;
+		flap_stack		fWaitingSupport;
+			pfc_map		fPendingConnections;
 
 			uint16		fSSILimits[kSSILimitCount];
 		

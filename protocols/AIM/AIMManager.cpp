@@ -142,12 +142,17 @@ status_t AIMManager::ClearConnections(void) {
 	
 	for (it = fConnections.begin(); it != fConnections.end(); it++) {
 		AIMConnection *con = (*it);
-		con->Lock();
-		con->Quit();
-//		delete con;
+		if (con->Lock()) con->Quit();
 	};
 	
 	fConnections.clear();
+
+	pfc_map::iterator pIt;
+	for (pIt = fPendingConnections.begin(); pIt != fPendingConnections.end(); pIt++) {
+		AIMReqConn *con = dynamic_cast<AIMReqConn *>(pIt->second);
+		if (con->Lock()) con->Quit();
+	};
+	fPendingConnections.clear();
 	
 	return B_OK;
 };
@@ -221,8 +226,7 @@ status_t AIMManager::HandleServiceControl(BMessage *msg) {
 		} break;
 
 		case EXTENDED_STATUS: {
-//			printf("AIMManager got extended status!\n");
-//			exit(0);
+			ret = kUnhandled;
 		} break;
 		
 		default: {
@@ -435,7 +439,7 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 	};
 
 	switch (subtype) {
-		case USER_ONLINE: {
+		case USER_ONLINE: {	
 //			This message contains lots of stuff, most of which we
 //			ignore. We're good like that :)
 			PrintHex(data, bytes);
@@ -471,7 +475,7 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 						uint8 index;
 						uint8 length;
 						uint16 end = offset + tlvlen;
-						
+
 						while (offset < end) {
 							type = (data[++offset] << 8) + data[++offset];
 							index = data[++offset];
@@ -481,17 +485,19 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 								} break;
 								case 0x0001: {	// Icon
 									char *v = (char *)calloc(length, sizeof(char));
-									memcpy(v, data + offset, length);
+									memcpy(v, data + offset + 1, length);
+
 									Flap *buddy = new Flap(SNAC_DATA);
 									buddy->AddSNAC(new SNAC(
-										SERVER_STORED_BUDDY_ICONS,
-										0x0004, 0x00, 0x00, 0x00000000));
-									buddy->AddRawData((uchar *)&nickLen, 1);
+										SERVER_STORED_BUDDY_ICONS, AIM_ICON_REQUEST));
+									buddy->AddInt8(nickLen);
 									buddy->AddRawData((uchar *)nick, nickLen);
-									buddy->AddRawData((uchar []){0x01, 0x00, 0x01, 0x01}, 4);
-									buddy->AddRawData((uchar []){0x10}, 1);
-									buddy->AddRawData((uchar *)v, 16);
-//									Send(buddy);
+									buddy->AddInt8(0x01);		// Command
+									buddy->AddInt16(0x0001);	// Icon id
+									buddy->AddInt8(0x01);		// Icon flags?
+									buddy->AddInt8(0x10);		// Hash size
+									buddy->AddRawData((uchar *)v, 0x10);
+									Send(buddy);
 									free(v);
 								} break;
 								case 0x0002: {
@@ -549,16 +555,10 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 	
 	offset = 9;
 	
-	PrintHex(data, bytes);
-	
 	if (flags & 0x8000) {
 		uint16 skip = (data[++offset] << 8) + data[++offset];
 		offset += skip;
 	};
-	
-//	printf("Got SSI: 0x%04x / 0x%04x\n", SERVER_SIDE_INFORMATION, subtype);
-//	PrintHex(data, bytes, true);
-	
 	switch (subtype) {
 		case SERVICE_PARAMETERS: {
 			uint16 type = (data[++offset] << 8) + data[++offset];
@@ -601,12 +601,6 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 				LOG(kProtocolName, liLow, "SSI item %i is of type 0x%04x (%i bytes)",
 					 i, type, len);
 				
-//				printf("\tName: %s\n\tGroupID: 0x%04x\n\tItemID: 0x%04x\nData:\n",
-//					name, groupID, itemID);
-//
-//				for (int32 i = 0; i < len; i++) printf("0x%02x ", data[offset + i + 1]);
-//				printf("\n");
-
 				switch (type) {
 					case BUDDY_RECORD: {
 //						There's some custom info here.
@@ -704,7 +698,39 @@ status_t AIMManager::HandleUserSearch(BMessage *msg) {
 };
 
 status_t AIMManager::HandleBuddyIcon(BMessage *msg) {
-	return kUnhandled;
+	status_t ret = B_OK;
+	uint16 seqNum = msg->FindInt16("seqNum");
+	uint16 flapLen = msg->FindInt16("flapLen");
+	const uchar *data;
+	int32 bytes = 0;
+	msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+
+	uint32 offset = 0;
+	uint16 family = (data[offset] << 8) + data[++offset];
+	uint16 subtype = (data[++offset] << 8) + data[++offset];
+	uint16 flags = (data[++offset] << 8) + data[++offset];
+	uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
+		(data[++offset] << 8) + data[++offset];
+
+	switch (subtype) {
+		case AIM_ICON: {
+			uint8 nickLen = data[++offset];
+			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
+			memcpy(nick, data + offset + 1, nickLen);
+			offset += 20 + nickLen;	// Misc data
+			uint16 iconLength = (data[++offset] << 8) + data[++offset];
+			
+			fHandler->BuddyIconFromUser(nick, data + offset + 1, iconLength);
+
+			free(nick);			
+		} break;
+		
+		default: {
+			ret = kUnhandled;
+		} break;
+	};
+	
+	return ret;
 };
 
 status_t AIMManager::HandleICQ(BMessage *msg) {
@@ -726,10 +752,6 @@ status_t AIMManager::Send(Flap *f) {
 		if (s != NULL) {
 			uint16 family = s->Family();
 
-			if (family == 10) {
-				
-			};
-
 			list <AIMConnection *>::iterator i;
 			
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
@@ -749,17 +771,23 @@ status_t AIMManager::Send(Flap *f) {
 				LOG(kProtocolName, liHigh, "No available connections to send SNAC");
 				return B_ERROR;
 			} else {
-				Flap *newService = new Flap(SNAC_DATA);
-				newService->AddSNAC(new SNAC(SERVICE_CONTROL, REQUEST_NEW_SERVICE,
-					0x00, 0x00, 0x00000000));
-					
-				uchar highF = (family & 0xff00) >> 8;
-				uchar lowF = (family & 0x00ff);
-				newService->AddRawData((uchar *)&highF, sizeof(highF));
-				newService->AddRawData((uchar *)&lowF, sizeof(lowF));
-				con->Send(newService);
+				pfc_map::iterator pIt = fPendingConnections.find(family);
+				if (pIt == fPendingConnections.end()) {
+					Flap *newService = new Flap(SNAC_DATA);
+					newService->AddSNAC(new SNAC(SERVICE_CONTROL, REQUEST_NEW_SERVICE));
+					newService->AddInt16(family);
 
-//				fWaitingSupport.push_back(f);
+					con->Send(newService, atImmediate);
+					
+					fPendingConnections[family] = NULL;
+					fWaitingSupport.push_back(f);
+				} else {
+					if (pIt->second != NULL) {
+						pIt->second->Send(f, atOnline);
+					} else {
+						fWaitingSupport.push_back(f);
+					};
+				};
 			};
 		};
 	} else {
@@ -835,12 +863,20 @@ void AIMManager::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case AMAN_NEW_CAPABILITIES: {
 
-			list <Flap *>::iterator i;
+			int16 family = 0;
+			pfc_map::iterator pIt;
+			for (int32 i = 0; msg->FindInt16("family", i, &family) == B_OK; i++) {
+				pIt = fPendingConnections.find(family);
+				if (pIt != fPendingConnections.end()) {
+					fConnections.push_back(pIt->second);
+					fPendingConnections.erase(pIt);
+				};
+			};
+			flap_stack::iterator i;
 			
 //			We can cheat here. Just try resending all the items, Send() will
 //			take care of finding a connection for it
 			for (i = fWaitingSupport.begin(); i != fWaitingSupport.end(); i++) {
-				fWaitingSupport.pop_front();
 				Flap *f = (*i);
 				if (f) Send(f);
 			};
@@ -868,6 +904,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			if (msg->FindInt16("family", &family) == B_OK) {
 				LOG(kProtocolName, liMedium, "Connecting to %s:%i for 0x%04x\n",
 					host, port, family);
+				fPendingConnections[family] = con;
 				con = new AIMReqConn(host, port, this);
 			} else {
 				con = new AIMConnection(host, port, this);

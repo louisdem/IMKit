@@ -48,6 +48,8 @@ class AIMProtocol : public IM::Protocol, public AIMHandler
 			status_t	MessageFromUser(const char *nick, const char *msg);
 			status_t	UserIsTyping(const char *nick, typing_notification type);
 			status_t 	SSIBuddies(list<BString> buddies);
+			status_t	BuddyIconFromUser(const char *nick, const uchar *icon,
+							uint32 length);
 
 	private:
 			BString 	NormalizeNick(const char *nick);

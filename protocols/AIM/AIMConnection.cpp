@@ -5,8 +5,8 @@
 
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size, bool override = false);
-const char *kProtocolName = "AIM";
 const char *kThreadName = "IM Kit: AIM Connection";
+const char *kProtocolName = "AIM";
 
 AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
 	const char *name = "AIM Connection")
@@ -23,7 +23,7 @@ AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_KEEP_ALIVE), 30000000, -1);
 	
-	fState = AMAN_CONNECTING;
+	SetState(AMAN_CONNECTING);
 	fSock = B_ERROR;
 	fSock = ConnectTo(fServer.String(), fPort);
 	if (fSock > B_OK) StartReceiver();
@@ -41,59 +41,45 @@ AIMConnection::~AIMConnection(void) {
 
 //#pragma mark -
 
-status_t AIMConnection::Send(Flap *f) {
-	fOutgoing.push_back(f);
+status_t AIMConnection::Send(Flap *f, send_time at = atBuffer) {
+	status_t status = B_OK;
+	switch (at) {
+		case atBuffer: {
+			fOutgoing.push_back(f);
+		} break;
+		
+		case atImmediate: {
+			status = LowLevelSend(f);
+		} break;
+
+		case atOnline: {
+			if (State() == AMAN_ONLINE) {
+				fOutgoing.push_back(f);
+			} else {
+				fOutgoingOnline.push_back(f);
+			};
+		} break;
+		
+		default: {
+			status = B_ERROR;
+		} break;
+	};
+	
+	return status;
 }
 
 void AIMConnection::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case AMAN_PULSE: {
-			if (fSock > 0) {
-				if (fOutgoing.size() == 0) return;
-				Flap *f = fOutgoing.front();
-
-				if (f->Channel() == SNAC_DATA) {
-					LOG(kProtocolName, liLow, "%s:%i Sending 0x%04x / 0x%04x", Server(),
-						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
-				};
-				const char * data = f->Flatten(++fOutgoingSeqNum);
-				int32 data_size = f->FlattenedSize();
-				int32 sent_data = 0;
-				
-				LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
-					Port(), data_size);
-				
-				while (sent_data < data_size) {
-					int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
-					
-					if (sent < 0) {
-						delete f;
-						LOG(kProtocolName, liLow, "%s:%i: Couldn't send packet", Server(),
-							Port());
-						perror("Socket error");
-						return;
-					};
-					
-					if (sent == 0) {
-						LOG(kProtocolName, liHigh, "%s:%i: send() returned 0, is this bad?",
-							Server(), Port());
-						snooze(1*1000*1000);
-					};
-					
-					sent_data += sent;
-				};
-				
-				LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
-					data_size);
-				
-				fOutgoing.pop_front();
-				delete f;
-				
-			};
+			if (fOutgoing.size() == 0) return;
+			Flap *flap = fOutgoing.front();
+			LowLevelSend(flap);
+		
+			fOutgoing.pop_front();
 		} break;
 		
 		case AMAN_KEEP_ALIVE: {
-			if ((fState == AMAN_ONLINE) || (fState == AMAN_AWAY)) {
+			if ((State() == AMAN_ONLINE) || (State() == AMAN_AWAY)) {
 				Flap *keepAlive = new Flap(KEEP_ALIVE);
 				Send(keepAlive);
 			};
@@ -110,7 +96,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			const uchar *data;
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
-			LOG(kProtocolName, liLow, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
+			LOG(ConnName(), liLow, "%s:%i: Got FLAP_OPEN_CON packet", Server(),
 				Port());
 		} break;
 		
@@ -123,7 +109,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			uint16 subtype = (data[2] << 8) + data[3];
 			status_t result = kUnhandled;
 
-			LOG(kProtocolName, liLow, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
+			LOG(ConnName(), liLow, "AIMConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
 				Server(), Port(), family, subtype);
 			
 			switch (family) {
@@ -198,7 +184,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			int32 bytes = 0;
 			msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
 
-			if (fState == AMAN_CONNECTING) {
+			if (State() == AMAN_CONNECTING) {
 	
 				char *server = NULL;
 				char *cookie = NULL;
@@ -226,7 +212,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 							pair<char *, uint16> serv = ExtractServerDetails(value);
 							server = serv.first;
 							port = serv.second;
-							LOG(kProtocolName, liLow, "Need to reconnect to: %s:%i", server, port);
+							LOG(ConnName(), liLow, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {
@@ -249,7 +235,7 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 //				Nuke the old packet queue
 				ClearQueue();
 
-				LOG(kProtocolName, liDebug, "%s:%i attempting connection to %s:%i\n",
+				LOG(ConnName(), liDebug, "%s:%i attempting connection to %s:%i\n",
 					fServer.String(), fPort, server, port);
 				if (fSock > B_OK) {
 					fSock = ConnectTo(server, port);
@@ -270,18 +256,15 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 					free(server);
 				};
 			} else {
-				
 				BMessage msg(AMAN_CLOSED_CONNECTION);
 				msg.AddPointer("connection", this);
 
 				fManMsgr.SendMessage(&msg);
-				fState = AMAN_OFFLINE;
+				SetState(AMAN_OFFLINE);
 
 				StopReceiver();
 				fSock = -1;
 			};
-
-			
 		} break;
 		
 		default: {
@@ -312,10 +295,70 @@ void AIMConnection::Support(uint16 family) {
 	fSupportedSNACs.push_back(family);
 };
 
+status_t AIMConnection::SetState(uint8 state) {
+	status_t status = B_OK;
+	if (state == AMAN_ONLINE) {
+		flap_stack::iterator pIt;
+		for (pIt = fOutgoingOnline.begin(); pIt != fOutgoingOnline.end(); pIt++) {
+			fOutgoing.push_back(*pIt);
+		};
+		
+		fOutgoingOnline.clear();
+	};
+	
+	fState = state;
+	
+	return status;
+};
+
 //#pragma mark -
 
+status_t AIMConnection::LowLevelSend(Flap *flap) {
+	int sent_data = -1;
+
+	if (fSock > 0) {
+		if (flap->Channel() == SNAC_DATA) {
+			LOG(ConnName(), liLow, "%s:%i Sending 0x%04x / 0x%04x", Server(),
+				Port(), flap->SNACAt()->Family(), flap->SNACAt()->SubType());
+		};
+		const char * data = flap->Flatten(++fOutgoingSeqNum);
+		int32 data_size = flap->FlattenedSize();
+		int32 sent_data = 0;
+		
+		LOG(ConnName(), liDebug, "%s:%i: Sending %ld bytes of data", Server(),
+			Port(), data_size);
+		
+		while (sent_data < data_size) {
+			int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
+			
+			if (sent < 0) {
+				delete flap;
+				LOG(ConnName(), liLow, "%s:%i: Couldn't send packet", Server(),
+					Port());
+				perror("Socket error");
+				return sent;
+			};
+			
+			if (sent == 0) {
+				LOG(ConnName(), liHigh, "%s:%i: send() returned 0, is this bad?",
+					Server(), Port());
+				snooze(1*1000*1000);
+			};
+			
+			sent_data += sent;
+		};
+		
+		LOG(ConnName(), liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
+			data_size);
+		
+		delete flap;
+	};
+	
+	return sent_data;
+};
+
 void AIMConnection::ClearQueue(void) {
-	list<Flap *>::iterator it;
+	flap_stack::iterator it;
 	
 	for (it = fOutgoing.begin(); it != fOutgoing.end(); it++) {
 		Flap *f = (*it);
@@ -327,7 +370,7 @@ void AIMConnection::ClearQueue(void) {
 
 int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	if (hostname == NULL) {
-		LOG(kProtocolName, liHigh, "ConnectTo() called with NULL hostname - probably"
+		LOG(ConnName(), liHigh, "ConnectTo() called with NULL hostname - probably"
 			" not authorised to login at this time");
 		fManager->Error("Authorisation rejected");
 		
@@ -337,7 +380,7 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 		msg.AddPointer("connection", this);
 
 		fManMsgr.SendMessage(&msg);
-		fState = AMAN_OFFLINE;
+		SetState(AMAN_OFFLINE);
 
 		return B_ERROR;
 	};
@@ -346,15 +389,15 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	struct sockaddr_in their_addr;
 	int32 sock = 0;
 
-	LOG(kProtocolName, liLow, "AIMConn::ConnectTo(%s, %i)", hostname, port);
+	LOG(ConnName(), liLow, "AIMConn::ConnectTo(%s, %i)", hostname, port);
 
 	if ((he = gethostbyname(hostname)) == NULL) {
-		LOG(kProtocolName, liMedium, "AIMConn::ConnectTo: Couldn't get Server name (%s)", hostname);
+		LOG(ConnName(), liMedium, "AIMConn::ConnectTo: Couldn't get Server name (%s)", hostname);
 		return B_ERROR;
 	};
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG(kProtocolName, liMedium, "AIMConn::ConnectTo(%s, %i): Couldn't create socket",
+		LOG(ConnName(), liMedium, "AIMConn::ConnectTo(%s, %i): Couldn't create socket",
 			hostname, port);	
 		return B_ERROR;
 	};
@@ -365,7 +408,7 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	memset(&(their_addr.sin_zero), 0, 8);
 
 	if (connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1) {
-		LOG(kProtocolName, liMedium, "AIMConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
+		LOG(ConnName(), liMedium, "AIMConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
 
 		StopReceiver();
 
@@ -373,10 +416,12 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 		msg.AddPointer("connection", this);
 
 		fManMsgr.SendMessage(&msg);
-		fState = AMAN_OFFLINE;
+		SetState(AMAN_OFFLINE);
 				
 		return B_ERROR;
 	};
+	
+	SetState(AMAN_CONNECTING);
 	
 	return sock;
 };
@@ -408,11 +453,12 @@ int32 AIMConnection::Receiver(void *con) {
 	const char *kHost = connection->Server();
 	const uint16 kPort = connection->Port();
 	const BMessenger *kMsgr = connection->fSockMsgr;
+	const char *kConnName = connection->ConnName();
 	
 	int32 socket = 0;
 
 	if ( !connection->fSockMsgr->IsValid() ) {
-		LOG(kProtocolName, liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
+		LOG(kConnName, liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
 		return B_ERROR;
 	}
 
@@ -424,17 +470,17 @@ int32 AIMConnection::Receiver(void *con) {
 	{
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
 		{
-			LOG(kProtocolName, liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
+			LOG(kConnName, liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
 			return B_ERROR;
 		}
 	} else 
 	{
-		LOG(kProtocolName, liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
+		LOG(kConnName, liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
 		return B_ERROR;
 	}
 	
 	if (socket < 0) {
-		LOG(kProtocolName, liLow, "%s:%i: Socket is invalid: %i", kHost, kPort, socket);
+		LOG(kConnName, liLow, "%s:%i: Socket is invalid: %i", kHost, kPort, socket);
 		return B_ERROR;
 	};
 	
@@ -458,7 +504,7 @@ int32 AIMConnection::Receiver(void *con) {
 
 			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
 				if (FD_ISSET(socket, &error)) {
-					LOG(kProtocolName, liLow, "%s:%i: Got socket error", kHost, kPort);
+					LOG(kConnName, liLow, "%s:%i: Got socket error", kHost, kPort);
 					snooze(kSleep);
 					continue;
 				};
@@ -473,7 +519,7 @@ int32 AIMConnection::Receiver(void *con) {
 						} else {
 							if (kMsgr->IsValid() == false) return B_OK;
 
-							LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0",
+							LOG(kConnName, liLow, "%s:%i: Socket got less than 0",
 								kHost, kPort);
 							perror("SOCKET ERROR");
 
@@ -481,7 +527,7 @@ int32 AIMConnection::Receiver(void *con) {
 							msg.AddPointer("connection", con);
 			
 							connection->fManMsgr.SendMessage(&msg);
-							connection->fState = AMAN_OFFLINE;
+							connection->SetState(AMAN_OFFLINE);
 							
 							return B_ERROR;
 						};
@@ -497,7 +543,7 @@ int32 AIMConnection::Receiver(void *con) {
 		uchar *flapContents;
 		
 		if (flapHeader[0] != COMMAND_START) {
-			LOG(kProtocolName, liHigh, "%s:%i: Packet header doesn't start with 0x2a "
+			LOG(kConnName, liHigh, "%s:%i: Packet header doesn't start with 0x2a "
 				" - discarding!", kHost, kPort);
 			continue;
 		};
@@ -531,7 +577,7 @@ int32 AIMConnection::Receiver(void *con) {
 							free(flapContents);
 							if (kMsgr->IsValid() == false) return B_OK;
 						
-							LOG(kProtocolName, liLow, "%s:%i. Got socket error:",
+							LOG(kConnName, liLow, "%s:%i. Got socket error:",
 								connection->Server(), connection->Port());
 							perror("SOCKET ERROR");
 
@@ -539,7 +585,7 @@ int32 AIMConnection::Receiver(void *con) {
 							msg.AddPointer("connection", con);
 			
 							connection->fManMsgr.SendMessage(&msg);
-							connection->fState = AMAN_OFFLINE;
+							connection->SetState(AMAN_OFFLINE);
 							
 							return B_ERROR;
 						};
@@ -564,7 +610,7 @@ int32 AIMConnection::Receiver(void *con) {
 				dataReady.what = AMAN_FLAP_CLOSE_CON;
 			} break;
 			default: {
-				LOG(kProtocolName, liHigh, "%s:%i Got an unsupported FLAP channel",
+				LOG(kConnName, liHigh, "%s:%i Got an unsupported FLAP channel",
 					kHost, kPort);
 				continue;
 			};
@@ -622,17 +668,17 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 		} break;
 			
 		case SERVER_SUPPORTED_SNACS: {
-			LOG(kProtocolName, liLow, "Got server supported SNACs");
+			LOG(ConnName(), liLow, "Got server supported SNACs");
 
 			while (offset < bytes) {
 				uint16 s = (data[++offset] << 8) + data[++offset];
-				LOG(kProtocolName, liLow, "Server supports 0x%04x", s);
+				LOG(ConnName(), liLow, "Server supports 0x%04x", s);
 				Support(s);
 			};
 
 			fManMsgr.SendMessage(AMAN_NEW_CAPABILITIES);
 			
-			if (fState == AMAN_CONNECTING) {
+			if (State() == AMAN_CONNECTING) {
 				Flap *f = new Flap(SNAC_DATA);
 				f->AddSNAC(new SNAC(SERVICE_CONTROL,
 					REQUEST_RATE_LIMITS, 0x00, 0x00, ++fRequestID));
@@ -643,7 +689,7 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 		} break;
 		
 		case SERVICE_REDIRECT: {
-			LOG(kProtocolName, liLow, "Got service redirect SNAC");
+			LOG(ConnName(), liLow, "Got service redirect SNAC");
 			uint16 tlvType = 0;
 			uint16 tlvLen = 0;
 			char *tlvValue = NULL;
@@ -652,7 +698,7 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 			
 			if (data[4] & 0x80) {
 				uint16 skip = (data[10] << 8) + data[11];
-				LOG(kProtocolName, liLow, "Skipping %i bytes", skip);
+				LOG(ConnName(), liLow, "Skipping %i bytes", skip);
 				offset += skip + 2;
 			};
 			
@@ -676,7 +722,7 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 					} break;
 					
 					case 0x0005: {	// Server Details
-						LOG(kProtocolName, liLow, "Server details: %s\n", tlvValue);
+						LOG(ConnName(), liLow, "Server details: %s\n", tlvValue);
 
 						if (strchr(tlvValue, ':')) {
 							pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
@@ -691,7 +737,7 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 					} break;
 					
 					case 0x0006: {	// Cookie, nyom nyom nyom!
-						LOG(kProtocolName, liLow, "Cookie");
+						LOG(ConnName(), liLow, "Cookie");
 						service.AddData("cookie", B_RAW_TYPE, tlvValue,
 							tlvLen);
 					} break;
@@ -716,7 +762,7 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 			f->AddRawData((uchar []){0x00, 0x04}, 2);						
 			Send(f);
 			
-			if (fState != AMAN_CONNECTING) return B_OK;
+			if (State() != AMAN_CONNECTING) return B_OK;
 			
 			fManager->Progress("AIM Login", "AIM: Got rate limits", 0.6);
 			
@@ -813,22 +859,20 @@ status_t AIMConnection::HandleServiceControl(BMessage *msg) {
 			status.AddInt8("status", AMAN_ONLINE);
 
 			fManMsgr.SendMessage(&status);
-			fState = AMAN_ONLINE;
+			SetState(AMAN_ONLINE);
 		
 		} break;
 		case SERVER_FAMILY_VERSIONS: {
-			LOG(kProtocolName, liLow, "Supported SNAC families for "
+			LOG(ConnName(), liLow, "Supported SNAC families for "
 				"this server");
 			while (offset < bytes) {
-				LOG(kProtocolName, liLow, "\tSupported family: 0x%x "
+				LOG(ConnName(), liLow, "\tSupported family: 0x%x "
 					" 0x%x, Version: 0x%x 0x%x", data[++offset],
 					data[++offset], data[++offset], data[++offset]);
 			};
 		} break;
 
 		case EXTENDED_STATUS: {
-//			printf("AIMConnection %s:%i got extended status", Server(), Port());
-//			msg->PrintToStream();
 			ret = kUnhandled;
 		} break;
 

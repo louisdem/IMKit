@@ -438,6 +438,21 @@ status_t AIMProtocol::SSIBuddies(list<BString> buddies) {
 	fMsgr.SendMessage(&serverBased);
 };
 
+status_t AIMProtocol::BuddyIconFromUser(const char *nick, const uchar *icon,
+	uint32 length) {
+	
+	BMessage iconMsg(IM::MESSAGE);
+	iconMsg.AddString("protocol", kProtocolName);
+	iconMsg.AddInt32("im_what", IM::SET_BUDDY_ICON);
+	iconMsg.AddString("id", NormalizeNick(nick));
+	iconMsg.AddData("icondata", B_RAW_TYPE, icon, length);
+
+	fMsgr.SendMessage(&iconMsg);
+	return B_OK;
+};
+
+//#pragma mark -
+
 BString AIMProtocol::NormalizeNick(const char *nick) {
 	BString normal = nick;
 	

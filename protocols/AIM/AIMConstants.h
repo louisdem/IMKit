@@ -81,6 +81,8 @@ enum snac_subtype {
 
 //	Family 10 - Buddy Icons
 	ICON_UPLOAD = 0x0002,
+	AIM_ICON_REQUEST = 0x0004,
+	AIM_ICON = 0x0005,
 
 //	Family 13 - SSI
 	REQUEST_PARAMETERS = 0x0002,

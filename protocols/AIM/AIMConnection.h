@@ -24,6 +24,12 @@ typedef pair <char *, uint16> ServerAddress;
 class AIMManager;
 const status_t kUnhandled = -1;
 
+enum send_time {
+	atImmediate,
+	atBuffer,
+	atOnline
+};
+
 class AIMConnection : public BLooper {
 	public:
 						AIMConnection(const char *server, uint16 port,
@@ -37,20 +43,25 @@ class AIMConnection : public BLooper {
 		bool			Supports(const uint16 family) const;
 		void			Support(uint16 family);
 		
-		status_t		Send(Flap *flap);
+		status_t		Send(Flap *flap, send_time at = atBuffer);
 
 		inline const char
 						*Server(void) const { return fServer.String(); };
 		inline uint16	Port(void) const { return fPort; };
+		virtual inline
+			const char	*ConnName(void) const { return "AIMConnection"; };
+		
+		uint8			State(void) const { return fState; };
+		status_t		SetState(uint8 state);
 
 	private:
+		status_t		LowLevelSend(Flap *flap);
 		void			ClearQueue(void);		
 		int32			ConnectTo(const char *hostname, uint16 port);
 		static int32	Receiver(void *con);
 		void			StartReceiver(void);
 		void			StopReceiver(void);
 		ServerAddress	ExtractServerDetails(char *details);
-
 		
 		virtual status_t	HandleServiceControl(BMessage *msg);
 		virtual status_t	HandleLocation(BMessage *msg);
@@ -75,7 +86,8 @@ class AIMConnection : public BLooper {
 		BString			fServer;
 		uint16			fPort;
 		
-		list<Flap *>	fOutgoing;
+		flap_stack		fOutgoing;
+		flap_stack		fOutgoingOnline;
 		uint16			fOutgoingSeqNum;
 		
 		vector<uint16>	fSupportedSNACs;
@@ -94,7 +106,7 @@ class AIMConnection : public BLooper {
 		
 		AIMManager		*fManager;
 		
-		list<char *>		fIcons;
+		list<char *>	fIcons;
 };
 
 #endif
