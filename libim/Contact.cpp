@@ -150,9 +150,14 @@ Contact::LoadConnections()
 			if ( curr != start )
 			{
 				conn[curr-start] = 0;
-				fConnections.AddItem(conn);
+				
+				if ( connection_protocol(conn).size() > 0  && connection_id(conn).size() > 0 )
+				{
+					fConnections.AddItem(conn);
+					conn = new char[256];
+				}
+				
 				start = curr+1;
-				conn = new char[256];
 			}
 		}
 		curr++;
@@ -161,7 +166,8 @@ Contact::LoadConnections()
 	if ( start != curr )
 	{
 		conn[curr-start] = 0;
-		fConnections.AddItem(conn);
+		if ( connection_protocol(conn).size() > 0  && connection_id(conn).size() > 0 )
+			fConnections.AddItem(conn);
 	} else
 	{
 		delete conn;

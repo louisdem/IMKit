@@ -486,5 +486,10 @@ connection_protocol( string conn )
 string
 connection_id( string conn )
 {
-	return conn.substr(conn.find(":")+1);
+	size_t colon = conn.find(":");
+	
+	if ( colon == string::npos )
+		return "";
+	
+	return conn.substr(colon+1);
 }
