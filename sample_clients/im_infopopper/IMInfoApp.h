@@ -31,7 +31,7 @@ class IMInfoApp : public BApplication {
 		
 		BString		fStatusText;
 		BString		fMessageText;
-		int32		fIconSize;
+//		int32		fIconSize;
 		
 		protoicons	fProtocolIcons;
 };

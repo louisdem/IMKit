@@ -24,12 +24,12 @@ IMInfoApp::IMInfoApp(void)
 		fMessageText = "$nickname$ says:\n$shortmsg$";
 		settings.AddString("msg_text", fMessageText);
 	};
-	if (settings.FindInt32("icon_size", &fIconSize) != B_OK) {
+/*	if (settings.FindInt32("icon_size", &fIconSize) != B_OK) {
 		fIconSize = 16;
 		settings.AddInt32("icon_size", fIconSize);
 	};
-	
-	im_save_client_settings("IM-InfoPopper", &settings);
+*/	
+	im_save_client_settings("im_infopopper", &settings);
 	
 	BDirectory dir("/boot/home/config/add-ons/im_kit/protocols");
 	entry_ref ref;
@@ -235,7 +235,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 		
 		case IM::SETTINGS_UPDATED: {	
 			BMessage settings;
-			im_load_client_settings("InfoPopper", &settings);
+			im_load_client_settings("im_infopopper", &settings);
 			if (settings.FindString("status_text", &fStatusText) != B_OK) {
 				fStatusText = "$nickname$ is now $status$";
 			};

@@ -17,6 +17,7 @@ int main(void) {
 	autostart.AddString("description", "Auto-start");
 	autostart.AddInt32("type", B_BOOL_TYPE);
 	autostart.AddBool("default", true);
+	autostart.AddString("help", "Should this be started by im_server?");
 	
 	BMessage appsig;
 	appsig.AddString("name", "app_sig");
@@ -29,27 +30,33 @@ int main(void) {
 	status.AddString("description", "Status change text");
 	status.AddInt32("type", B_STRING_TYPE);
 	status.AddString("default", "$nickname$ is now $status$");
+	status.AddString("help","Here you can alter the way 'status change'\n"
+	"messages are displayed"
+	);
 	
 	BMessage msg;
 	msg.AddString("name", "msg_text");
 	msg.AddString("description", "Message received text");
 	msg.AddInt32("type", B_STRING_TYPE);
 	msg.AddString("default", "$nickname$ says $shortmsg$");
+	msg.AddString("help","Here you can alter the way 'message received'\n"
+	"messages are displayed"
+	);
 	
-	BMessage iconSize;
+/*	BMessage iconSize;
 	iconSize.AddString("name", "icon_size");
 	iconSize.AddString("description", "Icon size");
 	iconSize.AddInt32("type", B_INT32_TYPE);
 	iconSize.AddInt32("default", 16);
-	
+*/	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
 	tmplate.AddMessage("setting", &appsig);
 	tmplate.AddMessage("setting", &status);
 	tmplate.AddMessage("setting", &msg);
-	tmplate.AddMessage("setting", &iconSize);
+//	tmplate.AddMessage("setting", &iconSize);
 	
-	im_save_client_template("IM-InfoPopper", &tmplate);
+	im_save_client_template("im_infopopper", &tmplate);
 	
 	app.Run();
 }
