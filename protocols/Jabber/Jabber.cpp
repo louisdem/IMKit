@@ -204,17 +204,22 @@ Jabber::Process( BMessage * msg )
 				case IM::UNREGISTER_CONTACTS:
 				
 				{
+						
+					
 						const char * buddy=NULL;
 						
 						for ( int i=0; msg->FindString("id", i, &buddy) == B_OK; i++ )
 						{
+							LOG(kProtocolName, liDebug, "Unregister Contact: '%s'", buddy);
+							
 							if(!fFullLogged)
 							BuddyStatusChanged(buddy,OFFLINE_TEXT);
 							else
 							{
-							 JabberContact* contact=getContact(buddy);
-							 if(contact)
-								RemoveContact(contact);
+								LOG(kProtocolName, liDebug, "Unregister Contact DOING IT");
+							 	JabberContact* contact=getContact(buddy);
+							 	if(contact)
+									RemoveContact(contact);
 							}
 						}
 				} 
