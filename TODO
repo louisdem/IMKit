@@ -6,9 +6,6 @@ Fixes
 * Add status changes to im_logger?
 * Smart protocol selection, if contact is online on any service, use that etc
 * Deskbar icon: show current status in Set status menu
-* ChatWindow - resize problems with textview?
-* Change URLTextView so it highlights URL:s
-* URLTextView doesn't show selected text as selected
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * add support for setting the verbosity level on startup, now defaults to DEBUG which is a bit chatty

@@ -15,6 +15,10 @@ default .DEFAULT :
 	# copy the engine to a known location
 	-cp -u makefile-engine.IMkit $(BUILDHOME)/etc/makefile-engine.IMkit
 
+	# This seems to fail from the Makefile, but the exact same command works
+	# if executed from Terminal, anyone?
+	-unzip -n server/StatusIcons.zip -d ~/config/settings/im_kit/icons
+
 	# must install lib to make the rest.
 	$(MAKE) -C libim install
 
