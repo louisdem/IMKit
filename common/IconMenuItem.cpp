@@ -105,6 +105,6 @@ void IconMenuItem::DrawContent() {
 		
 	parent->MovePenTo(loc.x + fIcon->Bounds().Width() + kEdgePadding,
 		loc.y + fFontHeight.ascent + kEdgePadding);
-	parent->SetDrawingMode( B_OP_COPY );
+	parent->SetDrawingMode( B_OP_OVER );
 	parent->DrawString(fLabel.String());
 };
