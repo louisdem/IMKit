@@ -1,6 +1,7 @@
 #include "InfoWindow.h"
 #include <Application.h>
 #include <Beep.h>
+#include <stdio.h>
 
 #include <libim/InfoPopper.h>
 
