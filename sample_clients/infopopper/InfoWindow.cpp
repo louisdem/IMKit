@@ -84,29 +84,11 @@ InfoWindow::MessageReceived( BMessage * msg )
 				//printf("Displaying message <%s>\n", text.String() );
 				InfoView * view = new InfoView( type, text.String() );
 				
-				if ( fInfoViews.size() == 0 )
-				{
-					Show();
-				}
-				
 				fInfoViews.push_back(view);
-				
-				float w = Bounds().Width();
-				
-				if ( view->Bounds().Width() > Bounds().Width() )
-					w = view->Bounds().Width();
-				
-				if ( fInfoViews.size() == 1 )
-				{
-					ResizeTo( w, view->Bounds().Height() );
-				} else
-				{
-					ResizeTo( w, Bounds().Height()+view->Bounds().Height() );
-				}
 				
 				AddChild( view );
 				
-				view->MoveTo( 0, Bounds().bottom - view->Bounds().Height() );
+				ResizeAll();
 			}
 		}	break;
 		
@@ -121,24 +103,7 @@ InfoWindow::MessageReceived( BMessage * msg )
 			
 			fInfoViews.remove(info);
 			
-			if ( fInfoViews.size() == 0 )
-			{
-				Hide();
-			} else
-			{
-				float curry=0, maxw=0;
-				BView * view = NULL;
-			
-				for ( list<InfoView*>::iterator i=fInfoViews.begin(); i != fInfoViews.end(); i++ )
-				{
-					(*i)->MoveTo(0, curry);
-					curry += (*i)->Bounds().Height()+1;
-					if ( (*i)->Bounds().Width() > maxw )
-						maxw = (*i)->Bounds().Width();
-				}
-			
-				ResizeTo( maxw, curry );
-			}
+			ResizeAll();
 		}	break;
 		
 		default:
@@ -146,3 +111,30 @@ InfoWindow::MessageReceived( BMessage * msg )
 	}
 }
 
+void
+InfoWindow::ResizeAll()
+{
+	if ( fInfoViews.size() == 0 )
+	{
+		if ( !IsHidden() )
+			Hide();
+		return;
+	}
+	
+	if ( IsHidden() )
+		Show();
+	
+	float curry=0, maxw=0;
+	BView * view = NULL;
+			
+	for ( list<InfoView*>::iterator i=fInfoViews.begin(); i != fInfoViews.end(); i++ )
+	{
+		(*i)->MoveTo(0, curry);
+		curry += (*i)->Bounds().Height()+1;
+		if ( (*i)->Bounds().Width() > maxw )
+			maxw = (*i)->Bounds().Width();
+		(*i)->ResizeTo( Bounds().Width(), (*i)->Bounds().Height() );
+	}
+	
+	ResizeTo( maxw, curry-1 );
+}

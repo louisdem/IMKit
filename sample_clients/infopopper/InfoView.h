@@ -3,6 +3,8 @@
 
 #include <View.h>
 #include <MessageRunner.h>
+#include <StringView.h>
+#include "InputFilter.h"
 
 enum {
 	REMOVE_VIEW = 'ReVi'
@@ -23,9 +25,12 @@ class InfoView : public BView
 		~InfoView();
 		
 		void AttachedToWindow();
+		void MessageReceived( BMessage * );
 		
 	private:
-		BMessageRunner * fRunner;
+		BMessageRunner	* fRunner;
+		InputFilter		* fFilter;
+		BStringView 	* fView;
 };
 
 

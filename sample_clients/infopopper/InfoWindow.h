@@ -14,11 +14,12 @@ class InfoWindow : public BWindow
 		InfoWindow();
 		~InfoWindow();
 		
-		bool QuitRequested();
-		
-		void MessageReceived( BMessage * );
+		bool	QuitRequested();
+		void	MessageReceived( BMessage * );
 	
 	private:
+		void	ResizeAll();
+		
 		IM::Manager 		* fMan;
 		list<InfoView*>		fInfoViews;
 };
