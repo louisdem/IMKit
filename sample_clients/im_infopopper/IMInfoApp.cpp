@@ -55,14 +55,13 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 		case IM::MESSAGE: {
 			int32 im_what = IM::ERROR;
 			if (msg->FindInt32( "im_what", &im_what) != B_OK) im_what = IM::ERROR;
-			
-			msg->PrintToStream();
-			
+				
 			BString text("");		
 			entry_ref ref;
 			
 			msg->FindRef("contact", &ref);
 			
+			BString title;
 			const char *protocol;
 			char contactname[512];
 			char nickname[512];
@@ -98,6 +97,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			switch (im_what) {
 				case IM::ERROR:
 				{
+					title = "Error";
 					BMessage error;
 					int32 error_what = -1;
 					if ( msg->FindMessage("message", &error ) == B_OK )
@@ -114,6 +114,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 				}	break;
 				
 				case IM::MESSAGE_RECEIVED: {
+					title = "Message Received";
 					text = fMessageText;
 					BString message = msg->FindString("message");
 					BString shortMessage = message;
@@ -136,6 +137,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 				}	break;
 				
 				case IM::STATUS_CHANGED: {
+					title = "Status change";
 					const char * new_status = msg->FindString("status");
 					const char * old_status = msg->FindString("old_status");
 					
@@ -148,8 +150,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 				}	break;
 				
 				case IM::PROGRESS: {
-					printf("Displaying message <%s>\n", text.String() );
-					
+					title = "Progress";
 					float progress;
 					if (msg->FindFloat("progress", &progress) != B_OK) progress=0.0f;
 					const char * messageID;
@@ -158,7 +159,8 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					if (msg->FindString("message", &message) != B_OK) message=NULL;
 					
 					BMessage pop_msg(InfoPopper::AddMessage);
-					pop_msg.AddString("title", "IM Kit");
+					pop_msg.AddString("appTitle", "IM Kit");
+					pop_msg.AddString("title", title);
 					pop_msg.AddInt8("type", InfoPopper::Progress);
 					pop_msg.AddFloat("progress",progress);
 					if ( messageID )
@@ -188,7 +190,8 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 				printf("Displaying message <%s>\n", text.String() );
 				
 				BMessage pop_msg(InfoPopper::AddMessage);
-				pop_msg.AddString("title", "IM Kit");
+				pop_msg.AddString("appTitle", "IM Kit");
+				pop_msg.AddString("title", title);
 				pop_msg.AddString("content", text);
 				pop_msg.AddInt8("type", (int8)type);
 	
