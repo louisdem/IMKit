@@ -80,11 +80,11 @@ Contact::InitCheck()
 	if (ret == B_OK) {
 		ret = (entry.Exists() == true) ? B_OK : B_ERROR;
 		
-		if (ret == B_OK) {
+/*		if (ret == B_OK) {
 			LoadConnections();
 			if (CountConnections() <= 0) ret = B_ERROR;
 		};
-	};
+*/	};
 	
 	return ret;
 }
