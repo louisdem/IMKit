@@ -10,7 +10,7 @@ ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
 
 .PHONY: default
 default:
-	@echo The AIM add-on currently requires BONE. MSN add-on ignored.
+	@echo The MSN add-on currently requires BONE. MSN add-on ignored.
 
 else
 
