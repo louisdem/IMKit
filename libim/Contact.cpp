@@ -446,7 +446,7 @@ status_t Contact::SetBuddyIcon(const char *protocol, BBitmap *icon) {
 	return ret;
 };
 
-BBitmap *Contact::GetBuddyIcon(const char *protocol, int16 size = 48) {
+BBitmap *Contact::GetBuddyIcon(const char *protocol, int16 /*size*/) {
 	char *buffer = NULL;
 	int32 length = -1;
 

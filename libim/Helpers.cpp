@@ -133,7 +133,7 @@ void LOG(const char * module, log_importance level, const char *message, const B
 	
 	char timestr[64];
 	time_t now = time(NULL);
-	strftime(timestr,sizeof(timestr),"%F %H:%M", localtime(&now) );
+	strftime(timestr,sizeof(timestr),"%Y-%m-%d %H:%M", localtime(&now) );
 	
 	printf("%s %s: %s\n", module, timestr, buffer);
 	if ( msg )
@@ -160,7 +160,7 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 	
 	char timestr[64];
 	time_t now = time(NULL);
-	strftime(timestr,sizeof(timestr),"%F %H:%M", localtime(&now) );
+	strftime(timestr,sizeof(timestr),"%Y-%m-%d %H:%M", localtime(&now) );
 	
 	printf("%s %s: %s\n", module, timestr, buffer);
 	
