@@ -970,8 +970,6 @@ void ChatWindow::BuildProtocolMenu(void) {
 	fProtocolMenu->Invalidate();
 	
 	// resize fInfoView
-	printf("fProtocolMenu: "); fProtocolMenu->Frame().PrintToStream();
-	printf("fStatusBar: "); fStatusBar->Frame().PrintToStream();
 //	fInfoView->MoveTo( fProtocolMenu->MenuBar()->Frame().right + 5, 2 );
 	fInfoView->MoveTo( 200, 2 );
 	fInfoView->ResizeTo(
@@ -979,7 +977,6 @@ void ChatWindow::BuildProtocolMenu(void) {
 		fStatusBar->Bounds().Width() - 200 - 2,
 		fStatusBar->Bounds().Height() - 4
 	);
-	printf("fInfoView: "); fInfoView->Frame().PrintToStream();
 };
 
 void
