@@ -160,7 +160,7 @@ Server::QuitRequested()
 	Loads attribute named 'attribute' from the file 'name'defaults to a type of 'BBMP'
 	Doesn't work on symlinks
 */
-BBitmap *
+/*BBitmap *
 Server::GetBitmapFromAttribute(const char *name, const char *attribute, 
 	type_code type = 'BBMP') {
 	BBitmap 	*bitmap = NULL;
@@ -210,11 +210,11 @@ Server::GetBitmapFromAttribute(const char *name, const char *attribute,
 	
 	return bitmap;
 }
-
+*/
 /**
 	Read an image form a file?
 */
-BBitmap *
+/*BBitmap *
 Server::GetBitmap(const char *name, type_code type = 'BBMP') {
 	BResources *res = AppResources();
 
@@ -247,6 +247,7 @@ Server::GetBitmap(const char *name, type_code type = 'BBMP') {
 	
 	return bitmap;
 }
+*/
 
 /**
 */
@@ -260,7 +261,7 @@ Server::MessageReceived( BMessage * msg )
 		case B_QUERY_UPDATE:
 			HandleContactUpdate(msg);
 			break;
-
+		
 		// IM-Kit specified messages:
 		
 		case GET_CONTACT_STATUS:
@@ -269,6 +270,9 @@ Server::MessageReceived( BMessage * msg )
 		case GET_OWN_STATUSES: {
 			reply_GET_OWN_STATUSES(msg);
 		} break;
+		case UPDATE_CONTACT_STATUS:
+			reply_UPDATE_CONTACT_STATUS(msg);
+			break;
 		
 		case FLASH_DESKBAR:
 		case STOP_FLASHING:
@@ -711,7 +715,7 @@ Server::FindContact( const char * proto_id )
 			continue;
 		
 		vol.GetName(volName);
-		LOG("im_server", DEBUG, "FindContact: Looking for contacts on %s", volName);
+		//LOG("im_server", DEBUG, "FindContact: Looking for contacts on %s", volName);
 		
 		BQuery query;
 		
@@ -1345,7 +1349,8 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 
 
 /**
-	Calculate total status for contact and update IM:status attribute.
+	Calculate total status for contact and update IM:status attribute
+	and the icons too.
 */
 void
 Server::UpdateContactStatusAttribute( Contact & contact )
@@ -1373,6 +1378,8 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		}
 	}
 	
+	//LOG("im_server", MEDIUM, "STATUS_CHANGED total status is now %s", new_status.c_str());
+
 	// update status attribute
 	BNode node(contact);
 	
@@ -1383,12 +1390,25 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 	{ // node exists, write status
 		const char * status = new_status.c_str();
 		
-		if ( node.WriteAttr(
-			"IM:status", B_STRING_TYPE, 0,
-			status, strlen(status)+1
-		) != (int32)strlen(status)+1 )
+		// check if blocked
+		char old_status[256];
+		bool is_blocked = false;
+		
+		if ( contact.GetStatus(old_status, sizeof(old_status)) == B_OK )
 		{
-			_ERROR("Error writing status attribute");
+			if ( strcmp(old_status, BLOCKED_TEXT) == 0 )
+				is_blocked = true;
+		}
+		
+		if ( !is_blocked )
+		{ // only update IM:status if not blocked
+			if ( node.WriteAttr(
+				"IM:status", B_STRING_TYPE, 0,
+				status, strlen(status)+1
+			) != (int32)strlen(status)+1 )
+			{
+				_ERROR("Error writing status attribute");
+			}
 		}
 		
 		BBitmap *large = NULL;
@@ -1396,24 +1416,36 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		
 		BString pointerName = status;
 		pointerName << "_small";
-
-		fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&small));
+		
+		if ( fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&small)) != B_OK )
+		{
+			LOG("im_server", DEBUG, "Couldn't find large icon..");
+		}
 		
 		pointerName = status;
 		pointerName << "_large";
 		
-		fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&large));
+		if ( fIcons.FindPointer(pointerName.String(), reinterpret_cast<void **>(&large)) != B_OK )
+		{
+			LOG("im_server", DEBUG, "Couldn't find small icon..");
+		}
 		
 		if (large != NULL) {
-			node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
-				large->BitsLength());
+			if ( node.WriteAttr(BEOS_LARGE_ICON_ATTRIBUTE, 'ICON', 0, large->Bits(), 
+					large->BitsLength()) != large->BitsLength() )
+			{
+				LOG("im_server", DEBUG, "Couldn't write large icon..");
+			}
 		} else {
 			node.RemoveAttr(BEOS_LARGE_ICON_ATTRIBUTE);
 		};	
 
 		if (small != NULL) {
-			node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
-				small->BitsLength());
+			if ( node.WriteAttr(BEOS_SMALL_ICON_ATTRIBUTE, 'MICN', 0, small->Bits(), 
+				small->BitsLength()) != small->BitsLength() )
+			{
+				LOG("im_server", DEBUG, "Couldn't write small icon..");
+			}
 		} else {
 			node.RemoveAttr(BEOS_SMALL_ICON_ATTRIBUTE);
 		};
@@ -2048,3 +2080,20 @@ Server::reply_SERVER_BASED_CONTACT_LIST( BMessage * msg )
 	}
 }
 
+/**
+*/
+void
+Server::reply_UPDATE_CONTACT_STATUS( BMessage * msg )
+{
+	entry_ref ref;
+	
+	if ( msg->FindRef("contact", &ref) != B_OK )
+	{
+		_ERROR("Missing contact in UPDATE_CONTACT_STATUS",msg);
+		return;
+	}
+	
+	Contact contact(ref);
+	
+	UpdateContactStatusAttribute(contact);
+}

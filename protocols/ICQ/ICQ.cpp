@@ -658,7 +658,7 @@ ICQProtocol::Process( BMessage * msg )
 					replyMsg.AddString("message", message_text);
 					replyMsg.AddInt32("charset", charset);
 					
-					fMsgr.SendMessage(replyMsg);
+					fMsgr.SendMessage(&replyMsg);
 				}	break;
 				case IM::SEND_AUTH_ACK:
 				{
