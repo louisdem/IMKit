@@ -17,7 +17,7 @@ bool PApplication::QuitRequested(void) {
 };
 
 void PApplication::MessageReceived(BMessage *msg) {
-	msg->PrintToStream();
+	//msg->PrintToStream();
 	BApplication::MessageReceived(msg);
 
 //	switch (msg->what) {

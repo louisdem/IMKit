@@ -21,6 +21,7 @@ ___ Things to fix
 * Remove charset setting from MSN, it's not used anyway.
 * Add ~/people to Deskbar context menu
 * Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
+* There are lots of hard-coded paths that should be using find_directory(), in Helpers.cpp etc.
 
 ___ New features
 

@@ -425,13 +425,15 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 		}
 		
 		if (curr.FindInt32("type", &type) != B_OK) {
-			printf("Error getting type for %s, skipping\n");
+			printf("Error getting type for %s, skipping\n", name);
 			continue;
 		};
-
+		
 		switch (type) {
 			case B_STRING_TYPE: {
 				if (curr.FindString("valid_value")) {
+					// It's a "select one of these" setting
+					
 					freeText = false;
 			
 					menu = new BPopUpMenu(name);
@@ -445,6 +447,8 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 					
 					if (value) menu->FindItem(value)->SetMarked(true);
 				} else {
+					// It's a free-text setting
+					
 					if (curr.FindBool("multi_line", &multiLine) != B_OK) multiLine = false;
 					value = settings.FindString(name);
 					if (!value) value = curr.FindString("default");
@@ -453,6 +457,8 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 			} break;
 			case B_INT32_TYPE: {
 				if (curr.FindInt32("valid_value")) {
+					// It's a "select one of these" setting
+					
 					freeText = false;
 					
 					menu = new BPopUpMenu(name);
@@ -463,6 +469,7 @@ status_t PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view
 						menu->AddItem(new BMenuItem(temp, NULL));
 					};
 				} else {
+					// It's a free-text (but number) setting
 					int32 v = 0;
 					if (settings.FindInt32(name,&v) == B_OK) {
 						sprintf(temp,"%ld",v);

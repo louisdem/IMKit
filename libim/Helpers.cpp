@@ -210,12 +210,14 @@ status_t
 im_save_attribute( const char * path, const char * attribute, const BMessage * msg )
 {
 	// save settings
-	char data[1024*1024];
 	int32 data_size=msg->FlattenedSize();
 	
+	char * data = (char*)malloc(data_size);
+
 	if ( msg->Flatten(data,data_size) != B_OK )
 	{ // error flattening message
 		LOG("helpers", liHigh, "ERROR: save_attribute: Error flattening (%s) message for (%s)", attribute, path);
+		free(data);
 		return B_ERROR;
 	}
 	
@@ -227,6 +229,7 @@ im_save_attribute( const char * path, const char * attribute, const BMessage * m
 	if ( node.InitCheck() != B_OK )
 	{
 		LOG("helpers", liHigh, "ERROR: save_attribute: Error opening save file (%s):(%s)", attribute, path);
+		free(data);
 		node.Unset();
 		return B_ERROR;
 	}
@@ -235,6 +238,8 @@ im_save_attribute( const char * path, const char * attribute, const BMessage * m
 		attribute, B_RAW_TYPE, 0,
 		data, data_size
 	);
+	
+	free(data);
 	
 	if ( num_written != data_size )
 	{ // error saving settings

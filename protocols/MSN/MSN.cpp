@@ -279,6 +279,7 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	mobilePhoneMsg.AddString("description", "Mobile Phone Number");
 	mobilePhoneMsg.AddInt32("type", B_STRING_TYPE);
 	
+/*	Since MSN uses UTF-8 this isn't needed here.
 	BMessage enc_msg;
 	enc_msg.AddString("name","encoding");
 	enc_msg.AddString("description","Text encoding");
@@ -289,14 +290,14 @@ BMessage MSNProtocol::GetSettingsTemplate() {
 	enc_msg.AddString("valid_value", "Shift-JIS");
 	enc_msg.AddString("valid_value", "EUC");
 	enc_msg.AddString("default", "ISO 8859-1");
-		
+*/		
 	main_msg.AddMessage("setting", &user_msg);
 	main_msg.AddMessage("setting", &pass_msg);
 	main_msg.AddMessage("setting", &screen_msg);
 //	main_msg.AddMessage("setting", &homePhoneMsg);
 //	main_msg.AddMessage("setting", &workPhoneMsg);
 //	main_msg.AddMessage("setting", &mobilePhoneMsg);
-	main_msg.AddMessage("setting", &enc_msg);
+//	main_msg.AddMessage("setting", &enc_msg); See note above.
 	
 	return main_msg;
 }
