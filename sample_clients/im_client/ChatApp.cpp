@@ -234,8 +234,16 @@ ChatApp::MessageReceived( BMessage * msg )
 					}
 				}	return;
 				
-				case IM::GET_CONTACT_INFO:
 				case IM::STATUS_CHANGED:
+				{ // need to forward there to client windows so they can rebuild their protocol menus
+					for ( int i=0; i<CountWindows(); i++ )			
+					{
+						BWindow * win = WindowAt(i);
+						BMessenger( win ).SendMessage(msg);
+					}
+				}	return;
+				
+				case IM::GET_CONTACT_INFO:
 					// ignore these so we don't open new windows that aren't needed.
 					return;
 				

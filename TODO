@@ -15,9 +15,13 @@ ___ Things to fix
 * Fix Preflet so it reads SVG icons(?)
 * im_client: when settings are changed, make them apply to existing windows too
 * MSN and AIM: Add support for UNREGISTER_CONTACTS message
-
+* Change 'command sends message' option to a one-of-two menu
+* Info popper: the title should have a say when deciding the window size
+* Make the clients handle the new 'multiple contacts per message' thing
 
 ___ New features
+
+More sound events, for example when connected, disconnected, contact log in etc.
 
 Support for wide char encodings (utf-16 etc)?
 

@@ -624,6 +624,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 				
 			switch ( im_what )
 			{
+				case IM::STATUS_CHANGED:
+				{
+					// This means we're rebuilding menus we don't rally need to rebuild..
+					BuildProtocolMenu();
+				}	break;
+				
 				case IM::MESSAGE_SENT:
 				{
 					fText->Append(timestr, C_TIMESTAMP, C_TIMESTAMP, F_TIMESTAMP);
@@ -811,11 +817,17 @@ ChatWindow::MessageReceived( BMessage * msg )
 			
 			switch ( opcode )
 			{
-				case B_ENTRY_REMOVED:
+				case B_ENTRY_REMOVED: {
 					// oops. should we close down this window now?
 					// Nah, we'll just disable everything.
 					fInput->MakeEditable(false);
-					break;
+					fInput->SetViewColor( 198,198,198 );
+					fInput->Invalidate();
+					
+					BString title( Title() );
+					title += " - DELETED!";
+					SetTitle( title.String() );
+				}	break;
 				case B_ENTRY_MOVED:
 				{
 					entry_ref ref;
@@ -1050,13 +1062,17 @@ void ChatWindow::BuildProtocolMenu(void) {
 	BMessage statusMsg;
 	
 	fMan->SendMessage(&getStatus, &statusMsg);
-
+	
 	BPath iconDir;
 	find_directory(B_USER_ADDONS_DIRECTORY, &iconDir, true);
 	iconDir.Append("im_kit/protocols");
 	
 	BMenu *menu = fProtocolMenu->Menu();
-	if (menu == NULL) return;
+	if (menu == NULL) 
+	{
+		LOG("im_client", liHigh, "BuildProtocolMenu(): fProtocolMenu is NULL.");
+		return;
+	}
 	
 //	You have to do this twice... buggered if I know why...
 	for (int32 i = 0; i < menu->CountItems(); i++) delete menu->RemoveItem(0L);
