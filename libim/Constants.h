@@ -91,6 +91,7 @@ enum message_what_codes {
 #define ONLINE_TEXT		"Available"
 #define AWAY_TEXT		"Away"
 #define OFFLINE_TEXT	"Offline"
+#define BLOCKED_TEXT	"Blocked"
 
 };
 

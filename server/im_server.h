@@ -78,14 +78,18 @@ class Server : public BApplication
 		
 		string	FindBestProtocol( Contact & contact );
 		
+		// Variables
+		
 		BQuery						fQuery;
 		list<BMessenger>			fMessengers;
 		map<string,Protocol*>		fProtocols;
 		map<Protocol*,AddOnInfo>	fAddOnInfo;
+		
 		/*	Used to store both <protocol>:<id> and <protocol> status.
 			In other words, both own status per protocol and contact
 			status per connection */
 		map<string,string>			fStatus;// proto_id_string,status_string
+		
 		map<Contact,string>			fPreferredProtocol;
 		
 		BMessage					fIcons;

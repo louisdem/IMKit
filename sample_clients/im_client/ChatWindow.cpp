@@ -3,6 +3,7 @@
 #include "ImageButton.h"
 
 #include <libim/Contact.h>
+#include <libim/Constants.h>
 #include <libim/Helpers.h>
 #include <Mime.h>
 #include <Path.h>
@@ -588,7 +589,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			if ( contact.GetStatus( status, sizeof(status) ) != B_OK )
 				status[0] = 0;
 			
-			if ( strcmp(status, "Blocked") == 0 )
+			if ( strcmp(status, BLOCKED_TEXT) == 0 )
 			{ // already blocked, unblocked
 				contact.SetStatus(OFFLINE_TEXT);
 				
@@ -598,7 +599,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 				fMan->SendMessage( &update_msg );
 			} else
 			{
-				if ( contact.SetStatus("Blocked") != B_OK )
+				if ( contact.SetStatus(BLOCKED_TEXT) != B_OK )
 				{
 					LOG("im_client", LOW, "Error setting contact status");
 				}

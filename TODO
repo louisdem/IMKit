@@ -4,22 +4,26 @@ Things to fix
 * Strangeness when getting the server based contact list. Contact info messages duplicated? Not indexed?
 * Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
 * Add status changes to im_logger?
-* Smart protocol selection, if contact is online on any service, use that etc
-* Deskbar icon: show current status in Set status menu
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * long message bug in LOG(), make buffer dunamic somehow?
 * Add link to im_server in Be menu or in Preferences?
-* Add Deskbar monitor for im_server, so it restores the deskbar icon if needed. Not needed?
+* Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
 * Add "Send" button to client, for those poor souls who don't know that cmd-enter == send
 * Add option to client - multi/single line edit
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Change Merge contacts, or make a new one, so it can be used from the Terminal
 * Client: not scrolling correctly in conversation when opening a conversation with a history
-* When running Zeta: reused message from sending message is corrupted somewhere along the line
-* Crash in BubbleHelper, ...( FindView( WindowAt() ) ). 
+* When running Zeta: reused message from sending message is corrupted somewhere along the line. Fixed?
+* Crash in BubbleHelper, ...( FindView( WindowAt() ) ). Remove Bubblehelper on quit?
+* Only warn about not being able to read settingsfiles when there's cause for concern
+* Add check for Blocked everywhere we change status: status update, connect, disconnect, etc
+* Add Capabilities to IM::Protocol in some way
+* Alt-C in client doesn't work
 
 New features
+
+Invisibility
 
 Connect/disconnect sounds
 

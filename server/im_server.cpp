@@ -155,9 +155,11 @@ Server::QuitRequested()
 	return true;
 }
 
-// Loads attribute named 'attribute' from the file 'name'defaults to a type of 'BBMP'
-// Doesn't work on symlinks
 
+/**
+	Loads attribute named 'attribute' from the file 'name'defaults to a type of 'BBMP'
+	Doesn't work on symlinks
+*/
 BBitmap *
 Server::GetBitmapFromAttribute(const char *name, const char *attribute, 
 	type_code type = 'BBMP') {
@@ -209,6 +211,9 @@ Server::GetBitmapFromAttribute(const char *name, const char *attribute,
 	return bitmap;
 }
 
+/**
+	Read an image form a file?
+*/
 BBitmap *
 Server::GetBitmap(const char *name, type_code type = 'BBMP') {
 	BResources *res = AppResources();
@@ -369,6 +374,7 @@ Server::StartQuery()
 }
 
 /**
+	Load protocol add-ons and init them
 */
 status_t
 Server::LoadAddons()
@@ -508,7 +514,7 @@ Server::LoadAddons()
 }
 
 /**
-	Unloads add-on images after shutting the down.
+	Unloads add-on images after shutting them down.
 */
 void
 Server::UnloadAddons()
@@ -527,6 +533,8 @@ Server::UnloadAddons()
 }
 
 /**
+	Add a listener endpoint that will receive all messages
+	broadcasted from the im_server
 */
 void
 Server::AddEndpoint( BMessenger msgr )
@@ -536,6 +544,7 @@ Server::AddEndpoint( BMessenger msgr )
 }
 
 /**
+	Remove a listener endpoint.
 */
 void
 Server::RemoveEndpoint( BMessenger msgr )
@@ -689,31 +698,31 @@ Server::FindContact( const char * proto_id )
 	
 	Contact result;
 	
+	string pred = 
+		string( 
+			string("IM:connections=\"*") + 
+			string(proto_id) +
+			string("*\"")
+		);
+	
 	while ( vroster.GetNextVolume(&vol) == B_OK )
 	{
 		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
 			continue;
 		
 		vol.GetName(volName);
-		LOG("im_server", LOW, "FindContact: Looking for contacts on %s", volName);
+		LOG("im_server", DEBUG, "FindContact: Looking for contacts on %s", volName);
 		
 		BQuery query;
 		
-		string pred = 
-			string( 
-				string("IM:connections=\"*") + 
-				string(proto_id) +
-				string("*\"")
-			);
-			
 		query.SetPredicate( pred.c_str() );
-			
+		
 		query.SetVolume(&vol);
-			
+		
 		query.Fetch();
-			
+		
 		entry_ref entry;
-			
+		
 		if ( query.GetNextRef(&entry) == B_OK )
 		{
 			result.SetTo(entry);
@@ -799,92 +808,15 @@ Server::CreateContact( const char * proto_id )
 	msg.AddRef("contact", result);
 	
 	PostMessage(&msg);
-
+	
 	LOG("im_server", DEBUG, "  done.");
 	
 	return result;
 }
 
-void
-Server::reply_GET_SETTINGS_TEMPLATE( BMessage * msg )
-{
-	const char * p = msg->FindString("protocol");
-			
-	if ( !p )
-	{
-		p = "";
-	}
-	
-	BMessage t;
-	
-	if ( strlen(p) > 0 )
-	{ // protocol settings
-		if (fProtocols.find(p) == fProtocols.end() )
-		{
-			_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Protocol not loaded",msg);
-			return;
-		}
-		
-		Protocol * protocol = fProtocols[p];
-			
-		t = protocol->GetSettingsTemplate();
-	} else
-	{ // im_server settings
-		t = GenerateSettingsTemplate();
-	}
-	
-	if ( !msg->ReturnAddress().IsValid() )
-	{
-		_ERROR("Invalid return address in GetSettingsTemplate()", msg);
-	}
-
-	msg->SendReply( &t );
-}
-
-void
-Server::reply_GET_LOADED_PROTOCOLS( BMessage * msg )
-{
-	BMessage reply( ACTION_PERFORMED );
-	
-	map<string,Protocol*>::iterator i;
-	
-	for ( i = fProtocols.begin(); i != fProtocols.end(); i++ )
-	{
-		reply.AddString("protocol", i->second->GetSignature() );
-		entry_ref ref;
-		get_ref_for_path(fAddOnInfo[i->second].path.String(), &ref);
-		reply.AddRef("ref", &ref);
-	}
-	
-	msg->SendReply( &reply );
-}
-
-void
-Server::reply_SERVER_BASED_CONTACT_LIST( BMessage * msg )
-{
-	const char * protocol = msg->FindString("protocol");
-	
-	if ( !protocol )
-	{
-		_ERROR("ERROR: Malformed SERVER_BASED_CONTACT_LIST message",msg);
-		return;
-	}
-	
-	for ( int i=0; msg->FindString("id",i); i++ )
-	{ // for each ID
-		const char * id = msg->FindString("id",i);
-		
-		string proto_id( string(protocol) + string(":") + string(id) );
-		
-		Contact c = FindContact( proto_id.c_str() );
-		
-		if ( c.InitCheck() != B_OK )
-		{
-			CreateContact( proto_id.c_str() );
-		}
-	}
-}
-
+/**
+	Load settings for protocol into message
+*/
 status_t
 Server::GetSettings( const char * protocol_sig, BMessage * settings )
 {
@@ -937,6 +869,9 @@ Server::GetSettings( const char * protocol_sig, BMessage * settings )
 	return B_OK;
 }
 
+/**
+	Write settings for protocol in message to disk
+*/
 status_t
 Server::SetSettings( const char * protocol_sig, BMessage * settings )
 {
@@ -1018,6 +953,9 @@ Server::SetSettings( const char * protocol_sig, BMessage * settings )
 	return B_OK;			
 }
 
+/**
+	Select the 'best' protocol for sending a message to contact
+*/
 string
 Server::FindBestProtocol( Contact & contact )
 {
@@ -1063,6 +1001,9 @@ Server::FindBestProtocol( Contact & contact )
 	return protocol;
 }
 
+/**
+	Forward message from client-side to protocol-side
+*/
 void
 Server::MessageToProtocols( BMessage * msg )
 {
@@ -1236,6 +1177,10 @@ Server::MessageToProtocols( BMessage * msg )
 	Broadcast( &client_side_msg );
 }
 
+
+/**
+	Handle a message coming from protocol-side to client-side
+*/
 void
 Server::MessageFromProtocols( BMessage * msg )
 {
@@ -1264,7 +1209,7 @@ Server::MessageFromProtocols( BMessage * msg )
 				int32 state = 0;
 				
 				char * new_data = new char[dst_len];
-			
+				
 				if ( convert_to_utf8(
 					charset,
 					data,		&src_len,
@@ -1273,7 +1218,7 @@ Server::MessageFromProtocols( BMessage * msg )
 				) == B_OK )
 				{
 					new_data[dst_len] = 0;
-			
+					
 					msg->ReplaceString(name,x,new_data);
 				}
 				
@@ -1315,12 +1260,12 @@ Server::MessageFromProtocols( BMessage * msg )
 		if ( contact.InitCheck() != B_OK )
 		{ // No matching contact, create a new one!
 			contact.SetTo( CreateContact( proto_id.c_str() ) );
-
+			
 			// register the contact we created
 			BMessage connection(MESSAGE);
 			connection.AddInt32("im_what", REGISTER_CONTACTS);
 			connection.AddString("id", id);
-
+			
 			Protocol * p = fProtocols[protocol];
 			
 			p->Process( &connection );			
@@ -1336,7 +1281,7 @@ Server::MessageFromProtocols( BMessage * msg )
 			char status[256];
 			contact.GetStatus(status,sizeof(status));
 			
-			if ( strcmp(status,"Blocked") == 0 )
+			if ( strcmp(status,BLOCKED_TEXT) == 0 )
 			{ // contact blocked, dropping message!
 				LOG("im_server", LOW, "Dropping message from blocked contact [%s:%s]", protocol, id);
 				return;
@@ -1365,6 +1310,13 @@ Server::MessageFromProtocols( BMessage * msg )
 	}
 }
 
+/**
+	Update the status of a given contact. Set im_server internal
+	status and calls UpdateContactStatusAttribute to update IM:status attribute
+	
+	@param msg 			The message is a STATUS_CHANGED message.
+	@param contact 		The contact to update
+*/
 void
 Server::UpdateStatus( BMessage * msg, Contact & contact )
 {
@@ -1388,12 +1340,13 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	fStatus[proto_id] = new_status;
 	
 	// calculate total status for contact
-	new_status = OFFLINE_TEXT;
-	
 	UpdateContactStatusAttribute(contact);
 }
 
 
+/**
+	Calculate total status for contact and update IM:status attribute.
+*/
 void
 Server::UpdateContactStatusAttribute( Contact & contact )
 {
@@ -1483,6 +1436,8 @@ Server::SetAllOffline()
 	BMessage msg;
 	entry_ref entry;
 	
+	// query for all contacts on all drives first
+	//
 	while ( vroster.GetNextVolume(&vol) == B_OK )
 	{
 		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
@@ -1503,6 +1458,7 @@ Server::SetAllOffline()
 		}
 	}
 	
+	// set status of all found contacts to OFFLINE_TEXT (skipping blocked ones)
 	char nickname[512], name[512], filename[512], status[512];
 	
 	Contact c;
@@ -1523,9 +1479,9 @@ Server::SetAllOffline()
 			
 		if ( c.GetStatus(status, sizeof(status)) == B_OK )
 		{
-			if ( strcmp(status, "Blocked") == 0 )
+			if ( strcmp(status, BLOCKED_TEXT) == 0 )
 			{
-				LOG("im_server", DEBUG, "Skipping contact %s (%s), filename: %s", name, nickname, filename);
+				LOG("im_server", DEBUG, "Skipping blocked contact %s (%s), filename: %s", name, nickname, filename);
 				continue;
 			}
 		}
@@ -1622,6 +1578,9 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 	refs.clear();
 }
 
+/**
+	Generate a settings template for im_server settings
+*/
 BMessage
 Server::GenerateSettingsTemplate()
 {
@@ -1646,6 +1605,9 @@ Server::GenerateSettingsTemplate()
 	return main_msg;
 }
 
+/**
+	Update im_server settings from message
+*/
 status_t
 Server::UpdateOwnSettings( BMessage settings )
 {
@@ -1674,6 +1636,9 @@ Server::UpdateOwnSettings( BMessage settings )
 	return B_OK;
 }
 
+/**
+	Start all registered auto-start apps
+*/
 void
 Server::StartAutostartApps()
 {
@@ -1688,6 +1653,9 @@ Server::StartAutostartApps()
 	}
 }
 
+/**
+	Stop all registered auto-start apps
+*/
 void
 Server::StopAutostartApps()
 {
@@ -1703,121 +1671,9 @@ Server::StopAutostartApps()
 	}
 }
 
-void
-Server::reply_ADD_AUTOSTART_APPSIG( BMessage * msg )
-{
-	if ( msg->FindString("app_sig") == NULL )
-	{
-		_SEND_ERROR("No app_sig provided", msg);
-		return;
-	}
-	
-	const char * new_appsig = msg->FindString("app_sig");
-	
-	BMessage settings;
-	if ( GetSettings(NULL, &settings) != B_OK )
-	{
-		_SEND_ERROR("Error reading settings",msg);
-		return;
-	}
-	
-	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING, i); i++ )
-	{
-		if ( strcmp( new_appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) == 0 )
-		{ // app-sig already present, don't add again
-			msg->SendReply(ACTION_PERFORMED);
-			LOG("im_server", HIGH, "Auto-start app already present [%s]", new_appsig);
-			return;
-		}
-	}
-	
-	settings.AddString(AUTOSTART_APPSIG_SETTING, new_appsig);
-	
-	SetSettings( NULL, &settings );
-	
-	msg->SendReply(ACTION_PERFORMED);
-	
-	LOG("im_server", HIGH, "Auto-start app added [%s]", new_appsig);
-}
-
-void
-Server::reply_REMOVE_AUTOSTART_APPSIG( BMessage * msg )
-{
-	if ( msg->FindString("app_sig") == NULL )
-		_SEND_ERROR("No app_sig provided", msg);
-		return;
-			
-	const char * appsig = msg->FindString("app_sig");
-			
-	BMessage settings;
-	BMessage temp;
-	GetSettings(NULL, &settings);
-	
-	// save app-sigs not to be deleted in temp
-	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING, i); i++ )
-	{
-		if ( strcmp( appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) != 0 )
-		{ // this is not the app-sig to delete, store it
-			temp.AddString(AUTOSTART_APPSIG_SETTING, settings.FindString(AUTOSTART_APPSIG_SETTING,i));
-		}
-	}
-	
-	// delete all app-sigs from settings
-	settings.RemoveName(AUTOSTART_APPSIG_SETTING);
-	
-	// copy app-sigs from temp
-	for ( int i=0; temp.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
-		settings.AddString(AUTOSTART_APPSIG_SETTING, temp.FindString(AUTOSTART_APPSIG_SETTING,i));
-	
-	SetSettings( NULL, &settings );
-
-	msg->SendReply(ACTION_PERFORMED);
-	
-	LOG("im_server", HIGH, "Auto-start app removed [%s]", appsig);
-}
-
-void
-Server::reply_GET_SETTINGS( BMessage * msg )
-{
-	const char * protocol = msg->FindString("protocol");
-	
-	if ( protocol[0] == 0 )
-		protocol = NULL;
-	
-	BMessage settings;
-	
-	if ( GetSettings( protocol, &settings ) != B_OK )
-	{
-		_SEND_ERROR("Error getting settings", msg);
-	}
-	
-	msg->SendReply(&settings);
-}
-
-void
-Server::reply_SET_SETTINGS( BMessage * msg )
-{
-	const char * protocol = msg->FindString("protocol");
-	
-	if ( protocol[0] == 0 )
-		protocol = NULL;
-	
-	BMessage settings;
-	
-	if ( msg->FindMessage("settings", &settings) != B_OK )
-	{
-		_SEND_ERROR("No settings provided", msg);
-		return;
-	}
-	
-	if ( SetSettings( protocol, &settings ) != B_OK )
-	{
-		_SEND_ERROR("Error setting settings", msg);
-	}
-	
-	msg->SendReply(ACTION_PERFORMED);
-}
-
+/**
+	Forward a message to deskbar icon
+*/
 void
 Server::handleDeskbarMessage( BMessage * msg )
 {
@@ -1838,6 +1694,9 @@ Server::handleDeskbarMessage( BMessage * msg )
 	}
 }
 
+/**
+	Handle a STATUS_SET message, update per-protocol and total status
+*/
 void
 Server::handle_STATUS_SET( BMessage * msg )
 {
@@ -1922,6 +1781,9 @@ Server::handle_STATUS_SET( BMessage * msg )
 	handleDeskbarMessage(msg);
 }
 
+/**
+	Get current online status per-protocol for a contact
+*/
 void
 Server::reply_GET_CONTACT_STATUS( BMessage * msg )
 {
@@ -1951,6 +1813,9 @@ Server::reply_GET_CONTACT_STATUS( BMessage * msg )
 	msg->SendReply(&reply);
 }
 
+/**
+	Get list of current own online status per protocol
+*/
 void Server::reply_GET_OWN_STATUSES(BMessage *msg) {
 	LOG("im_server", LOW, "Got own status request. There are %i statuses",
 		fStatus.size());
@@ -1965,3 +1830,221 @@ void Server::reply_GET_OWN_STATUSES(BMessage *msg) {
 
 	msg->SendReply(&reply);
 };
+
+/**
+	Handle an ADD_AUTOSTART_APPSIG request
+*/
+void
+Server::reply_ADD_AUTOSTART_APPSIG( BMessage * msg )
+{
+	if ( msg->FindString("app_sig") == NULL )
+	{
+		_SEND_ERROR("No app_sig provided", msg);
+		return;
+	}
+	
+	const char * new_appsig = msg->FindString("app_sig");
+	
+	BMessage settings;
+	if ( GetSettings(NULL, &settings) != B_OK )
+	{
+		_SEND_ERROR("Error reading settings",msg);
+		return;
+	}
+	
+	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING, i); i++ )
+	{
+		if ( strcmp( new_appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) == 0 )
+		{ // app-sig already present, don't add again
+			msg->SendReply(ACTION_PERFORMED);
+			LOG("im_server", HIGH, "Auto-start app already present [%s]", new_appsig);
+			return;
+		}
+	}
+	
+	settings.AddString(AUTOSTART_APPSIG_SETTING, new_appsig);
+	
+	SetSettings( NULL, &settings );
+	
+	msg->SendReply(ACTION_PERFORMED);
+	
+	LOG("im_server", HIGH, "Auto-start app added [%s]", new_appsig);
+}
+
+/**
+	Handle an REMOVE_AUTOSTART_APPSIG request
+*/
+void
+Server::reply_REMOVE_AUTOSTART_APPSIG( BMessage * msg )
+{
+	if ( msg->FindString("app_sig") == NULL )
+		_SEND_ERROR("No app_sig provided", msg);
+		return;
+			
+	const char * appsig = msg->FindString("app_sig");
+			
+	BMessage settings;
+	BMessage temp;
+	GetSettings(NULL, &settings);
+	
+	// save app-sigs not to be deleted in temp
+	for ( int i=0; settings.FindString(AUTOSTART_APPSIG_SETTING, i); i++ )
+	{
+		if ( strcmp( appsig, settings.FindString(AUTOSTART_APPSIG_SETTING,i) ) != 0 )
+		{ // this is not the app-sig to delete, store it
+			temp.AddString(AUTOSTART_APPSIG_SETTING, settings.FindString(AUTOSTART_APPSIG_SETTING,i));
+		}
+	}
+	
+	// delete all app-sigs from settings
+	settings.RemoveName(AUTOSTART_APPSIG_SETTING);
+	
+	// copy app-sigs from temp
+	for ( int i=0; temp.FindString(AUTOSTART_APPSIG_SETTING,i); i++ )
+		settings.AddString(AUTOSTART_APPSIG_SETTING, temp.FindString(AUTOSTART_APPSIG_SETTING,i));
+	
+	SetSettings( NULL, &settings );
+
+	msg->SendReply(ACTION_PERFORMED);
+	
+	LOG("im_server", HIGH, "Auto-start app removed [%s]", appsig);
+}
+
+/**
+	Return current settings for a protocol
+*/
+void
+Server::reply_GET_SETTINGS( BMessage * msg )
+{
+	const char * protocol = msg->FindString("protocol");
+	
+	if ( protocol[0] == 0 )
+		protocol = NULL;
+	
+	BMessage settings;
+	
+	if ( GetSettings( protocol, &settings ) != B_OK )
+	{
+		_SEND_ERROR("Error getting settings", msg);
+	}
+	
+	msg->SendReply(&settings);
+}
+
+/**
+	Set settings for specified protocol
+*/
+void
+Server::reply_SET_SETTINGS( BMessage * msg )
+{
+	const char * protocol = msg->FindString("protocol");
+	
+	if ( protocol[0] == 0 )
+		protocol = NULL;
+	
+	BMessage settings;
+	
+	if ( msg->FindMessage("settings", &settings) != B_OK )
+	{
+		_SEND_ERROR("No settings provided", msg);
+		return;
+	}
+	
+	if ( SetSettings( protocol, &settings ) != B_OK )
+	{
+		_SEND_ERROR("Error setting settings", msg);
+	}
+	
+	msg->SendReply(ACTION_PERFORMED);
+}
+
+/**
+	GET_SETTINGS_TEMPLATE returns a message describing
+	the settings available for a specified protocol.
+*/
+void
+Server::reply_GET_SETTINGS_TEMPLATE( BMessage * msg )
+{
+	const char * p = msg->FindString("protocol");
+			
+	if ( !p )
+	{
+		p = "";
+	}
+	
+	BMessage t;
+	
+	if ( strlen(p) > 0 )
+	{ // protocol settings
+		if (fProtocols.find(p) == fProtocols.end() )
+		{
+			_SEND_ERROR("ERROR: GET_SETTINGS_TEMPLATE: Protocol not loaded",msg);
+			return;
+		}
+		
+		Protocol * protocol = fProtocols[p];
+			
+		t = protocol->GetSettingsTemplate();
+	} else
+	{ // im_server settings
+		t = GenerateSettingsTemplate();
+	}
+	
+	if ( !msg->ReturnAddress().IsValid() )
+	{
+		_ERROR("Invalid return address in GetSettingsTemplate()", msg);
+	}
+
+	msg->SendReply( &t );
+}
+
+/**
+	Returns a list of currently loaded protocols
+*/
+void
+Server::reply_GET_LOADED_PROTOCOLS( BMessage * msg )
+{
+	BMessage reply( ACTION_PERFORMED );
+	
+	map<string,Protocol*>::iterator i;
+	
+	for ( i = fProtocols.begin(); i != fProtocols.end(); i++ )
+	{
+		reply.AddString("protocol", i->second->GetSignature() );
+		entry_ref ref;
+		get_ref_for_path(fAddOnInfo[i->second].path.String(), &ref);
+		reply.AddRef("ref", &ref);
+	}
+	
+	msg->SendReply( &reply );
+}
+
+/**
+	?
+*/
+void
+Server::reply_SERVER_BASED_CONTACT_LIST( BMessage * msg )
+{
+	const char * protocol = msg->FindString("protocol");
+	
+	if ( !protocol )
+	{
+		_ERROR("ERROR: Malformed SERVER_BASED_CONTACT_LIST message",msg);
+		return;
+	}
+	
+	for ( int i=0; msg->FindString("id",i); i++ )
+	{ // for each ID
+		const char * id = msg->FindString("id",i);
+		
+		string proto_id( string(protocol) + string(":") + string(id) );
+		
+		Contact c = FindContact( proto_id.c_str() );
+		
+		if ( c.InitCheck() != B_OK )
+		{
+			CreateContact( proto_id.c_str() );
+		}
+	}
+}
+
