@@ -9,7 +9,6 @@ Fixes
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
 * long message bug in LOG(), make buffer dunamic somehow?
-* Make LOG() check if it's running in a Terminal or not, and log to file if it is not
 * Add link to im_server in Be menu or in Preferences
 * Add auto-start option for im_server
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed

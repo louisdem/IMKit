@@ -1,5 +1,9 @@
 #include "Helpers.h"
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
 VERBOSITY_LEVEL g_verbosity_level = MEDIUM;
 
 #if 0
@@ -38,6 +42,24 @@ VERBOSITY_LEVEL g_verbosity_level = MEDIUM;
               }
 #endif
 
+bool _has_checked_for_tty = false;
+
+void
+check_for_tty()
+{
+	if ( _has_checked_for_tty )
+		return;
+	
+	_has_checked_for_tty = true;
+	
+	if ( !isatty(STDOUT_FILENO) )
+	{ // redirect output to ~/im_kit.log if not run from Terminal
+		close(STDOUT_FILENO);
+		open("/boot/home/im_kit.log", O_WRONLY|O_CREAT|O_APPEND|O_TEXT);
+		chmod("/boot/hmoe/im_kit.log", 0x600 );
+	}
+}
+
 
 // Note: if you change something in this LOG,
 // make sure to change the LOG below as the code
@@ -51,6 +73,8 @@ void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, const 
 	if ( level < g_verbosity_level )
 		return;
 	
+	check_for_tty();
+	
 	char timestr[64];
 	time_t now = time(NULL);
 	strftime(timestr,sizeof(timestr),"%F %H:%M", localtime(&now) );
@@ -61,6 +85,8 @@ void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, const 
 		printf("BMessage for last message:\n");
 		msg->PrintToStream();
 	}
+	
+	fsync(STDOUT_FILENO);
 }
 
 void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, ...) {
@@ -72,9 +98,13 @@ void LOG(const char * module, VERBOSITY_LEVEL level, const char *message, ...) {
 	if ( level < g_verbosity_level )
 		return;
 	
+	check_for_tty();
+	
 	char timestr[64];
 	time_t now = time(NULL);
 	strftime(timestr,sizeof(timestr),"%F %H:%M", localtime(&now) );
 	
 	printf("%s %s: %s\n", module, timestr, buffer);
+	
+	fsync(STDOUT_FILENO);
 }
