@@ -16,14 +16,14 @@ AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man) {
 	fPort = port;
 	
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
-//		new BMessage(AMAN_PULSE), 1000000, -1);	
+//		new BMessage(AMAN_PULSE), 1000000, -1);
 		new BMessage(AMAN_PULSE), 500000, -1);	
 
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_KEEP_ALIVE), 30000000, -1);
 	
 	fState = AMAN_CONNECTING;
-	
+	fSock = B_ERROR;
 	fSock = ConnectTo(fServer.String(), fPort);
 	if (fSock > B_OK) StartReceiver();
 };
@@ -53,6 +53,7 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	if (hostname == NULL) {
 		LOG(kProtocolName, liHigh, "ConnectTo() called with NULL hostname - probably"
 			" not authorised to login at this time");
+		fManager->Error("Authorisation rejected");
 		
 		StopReceiver();
 		
@@ -155,6 +156,11 @@ int32 AIMConnection::Receiver(void *con) {
 		LOG(kProtocolName, liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
 		return B_ERROR;
 	}
+	
+	if (socket < 0) {
+		LOG(kProtocolName, liLow, "%s:%i: Socket is invalid: %i", kHost, kPort, socket);
+		return B_ERROR;
+	};
 	
 	struct fd_set read;
 	struct fd_set error;
@@ -582,7 +588,12 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 							0x01, 0x10, 0x07, 0x39}, 8);
 	
 						Send(cready);
-											
+						
+						Flap *ssiparam = new Flap(SNAC_DATA);
+						ssiparam->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
+							REQUEST_PARAMETERS, 0x00, 0x00, ++fRequestID));
+						Send(ssiparam);
+						
 						Flap *ssi = new Flap(SNAC_DATA);
 						ssi->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION,
 							REQUEST_LIST, 0x00, 0x00, ++fRequestID));

@@ -86,6 +86,7 @@ class AIMManager : public BLooper {
 		inline const char *Profile(void) const { return fProfile.String(); };
 		
 			status_t	Progress(const char *id, const char *msg, float progress);
+			status_t	Error(const char *msg);
 	private:
 			status_t	ClearConnections(void);
 			status_t	ClearWaitingSupport(void);
@@ -99,6 +100,8 @@ class AIMManager : public BLooper {
 		list<AIMConnection *>
 						fConnections;	
 		list<Flap *>	fWaitingSupport;
+
+			uint16		fSSILimits[14];
 		
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
@@ -107,7 +110,6 @@ class AIMManager : public BLooper {
 			char		*fOurNick;
 			BString		fProfile;
 			BString		fAwayMsg;
-			
 		AIMHandler		*fHandler;
 };
 

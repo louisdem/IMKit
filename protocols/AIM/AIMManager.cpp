@@ -232,6 +232,10 @@ status_t AIMManager::Progress(const char *id, const char *msg, float progress) {
 	return fHandler->Progress(id, msg, progress);
 };
 
+status_t AIMManager::Error(const char *msg) {
+	return fHandler->Error(msg);
+};
+
 char *AIMManager::EncodePassword(const char *pass) {
 	int32 passLen = strlen(pass);
 	char *ret = (char *)calloc(passLen + 1, sizeof(char));
@@ -731,6 +735,17 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 	};
 	
 	switch (subtype) {
+		case SERVICE_PARAMETERS: {
+			uint16 type = (data[++offset] << 8) + data[++offset];
+			uint16 length = (data[++offset] << 8) + data[++offset];
+			
+			if (type == 0x0004) {
+//				SSI Params
+				for (int32 i = 0; i < kSSILimitCount; i++) {
+					fSSILimits[i] = (data[++offset] << 8) + data[++offset];					
+				};
+			};
+		} break;
 		case ROSTER_CHECKOUT: {
 			list <BString> contacts;
 		
@@ -760,11 +775,11 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 				LOG(kProtocolName, liLow, "SSI item %i is of type 0x%04x (%i bytes)",
 					 i, type, len);
 				
-				printf("\tName: %s\n\tGroupID: 0x%04x\n\tItemID: 0x%04x\nData:\n",
-					name, groupID, itemID);
-
-				for (int32 i = 0; i < len; i++) printf("0x%02x ", data[offset + i + 1]);
-				printf("\n");
+//				printf("\tName: %s\n\tGroupID: 0x%04x\n\tItemID: 0x%04x\nData:\n",
+//					name, groupID, itemID);
+//
+//				for (int32 i = 0; i < len; i++) printf("0x%02x ", data[offset + i + 1]);
+//				printf("\n");
 
 				switch (type) {
 					case BUDDY_RECORD: {
@@ -789,8 +804,8 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 			fHandler->SSIBuddies(contacts);
 		} break;
 		case 0x000e: {
-			msg->PrintToStream();
-			exit(0);
+//			msg->PrintToStream();
+//			exit(0);
 		} break;
 		default: {
 			LOG(kProtocolName, liLow, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
@@ -891,10 +906,7 @@ status_t AIMManager::AddBuddies(list <char *>buddies) {
 
 status_t AIMManager::RemoveBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
-	return ret;
-	
-printf("Deleting %s\n", buddy);
-	
+
 	if (buddy) {
 		buddymap::iterator bIt = fBuddy.find(buddy);
 		uint8 buddyLen = strlen(buddy);
@@ -912,18 +924,16 @@ printf("Deleting %s\n", buddy);
 	
 			ret = B_OK;
 		} else {
-
-printf("Buddy is an SSI user!\n");
 //			Start modification session
 			Flap *begin = new Flap(SNAC_DATA);
 			begin->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_BEGIN,
-				0x00, 0x00, 0x00000000));
+				0x00, 0x00, 0x00005235));
 			Send(begin);
 
 //			Buddy is in our SSI list
 			Flap *remove = new Flap(SNAC_DATA);
 			remove->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_DELETE_ITEM,
-				0x00, 0x00, 0x00000000));
+				0x00, 0x00, 0x00005236));
 			
 //			Buddy name
 			remove->AddRawData((uchar *)&buddyLen, sizeof(buddyLen));
@@ -934,16 +944,10 @@ printf("Buddy is an SSI user!\n");
 			uint16 itemID = ssi->ItemID();
 			uint16 type = BUDDY_RECORD;
 
-printf("0x%04x / 0x%04x\n", groupID, itemID);
-
 			remove->AddRawData((uchar *)&groupID, sizeof(groupID));
-printf("1\n");
 			remove->AddRawData((uchar *)&itemID, sizeof(itemID));
-printf("2\n");
 			remove->AddRawData((uchar *)&type, sizeof(type));
-printf("3\n");
 			remove->AddRawData((uchar []){0x00, 0x00}, 2);
-printf("4\n");
 
 			Send(remove);
 			
@@ -952,7 +956,7 @@ printf("4\n");
 			
 			Flap *end = new Flap(SNAC_DATA);
 			end->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_END,
-				0x00, 0x00, 0x00000000));
+				0x00, 0x00, 0x00005237));
 			Send(end);
 			
 			ret = B_OK;			

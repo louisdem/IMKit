@@ -8,6 +8,7 @@ extern const uint16 AIM_ERROR_COUNT;
 extern const char *kErrors[];
 
 const uchar COMMAND_START = 0x2a;
+const uint16 kSSILimitCount = 15;
 
 enum flap_channel {
 	OPEN_CONNECTION = 0x01,
@@ -77,6 +78,8 @@ enum snac_subtype {
 	TYPING_NOTIFICATION = 0x0014,
 
 //	Family 13 - SSI
+	REQUEST_PARAMETERS = 0x0002,
+	SERVICE_PARAMETERS = 0x003,
 	REQUEST_LIST = 0x0004,
 	ROSTER_CHECKOUT = 0x0006,
 	ACTIVATE_SSI_LIST = 0x0007,
