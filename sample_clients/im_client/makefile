@@ -150,7 +150,7 @@ ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
 # BeOS
 else
 #Zeta
-  LIBS += zeta tracker
+  LIBS += zeta tracker icon
 endif
 
 INSTALL_DIR= $(TOPDIR)/build/clients
