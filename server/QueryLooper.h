@@ -16,39 +16,37 @@
 #include <map>
 #include <vector>
 
-typedef map<entry_ref, BBitmap *> ereflist;
+typedef struct {
+	entry_ref ref;
+	node_ref nref;
+} result;
+
+typedef map<entry_ref, result> resultmap;
+
 typedef vector<BVolume> vollist;
 typedef vector<BQuery *> querylist;
-
-const uint32 QUERY_UPDATED = 'qlup';
 
 class QueryLooper : public BLooper {
 	public:
 						QueryLooper(const char *predicate, vollist vols,
 							const char *name = NULL, BHandler *notify = NULL,
-							uint32 command = 0);
+							BMessage *msg = NULL);
 		virtual			~QueryLooper(void);
 
 		virtual	void	MessageReceived(BMessage *msg);
 
 				int32	CountEntries(void);
 			entry_ref	EntryAt(int32 index);
-			ereflist	*List(void) { return &fERefs; };
-			
-			BMenu		*Menu(void);
-		
+	
 	private:
 			enum {
 				msgInitialFetch = 'ql01'
 			};
 	
-			void		CreateMenu(void);
-			BMenu		*fMenu;
-			uint32		fCommand;
-	
+			BMessage	*fMsg;	
 			BHandler	*fNotify;	
 
-			ereflist	fERefs;
+			resultmap	fResults;
 			
 			BString		fName;
 

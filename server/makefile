@@ -153,15 +153,6 @@ ifeq ($(DEBUG_BUILD), true)
 
 endif
 
-
-
-#	Detect BONE
-ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
-	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
-	LIBS += socket bind
-	DEFINES += BONE
-endif
-
 INSTALL_DIR= /boot/home/config/servers
 
 include $(TOPDIR)/makefile-engine.IMkit

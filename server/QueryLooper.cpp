@@ -3,15 +3,14 @@
 #include <stdio.h>
 
 QueryLooper::QueryLooper(const char *predicate, vollist vols, const char *name = NULL,
-	BHandler *notify = NULL, uint32 command = 0)
+	BHandler *notify = NULL, BMessage *msg = NULL)
 	: BLooper(name) {
 	
-	fMenu = NULL;
-	fCommand = command;
 	fName = name;
 	fNotify = notify;
 	fPredicate = predicate;
 	fVolumes = vols;
+	fMsg = msg;
 	
 	Run();
 
@@ -24,7 +23,6 @@ QueryLooper::~QueryLooper(void) {
 		(*vIt)->Clear();
 		delete (*vIt);
 	};
-	delete fMenu;
 };
 
 void QueryLooper::MessageReceived(BMessage *msg) {
@@ -35,37 +33,40 @@ void QueryLooper::MessageReceived(BMessage *msg) {
 					
 			switch (opcode) {
 				case B_ENTRY_CREATED: {
-					entry_ref ref;
+					result r;
 					const char *name;
 				
-					msg->FindInt32("device", &ref.device); 
-					msg->FindInt64("directory", &ref.directory); 
+					msg->FindInt32("device", &r.ref.device); 
+					msg->FindInt64("directory", &r.ref.directory); 
 					msg->FindString("name", &name); 
-					ref.set_name(name);
+					r.ref.set_name(name);
 
-					BBitmap *icon = ReadNodeIcon(BPath(&ref).Path());
-					fERefs[ref] = icon;
+					msg->FindInt32("device", &r.nref.device);
+					msg->FindInt64("node", &r.nref.node);
+										
+					fResults[r.ref] = r;
 				} break;
 				
 				case B_ENTRY_REMOVED: {
-					ereflist::iterator eIt;
-							
-					for (eIt = fERefs.begin(); eIt != fERefs.end(); eIt++) {
-						BEntry entry(&eIt->first);
-						if (entry.InitCheck() != B_OK) {
-							printf("\t%s is invalid! Removing\n", eIt->first.name);
-							delete eIt->second;
-							fERefs.erase(eIt);
+					node_ref nref;
+					resultmap::iterator rIt;
+
+					msg->FindInt32("device", &nref.device);
+					msg->FindInt64("node", &nref.node);
+
+					for (rIt = fResults.begin(); rIt != fResults.end(); rIt++) {
+						result r = rIt->second;
+						
+						if (nref == r.nref) {
+							fResults.erase(r.ref);
 							break;
 						};
 					};
 				} break;
 			};
 		
-			CreateMenu();
-		
-			if (fNotify) {
-				BMessage notify(QUERY_UPDATED);
+			if ((fNotify) && (fMsg)) {
+				BMessage notify(*fMsg);
 				notify.AddString("qlName", fName);
 				
 				BMessenger(fNotify).SendMessage(notify);
@@ -86,14 +87,18 @@ void QueryLooper::MessageReceived(BMessage *msg) {
 		
 				entry_ref ref;
 				while (query->GetNextRef(&ref) == B_OK) {
-					BBitmap *icon = ReadNodeIcon(BPath(&ref).Path());
-					fERefs[ref] = icon;
+					BNode node(&ref);
+					result r;
+
+					r.ref = ref;
+					node.GetNodeRef(&r.nref);
+
+					fResults[ref] = r;
 				};
 				
 				fQueries.push_back(query);
 			};
 			
-			CreateMenu();
 		} break;
 		
 		default: {
@@ -103,40 +108,18 @@ void QueryLooper::MessageReceived(BMessage *msg) {
 };
 
 int32 QueryLooper::CountEntries(void) {
-	return fERefs.size();
+	return fResults.size();
 };
 
 entry_ref QueryLooper::EntryAt(int32 index) {
 	entry_ref ref;
-//	if ((index >= 0) && (index < CountEntries())) {
-//		
-//		ref = fERefs[index];
-//	}
-//	
+	if ((index >= 0) && (index < CountEntries())) {
+		resultmap::iterator rIt = fResults.begin();
+		
+		for (int32 i = 0; i < index; index++) rIt++;
+		
+		ref = rIt->first;
+	}
+	
 	return ref;
-};
-
-BMenu *QueryLooper::Menu(void) {
-	printf("%s have %i entry_refs\n", fName.String(), fERefs.size());
-	return fMenu;
-};
-
-// #pragma mark -
-
-void QueryLooper::CreateMenu(void) {
-	ereflist::iterator eIt;
-	
-//	if ((fMenu) &&
-//		((fMenu->Superitem() == NULL) && (fMenu->Supermenu() == NULL))) delete fMenu;
-	fMenu = new BMenu(fName.String());
-	
-	for (eIt = fERefs.begin(); eIt != fERefs.end(); eIt++) {
-		entry_ref ref = (eIt->first);
-		BMessage *msg = new BMessage(fCommand);
-		msg->AddRef("fileRef", &ref);
-		
-		IconMenuItem *item = new IconMenuItem(eIt->second , ref.name, "", msg);
-		
-		fMenu->AddItem(item);
-	};
 };

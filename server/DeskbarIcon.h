@@ -30,14 +30,11 @@
 #include <be/kernel/fs_attr.h>
 #include <be/kernel/fs_info.h>
 
-//typedef map<entry_ref, QueryLooper *> querymap;
-//typedef map<BString, BMenu *> querymenumap;
-//typedef map<entry_ref, bool> querydirtymap;
-
 typedef struct {
 	entry_ref ref;
 	node_ref nref;
 	BBitmap *icon;
+	QueryLooper *query;
 } queryinfo;
 
 typedef map<entry_ref, queryinfo> querymap;
@@ -78,9 +75,9 @@ class _EXPORT IM_DeskbarIcon : public BView
 			SETTINGS_WINDOW_CLOSED = 'swcl',
 			
 			OPEN_QUERY		= 'opqu',
-			LAUNCH_FILE		= 'lafi',
-			
-			OPEN_QUERY_DIR	= 'opqd'
+			LAUNCH_FILE		= 'lafi',			
+			OPEN_QUERY_DIR	= 'opqd',
+			QUERY_UPDATED = 'qlup'
 		};
 		enum {
 			isOffline = 0,
@@ -127,6 +124,7 @@ class _EXPORT IM_DeskbarIcon : public BView
 		void				RemoveQueryRef(BMessage *msg);
 		void				AddQueryRef(BMessage *msg);
 		void				BuildQueryMenu(void);
+		status_t			ExtractVolumes(BNode *node, vollist *volumes);
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();
