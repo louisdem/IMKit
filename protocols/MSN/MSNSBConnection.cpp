@@ -82,7 +82,9 @@ MSNSBConnection::handleBYE( Command * cmd )
 		Command * reply = new Command("OUT");
 		reply->UseTrID(false);
 		
-		Send( reply );
+		Send( reply, qsImmediate );
+		
+		BMessenger(this).SendMessage(B_QUIT_REQUESTED);
 	}
 	
 	return B_OK;
