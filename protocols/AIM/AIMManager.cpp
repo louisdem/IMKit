@@ -10,6 +10,19 @@
 #include "AIMHandler.h"
 #include "htmlparse.h"
 
+#if B_BEOS_VERSION==B_BEOS_VERSION_5
+//Not beautiful. An inline function should probably be used instead.
+# define strlcpy(_dest,_src,_len) \
+	do { \
+		if( _dest && _src ) {\
+			if(_len>0) {\
+				strncpy(_dest,_src,_len-1); \
+			} \
+		} \
+		*(_dest+_len-1)='\0'; \
+	}while(0)
+#endif		
+
 const uint16 AIM_ERROR_COUNT = 0x18;
 const char *kErrors[] = {
 	"",
