@@ -3,6 +3,7 @@
 SUBDIRS = \
 	AIM \
 	MSN \
+	Jabber \
 	ICQ \
 	Yahoo
 
