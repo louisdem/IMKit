@@ -5,16 +5,18 @@ Fixes
 * Getting name, nick etc doesn't always work, it seems. Look into this. No IM:status?
 * Add status changes to im_logger?
 * Smart protocol selection, if contact is online on any service, use that etc
-* Deskbar icon. show current status in Set status menu
+* Deskbar icon: show current status in Set status menu
 * convert_to_utf8() on names etc, ICQ add-on
-* UIN set as nickname?
 * ChatWindow - resize problems with textview?
+* Change URLTextView so it highlights URL:s
+* URLTextView doesn't show selected text as selected
 
 New features
 
 More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
 
 "Autostart clients" in im_server (shut them down, too)
+	IM::Manager::RegisterAutostart(), IM::Manager::RemoveAutostart(), IM::Manager::GetAutostartList()
 
 Log in invisible for ICQ
 

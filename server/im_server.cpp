@@ -428,35 +428,10 @@ Server::Process( BMessage * msg )
 void
 Server::Broadcast( BMessage * msg )
 {
-	const char * message = msg->FindString("message");
-	
-	int32 charset=0xffff;
-	
-	// if there's a 'message' and a 'charset', transform to utf-8
-	if ( message != NULL && msg->FindInt32("charset",&charset) == B_OK )
-	{
-		char newmsg[65536];
-		int32 state=0;
-		int32 dstlen = sizeof(newmsg);
-		int32 srclen = strlen(message);
-		
-		if ( convert_to_utf8(
-			charset,
-			message, &srclen,
-			newmsg, &dstlen,
-			&state
-		) == B_OK )
-		{ // converted, replace!
-			newmsg[dstlen] = 0;
-			msg->ReplaceString("message",newmsg);
-		}
-	}
-	
 	list<BMessenger>::iterator i;
 	
 	for ( i=fMessengers.begin(); i != fMessengers.end(); i++ )
 	{
-//		(*i).SendMessage(msg);
 		if ( !(*i).IsTargetLocal() )
 		{
 			(*i).SendMessage(msg);
@@ -909,7 +884,7 @@ Server::MessageToProtocols( BMessage * msg )
 				_ERROR("Couldn't get connection for protocol",msg);
 				return;
 			}
-					
+				
 			const char * id=NULL;
 			
 			for ( int i=0; connection[i]; i++ )
@@ -929,7 +904,8 @@ Server::MessageToProtocols( BMessage * msg )
 		}
 	} // done selecting protocol and ID
 	
-	const char * message = msg->FindString("message");
+	// copy message so we can broadcast it later, with data intact
+	BMessage client_side_msg(*msg);
 	
 	if ( msg->FindString("protocol") == NULL )
 	{ // no protocol specified, send to all?
@@ -955,14 +931,14 @@ Server::MessageToProtocols( BMessage * msg )
 			}	break;
 			default:
 				_ERROR("Invalid message", msg);
+				return;
 		}
-		return;
 	} else
 	{ // protocol mapped
 		if ( fProtocols.find(msg->FindString("protocol")) == fProtocols.end() )
 		{ // invalid protocol, report and skip
 			_ERROR("Protocol not loaded or not installed", msg);
-				
+			
 			printf("looking for [%s], loaded protocols:\n", msg->FindString("protocol") );
 			
 			map<string,Protocol*>::iterator i;
@@ -978,25 +954,45 @@ Server::MessageToProtocols( BMessage * msg )
 			return;
 		}
 		
-		Protocol * p = fProtocols[msg->FindString("protocol")];
+		Protocol * p = fProtocols[msg->FindString("protocol")];		
 		
-		if ( message != NULL && p->GetEncoding() != 0xffff )
+		if ( p->GetEncoding() != 0xffff )
 		{ // convert to desired charset
-			char newmsg[65*1024];
-			int32 srclen = strlen(message);
-			int32 dstlen = sizeof(newmsg);
-			int32 state = 0;
-				
-			if ( convert_from_utf8(
-				p->GetEncoding(),
-				message, &srclen,
-				newmsg, &dstlen,
-				&state
-			) == B_OK )
-			{ // converted, replace!
-				newmsg[dstlen] = 0;
-				msg->ReplaceString("message",newmsg);
-				msg->AddInt32("charset", p->GetEncoding() );
+			int32 charset = p->GetEncoding();
+			
+			msg->AddInt32("charset", charset );
+			client_side_msg.AddInt32("charset", charset);
+			
+			type_code _type;
+			char * name;
+			int32 count;
+			
+			for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, &name, &_type, &count) == B_OK; i++ )
+			{ // get string names
+				for ( int x=0; x<count; x++ )
+				{ // replace all matching strings
+					const char * data = msg->FindString(name,x);
+					
+					int32 src_len = strlen(data);
+					int32 dst_len = strlen(data)*5;
+					int32 state = 0;
+					
+					char * new_data = new char[dst_len];
+					
+					if ( convert_from_utf8(
+						charset,
+						data,		&src_len,
+						new_data,	&dst_len,
+						&state				
+					) == B_OK )
+					{
+						new_data[dst_len] = 0;
+						
+						msg->ReplaceString(name,x,new_data);
+					}
+					
+					delete[] new_data;
+				}
 			}
 		} // done converting charset
 		
@@ -1007,13 +1003,56 @@ Server::MessageToProtocols( BMessage * msg )
 		}
 	}
 	
-	Broadcast( msg );
+//	client_side_msg.PrintToStream();
+//	msg->PrintToStream();
+	
+	// broadcast client_side_msg, since clients want utf8 text, and that has
+	// been replaced in msg with protocol-specific data
+	Broadcast( &client_side_msg );
 }
 
 void
 Server::MessageFromProtocols( BMessage * msg )
 {
-	//Tracer t("MessageFromProtocols()");
+	const char * protocol = msg->FindString("protocol");
+
+	// convert strings to utf8
+	type_code _type;
+	char * name;
+	int32 count;
+	int32 charset;
+	
+	if ( msg->FindInt32("charset",&charset) == B_OK )
+	{ // charset present, convert all strings
+		for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, &name, &_type, &count) == B_OK; i++ )
+		{ // get string names
+			for ( int x=0; x<count; x++ )
+			{ // replace all matching strings
+				const char * data = msg->FindString(name,x);
+				
+				int32 src_len = strlen(data);
+				int32 dst_len = strlen(data)*5;
+				int32 state = 0;
+				
+				char * new_data = new char[dst_len];
+			
+				if ( convert_to_utf8(
+					charset,
+					data,		&src_len,
+					new_data,	&dst_len,
+					&state				
+				) == B_OK )
+				{
+					new_data[dst_len] = 0;
+			
+					msg->ReplaceString(name,x,new_data);
+				}
+				
+				delete[] new_data;
+			}
+		}
+	}	
+	// done converting
 	
 	int32 im_what;
 	
@@ -1023,7 +1062,7 @@ Server::MessageFromProtocols( BMessage * msg )
 	
 	if ( msg->FindRef("contact",&testc) == B_OK )
 	{
-//		_ERROR("contact already present in message supposedly from protocol",msg);
+		_ERROR("contact already present in message supposedly from protocol",msg);
 		return;
 	}
 	
@@ -1031,7 +1070,6 @@ Server::MessageFromProtocols( BMessage * msg )
 	Contact contact;
 	
 	const char * id = msg->FindString("id");
-	const char * protocol = msg->FindString("protocol");
 	
 	if ( id != NULL )
 	{ // ID present, find out which Contact it belongs to

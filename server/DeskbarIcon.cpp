@@ -222,7 +222,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			} else
 			{ // show existing settings window
 				fSettingsWindow->SetWorkspaces( 1 << current_workspace() );
-				fSettingsWindow->Show();
+				fSettingsWindow->Activate();
 			}
 		}	break;
 		

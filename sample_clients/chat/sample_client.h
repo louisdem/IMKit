@@ -9,6 +9,8 @@
 #include <Entry.h>
 #include <TextControl.h>
 #include <TextView.h>
+#include <Rect.h>
+#include <BeBuild.h>
 
 class ChatWindow;
 
@@ -33,6 +35,17 @@ class MyApp : public BApplication
 		
 		IM::Manager *	fMan;
 		bool			fIsQuiting;
+};
+
+class URLTextView : public BTextView
+{
+	public:
+		URLTextView( BRect r, const char * name, BRect text_rect, uint32 follow, uint32 flags );
+		virtual ~URLTextView();
+		
+		virtual void MouseUp( BPoint );
+		
+		virtual void MakeFocus( bool );
 };
 
 class ChatWindow : public BWindow

@@ -14,6 +14,7 @@
 #include <PopUpMenu.h>
 #include <Beep.h>
 #include <String.h>
+#include <Roster.h>
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
@@ -289,7 +290,7 @@ ChatWindow::ChatWindow( entry_ref & ref )
 	
 	AddChild( fInput );
 	
-	fText = new BTextView(
+	fText = new URLTextView(
 		textRect, "text", text2Rect,
 		B_FOLLOW_ALL,B_WILL_DRAW
 	);
@@ -599,4 +600,89 @@ ChatWindow::stopNotify()
 	fChangedNotActivated = false;
 	SetTitle(fTitleCache);
 	((MyApp*)be_app)->NoFlash( BMessenger(this) );
+}
+
+URLTextView::URLTextView(BRect r, const char * name, BRect text_rect, uint32 follow, uint32 flags)
+:	BTextView(r, name, text_rect, follow, flags)
+{
+}
+
+URLTextView::~URLTextView()
+{
+}
+
+bool
+is_whitespace( const char c )
+{
+	return ( c == '\t' || c == ' ' || c == '\n' );
+}
+
+void
+URLTextView::MouseUp( BPoint where )
+{
+	int32 sel_start, sel_end;
+	
+	GetSelection( &sel_start, &sel_end );
+	
+	if ( sel_start != sel_end )
+	{
+		// something is selected, quit
+		BTextView::MouseUp(where);
+		return;
+	}
+	
+	const char * text = Text();
+	
+	int32 offset = OffsetAt(where);
+	
+	if ( offset < 0 )
+	{
+		BTextView::MouseUp(where);
+		return;
+	}
+	
+	int32 start = offset, end = offset;
+	
+	while ( start > 0 && !is_whitespace(text[start-1]) )
+		start--;
+	
+	while( text[end] && !is_whitespace(text[end]) )
+		end++;
+	
+	if ( start == end )
+	{
+		// can't find word
+		BTextView::MouseUp(where);
+		return;
+	}
+	
+	char * word = new char[end-start+5];
+	
+	strncpy( word, &text[start], end-start );
+	
+	word[end-start] = 0;
+	
+	if ( strncmp(word, "www.", 4) == 0 )
+	{ // add "http://" so N+ opens it
+		char temp[1024];
+		strcpy(temp,word);
+		sprintf(word, "http://%s", temp);
+	}
+	
+	char * argv[2] = { word, NULL };
+	
+	if ( strncmp(word, "http://", 7) == 0 )
+	{ // URL!
+		be_roster->Launch( "text/html", 1, argv );
+	}
+	
+	delete[] word;
+	
+	BTextView::MouseUp(where);
+}
+
+void
+URLTextView::MakeFocus( bool )
+{
+	BView::MakeFocus(false);
 }

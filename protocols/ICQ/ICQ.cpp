@@ -294,18 +294,24 @@ void SimpleClient::contact_userinfo_change_cb( UserInfoChangeEvent * e )
 	BMessage * msg = new BMessage(IM::MESSAGE);
 	msg->AddInt32("im_what", IM::CONTACT_INFO);
 	msg->AddString("protocol", "ICQ");
+	msg->AddInt32("charset", fEncoding );
 	msg->AddString("id", contact->getStringUIN().c_str() );
 	
 	if ( contact->getFirstName().length() > 0 )
 		msg->AddString("first name", contact->getFirstName().c_str() );
+	
 	if ( contact->getLastName().length() > 0 )
 		msg->AddString("last name", contact->getLastName().c_str() );
+	
 	if ( contact->getEmail().length() > 0 )
 		msg->AddString("email", contact->getEmail().c_str() );
+	
 	if ( contact->getAlias().length() > 0 )
 	{
-		// add test to see if alias == UIN and skip if it is
-		msg->AddString("nick", contact->getAlias().c_str() );
+		if ( contact->getAlias() != contact->getStringUIN() )
+		{ // test to see if alias == UIN and skip if it is
+			msg->AddString("nick", contact->getAlias().c_str() );
+		}
 	}
 	
 	fMsgr.SendMessage( msg );
@@ -560,6 +566,7 @@ ICQProtocol::Process( BMessage * msg )
 					fClient.icqclient.addContact( c );
 					
 					// report message sent
+					msg->RemoveName("contact");
 					msg->ReplaceInt32("im_what", IM::MESSAGE_SENT);
 					
 					fMsgr.SendMessage(msg);
