@@ -4,7 +4,9 @@ http://libyahoo2.sf.net/
 
 We've been using 0.7.5, not sure if other versions will work.
 
-To get it to build you need to fiddle a bit with the makefile:
+To get it to build you need to fiddle a bit with libyahoo2's makefile.
+
+Start by running this in a Terminal where you've unpacked the lib source:
 
 	configure --prefix=/boot/home/config  --with-struct-callbacks
 
