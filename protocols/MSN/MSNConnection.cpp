@@ -864,11 +864,27 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		statusChange.AddInt8("status", fState);
 		fManMsgr.SendMessage(&statusChange);
 
-		Command *rea = new Command("PRP");
-		rea->AddParam("MFN");
-		rea->AddParam(fManager->DisplayName(), true);
-		Send(rea);
-
+		/*
+		 * Depending on the server protocol, server location and the
+		 * account being used (non-hotmail/msn acc), the server will not
+		 * respond on the PRP MFN command and our connection will break.
+		 * Michael
+		 */
+		BString passport( fManager->Passport() );
+		if( ( B_ERROR != passport.FindFirst( "@hotmail" ) ) || ( B_ERROR != passport.FindFirst( "@msn" ) ) )
+		{
+			LOG(kProtocolName, liDebug, "Sending PRP MSN command" );
+			
+			Command *rea = new Command("PRP");
+			rea->AddParam("MFN");
+			rea->AddParam(fManager->DisplayName(), true);
+			Send(rea);
+		}
+		else
+		{
+			LOG(kProtocolName, liDebug, "Not sending PRP MSN command!" );
+		}
+		
 		fManager->Handler()->ContactList(&fContacts);
 				
 		Command *syn = new Command("SYN");

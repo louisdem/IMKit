@@ -458,7 +458,18 @@ status_t MSNManager::MessageUser(const char *passport, const char *message) {
 
 status_t MSNManager::AddBuddy(const char *buddy) {
 	if ( !fNoticeCon )
+	{
+		LOG(kProtocolName, liDebug, "MSNManager::AddBuddy(%s): invalid fNoticeCon. Aborting!", buddy);	
+		
 		return B_ERROR;
+	}
+	
+	if( !buddy )
+	{
+		LOG(kProtocolName, liDebug, "MSNManager::AddBuddy(%s): called with NULL argument. Aborting!", buddy);
+		
+		return B_ERROR;
+	}
 	
 	LOG(kProtocolName, liDebug, "MSNManager::AddBuddy(%s)", buddy);
 	
