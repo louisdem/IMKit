@@ -8,8 +8,11 @@ Fixes
 * Deskbar icon: show current status in Set status menu
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * im_server: Monitor People files and remove from interest list if a connection attribute is removed
-* add support for setting the verbosity level on startup, now defaults to DEBUG which is a bit chatty
 * long message bug in LOG(), make buffer dunamic somehow?
+* Make LOG() check if it's running in a Terminal or not, and log to file if it is not
+* Add link to im_server in Be menu or in Preferences
+* Add auto-start option for im_server
+* Add Deskbar monitor for im_server, so it restores the deskbar icon if needed
 
 New features
 

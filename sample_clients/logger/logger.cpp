@@ -30,7 +30,7 @@ LoggerApp::LoggerApp()
 
 
 	// create ./Logs directory
-	create_directory("Logs", 0777);
+	create_directory("/boot/home/Logs/IM", 0777);
 /*
 	fMaxFiles = 10;
 
@@ -87,7 +87,7 @@ LoggerApp::MessageReceived( BMessage * msg )
 			time_t now = time(NULL);
 			strftime(datestamp, sizeof(datestamp), "%Y-%m-%d", localtime(&now));
 			
-			BString directory = "./Logs/";
+			BString directory = "/boot/home/Logs/IM/";
 			directory << name << " [" << nickname << "]" << "/";
 			BString filename = directory;
 			filename << datestamp << ".txt";

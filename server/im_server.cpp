@@ -96,6 +96,7 @@ Server::Server()
 	find_directory(B_USER_SETTINGS_DIRECTORY, &prefsPath, true);
 	prefsPath.Append("im_kit/icons");
 	
+	// load icons for "change icon depending on state"
 	BString iconPath = prefsPath.Path();
 	iconPath << "/Online";
 	
@@ -358,17 +359,10 @@ Server::LoadAddons()
 	// try loading all files in ./add-ons
 	
 	// get path
-	app_info info;
-    be_app->GetAppInfo(&info); 
-
+	BEntry entry;
 	BPath path;
-	BEntry entry(&info.ref); 
-	entry.GetPath(&path); 
-	path.GetParent(&path);
-	path.Append("add-ons");
-
-//	BPath path("/boot/home/config/settings/im_kit/add-ons/protocols");
-//	BEntry entry;
+	find_directory(B_USER_ADDONS_DIRECTORY, &path, true);
+	path.Append("im_kit/protocols");
 	
 	// setup Directory to get list of files
 	BDirectory dir( path.Path() );
@@ -451,21 +445,7 @@ Server::LoadAddons()
 			} else
 			{
 				_ERROR("Error unflattening settings");
-/*				for ( int i=0; i<num_read; i++ )
-				{
-					printf("%c",settings[i], settings[i]);
-					if ( i%16 == 15 )
-						printf("\n");
-				}
-				printf("\n");
-				for ( int i=0; i<num_read; i++ )
-				{
-					printf("%01x,",settings[i], settings[i]);
-					if ( i%16 == 15 )
-						printf("\n");
-				}
-				printf("\n");
-*/			}
+			}
 		} else
 		{
 			_ERROR("No settings found");
@@ -478,7 +458,7 @@ Server::LoadAddons()
 }
 
 /**
-	Currently does nothing. Will eventually unload add-on images.
+	Unloads add-on images after shutting the down.
 */
 void
 Server::UnloadAddons()
@@ -501,7 +481,7 @@ Server::UnloadAddons()
 void
 Server::AddEndpoint( BMessenger msgr )
 {
-//	printf("Endpoint added\n");
+	LOG("im_server", DEBUG, "Endpoint added\n");
 	fMessengers.push_back(msgr);
 }
 
@@ -510,7 +490,7 @@ Server::AddEndpoint( BMessenger msgr )
 void
 Server::RemoveEndpoint( BMessenger msgr )
 {
-//	printf("Endpoint removed\n");
+	LOG("im_server", DEBUG, "Endpoint removed\n");
 	fMessengers.remove(msgr);
 }
 
@@ -555,7 +535,7 @@ Server::Process( BMessage * msg )
 		}	break;
 		// authorization requests
 		case AUTH_REQUEST:
-		{
+		{ // this should probably be in the client at a later time.
 			BString authProtocol;
 			BString authUIN;
 			BString authMessage;
