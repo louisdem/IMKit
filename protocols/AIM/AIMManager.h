@@ -80,11 +80,14 @@ class AIMManager : public BLooper {
 		inline const char *Profile(void) const { return fProfile.String(); };
 		
 			
-	private:	
+	private:
+			status_t	ClearConnections(void);
+			status_t	ClearWaitingSupport(void);
 			char		*EncodePassword(const char *pass);
 			
 			status_t	HandleBuddyList(BMessage *msg);
 			status_t	HandleSSI(BMessage *msg);
+			status_t	HandleICBM(BMessage *msg);
 			
 		list<BString>	fBuddy;
 		list<AIMConnection *>

@@ -4,50 +4,63 @@
 
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
-const char kProtocolName[] = "AIM";
+const char *kProtocolName = "AIM";
+const char *kThreadName = "IM Kit: AIM Connection";
 
-AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
-	bool uberDebug = false) {
-	
-fUberDebug = uberDebug;
+AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man) {
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
-	uint8 serverLen = strlen(server);
-	fServer = (char *)calloc(serverLen + 1, sizeof(char));
-	memcpy(fServer, server, serverLen);
-	fServer[serverLen] = '\0';
+	fServer = server;
 	fPort = port;
 	
-if (fUberDebug) {
-	printf("\n\n\n\nNew connection %s:%i\n", fServer, fPort);
-};
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
-		new BMessage(AMAN_PULSE), 1000000, -1);	
+//		new BMessage(AMAN_PULSE), 1000000, -1);	
+		new BMessage(AMAN_PULSE), 500000, -1);	
 
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_KEEP_ALIVE), 30000000, -1);
 	
 	fState = AMAN_CONNECTING;
 	
-	fSock = ConnectTo(fServer, fPort);
-	StartReceiver();
-	
+	fSock = ConnectTo(fServer.String(), fPort);
+	if (fSock > B_OK) StartReceiver();
 };
 
 AIMConnection::~AIMConnection(void) {
-	free(fServer);
 	snooze(1000);
 	
 	StopReceiver();
 	
 	if (fThread > 0) kill_thread(fThread);
+	
+	ClearQueue();	
+};
+
+void AIMConnection::ClearQueue(void) {
+	list<Flap *>::iterator it;
+	
+	for (it = fOutgoing.begin(); it != fOutgoing.end(); it++) {
+		Flap *f = (*it);
+		delete f;
+	};
+
+	fOutgoing.clear();
 };
 
 int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	if (hostname == NULL) {
-		LOG("AIM", liLow, "ConnectTo() called with NULL hostname - probably"
+		LOG(kProtocolName, liHigh, "ConnectTo() called with NULL hostname - probably"
 			" not authorised to login at this time");
+		
+		StopReceiver();
+		
+		BMessage msg(AMAN_CLOSED_CONNECTION);
+		msg.AddPointer("connection", this);
+
+		fManMsgr.SendMessage(&msg);
+		fState = AMAN_OFFLINE;
+
 		return B_ERROR;
 	};
 
@@ -55,15 +68,15 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	struct sockaddr_in their_addr;
 	int32 sock = 0;
 
-	LOG("AIM", liLow, "AIMConn::ConnectTo(%s, %i)", hostname, port);
+	LOG(kProtocolName, liLow, "AIMConn::ConnectTo(%s, %i)", hostname, port);
 
 	if ((he = gethostbyname(hostname)) == NULL) {
-		LOG("AIM", liMedium, "AIMConn::ConnectTo: Couldn't get Server name (%s)", hostname);
+		LOG(kProtocolName, liMedium, "AIMConn::ConnectTo: Couldn't get Server name (%s)", hostname);
 		return B_ERROR;
 	};
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG("AIM", liMedium, "AIMConn::ConnectTo(%s, %i): Couldn't create socket",
+		LOG(kProtocolName, liMedium, "AIMConn::ConnectTo(%s, %i): Couldn't create socket",
 			hostname, port);	
 		return B_ERROR;
 	};
@@ -74,7 +87,16 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 	memset(&(their_addr.sin_zero), 0, 8);
 
 	if (connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1) {
-		LOG("AIM", liMedium, "AIMConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
+		LOG(kProtocolName, liMedium, "AIMConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
+
+		StopReceiver();
+
+		BMessage msg(AMAN_CLOSED_CONNECTION);
+		msg.AddPointer("connection", this);
+
+		fManMsgr.SendMessage(&msg);
+		fState = AMAN_OFFLINE;
+				
 		return B_ERROR;
 	};
 	
@@ -84,8 +106,7 @@ int32 AIMConnection::ConnectTo(const char *hostname, uint16 port) {
 void AIMConnection::StartReceiver(void) {
 	fSockMsgr = new BMessenger(NULL, (BLooper *)this);
 
-	fThread = spawn_thread(Receiver, "DSfgsfdg", B_NORMAL_PRIORITY,
-		(void *)this);
+	fThread = spawn_thread(Receiver, kThreadName, B_NORMAL_PRIORITY, (void *)this);
 	if (fThread > B_ERROR) resume_thread(fThread);
 	
 };
@@ -107,13 +128,13 @@ int32 AIMConnection::Receiver(void *con) {
 	const uint8 kFLAPHeaderLen = 6;
 	const uint32 kSleep = 2000000;
 	const char *kHost = connection->Server();
-	const char kPort = connection->Port();
+	const uint16 kPort = connection->Port();
 	const BMessenger *kMsgr = connection->fSockMsgr;
 	
 	int32 socket = 0;
 
 	if ( !connection->fSockMsgr->IsValid() ) {
-		LOG("AIM", liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
+		LOG(kProtocolName, liLow, "%s:%i: Messenger wasn't valid!", kHost, kPort);
 		return B_ERROR;
 	}
 
@@ -125,12 +146,12 @@ int32 AIMConnection::Receiver(void *con) {
 	{
 		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) 
 		{
-			LOG("AIM", liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
+			LOG(kProtocolName, liLow, "%s:%i: Couldn't get socket: %i", kHost, kPort, ret);
 			return B_ERROR;
 		}
 	} else 
 	{
-		LOG("AIM", liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
+		LOG(kProtocolName, liLow, "%s:%i: Couldn't obtain socket: %i", kHost, kPort, ret);
 		return B_ERROR;
 	}
 	
@@ -172,14 +193,14 @@ int32 AIMConnection::Receiver(void *con) {
 							LOG(kProtocolName, liLow, "%s:%i: Socket got less than 0",
 								kHost, kPort);
 							perror("SOCKET ERROR");
-							
+
 							BMessage msg(AMAN_CLOSED_CONNECTION);
 							msg.AddPointer("connection", con);
 			
 							connection->fManMsgr.SendMessage(&msg);
 							connection->fState = AMAN_OFFLINE;
 							
-							return B_ERROR;							
+							return B_ERROR;
 						};
 					};					
 				};
@@ -204,8 +225,6 @@ int32 AIMConnection::Receiver(void *con) {
 		
 		flapContents = (uchar *)calloc(flapLen, sizeof(char));
 		
-//		printf("FLAP is %i (0x%04x) bytes\n", flapLen, flapLen);
-	
 		processed = 0;
 		bytes = 0;
 		
@@ -226,19 +245,20 @@ int32 AIMConnection::Receiver(void *con) {
 							snooze(kSleep);
 							continue;
 						} else {
+							free(flapContents);
 							if (kMsgr->IsValid() == false) return B_OK;
 						
-							LOG("AIM", liLow, "%s:%i. Got socket error:",
+							LOG(kProtocolName, liLow, "%s:%i. Got socket error:",
 								connection->Server(), connection->Port());
 							perror("SOCKET ERROR");
-							
+
 							BMessage msg(AMAN_CLOSED_CONNECTION);
 							msg.AddPointer("connection", con);
 			
 							connection->fManMsgr.SendMessage(&msg);
 							connection->fState = AMAN_OFFLINE;
 							
-							return B_ERROR;							
+							return B_ERROR;
 						};
 					};
 				};
@@ -272,11 +292,6 @@ int32 AIMConnection::Receiver(void *con) {
 		dataReady.AddInt16("flapLen", flapLen);
 		dataReady.AddData("data", B_RAW_TYPE, flapContents, flapLen);
 
-if (connection->fUberDebug) {
-	LOG(kProtocolName, liLow, "%s:%i\n", kHost, kPort);
-	dataReady.PrintToStream();
-}
-
 		kMsgr->SendMessage(&dataReady);
 
 		free(flapContents);
@@ -297,39 +312,40 @@ void AIMConnection::MessageReceived(BMessage *msg) {
 			if (fSock > 0) {
 				if (fOutgoing.size() == 0) return;
 				Flap *f = fOutgoing.front();
+
 				if (f->Channel() == SNAC_DATA) {
-if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
-					LOG("AIM", liLow, "Connection %s:%i 0x%04x / 0x%04x", Server(),
+					LOG(kProtocolName, liLow, "%s:%i Sending 0x%04x / 0x%04x", Server(),
 						Port(), f->SNACAt()->Family(), f->SNACAt()->SubType());
 				};
 				const char * data = f->Flatten(++fOutgoingSeqNum);
 				int32 data_size = f->FlattenedSize();
 				int32 sent_data = 0;
 				
-				LOG("AIM", liDebug, "Sending %ld bytes of data", data_size);
+				LOG(kProtocolName, liDebug, "%s:%i: Sending %ld bytes of data", Server(),
+					Port(), data_size);
 				
-				while ( sent_data < data_size )
-				{
+				while (sent_data < data_size) {
 					int32 sent = send(fSock, &data[sent_data], data_size-sent_data, 0);
 					
-					if ( sent < 0 ) 
-					{
+					if (sent < 0) {
 						delete f;
-						LOG("AIM", liLow, "AIMConn::MessageReceived: Couldn't send packet");
+						LOG(kProtocolName, liLow, "%s:%i: Couldn't send packet", Server(),
+							Port());
 						perror("Socket error");
 						return;
-					}
+					};
 					
-					if ( sent == 0 )
-					{
-						LOG("AIM", liHigh, "send() returned 0, is this bad?");
+					if (sent == 0) {
+						LOG(kProtocolName, liHigh, "%s:%i: send() returned 0, is this bad?",
+							Server(), Port());
 						snooze(1*1000*1000);
-					}
+					};
 					
 					sent_data += sent;
-				}
+				};
 				
-				LOG("AIM", liDebug, "Sent %ld bytes of data", data_size);
+				LOG(kProtocolName, liDebug, "%s:%i: Sent %ld bytes of data", Server(), Port(),
+					data_size);
 				
 				fOutgoing.pop_front();
 				delete f;
@@ -382,7 +398,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 			} else {
 				switch (subtype) {
 					case VERIFICATION_REQUEST: {
-						LOG("AIM", liLow, "AIMConn: AOL sent us a client verification");
+						LOG(kProtocolName, liLow, "AIMConn: AOL sent us a client verification");
 						PrintHex((uchar *)data, bytes);
 					} break;
 						
@@ -406,7 +422,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 					} break;
 					
 					case SERVICE_REDIRECT: {
-						LOG("AIM", liLow, "Got service redirect SNAC");
+						LOG(kProtocolName, liLow, "Got service redirect SNAC");
 						uint16 tlvType = 0;
 						uint16 tlvLen = 0;
 						char *tlvValue = NULL;
@@ -415,11 +431,10 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 						
 						if (data[4] & 0x80) {
 							uint16 skip = (data[10] << 8) + data[11];
-							LOG("AIM", liLow, "Skipping %i bytes", skip);
+							LOG(kProtocolName, liLow, "Skipping %i bytes", skip);
 							offset += skip + 2;
 						};
 						
-						printf("Offset: %i - 0x%x\n", offset, data[offset]);
 						offset--;
 						
 						BMessage service(AMAN_NEW_CONNECTION);
@@ -437,13 +452,12 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 							switch(tlvType) {
 								case 0x000d: {	// Service Family
 									if ((tlvValue[0] == 0x00) && (tlvValue[1] == 0x10)) {
-//										service.AddBool("icon", true);
-										printf("Icon service!\n");
+										service.AddBool("icon", true);
 									};
 								} break;
 								
 								case 0x0005: {	// Server Details
-									LOG("AIM", liLow, "Server details: %s\n", tlvValue);
+									LOG(kProtocolName, liLow, "Server details: %s\n", tlvValue);
 	
 									if (strchr(tlvValue, ':')) {
 										pair<char *, uint16> sd = ExtractServerDetails(tlvValue);
@@ -458,13 +472,7 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 								};
 								
 								case 0x0006: {	// Cookie, nyom nyom nyom!
-									for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[i]);
-									printf("\n");
-									for (int i = 0; i < 10; i++) printf("0x%x ", tlvValue[(tlvLen - 10)+ i]);
-									printf("\n");
-								
-								
-									LOG("AIM", liLow, "Cookie");
+									LOG(kProtocolName, liLow, "Cookie");
 									service.AddData("cookie", B_RAW_TYPE, tlvValue,
 										tlvLen);
 								};
@@ -558,8 +566,8 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 						cready->AddRawData((uchar []){0x00, 0x09, 0x00, 0x01,
 							0x01, 0x10, 0x07, 0x39}, 8);
 //						Possibly remove.
-						cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
-							0x01, 0x10, 0x07, 0x39}, 8);
+//						cready->AddRawData((uchar []){0x00, 0x10, 0x00, 0x01,
+//							0x01, 0x10, 0x07, 0x39}, 8);
 						cready->AddRawData((uchar []){0x00, 0x13, 0x00, 0x03,
 							0x01, 0x10, 0x07, 0x39}, 8);
 	
@@ -633,11 +641,10 @@ if (fUberDebug) printf("---- Sending SNAC!!!\n\n");
 						} break;
 						
 						case 0x0005: {	// New Server:IP
-LOG("AIM", liDebug, "\n\n\n\nRaw details: %s\n", value);
 							pair<char *, uint16> serv = ExtractServerDetails(value);
 							server = serv.first;
 							port = serv.second;
-							LOG("AIM", liLow, "Need to reconnect to: %s:%i", server, port);
+							LOG(kProtocolName, liLow, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {
@@ -656,25 +663,28 @@ LOG("AIM", liDebug, "\n\n\n\nRaw details: %s\n", value);
 				StopReceiver();
 				
 //				Nuke the old packet queue
-				fOutgoing.empty();
+				ClearQueue();
 
-PrintHex((uchar *)data, bytes);				
-LOG("AIM", liDebug, "Attempting connection to %s:%i\n", server, port);
-				fSock = ConnectTo(server, port);
+				LOG(kProtocolName, liDebug, "%s:%i attempting connection to %s:%i\n",
+					fServer.String(), fPort, server, port);
+				if (fSock > B_OK) {
+					fSock = ConnectTo(server, port);
 
-				free(fServer);
-				fPort = port;
-				fServer = strdup(server);
-				
-				free(server);
-				
-				StartReceiver();
-				
-				Flap *f = new Flap(OPEN_CONNECTION);
-				f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
-				f->AddTLV(0x0006, cookie, cookieSize);
-				
-				Send(f);
+					fPort = port;
+					fServer = server;
+					
+					free(server);
+					
+					StartReceiver();
+					
+					Flap *f = new Flap(OPEN_CONNECTION);
+					f->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4); // ID
+					f->AddTLV(0x0006, cookie, cookieSize);
+					
+					Send(f);
+				} else {
+					free(server);
+				};
 			} else {
 				
 				BMessage msg(AMAN_CLOSED_CONNECTION);

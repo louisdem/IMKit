@@ -1,6 +1,9 @@
 #ifndef AIMCONSTANTS_H
 #define AIMCONSTANTS_H
 
+extern const char *kProtocolName;
+extern const char *kThreadName;
+
 const uchar COMMAND_START = 0x2a;
 
 enum flap_channel {

@@ -7,9 +7,6 @@
 
 #include "AIMHandler.h"
 
-const char kThreadName[] = "IMKit: AIM Protocol";
-const char kProtocolName[] = "AIM";
-
 void PrintHex(const unsigned char* buf, size_t size) {
 	if ( g_verbosity_level != liDebug ) {
 		// only print this stuff in debug mode
@@ -104,7 +101,37 @@ AIMManager::~AIMManager(void) {
 	LogOff();
 }
 
+status_t AIMManager::ClearConnections(void) {
+	list<AIMConnection *>::iterator it;
+	
+	for (it = fConnections.begin(); it != fConnections.end(); it++) {
+		AIMConnection *con = (*it);
+		con->Lock();
+		con->Quit();
+//		delete con;
+	};
+	
+	fConnections.clear();
+	
+	return B_OK;
+};
+
+status_t AIMManager::ClearWaitingSupport(void) {
+	list<Flap *>::iterator it;
+	
+	for (it = fWaitingSupport.begin(); it != fWaitingSupport.end(); it++) {
+		Flap *f = (*it);
+		delete f;
+//		fWaitingSupport.pop_front();
+	};
+	
+	fWaitingSupport.clear();
+	
+	return B_OK;
+};
+
 status_t AIMManager::Send(Flap *f) {
+	
 	if (f->Channel() == SNAC_DATA) {
 		SNAC *s = f->SNACAt(0);
 		
@@ -116,18 +143,18 @@ status_t AIMManager::Send(Flap *f) {
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
 				AIMConnection *con = (*i);
 				if (con->Supports(family) == true) {
-					LOG("AIM", liLow, "Sending SNAC (0x%04x) via %s:%i", family,
+					LOG(kProtocolName, liLow, "Sending SNAC (0x%04x) via %s:%i", family,
 						con->Server(), con->Port());
 					con->Send(f);
 					return B_OK;
 				};
 			}
 			
-			LOG("AIM", liMedium, "No connections handle SNAC (0x%04x) requesting service",
+			LOG(kProtocolName, liMedium, "No connections handle SNAC (0x%04x) requesting service",
 				family);
 			AIMConnection *con = fConnections.front();
 			if (con == NULL) {
-				LOG("AIM", liHigh, "No available connections to send SNAC");
+				LOG(kProtocolName, liHigh, "No available connections to send SNAC");
 			} else {
 			
 				Flap *newService = new Flap(SNAC_DATA);
@@ -154,7 +181,7 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 	const char *password) {
 	
 	if ((username == NULL) || (password == NULL)) {
-		LOG("AIM", liHigh, "AIMManager::Login: username or password not set");
+		LOG(kProtocolName, liHigh, "AIMManager::Login: username or password not set");
 		return B_ERROR;
 	}
 	
@@ -192,7 +219,7 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 
 		return B_OK;
 	} else {
-		LOG("AIM", liDebug, "AIMManager::Login: Already online");
+		LOG(kProtocolName, liDebug, "AIMManager::Login: Already online");
 		return B_ERROR;
 	};
 };
@@ -219,6 +246,7 @@ char *AIMManager::EncodePassword(const char *pass) {
 void AIMManager::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case AMAN_NEW_CAPABILITIES: {
+
 			list <Flap *>::iterator i;
 			
 //			We can cheat here. Just try resending all the items, Send() will
@@ -246,11 +274,10 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			if (msg->FindInt16("port", &port) != B_OK) return;
 			
 			Flap *srvCookie = new Flap(OPEN_CONNECTION);
+			srvCookie->AddRawData((uchar []){0x00, 0x00, 0x00, 0x01}, 4);
 			srvCookie->AddTLV(new TLV(0x0006, cookie, bytes));
 
-bool icon = msg->FindBool("icon");
-printf("Is icon: %i\n", icon);
-			AIMConnection *con = new AIMConnection(host, port, this, icon);
+			AIMConnection *con = new AIMConnection(host, port, this);
 			con->Run();
 			fConnections.push_back(con);
 			
@@ -262,16 +289,18 @@ printf("Is icon: %i\n", icon);
 			AIMConnection *con = NULL;
 			msg->FindPointer("connection", (void **)&con);
 			if (con != NULL) {
-				LOG("AIM", liLow, "Connection (%s:%i) closed", con->Server(),
+				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(),
 					con->Port());
 					
 				fConnections.remove(con);
 				con->Lock();
 				con->Quit();
-				LOG("AIM", liLow, "After close we have %i connections",
+				LOG(kProtocolName, liLow, "After close we have %i connections",
 					fConnections.size());
-					
+						
 				if (fConnections.size() == 0) {
+					ClearWaitingSupport();
+					ClearConnections();
 					fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
 					fConnectionState = AMAN_OFFLINE;
 				};
@@ -299,7 +328,7 @@ printf("Is icon: %i\n", icon);
 			uint32 requestid = (data[++offset] << 24) + (data[++offset] << 16) +
 				(data[++offset] << 8) + data[++offset];
 
-			LOG("AIM", liLow, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
+			LOG(kProtocolName, liLow, "AIMManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
 			
 			switch(family) {
 				case SERVICE_CONTROL: {
@@ -320,125 +349,7 @@ printf("Is icon: %i\n", icon);
 				} break;
 				
 				case ICBM: {
-					switch (subtype) {
-						case ERROR: {
-							LOG(kProtocolName, liHigh, "GOT SERVER ERROR 0x%x "
-								"0x%x", data[++offset], data[++offset]);
-						} break;
-						
-						case MESSAGE_FROM_SERVER: {
-							offset = 18;
-							
-							uint16 channel = (data[offset] << 8) + data[++offset];
-							uint8 nickLen = data[++offset];
-							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-
-							memcpy(nick, (void *)(data + offset + 1), nickLen);
-							nick[nickLen] = '\0';
-
-							offset += nickLen;
-							uint16 warning = (data[++offset] << 8) + data[++offset];
-							uint16 TLVs = (data[++offset] << 8) + data[++offset];
-
-							for (uint16 i = 0; i < TLVs; i++) {
-								uint16 type = 0;
-								uint16 length = 0;
-								char *value = NULL;
-								
-								type = (data[++offset] << 8) + data[++offset];
-								length = (data[++offset] << 8) + data[++offset];
-
-								value = (char *)calloc(length + 1, sizeof(char));
-								memcpy(value, (void *)(data + offset), length);
-								value[length] = '\0';
-
-								free(value);
-								offset += length;
-							};
-
-//							We only support plain text channels currently									
-							switch (channel) {
-								case PLAIN_TEXT: {
-									//offset--;
-									offset += 2; // hack, hack. slaad should look at this :9
-									uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
-									offset += 2;
-									LOG("AIM", liLow, "AIMManager: PLAIN_TEXT "
-										"message, content length: %i (0x%0.4X)", contentLen-offset, contentLen-offset);
-									
-									PrintHex(data, bytes );
-									
-									while ( offset < contentLen ) 
-									{
-										uint32 tlvlen = 0;
-										uint16 msgtype = (data[++offset] << 8) + data[++offset];
-										switch ( msgtype) 
-										{
-											case 0x0501: {	// Client Features, ignore
-												tlvlen = (data[++offset] << 8) + data[++offset];
-												//if ( tlvlen == 1 )
-												//	tlvlen = 0;
-												LOG("AIM", liDebug, "Ignoring Client Features, %ld bytes", tlvlen);
-											} break;
-											case 0x0101: { // Message Len
-												tlvlen = (data[++offset] << 8) + data[++offset];
-												
-												if ( tlvlen == 0 )
-												{ // old-style message?
-													tlvlen = (data[offset] << 8) + data[offset+1];
-													offset++;
-													printf("zero size message, new size: %ld\n", tlvlen);
-												}
-												
-												char *msg = (char *)calloc(tlvlen - 2, sizeof(char));
-												memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
-												msg[tlvlen - 3] = '\0';
-												
-												remove_html( msg );
-												
-												LOG("AIM", liHigh, "AIMManager: Got message from %s: \"%s\"",
-													nick, msg);
-								
-												fHandler->MessageFromUser(nick, msg);
-												
-												free(msg);
-											} break;
-											
-											default:
-												LOG("AIM", liDebug, "Unknown msgtype: %.04x", msgtype);
-										}
-										offset += tlvlen;
-										//i += 4 + tlvlen;
-									}
-								} break;
-							} // end switch(channel)
-							
-							free(nick);
-											
-						} break;
-						
-						case TYPING_NOTIFICATION: {
-							offset += 8;
-							uint16 channel = (data[++offset] << 8) + data[++offset];
-							uint8 nickLen = data[++offset];
-							char *nick = (char *)calloc(nickLen + 1, sizeof(char));
-							memcpy(nick, (char *)(data + offset + 1), nickLen);
-							nick[nickLen] = '\0';
-							offset += nickLen;
-							uint16 typingType = (data[++offset] << 8) + data[++offset];
-							
-							LOG(kProtocolName, liLow, "Got typing notification "
-								"(0x%04x) for \"%s\"", typingType, nick);
-								
-							fHandler->UserIsTyping(nick, (typing_notification)typingType);
-							free(nick);
-							
-						} break;
-						default: {
-							LOG(kProtocolName, liMedium, "Got unhandled SNAC of family "
-								"0x0004 (ICBM) of subtype 0x%04x", subtype);
-						};
-					};
+					HandleICBM(msg);
 				} break;
 				
 				default: {
@@ -488,7 +399,7 @@ printf("Is icon: %i\n", icon);
 							strncpy(server, value, colon - value);
 							server[(colon - value)] = '\0';
 							
-							LOG("AIM", liHigh, "Need to reconnect to: %s:%i", server, port);
+							LOG(kProtocolName, liHigh, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {
@@ -521,16 +432,161 @@ printf("Is icon: %i\n", icon);
 	};
 };
 
+status_t AIMManager::HandleICBM(BMessage *msg) {
+	ssize_t bytes = 0;
+	const uchar *data = NULL;
+	uint16 offset = 0;
+	uint16 subtype = 0;
+	uint16 flags = 0;
+
+	msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
+	subtype = (data[2] << 8) + data[3];
+	flags = (data[4] << 8) + data[5];
+	
+	offset = 9;
+	
+	if (flags & 0x8000) {
+		uint16 skip = (data[++offset] << 8) + data[++offset];
+		offset += skip;
+	};
+
+	switch (subtype) {
+		case ERROR: {
+			LOG(kProtocolName, liHigh, "GOT SERVER ERROR 0x%x "
+				"0x%x", data[++offset], data[++offset]);
+		} break;
+		
+		case MESSAGE_FROM_SERVER: {
+			offset = 18;
+			
+			uint16 channel = (data[offset] << 8) + data[++offset];
+			uint8 nickLen = data[++offset];
+			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
+
+			memcpy(nick, (void *)(data + offset + 1), nickLen);
+			nick[nickLen] = '\0';
+
+			offset += nickLen;
+			uint16 warning = (data[++offset] << 8) + data[++offset];
+			uint16 TLVs = (data[++offset] << 8) + data[++offset];
+
+			for (uint16 i = 0; i < TLVs; i++) {
+				uint16 type = 0;
+				uint16 length = 0;
+				char *value = NULL;
+				
+				type = (data[++offset] << 8) + data[++offset];
+				length = (data[++offset] << 8) + data[++offset];
+
+				value = (char *)calloc(length + 1, sizeof(char));
+				memcpy(value, (void *)(data + offset), length);
+				value[length] = '\0';
+
+				free(value);
+				offset += length;
+			};
+
+//							We only support plain text channels currently									
+			switch (channel) {
+				case PLAIN_TEXT: {
+					//offset--;
+					offset += 2; // hack, hack. slaad should look at this :9
+					uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
+					offset += 2;
+					LOG(kProtocolName, liLow, "AIMManager: PLAIN_TEXT "
+						"message, content length: %i (0x%0.4X)", contentLen-offset, contentLen-offset);
+					
+					PrintHex(data, bytes );
+					
+					while ( offset < contentLen ) {
+						uint32 tlvlen = 0;
+						uint16 msgtype = (data[++offset] << 8) + data[++offset];
+						switch (msgtype) {
+							case 0x0501: {	// Client Features, ignore
+								tlvlen = (data[++offset] << 8) + data[++offset];
+								//if ( tlvlen == 1 )
+								//	tlvlen = 0;
+								LOG(kProtocolName, liDebug, "Ignoring Client Features, %ld bytes", tlvlen);
+							} break;
+							case 0x0101: { // Message Len
+								tlvlen = (data[++offset] << 8) + data[++offset];
+								
+								if ( tlvlen == 0 )
+								{ // old-style message?
+									tlvlen = (data[offset] << 8) + data[offset+1];
+									offset++;
+									LOG(kProtocolName, liDebug, "Zero sized message "
+										", new size: %ld", tlvlen);
+								}
+								
+								char *msg = (char *)calloc(tlvlen - 2, sizeof(char));
+								memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
+								msg[tlvlen - 3] = '\0';
+								
+								remove_html( msg );
+								
+								LOG(kProtocolName, liHigh, "AIMManager: Got message from %s: \"%s\"",
+									nick, msg);
+				
+								fHandler->MessageFromUser(nick, msg);
+								
+								free(msg);
+							} break;
+							
+							default:
+								LOG(kProtocolName, liDebug, "Unknown msgtype: %.04x", msgtype);
+						}
+						offset += tlvlen;
+						//i += 4 + tlvlen;
+					}
+				} break;
+			} // end switch(channel)
+			
+			free(nick);
+							
+		} break;
+		
+		case TYPING_NOTIFICATION: {
+			offset += 8;
+			uint16 channel = (data[++offset] << 8) + data[++offset];
+			uint8 nickLen = data[++offset];
+			char *nick = (char *)calloc(nickLen + 1, sizeof(char));
+			memcpy(nick, (char *)(data + offset + 1), nickLen);
+			nick[nickLen] = '\0';
+			offset += nickLen;
+			uint16 typingType = (data[++offset] << 8) + data[++offset];
+			
+			LOG(kProtocolName, liLow, "Got typing notification "
+				"(0x%04x) for \"%s\"", typingType, nick);
+				
+			fHandler->UserIsTyping(nick, (typing_notification)typingType);
+			free(nick);
+			
+		} break;
+		default: {
+			LOG(kProtocolName, liMedium, "Got unhandled SNAC of family "
+				"0x0004 (ICBM) of subtype 0x%04x", subtype);
+		};
+	};
+};
+
 status_t AIMManager::HandleBuddyList(BMessage *msg) {
 	ssize_t bytes = 0;
 	const uchar *data = NULL;
 	uint16 offset = 0;
 	uint16 subtype = 0;
+	uint16 flags = 0;
 
 	msg->FindData("data", B_RAW_TYPE, (const void **)&data, &bytes);
 	subtype = (data[2] << 8) + data[3];
+	flags = (data[4] << 8) + data[5];
 	
 	offset = 9;
+	
+	if (flags & 0x8000) {
+		uint16 skip = (data[++offset] << 8) + data[++offset];
+		offset += skip;
+	};
 
 	switch (subtype) {
 		case USER_ONLINE: {
@@ -552,8 +608,7 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 				uint16 tlvlen = (data[++offset] << 8) + data[++offset];
 				switch (tlvtype) {
 					case 0x0001: {	// User class / status
-						uint16 userclass = (data[++offset] << 8) +
-							data[++offset];
+						uint16 userclass = (data[++offset] << 8) + data[++offset];
 
 						if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
 							fHandler->StatusChanged(nick, AMAN_AWAY);
@@ -563,7 +618,7 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 					} break;
 					
 					case 0x001d: {	// Icon / available message
-						LOG("AIM", liLow, "User %s has icon / available message.",
+						LOG(kProtocolName, liLow, "User %s has icon / available message.",
 							nick);
 						uint16 type;
 						uint8 index;
@@ -581,7 +636,8 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 									char *v = (char *)calloc(length, sizeof(char));
 									memcpy(v, data + offset, length);
 									Flap *buddy = new Flap(SNAC_DATA);
-									buddy->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS,
+									buddy->AddSNAC(new SNAC(
+										SERVER_STORED_BUDDY_ICONS,
 										0x0004, 0x00, 0x00, 0x00000000));
 									buddy->AddRawData((uchar *)&nickLen, 1);
 									buddy->AddRawData((uchar *)nick, nickLen);
@@ -617,11 +673,10 @@ status_t AIMManager::HandleBuddyList(BMessage *msg) {
 			memcpy(nick, (void *)(data + offset), nickLen);
 			nick[nickLen] = '\0';
 								
-			LOG("AIM", liLow, "AIMManager: \"%s\" went offline", nick);
+			LOG(kProtocolName, liLow, "AIMManager: \"%s\" went offline", nick);
 			
 			fHandler->StatusChanged(nick, AMAN_OFFLINE);
 			free(nick);
-			
 		} break;
 		default: {
 			LOG(kProtocolName, liMedium, "Got an unhandled SNAC of family 0x0003 "
@@ -712,7 +767,7 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 // -- Interface
 
 status_t AIMManager::MessageUser(const char *screenname, const char *message) {
-	LOG("AIM", liLow, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
+	LOG(kProtocolName, liLow, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
@@ -750,7 +805,7 @@ status_t AIMManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
 	if (buddy == NULL) return B_ERROR;
 //	if ((fConnectionState == AMAN_ONLINE) || (fConnectionState == AMAN_AWAY)) {
-		LOG("AIM", liLow, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
+		LOG(kProtocolName, liLow, "AIMManager::AddBuddy: Adding \"%s\" to list", buddy);
 		fBuddy.push_back(BString(buddy));
 	
 		Flap *addBuddy = new Flap(SNAC_DATA);
@@ -805,17 +860,20 @@ status_t AIMManager::LogOff(void) {
 	if (fConnectionState != AMAN_OFFLINE) {
 		fConnectionState = AMAN_OFFLINE;
 		
-		LOG("AIM", liLow, "%i connection(s) to kill", fConnections.size());
-		list <AIMConnection *>::iterator i;
+		LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
+//		list <AIMConnection *>::iterator i;
 		
-		for (i = fConnections.begin(); i != fConnections.end(); i++) {
-			AIMConnection *con = (*i);
-			if (con == NULL) continue;
-			LOG("AIM", liLow, "Killing connection to %s:%i", con->Server(),
-				con->Port());
-			con->Lock();
-			con->Quit();	
-		};
+		ClearConnections();
+		ClearWaitingSupport();
+		
+//		for (i = fConnections.begin(); i != fConnections.end(); i++) {
+//			AIMConnection *con = (*i);
+//			if (con == NULL) continue;
+//			LOG(kProtocolName, liLow, "Killing connection to %s:%i", con->Server(),
+//				con->Port());
+//			con->Lock();
+//			con->Quit();	
+//		};
 
 		fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
 		ret = B_OK;
