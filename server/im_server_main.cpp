@@ -2,13 +2,14 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <Messenger.h>
 
 #include <libim/Helpers.h>
 
 void handle_ctrl_c( int sig )
 {
 	printf("Fatal signal received.\n");
-	be_app->PostMessage( B_QUIT_REQUESTED );
+	BMessenger(be_app).SendMessage( B_QUIT_REQUESTED );
 }
 
 int main( int numarg, const char ** argv )

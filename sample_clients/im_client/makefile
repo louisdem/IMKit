@@ -157,6 +157,6 @@ else
   LIBS += zeta icon
 endif
 
-INSTALL_DIR= ../../install
+INSTALL_DIR= ../../build
 
 include $(BUILDHOME)/etc/makefile-engine.IMkit

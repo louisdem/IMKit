@@ -136,7 +136,7 @@ PWindow::PWindow(void)
 		};
 	} else {
 		printf("Fatal error - could not get protocols\n");
-		be_app->PostMessage(B_QUIT_REQUESTED);
+		BMessenger(be_app).SendMessage(B_QUIT_REQUESTED);
 		
 		return;
 	};
@@ -205,7 +205,7 @@ bool PWindow::QuitRequested(void) {
 	if (fView != NULL) fView->RemoveSelf();
 	delete fView;
 	
-	be_app->PostMessage(B_QUIT_REQUESTED);
+	BMessenger(be_app).SendMessage(B_QUIT_REQUESTED);
 	
 	return true;
 };

@@ -720,7 +720,7 @@ Server::CreateContact( const char * proto_id )
 	msg.AddInt32("im_what", GET_CONTACT_INFO);
 	msg.AddRef("contact", result);
 	
-	PostMessage(&msg);
+	BMessenger(this).SendMessage(&msg);
 	
 	LOG("im_server", liDebug, "  done.");
 	
@@ -1693,7 +1693,7 @@ Server::handle_STATUS_SET( BMessage * msg )
 			update.AddString("id", contacts.FindString("id",i) );
 			update.AddString("status", OFFLINE_TEXT);
 			
-			PostMessage( &update );
+			BMessenger(this).SendMessage( &update );
 		}
 	}
 	//fAddOnInfo[protocol].online_status = status;

@@ -77,6 +77,6 @@ ResizeView::MouseMoved (BPoint, uint32, const BMessage *)
       return;
     msg.AddPoint ("loc", windowCoord);
     msg.AddPointer ("view", attachedView);
-    window->PostMessage (&msg);
+    BMessenger(window).SendMessage (&msg);
   }
 }

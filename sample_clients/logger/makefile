@@ -144,6 +144,6 @@ ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot
 	DEFINES += BONE
 endif
 
-INSTALL_DIR= ../../install
+INSTALL_DIR= ../../build
 
 include $(BUILDHOME)/etc/makefile-engine.IMkit

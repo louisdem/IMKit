@@ -282,7 +282,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
   	
   	char uin_string[100];
   	
-  	sprintf(uin_string,"%d",msg->getSenderUIN());
+  	sprintf(uin_string,"%ld",msg->getSenderUIN());
 
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::AUTH_REQUEST);

@@ -92,7 +92,7 @@ ChatApp::RefsReceived( BMessage * msg )
 	msg->AddInt32("im_what", IM::MESSAGE_RECEIVED);
 	msg->AddBool("user_opened", true);
 	
-	PostMessage(msg);
+	BMessenger(this).SendMessage(msg);
 }
 
 void
@@ -177,7 +177,7 @@ ChatApp::MessageReceived( BMessage * msg )
 				{
 					win->Show();
 					win->SetFlags(win->Flags() ^ B_AVOID_FOCUS);
-					win->PostMessage(msg);
+					BMessenger(win).SendMessage(msg);
 					win->Unlock();
 					
 					bool user_opened;
@@ -197,7 +197,7 @@ ChatApp::MessageReceived( BMessage * msg )
 			{
 				if (_msgr.LockTarget() )
 				{
-					win->PostMessage(msg);
+					BMessenger(win).SendMessage(msg);
 					if ( win->IsMinimized() )
 					{ // window is hidden, move to this workspace and show it
 						win->SetWorkspaces( B_CURRENT_WORKSPACE );

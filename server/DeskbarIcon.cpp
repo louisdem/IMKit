@@ -462,7 +462,7 @@ IM_DeskbarIcon::DetachedFromWindow()
 {
 	if ( fSettingsWindow )
 	{
-		fSettingsWindow->PostMessage( B_QUIT_REQUESTED );
+		BMessenger(fSettingsWindow).SendMessage( B_QUIT_REQUESTED );
 	}
 }
 

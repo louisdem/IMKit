@@ -17,7 +17,7 @@ filter_result InputFilter::Filter (BMessage *msg, BHandler **target) {
 		} break;
 		
 		case B_MOUSE_WHEEL_CHANGED: {
-			fParent->Window()->PostMessage(msg);
+			BMessenger(fParent->Window()).SendMessage(msg);
 			return B_SKIP_MESSAGE;
 		} break;
 		
@@ -44,9 +44,9 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 		case B_RETURN: {				
 			if (keyModifiers & B_COMMAND_KEY) {
 				BMessage *typing = new BMessage(IM::USER_STOPPED_TYPING);
-				fParent->Window()->PostMessage(typing);			
+				BMessenger(fParent->Window()).SendMessage(typing);			
 			
-				fParent->Window()->PostMessage(fMessage);
+				BMessenger(fParent->Window()).SendMessage(fMessage);
 				return B_SKIP_MESSAGE;
 			};
 		} break;
@@ -55,7 +55,7 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 		} break;
 	
 		default: {
-			fParent->Window()->PostMessage(new BMessage(IM::USER_STARTED_TYPING));
+			BMessenger(fParent->Window()).SendMessage(new BMessage(IM::USER_STARTED_TYPING));
 //			filter_result result (B_DISPATCH_MESSAGE);
 //			return result;
 		} break;

@@ -71,7 +71,7 @@ BubbleHelper::~BubbleHelper()
         // dispose of window
         if(locked)
         {
-	        textwin->PostMessage(B_QUIT_REQUESTED);
+	        BMessenger(textwin).SendMessage(B_QUIT_REQUESTED);
     	    textwin->Unlock();
     	}
     }

@@ -35,7 +35,7 @@ LoggerApp::LoggerApp()
 	fMaxFiles = 10;
 
 	fFiles = new BFile *[fMaxFiles];
-	if (fFiles == NULL) be_app->PostMessage(B_QUIT_REQUESTED);
+	if (fFiles == NULL) BMessenger(be_app).SendMessage(B_QUIT_REQUESTED);
 	fLastFile = 0;
 */
 

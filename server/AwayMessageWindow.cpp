@@ -129,7 +129,7 @@ void AwayMessageWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case CANCEL_AWAY: {
 			//Quit();
-			PostMessage(B_QUIT_REQUESTED);
+			BMessenger(this).SendMessage(B_QUIT_REQUESTED);
 		} break;
 		
 		case SET_AWAY: {
@@ -144,7 +144,7 @@ void AwayMessageWindow::MessageReceived(BMessage *msg) {
 			man.OneShotMessage(&status);
 			
 			//Quit();
-			PostMessage(B_QUIT_REQUESTED);
+			BMessenger(this).SendMessage(B_QUIT_REQUESTED);
 		} break;
 	
 		default: {
