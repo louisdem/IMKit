@@ -307,9 +307,9 @@ void AIMManager::MessageReceived(BMessage *msg) {
 											data[++offset];
 	
 										if ((userclass & CLASS_AWAY) == CLASS_AWAY) {
-											fHandler->StatusChanged(nick, AWAY);
+											fHandler->StatusChanged(nick, AMAN_AWAY);
 										} else {
-											fHandler->StatusChanged(nick, ONLINE);
+											fHandler->StatusChanged(nick, AMAN_ONLINE);
 										};
 									} break;
 									
@@ -368,7 +368,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 												
 							LOG("AIM", LOW, "AIMManager: \"%s\" went offline", nick);
 							
-							fHandler->StatusChanged(nick, OFFLINE);							
+							fHandler->StatusChanged(nick, AMAN_OFFLINE);
 							free(nick);
 							
 						} break;
@@ -578,7 +578,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 				
 				Send(f);
 			} else {
-				fHandler->StatusChanged(fOurNick, OFFLINE);
+				fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
 			};
 		} break;
 		
@@ -695,7 +695,7 @@ status_t AIMManager::LogOff(void) {
 			con->Quit();	
 		};
 
-		fHandler->StatusChanged(fOurNick, OFFLINE);
+		fHandler->StatusChanged(fOurNick, AMAN_OFFLINE);
 		ret = B_OK;
 	};
 

@@ -40,13 +40,6 @@ enum {
 	AMAN_NEW_CAPABILITIES = 'amna'
 };
 
-enum {
-	AMAN_OFFLINE = 0,
-	AMAN_CONNECTING = 1,
-	AMAN_AWAY = 2,
-	AMAN_ONLINE = 3
-};
-
 class AIMConnection;
 class AIMHandler;
 

@@ -91,7 +91,7 @@ void AIMConnection::StopReceiver(void) {
 		delete old_msgr;
 	}
 	
-	fThread = 0;
+//	fThread = 0;
 
 };
 

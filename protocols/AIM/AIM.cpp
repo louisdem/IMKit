@@ -286,14 +286,14 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status) {
 	};
 
 	switch (status) {
-		case ONLINE: {
+		case AMAN_ONLINE: {
 			msg.AddString("status", ONLINE_TEXT);
 		} break;
-		case AWAY:
-		case IDLE: {
+		case AMAN_AWAY: {
+//		case IDLE: {
 			msg.AddString("status", AWAY_TEXT);
 		} break;
-		case OFFLINE: {
+		case AMAN_OFFLINE: {
 			msg.AddString("status", OFFLINE_TEXT);
 		} break;
 		

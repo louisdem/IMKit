@@ -99,10 +99,9 @@ enum user_class {
 
 //	Internal status types
 enum online_types {
-	ONLINE,
-	IDLE,
-	AWAY,
-	OFFLINE
+	AMAN_OFFLINE = 0,
+	AMAN_CONNECTING = 1,
+	AMAN_AWAY = 2,
+	AMAN_ONLINE = 3
 };
-
 #endif
