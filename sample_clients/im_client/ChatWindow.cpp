@@ -24,6 +24,10 @@ BubbleHelper gBubbles;
 
 const char *kImNewMessageSound = "IM Message Received";
 const float kPadding = 2.0;
+const float kDockPadding = 12.0;
+const int32 kTypingSendRate = 3 * 1000 * 1000;
+const int32 kTypingStoppedRate = 5 * 1000 * 1000;
+
 
 /*
 #include <libbsvg/SVGView.h>
@@ -156,7 +160,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	BRect inputRect = Bounds();
 	BRect dockRect = Bounds();
 
-	dockRect.bottom = iconBarSize+12;
+	dockRect.bottom = iconBarSize + kDockPadding;
 	fDock = new IconBar(dockRect);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -188,7 +192,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		buttonRect,
 		"open in people button",
 		new BMessage(SHOW_INFO),
-		B_FOLLOW_NONE,
+		B_FOLLOW_ALL,
 		B_WILL_DRAW,
 		icon,
 		NULL
@@ -436,7 +440,8 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fInput->MakeFocus();
 	
 	// add input filter that generates "user typing" messages and routes copy-commands
-	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command, fText );
+	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command, fText,
+		kTypingSendRate);
 	fInput->AddFilter((BMessageFilter *)fFilter);
 	
 	// monitor node so we get updates to status etc
@@ -451,6 +456,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 
 	// set up timer for clearing typing view
 	fTypingTimer = NULL;
+	fTypingTimerSelf = NULL;
 	
 	// this message runner needed to fix a BMenuField bug.
 	BMessage protoHack(PROTOCOL_SELECTED2);
@@ -495,6 +501,8 @@ ChatWindow::~ChatWindow()
 	fMan->Lock();
 	fMan->Quit();
 }
+
+//#pragma mark -
 
 bool
 ChatWindow::QuitRequested()
@@ -594,17 +602,26 @@ ChatWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case IM::SETTINGS_UPDATED: {
+			printf("Settings!\n");
+			
+			RebuildDisplay();
+		} break;
 		case IM::USER_STOPPED_TYPING: {
 			BMessage im_msg(IM::MESSAGE);
 			im_msg.AddInt32("im_what",IM::USER_STOPPED_TYPING);
 			im_msg.AddRef("contact",&fEntry);
 			fMan->SendMessage(&im_msg);
+			
+			stopSelfTypingTimer();
 		} break;
 		case IM::USER_STARTED_TYPING: {
 			BMessage im_msg(IM::MESSAGE);
 			im_msg.AddInt32("im_what", IM::USER_STARTED_TYPING);
 			im_msg.AddRef("contact", &fEntry);
 			fMan->SendMessage(&im_msg);
+			
+			startSelfTypingTimer();
 		} break;
 		case IM::DESKBAR_ICON_CLICKED:
 		{ // deskbar icon clicked, move to current workspace and activate
@@ -1075,6 +1092,8 @@ ChatWindow::stopNotify()
 }
 
 
+//#pragma mark -
+
 void ChatWindow::BuildProtocolMenu(void) {
 	BMessage getStatus(IM::GET_CONTACT_STATUS);
 	getStatus.AddRef("contact", &fEntry);
@@ -1142,22 +1161,21 @@ void ChatWindow::BuildProtocolMenu(void) {
 		fInfoView->Bounds().Height());
 };
 
-void
-ChatWindow::startTypingTimer()
-{
-	if ( fTypingTimer )
-		delete fTypingTimer;
+void ChatWindow::startTypingTimer(void) {
+	if (fTypingTimer) delete fTypingTimer;
 	
 	BMessage clearTyping(CLEAR_TYPING);
-	fTypingTimer = new BMessageRunner( BMessenger(this), &clearTyping, 7*1000*1000, 1 );
-	if ( fTypingTimer->InitCheck() != B_OK )
+	fTypingTimer = new BMessageRunner(BMessenger(this), &clearTyping,
+		kTypingStoppedRate, 1);
+		
+	if (fTypingTimer->InitCheck() != B_OK)
 		LOG("im_client", liHigh, "InitCheck fail on typing timer");
 	
 	fInfoView->SetText(_T("User is typing.."));
-}
+};
 
 void
-ChatWindow::stopTypingTimer()
+ChatWindow::stopTypingTimer(void)
 {
 	fInfoView->SetText("");
 	
@@ -1166,3 +1184,40 @@ ChatWindow::stopTypingTimer()
 	
 	fTypingTimer = NULL;
 }
+
+void ChatWindow::startSelfTypingTimer(void) {
+	if (fTypingTimerSelf) delete fTypingTimerSelf;
+	
+	fTypingTimerSelf = new BMessageRunner(BMessenger(this),
+		new BMessage(IM::USER_STOPPED_TYPING), kTypingStoppedRate, 1);
+	if (fTypingTimerSelf->InitCheck() != B_OK) {
+		LOG("im_client", liHigh, "Initcheck failed on self-typing timer");
+	};
+};
+
+void ChatWindow::stopSelfTypingTimer(void) {
+	if (fTypingTimerSelf) delete fTypingTimerSelf;
+	fTypingTimerSelf = NULL;
+};
+
+void ChatWindow::RebuildDisplay(void) {
+#if 0
+
+	BMessage chatSettings;
+	int32 iconBarSize;
+	
+	im_load_client_settings("im_client", &chatSettings);
+	
+//	if ( chatSettings.FindBool("command_sends", &command) != B_OK )
+//		command = true;
+//	if ( chatSettings.FindBool("show_send_button", &sendButton) != B_OK )
+//		sendButton = true;
+	if ( chatSettings.FindInt32("icon_size", &iconBarSize) != B_OK )
+		iconBarSize = kLargeIcon;
+	if (iconBarSize <= 0) iconBarSize = kLargeIcon;
+	
+	printf("Resizing to %i\n", iconBarSize);
+	fDock->ResizeTo(Bounds().Width(), iconBarSize + kDockPadding);
+#endif
+};
+

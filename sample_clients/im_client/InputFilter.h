@@ -11,7 +11,8 @@ class BMessageFilter;
 class InputFilter : public BMessageFilter {
 	public:
 								InputFilter(BTextView *owner, BMessage *msg,
-									bool commandSends, BView * forward_to);
+									bool commandSends, BView * forward_to,
+									int32 interval);
 	    virtual filter_result	Filter (BMessage *, BHandler **);
     	filter_result			HandleKeys (BMessage *);
     
@@ -21,6 +22,7 @@ class InputFilter : public BMessageFilter {
 		BMessage				*fMessage;
 		bigtime_t				fLastTyping;
 		bool					fCommandSends;
+		int32					fInterval;
 };
 
 #endif

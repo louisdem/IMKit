@@ -4,13 +4,15 @@
 #include <Messenger.h>
 #include <stdio.h>
 
-InputFilter::InputFilter (BTextView *owner, BMessage *msg, bool commandSends, BView * forward_to) 
+InputFilter::InputFilter (BTextView *owner, BMessage *msg, bool commandSends,
+	BView * forward_to, int32 interval) 
 	: BMessageFilter (B_ANY_DELIVERY, B_ANY_SOURCE),
 	fParent(owner),
 	fForwardTo(forward_to),
 	fMessage(new BMessage(*msg)),
 	fLastTyping(0),
-	fCommandSends(commandSends) {
+	fCommandSends(commandSends),
+	fInterval(interval) {
 }
 
 filter_result InputFilter::Filter (BMessage *msg, BHandler ** /*target*/) {
@@ -54,8 +56,6 @@ filter_result InputFilter::Filter (BMessage *msg, BHandler ** /*target*/) {
 filter_result InputFilter::HandleKeys (BMessage *msg) {
 	const char *keyStroke;
 	int32 keyModifiers;
-
-//	static bigtime_t last_typing_message_sent=0;
 	
 	msg->FindString("bytes", &keyStroke);
 	msg->FindInt32("modifiers", &keyModifiers);
@@ -64,7 +64,6 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 		case B_RETURN: {
 			if (fCommandSends == true) {
 				if (keyModifiers & B_COMMAND_KEY) {
-// if ((keyModifiers & B_COMMAND_KEY) == ((fCommandSends) ? B_COMMAND_KEY : 0)) ?
 					BMessage *typing = new BMessage(IM::USER_STOPPED_TYPING);
 					BMessenger(fParent->Window()).SendMessage(typing);			
 				
@@ -82,7 +81,6 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 					return B_SKIP_MESSAGE;
 				} else {
 					fParent->Insert(fParent->TextLength(), "\n", strlen("\n"));
-//					TextLength()
 				};
 			};
 		} break;
@@ -91,8 +89,7 @@ filter_result InputFilter::HandleKeys (BMessage *msg) {
 		} break;
 		
 		default: {
-			if ( system_time() - fLastTyping > 10*1000*1000 )
-			{ // only send typing messages every 10 sec
+			if ((system_time() - fLastTyping) > fInterval) {
 				BMessenger(fParent->Window()).SendMessage(new BMessage(IM::USER_STARTED_TYPING));
 				fLastTyping = system_time();
 			}

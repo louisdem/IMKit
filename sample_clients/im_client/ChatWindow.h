@@ -63,73 +63,78 @@ class Theme;
 
 class StatusBar;
 
-class ChatWindow : public BWindow
-{
-	public:
-		ChatWindow(entry_ref &);//, int32 iconBarSize = kLargeIcon, bool command = true);
-		~ChatWindow();
+extern const int32 kTypingSendRate;
 
-		void MessageReceived( BMessage * );
-		bool QuitRequested();
+class ChatWindow : public BWindow {
+	public:
+							ChatWindow(entry_ref &);
+							~ChatWindow();
+
+					void	MessageReceived(BMessage *msg);
+					bool 	QuitRequested();
 		
-		virtual void FrameResized( float, float );
-		virtual void WindowActivated( bool );
+			virtual void 	FrameResized( float, float );
+			virtual void 	WindowActivated( bool );
 		
-		bool handlesRef( entry_ref & );
-		void reloadContact();
-		void startNotify();
-		void stopNotify();
+					bool 	handlesRef( entry_ref & );
+					void 	reloadContact();
+					void 	startNotify();
+					void 	stopNotify();
 		
-		status_t SaveSettings(void);
-		status_t LoadSettings(void);
+				status_t 	SaveSettings(void);
+				status_t 	LoadSettings(void);
 		
 	private:
-		void BuildProtocolMenu(void);
-		void startTypingTimer();
-		void stopTypingTimer();
+					void	BuildProtocolMenu(void);
+					void	startTypingTimer(void);
+					void	stopTypingTimer(void);
+					void	startSelfTypingTimer(void);
+					void	stopSelfTypingTimer(void);
+					void	RebuildDisplay(void);
 		
-		enum { 
-			SEND_MESSAGE	= 1,
-			
-			SHOW_INFO		= 100,
-			BLOCK,
-			EMAIL,
-			AUTH,
-			VIEW_LOG,
-			
-			CLEAR_TYPING	= 1000,
-			PROTOCOL_SELECTED,
-			PROTOCOL_SELECTED2
-		 };
+					enum { 
+							SEND_MESSAGE	= 1,
+						
+							SHOW_INFO		= 100,
+							BLOCK,
+							EMAIL,
+							AUTH,
+							VIEW_LOG,
+						
+							CLEAR_TYPING	= 1000,
+							PROTOCOL_SELECTED,
+							PROTOCOL_SELECTED2
+					 };
 		
-		entry_ref	fEntry;
-		char		fName[512];
-		
-		BTextView		* fInput;
-		RunView			* fText;
-		ResizeView		*fResize;
-		
-		BScrollView		*fInputScroll;
-		BScrollView		*fTextScroll;
-		
-		InputFilter		*fFilter;
-		IM::Manager		* fMan;
-		bool			fChangedNotActivated;
-		char			fTitleCache[512];
-		
-		BMessage		fWindowSettings;
-		Theme			*fTheme;
-		
-		float			fFontHeight;
-		IconBar			*fDock;
-		
-		BMenuField		*fProtocolMenu;
-		StatusBar		*fStatusBar;
-		BStringView		*fInfoView;
-		BButton			*fSendButton;
-		
-		BMessageRunner	*fTypingTimer;
-		BMessageRunner	*fProtocolHack; // used to circumvent a BMenuField bug. m_eiman knows.
+				entry_ref	fEntry;
+					char	fName[512];
+					
+				BTextView	*fInput;
+				RunView		*fText;
+				ResizeView	*fResize;
+					
+			BScrollView		*fInputScroll;
+			BScrollView		*fTextScroll;
+					
+			InputFilter		*fFilter;
+			IM::Manager		*fMan;
+					bool	fChangedNotActivated;
+					char	fTitleCache[512];
+					
+				BMessage	fWindowSettings;
+					Theme	*fTheme;
+					
+					float	fFontHeight;
+				IconBar		*fDock;
+					
+				BMenuField	*fProtocolMenu;
+				StatusBar	*fStatusBar;
+			BStringView		*fInfoView;
+				BButton		*fSendButton;
+					
+			BMessageRunner	*fTypingTimerSelf;
+			BMessageRunner	*fTypingTimer;
+			BMessageRunner	*fProtocolHack; // used to circumvent a BMenuField bug. m_eiman knows.
 };
 
 #endif
