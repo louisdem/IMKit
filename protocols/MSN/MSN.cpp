@@ -242,9 +242,9 @@ const char * MSNProtocol::GetSignature() {
 	return kProtocolName;
 }
 
-//uint32 MSNProtocol::Capabilities() {
-//	return PROT_AWAY_MESSAGES | PROT_TYPING_NOTIFICATIONS;
-//};
+const char * MSNProtocol::GetFriendlySignature() {
+	return "MSN";
+}
 
 BMessage MSNProtocol::GetSettingsTemplate() {
 	BMessage main_msg(IM::SETTINGS_TEMPLATE);

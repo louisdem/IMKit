@@ -27,6 +27,7 @@ class Yahoo : public IM::Protocol, public YahooManager
 		
 		// Get name of protocol
 		virtual const char * GetSignature();
+		virtual const char * GetFriendlySignature();
 		
 		// settings template
 		virtual BMessage GetSettingsTemplate();

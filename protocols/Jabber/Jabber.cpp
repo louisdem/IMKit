@@ -293,6 +293,13 @@ Jabber::GetSignature()
 	return kProtocolName;
 }
 
+const char *
+Jabber::GetFriendlySignature()
+{
+	return "Jabber";
+}
+
+
 
 
 
@@ -699,6 +706,7 @@ Jabber::Roster(RosterList * roster){
 	CheckLoginStatus();
 	
 }
+
 void
 Jabber::Agents(AgentList * agents){
 	fPerc +=0.3333;
@@ -706,6 +714,7 @@ Jabber::Agents(AgentList * agents){
 	Progress("Jabber Login", "Jabber: Agents", fPerc);
 	CheckLoginStatus();
 }
+
 void
 Jabber::Disconnected(const BString & reason){
 

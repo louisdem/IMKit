@@ -121,6 +121,7 @@ class ICQProtocol : public IM::Protocol
 		virtual status_t Process( BMessage * );
 		
 		virtual const char * GetSignature();
+		virtual const char * GetFriendlySignature();
 	
 		virtual BMessage GetSettingsTemplate();
 		

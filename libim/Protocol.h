@@ -31,9 +31,15 @@ class Protocol
 		virtual status_t Process( BMessage * )=0;
 		
 		/**
-			Return the signature of the protocol, "ICQ" for ICQ etc.
+			Return the signature of the protocol, "icq" for ICQ etc.
+			Note that this MUST be lowercase.
 		*/
 		virtual const char * GetSignature()=0;
+		
+		/**
+			Return a user friendly version of the signature. "ICQ" for "ICQ".
+		*/
+		virtual const char * GetFriendlySignature()=0;
 		
 		/**
 			Return a BMessage containing the various settings that can

@@ -31,6 +31,7 @@ class Jabber : public IM::Protocol, public JabberManager, public JabberHandler
 		
 		// Get name of protocol
 		virtual const char * GetSignature();
+		virtual const char * GetFriendlySignature();
 		
 		// settings template
 		virtual BMessage GetSettingsTemplate();

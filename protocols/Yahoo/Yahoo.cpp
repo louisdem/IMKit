@@ -158,6 +158,12 @@ Yahoo::GetSignature()
 	return kProtocolName;
 }
 
+const char *
+Yahoo::GetFriendlySignature()
+{
+	return "Yahoo";
+}
+
 BMessage
 Yahoo::GetSettingsTemplate()
 {

@@ -33,7 +33,7 @@ class MSNProtocol : public IM::Protocol, public MSNHandler
 		virtual status_t Process( BMessage * );
 		
 		virtual const char * GetSignature();
-//		virtual uint32	Capabilities();
+		virtual const char * GetFriendlySignature();
 	
 		virtual BMessage GetSettingsTemplate();
 		

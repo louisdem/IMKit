@@ -748,6 +748,12 @@ ICQProtocol::GetSignature()
 	return "icq";
 }
 
+const char *
+ICQProtocol::GetFriendlySignature()
+{
+	return "ICQ";
+}
+
 BMessage
 ICQProtocol::GetSettingsTemplate()
 {

@@ -31,6 +31,7 @@ class AIMProtocol : public IM::Protocol, public OSCARHandler
 		virtual status_t Process( BMessage * );
 		
 		virtual const char * GetSignature();
+		virtual const char * GetFriendlySignature();
 	
 		virtual BMessage GetSettingsTemplate();
 		

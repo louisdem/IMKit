@@ -203,6 +203,10 @@ const char * AIMProtocol::GetSignature() {
 	return kProtocolName;
 }
 
+const char * AIMProtocol::GetFriendlySignature() {
+	return "AIM";
+}
+
 BMessage AIMProtocol::GetSettingsTemplate() {
 	BMessage main_msg(IM::SETTINGS_TEMPLATE);
 	
