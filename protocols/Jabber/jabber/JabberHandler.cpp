@@ -358,6 +358,7 @@ JabberHandler::ReceiveData(void * pHandler)
 #ifdef NETSERVER_BUILD 
 			handler->fEndpointLock->Unlock(); 
 #endif
+			if(fAuthorized)
 			handler->Disconnected("Disconnected when receiving");
 			break;
 		}
