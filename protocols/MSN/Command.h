@@ -1,14 +1,13 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-#include <vector>
 #include <String.h>
+#include <DataIO.h>
+
+#include <vector>
 #include <map.h>
 
-typedef struct {
-	char *contents;
-	int32 length;
-} clpair;
+typedef vector<BMallocIO> payloadv;
 
 /**
 	Class to manage encoding and decoding of MSN commands.
@@ -59,14 +58,14 @@ class Command {
 		int32		fTrID;
 		bool		fUseTrID;
 		bool		fDirty;
-		int32		fFlattenedSize;
-		char		*fFlattened;
+//		int32		fFlattenedSize;
+//		char		*fFlattened;
+		BMallocIO	fFlattened;
 
 		BString		fType;
 		vector<BString>
 					fParams;
-		vector<clpair *>
-					fPayloads;
+		payloadv	fPayloads;
 
 		map<BString, bool>
 					gExpectsPayload;

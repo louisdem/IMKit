@@ -4,7 +4,6 @@
 
 Command::Command(const char *type)
 	: fDirty(true),
-	fFlattened( (char*)malloc(1) ),
 	fType(type),
 	fTrID(-1),
 	fUseTrID(true) {
@@ -15,17 +14,6 @@ Command::Command(const char *type)
 };
 
 Command::~Command(void) {
-	if (Payloads() > 0) {
-		vector<clpair *>::iterator i;
-		
-		for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-			clpair *payload = *i;
-			free(payload->contents);
-			delete payload;
-		};
-	};
-	
-	if (fFlattened) free(fFlattened);
 };
 
 status_t Command::AddParam(const char *param, bool encode = false) {
@@ -96,18 +84,15 @@ status_t Command::AddPayload(const char *payload, int32 length = -1, bool encode
 
 	if (length == -1) length = strlen(payload);
 
-	clpair *content = new clpair();
-	content->length = length;
-	content->contents = (char *)calloc(length, sizeof(char));
-	memcpy(content->contents, payload, length);
-	
+	BMallocIO content;
+	content.WriteAt(0, payload, length);
 	fPayloads.push_back(content);
 	
 	return B_OK;
 };
 
 const char *Command::Payload(int32 index) {
-	return fPayloads[index]->contents;
+	return fPayloads[index].AsString();
 }
 
 const char *Command::Flatten(int32 sequence) {
@@ -115,97 +100,95 @@ const char *Command::Flatten(int32 sequence) {
 		int32 offset = 0;
 		BString temp = "";
 		fTrID = sequence;
-		FlattenedSize();
 		
-		fFlattened = (char *)realloc(fFlattened, sizeof(char) * fFlattenedSize);
-		
-		memcpy(fFlattened, fType.String(), fType.Length());
+		fFlattened.WriteAt(offset, fType.String(), fType.Length());
 		offset += fType.Length();
-
+		
 		if (fUseTrID) {
 			temp << " " << fTrID;
-			memcpy((fFlattened + offset), temp.String(), temp.Length());
+			fFlattened.WriteAt(offset, temp.String(), temp.Length());
 			offset += temp.Length();
 		};
 		
 		if (Params() > 0) {
 			vector<BString>::iterator i;
 			for (i = fParams.begin(); i != fParams.end(); i++) {
-				fFlattened[offset++] = ' ';
-				memcpy((fFlattened + offset), i->String(), i->Length());
+				fFlattened.WriteAt(offset++, " ", 1);
+				fFlattened.WriteAt(offset, i->String(), i->Length());
 				offset += i->Length();
 			};
 		};
 		
 		if (Payloads() > 0) {
-			vector<clpair *>::iterator i;
+			payloadv::iterator i;
 			int32 payload = 0;
 			temp = " ";
 			
 			for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-				payload += (*i)->length;
+				payload += i->BufferLength();
 			};
 			
 			temp << payload;
-			memcpy((fFlattened + offset), temp.String(), temp.Length());
+			fFlattened.WriteAt(offset, temp.String(), temp.Length());
 			offset += temp.Length();
 		};
-		
-		memcpy((fFlattened + offset), "\r\n", strlen("\r\n"));
+	
+		fFlattened.WriteAt(offset, "\r\n", strlen("\r\n"));
 		offset += strlen("\r\n");
 		
 		if (Payloads() > 0) {
-			vector<clpair *>::iterator i;
+			payloadv::iterator i;
 
 			for (i = fPayloads.begin(); i != fPayloads.end(); i++) {
-				memcpy((fFlattened + offset), (*i)->contents, (*i)->length);
-				offset += (*i)->length;
+				fFlattened.WriteAt(offset, i->Buffer(), i->BufferLength());
+				offset += i->BufferLength();
 			};
 		};
 		
 		fDirty = false;
 	};
 	
-	return fFlattened;
+	return (char *)fFlattened.Buffer();
 };
 
 int32 Command::FlattenedSize(void) {
-	if (fDirty) {
-		int32 payloadSize = 0;
-		int32 size = 0;
-		BString temp = "";
-		
-		size += fType.Length();
-
-		if (fUseTrID) {
-			size++; // Space
-			temp << fTrID;
-			size += temp.Length();
-		};
-		if (Params() > 0) {
-			vector<BString>::iterator i;
-			for (i = fParams.begin(); i != fParams.end(); i++) 
-				size += i->Length() + 1;
-		}
-		
-		if (Payloads() > 0 ) {
-			vector<clpair*>::iterator i;
-			for (i = fPayloads.begin(); i != fPayloads.end(); i++) 
-				payloadSize += (*i)->length;
-			
-			temp = "";
-			temp << payloadSize;
-			size += temp.Length() + 1;
-			
-			size += payloadSize;
-		};
-		
-		size += strlen("\r\n");
-		
-		fFlattenedSize = size;
-	};
-	
-	return fFlattenedSize;
+	return fFlattened.BufferLength();
+//	if (fDirty) {
+//		int32 payloadSize = 0;
+//		int32 size = 0;
+//		BString temp = "";
+//		
+//		size += fType.Length();
+//
+//		if (fUseTrID) {
+//			size++; // Space
+//			temp << fTrID;
+//			size += temp.Length();
+//		};
+//		if (Params() > 0) {
+//			vector<BString>::iterator i;
+//			for (i = fParams.begin(); i != fParams.end(); i++) 
+//				size += i->Length() + 1;
+//		}
+//		
+//		if (Payloads() > 0 ) {
+//			vector<clpair*>::iterator i;
+//			for (i = fPayloads.begin(); i != fPayloads.end(); i++) 
+//				payloadSize += (*i)->length;
+//			
+//			temp = "";
+//			temp << payloadSize;
+//			size += temp.Length() + 1;
+//			
+//			size += payloadSize;
+//		};
+//		
+//		size += strlen("\r\n");
+//		
+//		fFlattenedSize = size;
+//	};
+//	
+//	return fFlattenedSize;
 };
 
 void Command::Debug(void) {
@@ -213,11 +196,11 @@ void Command::Debug(void) {
 	vector<BString>::iterator i;
 	for (i = fParams.begin(); i != fParams.end(); i++) printf(" %s", i->String());
 	
-	vector<clpair *>::iterator j;
+	payloadv::iterator j;
 
 	if (Payloads() > 0) {
 		int32 size = 0;
-		for (j = fPayloads.begin(); j != fPayloads.end(); j++) size += (*j)->length;
+		for (j = fPayloads.begin(); j != fPayloads.end(); j++) size += j->BufferLength();
 		
 		printf(" %i", size);
 	};
@@ -226,8 +209,15 @@ void Command::Debug(void) {
 	
 	if (Payloads() > 0) {
 		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
-			clpair *p = (*j);
-			for (int32 i = 0; i < p->length; i++) printf("0x%02x ", p->contents[i]);
+			char *buffer = (char *)j->Buffer();
+			for (int32 i = 0; i < j->BufferLength(); i++) {
+				if ((buffer[i] = '\r') || (buffer[i] == '\n'))
+					printf("%c", buffer[i]);
+				else if ((buffer[i] < 0x20) || (buffer[i] > 0x7e))
+					printf("0x%02x ", buffer[i]);
+				else 
+					printf("%c", buffer[i]);
+			};
 		};
 	};
 	
