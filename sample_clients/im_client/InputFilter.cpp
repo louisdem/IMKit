@@ -28,8 +28,7 @@ filter_result InputFilter::Filter (BMessage *msg, BHandler ** /*target*/) {
 			return B_SKIP_MESSAGE;
 		} break;
 		
-		case B_KEY_DOWN: 
-		case B_KEY_UP: {
+		case B_KEY_DOWN: {
 			result = HandleKeys (msg);
 		} break;
 
