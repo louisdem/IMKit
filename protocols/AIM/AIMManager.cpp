@@ -5,6 +5,7 @@
 #include <libim/Helpers.h>
 #include <UTF8.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "AIMHandler.h"
 #include "htmlparse.h"
