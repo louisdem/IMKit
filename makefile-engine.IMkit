@@ -43,7 +43,7 @@ else
 endif
 
 #	the target goes in the TARGET_DIR
-TARGET		:= "$(TARGET_DIR)/$(NAME)"
+TARGET		:= $(TARGET_DIR)/$(NAME)
 
 #	specify the mimeset tool
 MIMESET		:= mimeset
@@ -353,7 +353,10 @@ default: build
 
 build: $(TARGET)
 
-$(TARGET):	$(OBJ_DIR) $(OBJS) $(RSRCS)
+#$(TARGET):	$(OBJ_DIR) $(OBJS) $(RSRCS)
+$(TARGET):	$(OBJS)
+		@echo $(TARGET) $(OBJS)
+		ls -l $(TARGET)
 		@rm -f $(TEMPDEPFILE)
 		$(BUILD_LINE)
 		$(DO_RSRCS)
