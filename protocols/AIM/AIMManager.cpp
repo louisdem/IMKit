@@ -824,7 +824,7 @@ status_t AIMManager::HandleSSI(BMessage *msg) {
 					} break;
 				};
 
-				free(name);
+				//free(name);
 			};
 						
 			uint32 checkOut = (data[++offset] << 24) + (data[++offset] << 16) +
@@ -853,7 +853,7 @@ status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
-	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, 0x00000000)); //++fRequestID));
+	msg->AddSNAC(new SNAC(ICBM, SEND_MESSAGE_VIA_SERVER, 0x00, 0x00, 0x2728)); //++fRequestID));
 	msg->AddRawData((uchar []){0x00, 0x00, 0xff, 0x00, 0x00, 0x0f, 0x08, 0x03}, 8); // MSG-ID Cookie
 	msg->AddRawData((uchar []){0x00, 0x01}, 2); // Channel: Plain Text
 
