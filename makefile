@@ -9,13 +9,14 @@ SUBDIRS = \
 
 default .DEFAULT :
 	# These two lines shouldn't be here. They should be in libim/makefile somehow.
-	-mkdir /boot/home/config/include/libim
+	-mkdir -p /boot/home/config/include/libim
 	-cp -u libim/*.h /boot/home/config/include/libim
 	
 	# copy the engine to a known location
 	-cp -u makefile-engine.IMkit $(BUILDHOME)/etc/makefile-engine.IMkit
 
 	# Unpack the Server icons.
+	-mkdir -p /boot/home/config/settings/im_kit	# Yes, it won't work if it does not exist.
 	-unzip -n server/Icons.zip -d /boot/home/config/settings/im_kit/icons
 
 	# Create the _APP_ link needed by the ICQ protocol. Note you must do make install
