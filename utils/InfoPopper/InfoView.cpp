@@ -117,6 +117,7 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 		if ( width > *w ) *w = width + kEdgePadding;
 	};
 	
+	if (*h < fBitmap->Bounds().Height()) *h = fBitmap->Bounds().Height() + (kEdgePadding * 2);
 	*w += fBitmap->Bounds().Width() + (kEdgePadding * 2);
 };
 
@@ -217,6 +218,10 @@ void InfoView::MouseDown(BPoint point) {
 				messages.AddItem((void *)&argMsg);
 			};
 			
+			BMessage *tmp;
+			for (int32 i = 0; fDetails->FindMessage("onClickMsg", i, tmp) == B_OK; i++) {
+				messages.AddItem((void *)tmp);
+			};
 							
 			if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
 				be_roster->Launch(launchString.String(), &messages);

@@ -31,6 +31,7 @@ namespace InfoPopper {
 //  entry_ref onClickFile: File to launch when clicked
 //  String onClickArgv: A string to be passed to the application as an argv (may be multiples)
 //  entry_ref onClickRef: Entry ref to be passed to launched (may be multiples)
+//  BMessage onClicMsg: Message to be sent on click (may be multiples)
 
 
 //	const char *kInfoPopperSig = "application/x-vnd.beclan.IM_InfoPopper";
