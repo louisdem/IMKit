@@ -41,7 +41,6 @@ symlinks: common $(ICONDIR)
 #does this create symlinks for the rest of $(BUILD)/clients/* ?
 	ln -sf "$(BUILD)/settings/InstantMessaging" /boot/home/config/be/Preferences
 
-
 install: common $(ICONDIR)
 	copyattr --data --move "$(BUILD)/lib/libim.so" "$(COMMON_LIB)"
 	rmdir "$(BUILD)/lib"
@@ -68,6 +67,7 @@ common:
 	# add attributes to application/x-person
 	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:connections" --public-name "IM Connections" --type string --width 80 --viewable --public
 	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public
+	ln -sf "/boot/home/config/lib/libim.so" "/boot/develop/lib/x86/libim.so"
 
 	-if [ ! -d "$(COMMON_SERVERS)" ]; then \
 		mkdir -p "$(COMMON_SERVERS)"; \
