@@ -53,10 +53,6 @@ enum message_what_codes {
 	/*
 		Settings management
 	*/
-//	GET_SETTINGS		= 'IMgs',
-//	SETTINGS			= 'IMse',
-//	SET_SETTINGS		= 'IMss',
-//	GET_SETTINGS_TEMPLATE	= 'IMgt',
 	SETTINGS_TEMPLATE	= 'IMst',
 	SETTINGS_UPDATED	= 'IMs0', // settings updated, notify protocol/client/etc
 	
@@ -73,6 +69,7 @@ enum message_what_codes {
 	GET_OWN_STATUSES		='IMc1',
 	UPDATE_CONTACT_STATUS	= 'IMc2',
 	GET_CONTACTS_FOR_PROTOCOL = 'IMc3',
+	GET_ALL_CONTACTS		= 'IMc4',	// Request a list of all the contacts the server has, and statuses
 	
 	/*
 		Deskbar icon related messages

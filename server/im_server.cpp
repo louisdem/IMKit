@@ -270,6 +270,10 @@ Server::MessageReceived( BMessage * msg )
 			reply_GET_LOADED_PROTOCOLS(msg);
 			break;
 		
+		case GET_ALL_CONTACTS: {
+			reply_GET_ALL_CONTACTS(msg);
+		} break;
+		
 		case ERROR:
 			Broadcast( msg );
 			break;
@@ -1772,6 +1776,14 @@ Server::GenerateSettingsTemplate()
 
 	main_msg.AddMessage("setting", &default_away);
 	
+	BMessage personHandler;
+	personHandler.AddString("name", "person_handler");
+	personHandler.AddString("description", "Person handler");
+	personHandler.AddInt32("type", B_STRING_TYPE);
+	personHandler.AddString("default", "application/x-vnd.m_eiman.sample_im_client");
+	
+	main_msg.AddMessage("setting", &personHandler);
+	
 	BMessage appsig;
 	appsig.AddString("name", "app_sig");
 	appsig.AddString("description", "Application signature");
@@ -2149,6 +2161,21 @@ Server::reply_UPDATE_CONTACT_STATUS( BMessage * msg )
 	
 	UpdateContactStatusAttribute(contact);
 }
+
+/*
+*/
+
+void Server::reply_GET_ALL_CONTACTS(BMessage *msg) {
+	BMessage reply(B_REPLY);
+
+	list< pair<ContactHandle, list<string>* > >::iterator i;
+
+	for (i = fContacts.begin(); i != fContacts.end(); i++) {
+		reply.AddRef("contact", &i->first.entry);
+	};
+	
+	msg->SendReply(&reply);
+};
 
 /**
 */

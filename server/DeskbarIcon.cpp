@@ -65,8 +65,10 @@ IM_DeskbarIcon::~IM_DeskbarIcon()
 void
 IM_DeskbarIcon::_init()
 {
-	BPath iconDir;
-	find_directory(B_USER_SETTINGS_DIRECTORY, &iconDir, true);
+	BPath userDir;
+	find_directory(B_USER_SETTINGS_DIRECTORY, &userDir, true);
+
+	BPath iconDir = userDir;
 	iconDir.Append("im_kit/icons");
 	
 //	Load the Offline, Away, Online and Flash icons from disk
@@ -315,6 +317,95 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			};
 		} break;
 
+		case B_NODE_MONITOR: {
+			int32 opcode;
+			if (msg->FindInt32("opcode", &opcode) == B_OK) {
+				switch (opcode) {
+					case B_ENTRY_CREATED: {
+						BVolumeRoster volRoster;
+						BVolume bootVol;
+						BMessenger target(this, NULL, NULL);
+						entry_ref ref;
+						const char *name;
+						volRoster.GetBootVolume(&bootVol);
+						
+//						XXX For some reason the ref name won't set correctly :/
+//						So, new queries will show up in the menu, but not work
+						msg->FindInt32("device", &ref.device);
+						msg->FindInt64("directory", &ref.directory);
+						msg->FindString("name", &name);
+						printf("Set name: %s\n", strerror(ref.set_name(name)));
+
+printf("Ref from: %i/%i/%s (%s)\n", ref.device, ref.directory, ref.name, name);
+						
+						BNode node(&ref);
+						BQuery *query = new BQuery();
+						
+						int32 length = 0;
+						char *queryFormula = ReadAttribute(node, "_trk/qrystr", &length);
+						queryFormula = (char *)realloc(queryFormula, sizeof(char) * (length + 1));
+						queryFormula[length] = '\0';
+
+						query->SetPredicate(queryFormula);
+						query->SetVolume(&bootVol);
+						query->SetTarget(target);
+								
+						fQueries[ref] = query;
+						free(queryFormula);
+				
+						
+						printf("Fetch node: %s\n", strerror(query->Fetch()));
+					} break;
+					
+//					We currently only handle the case of the user *adding* a new query
+
+//					case B_ENTRY_RENAMED: {
+//					} break;			
+//					case B_ENTRY_MOVED:
+//					case B_ENTRY_REMOVED: {
+//					} break;
+				};
+
+			};
+		} break;
+
+		case B_QUERY_UPDATE: {
+//			msg->PrintToStream();
+			fDirtyMenu = true;
+		} break;
+		
+		case LAUNCH_FILE: {
+			entry_ref fileRef;
+			msg->FindRef("fileRef", &fileRef);
+			
+			const char *handler = "application/x-vnd.Be-TRAK";
+			int32 length = 0;
+			char *mime = ReadAttribute(BNode(&fileRef), "BEOS:TYPE", &length);
+			mime = (char *)realloc(mime, (length + 1) * sizeof(char));
+			mime[length] = '\0';
+			
+			if (strcmp(mime, "application/x-person") == 0) {
+				handler = fPeopleApp;
+			};
+			
+			BMessage openMsg(B_REFS_RECEIVED);
+			openMsg.AddRef("refs", &fileRef);
+			
+			be_roster->Launch(handler, &openMsg);
+			
+		} break;
+		
+		case OPEN_QUERY: {
+//			For great justice, take off every query!
+			entry_ref queryRef;
+			msg->FindRef("queryRef", &queryRef);
+
+			BMessage open_msg(B_REFS_RECEIVED);
+			open_msg.AddRef("refs", &queryRef);
+			
+			be_roster->Launch("application/x-vnd.Be-TRAK", &open_msg);
+		} break;
+
 		default:
 			BView::MessageReceived(msg);
 	}
@@ -334,11 +425,12 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 	if ((transit == B_OUTSIDE_VIEW) || (transit == B_EXITED_VIEW)) {
 		fTip->SetHelp(Parent(), NULL);
 	} else {
+		IM::Manager man;
+
 		if ((fDirtyStatus == true) || (fStatuses.size() == 0)) {
 			fStatuses.clear();
 			
 			BMessage protStatus;
-			IM::Manager man;
 			man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
 	
 			fTipText = "Online Status:";
@@ -413,20 +505,81 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			};
 			
 			status->SetTargetForItems( this );
-				
-			fMenu->AddItem(status);
-			fMenu->AddSeparatorItem();
 	
-	//		settings
+			fMenu->AddItem(status);
+
+			if (fQueries.size() > 0 ) {
+				BMenu *queries = new BMenu("Queries");
+				querymap::iterator qIt;
+				
+				BVolumeRoster volRoster;
+				BVolume bootVol;		
+				BMessenger target(this, NULL, NULL);
+				
+				volRoster.GetBootVolume(&bootVol);
+				
+				for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) {
+					BMenu *menu = new BMenu(qIt->first.name);
+					BQuery *query = qIt->second;
+					entry_ref ref;
+					
+					BBitmap *icon = ReadNodeIcon(BPath(&qIt->first).Path());
+					BMessage *queryMsg = new BMessage(OPEN_QUERY);
+					queryMsg->AddRef("queryRef", &qIt->first);
+
+					IconMenuItem *item = new IconMenuItem(icon, "Open In Tracker",
+						"Empty", queryMsg);
+
+					menu->AddItem(item);
+					menu->AddSeparatorItem();
+					
+					while (query->GetNextRef(&ref) == B_OK) {
+						BMessage *itemMsg = new BMessage(LAUNCH_FILE);
+						itemMsg->AddRef("fileRef", &ref);
+						
+						icon = ReadNodeIcon(BPath(&ref).Path());
+						item = new IconMenuItem(icon , ref.name, "", itemMsg);
+
+						menu->AddItem(item);						
+					};
+					
+//					Recreate query
+					int32 predLength = query->PredicateLength();
+					char *predicate = (char *)calloc(predLength + 1, sizeof(char));
+					query->GetPredicate(predicate, predLength);
+					predicate[predLength] = 0;
+
+					query->Clear();
+					query->SetVolume(&bootVol);
+					query->SetTarget(target);
+					query->SetPredicate(predicate);
+
+					free(predicate);
+					query->Fetch();
+					
+					menu->SetFont(be_plain_font);
+					menu->SetTargetForItems(this);
+					
+					queries->AddItem(menu);
+				};
+				
+				queries->SetFont(be_plain_font);
+				fMenu->AddSeparatorItem();
+				fMenu->AddItem(queries);
+				
+			};
+				
+//			settings
+			fMenu->AddSeparatorItem();
 			fMenu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
 		
-	//		Quit
+//			Quit
 			fMenu->AddSeparatorItem();
 			fMenu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
 	
 			fMenu->SetTargetForItems( this );
 			
-			fDirtyMenu = false;
+//			fDirtyMenu = false;
 		};
 		
 		ConvertToScreen(&p);
@@ -472,6 +625,48 @@ IM_DeskbarIcon::AttachedToWindow()
 	msg.AddMessenger( "msgr", BMessenger(this) );
 	
 	BMessenger(IM_SERVER_SIG).SendMessage(&msg);
+	
+	BVolumeRoster volRoster;
+	BVolume bootVol;
+	BMessenger target(this, NULL, NULL);
+	querymap::iterator qIt;
+	BPath queryPath;
+	entry_ref queryRef;
+
+	find_directory(B_USER_SETTINGS_DIRECTORY, &queryPath, true);
+	queryPath.Append("im_kit/queries");
+
+	BDirectory queryDir(queryPath.Path());
+	queryDir.Rewind();
+	volRoster.GetBootVolume(&bootVol);
+
+
+	node_ref nref;
+	if (queryDir.InitCheck() == B_OK) {
+		queryDir.GetNodeRef(&nref);
+		watch_node(&nref, B_WATCH_DIRECTORY, target);
+	};
+
+	for (int32 i = 0; queryDir.GetNextRef(&queryRef) == B_OK; i++) {
+		BNode node(&queryRef);
+		BQuery *query = new BQuery();
+		
+		int32 length = 0;
+		char *queryFormula = ReadAttribute(node, "_trk/qrystr", &length);
+		queryFormula = (char *)realloc(queryFormula, sizeof(char) * (length + 1));
+		queryFormula[length] = '\0';
+
+		query->SetPredicate(queryFormula);
+		query->SetVolume(&bootVol);
+		query->SetTarget(target);
+				
+		fQueries[queryRef] = query;
+		free(queryFormula);
+	
+		query->Fetch();	
+
+	};
+	
 }
 
 void
@@ -490,14 +685,9 @@ IM_DeskbarIcon::reloadSettings()
 
 	settings.FindBool("blink_db", &fShouldBlink );
 			
+	if (settings.FindString("person_handler", &fPeopleApp) != B_OK) {
+		fPeopleApp = "application/x-vnd.Be-TRAK";
+	};
+			
 	LOG("deskbar", liMedium, "IM: Settings applied");
-/*	BMessage request( IM::GET_SETTINGS ), settings;
-	request.AddString("protocol","");
-	
-	BMessenger msgr(IM_SERVER_SIG);
-	
-	msgr.SendMessage(&request, this );
-	
-	LOG("deskbar", liLow, "IM: Settings requested");
-*/
 }

@@ -1,24 +1,34 @@
 #ifndef DESKBAR_ICON_H
 #define DESKBAR_ICON_H
 
-#include <View.h>
-#include <Resources.h>
 #include <Bitmap.h>
-#include <list>
-#include <map>
+#include <Directory.h>
 #include <Messenger.h>
 #include <MessageRunner.h>
-#include <TextView.h>
-#include <string>
+#include <NodeMonitor.h>
 #include <PopUpMenu.h>
+#include <Query.h>
+#include <Resources.h>
 #include <String.h>
+#include <TextView.h>
+#include <View.h>
+#include <Volume.h>
+#include <VolumeRoster.h>
 
+#include <list>
+#include <map>
+#include <string>
+
+#include "../common/IconMenuItem.h"
 #include "../common/IMKitUtilities.h"
 #include "../common/BubbleHelper.h"
 #include "AwayMessageWindow.h"
 
 #include <libim/Manager.h>
+#include <libim/Contact.h>
 #include <be/kernel/fs_attr.h>
+
+typedef map<entry_ref, BQuery *> querymap;
 
 class _EXPORT IM_DeskbarIcon : public BView
 {
@@ -53,7 +63,15 @@ class _EXPORT IM_DeskbarIcon : public BView
 			
 			CLOSE_IM_SERVER = 'imqu',
 			
-			SETTINGS_WINDOW_CLOSED = 'swcl'
+			SETTINGS_WINDOW_CLOSED = 'swcl',
+			
+			OPEN_QUERY		= 'opqu',
+			LAUNCH_FILE		= 'lafi'
+		};
+		enum {
+			isOffline = 0,
+			isAway = 1,
+			isOnline = 2
 		};
 			
 		void				_init();
@@ -85,6 +103,10 @@ class _EXPORT IM_DeskbarIcon : public BView
 		BString				fTipText;
 		map<string, string>	fStatuses;
 		BPopUpMenu			*fMenu;
+		
+		const char			*fPeopleApp;
+		
+		querymap			fQueries;
 		
 };
 

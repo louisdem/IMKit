@@ -114,6 +114,7 @@ class Server : public BApplication
 		void	reply_UPDATE_CONTACT_STATUS( BMessage * );
 		void	reply_GET_OWN_STATUSES(BMessage *msg);
 		void	reply_GET_CONTACTS_FOR_PROTOCOL( BMessage * );
+		void	reply_GET_ALL_CONTACTS(BMessage *);
 		
 		void	handle_SETTINGS_UPDATED(BMessage *);
 		
@@ -138,7 +139,6 @@ class Server : public BApplication
 			Used to store connections for contacts, so we can notify the protocols
 			of any changes.
 		*/
-		//list<ContactHandle, list<string> >	fContacts;
 		list< pair<ContactHandle, list<string>* > > fContacts;
 		
 		/*	Used to store both <protocol>:<id> and <protocol> status.
