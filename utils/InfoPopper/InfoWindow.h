@@ -22,6 +22,10 @@
 class InfoWindow : public BWindow
 {
 	public:
+		enum {
+			ResizeToFit = 'IWrf'
+		};
+		
 		InfoWindow();
 		~InfoWindow();
 		

@@ -40,6 +40,10 @@ void InfoWindow::WorkspaceActivated(int32 workspace, bool active) {
 
 void InfoWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
+		case ResizeToFit: {
+			ResizeAll();
+		}	break;
+		
 		case InfoPopper::AddMessage: {
 			msg->PrintToStream();
 			

@@ -54,7 +54,8 @@ class InfoView : public BView
 	private:
 		info_type		 fType;
 		BMessageRunner	* fRunner;
-		list<pair<BString,const BFont*> >	fLines;
+		list<pair<BString,const BFont*> >	fContent;
+		pair<BString,const BFont*>			fTitle;
 		float			fProgress;
 		BString			fMessageID;
 		int32			fTimeout;
