@@ -56,7 +56,12 @@ IM_DeskbarIcon::~IM_DeskbarIcon() {
 	delete fOnlineIcon;
 	delete fOfflineIcon;
 	delete fFlashIcon;
+	printf("Deleting fMenu (%p)...", fMenu);
 	delete fMenu;
+	printf("... Done!\n");
+	printf("Deleting fQueryMenu (%p)...", fQueryMenu);
+	delete fQueryMenu;
+	printf("... Done!\n");
 }
 
 void
@@ -143,7 +148,6 @@ IM_DeskbarIcon::_init() {
 		};
 	};
 	
-//	fDirtyQueryMenu = true;
 	fQueryMenu = NULL;
 }
 

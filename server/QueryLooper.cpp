@@ -68,8 +68,12 @@ void QueryLooper::MessageReceived(BMessage *msg) {
 			if ((fNotify) && (fMsg)) {
 				BMessage notify(*fMsg);
 				notify.AddString("qlName", fName);
-				
+
+#if B_BEOS_VERSION > B_BEOS_VERSION_5				
 				BMessenger(fNotify).SendMessage(notify);
+#else
+				BMessenger(fNotify).SendMessage(&notify);
+#endif
 			};
 		} break;
 		

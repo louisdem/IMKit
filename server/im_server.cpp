@@ -1767,7 +1767,7 @@ Server::GenerateSettingsTemplate()
 	auto_start.AddString("description", "Auto-start im_server");
 	auto_start.AddInt32("type", B_BOOL_TYPE );
 	auto_start.AddBool("default", true );
-		
+	
 	main_msg.AddMessage("setting", &auto_start);
 	
 	BMessage log_level;
@@ -1779,7 +1779,7 @@ Server::GenerateSettingsTemplate()
 	log_level.AddString("valid_value", "Medium");
 	log_level.AddString("valid_value", "High");
 	log_level.AddString("valid_value", "Quiet");
-	log_level.AddBool("default", "Debug" );
+	log_level.AddString("default", "Debug" );
 	
 	main_msg.AddMessage("setting", &log_level);
 	
@@ -2236,7 +2236,7 @@ Server::InitSettings()
 	if ( settings.FindString("log_level", &str) != B_OK )
 		settings.AddString("log_level", "High" );
 	if (!settings.FindString("default_away"))
-		settings.AddString("default_away", "I'm not here right now");	
+		settings.AddString("default_away", "I'm not here right now");
 	im_save_client_settings("im_server", &settings);
 	// done with template and settings.
 }
@@ -2283,11 +2283,11 @@ Server::ContactMonitor_Added( ContactHandle handle )
 		
 		if ( fProtocols.find(conn.Protocol()) != fProtocols.end() )
 		{ // protocol loaded, register connection
-			BMessage remove(MESSAGE);
-			remove.AddInt32("im_what", UNREGISTER_CONTACTS);
-			remove.AddString("id", conn.ID() );
+			BMessage add(MESSAGE);
+			add.AddInt32("im_what", REGISTER_CONTACTS);
+			add.AddString("id", conn.ID());
 			
-			(fProtocols[conn.Protocol()])->Process(&remove);
+			(fProtocols[conn.Protocol()])->Process(&add);
 		}
 	}
 	
