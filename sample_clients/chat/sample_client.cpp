@@ -554,6 +554,9 @@ ChatWindow::reloadContact()
 void
 ChatWindow::startNotify()
 {
+	if ( fChangedNotActivated )
+		return;
+	
 	fChangedNotActivated = true;
 	char str[512];
 	sprintf(str, "√ %s", fTitleCache);
@@ -571,6 +574,9 @@ ChatWindow::startNotify()
 void
 ChatWindow::stopNotify()
 {
+	if ( !fChangedNotActivated )
+		return;
+	
 	fChangedNotActivated = false;
 	SetTitle(fTitleCache);
 	((MyApp*)be_app)->NoFlash( BMessenger(this) );
