@@ -1,8 +1,9 @@
+#include <Application.h>
 #include <Mime.h>
 #include <Message.h>
 #include <String.h>
-
 #include <be/support/SupportDefs.h>
+
 #include <stdio.h>
 
 typedef struct value_type_t {
@@ -35,6 +36,7 @@ void print_usage()
 
 int main( int numarg, const char * argv[] )
 {
+	BApplication bapp("application/x-vnd.BeClan.mimetype_attribute");;
 	BString mimeType;
 	BString attributeInternal;
 	BString attributePublic;
@@ -43,36 +45,33 @@ int main( int numarg, const char * argv[] )
 	bool isPublic = true;
 
 	// decode arguments
-	for ( int i=1; i<numarg; i++ )
-	{
-		if ( strcasecmp(argv[i], "--mime") == 0 )
-		{ // mime type
-			if ( i != numarg - 1 )
-			{
+	for (int i = 1; i<numarg; i++) {
+		if (strcasecmp(argv[i], "--mime") == 0) {
+			// mime type
+			if (i != numarg - 1) {
 				mimeType = argv[++i];
 			}
 		}
 
-		if ( strcasecmp(argv[i], "--internal") == 0 )
-		{ // internal name
+		if (strcasecmp(argv[i], "--internal") == 0) {
+			// internal name
 			if ( i != numarg - 1 )
 			{
 				attributeInternal = argv[++i];
 			}
 		}
 
-		if ( strcasecmp(argv[i], "--public") == 0 )
-		{ // public name
+		if ( strcasecmp(argv[i], "--public") == 0 ) {
+			// public name
 			if ( i != numarg - 1 )
 			{
 				attributePublic = argv[++i];
 			}
 		}
 
-		if ( strcasecmp(argv[i], "--type") == 0 )
-		{ // type
-			if ( i != numarg - 1 )
-			{
+		if (strcasecmp(argv[i], "--type") == 0) {
+			// type
+			if (i != numarg - 1) {
 				attributeType = argv[++i];
 			}
 		}
@@ -85,17 +84,16 @@ int main( int numarg, const char * argv[] )
 	}
 
 	// check arguments
-	if ( mimeType == "" || attributeInternal == "" || attributePublic == ""	)
-	{
+	if ( mimeType == "" || attributeInternal == "" || attributePublic == ""	) {
 		print_usage();
 		return 1;
 	}
 	
 	type_code attributeTypeConst = B_ANY_TYPE;
-	for ( int i=0; valid_types[i].name != ""; i++ )
-	{
-		if ( attributeType == valid_types[i].name )
+	for (int i=0; valid_types[i].name != ""; i++ ) {
+		if (attributeType == valid_types[i].name) {
 			attributeTypeConst = valid_types[i].type;
+		};
 	}
 	
 	if ( attributeTypeConst == B_ANY_TYPE )
@@ -105,32 +103,25 @@ int main( int numarg, const char * argv[] )
 	}
 
 	// args ok, fetch current attributes
-	BMimeType mime( mimeType.String() );
+	BMimeType mime(mimeType.String());
 	
-	if ( mime.InitCheck() != B_OK )
-	{
+	if (mime.InitCheck() != B_OK) {
 		printf("Invalid MIME type\n");
 		return 2;
 	}
 
 	BMessage msg;
 	
-	if ( mime.GetAttrInfo(&msg) != B_OK )
-	{
+	if (mime.GetAttrInfo(&msg) != B_OK) {
 		printf("Error getting current attributes.\n");
 		return 3;
 	}
 	
 	// check if already set
-
 	const char * name = NULL;
 
-	int32 index=0;
-
-	for ( ; msg.FindString("attr:name", index, &name) == B_OK; index++ )
-	{
-		if ( attributeInternal == name )
-		{
+	for (int32 index ; msg.FindString("attr:name", index, &name) == B_OK; index++) {
+		if (attributeInternal == name) {
 			printf("Attribute already set.\n");
 			return 4;
 		}
@@ -138,14 +129,14 @@ int main( int numarg, const char * argv[] )
 	
 	// Ok, let's add it.
 	msg.AddString("attr:name", attributeInternal.String() );
-	msg.AddString("attr:public", attributePublic.String() );
+	msg.AddString("attr:public_name", attributePublic.String() );
 	msg.AddInt32("attr:type", attributeTypeConst );
 	msg.AddBool("attr:public", isPublic );
 	msg.AddBool("attr:editable", isEditable );
-
-	if ( mime.SetAttrInfo( &msg ) != B_OK )
-	{
-		printf("Error setting attributes.\n");
+	
+	status_t setStatus = mime.SetAttrInfo(&msg);
+	if (setStatus != B_OK) {
+		printf("Error setting attributes: %s\n", strerror(setStatus));
 		return 5;
 	}
 
