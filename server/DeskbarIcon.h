@@ -23,12 +23,16 @@
 #include "../common/IMKitUtilities.h"
 #include "../common/BubbleHelper.h"
 #include "AwayMessageWindow.h"
+#include "QueryLooper.h"
 
 #include <libim/Manager.h>
 #include <libim/Contact.h>
 #include <be/kernel/fs_attr.h>
+#include <be/kernel/fs_info.h>
 
-typedef map<entry_ref, BQuery *> querymap;
+typedef map<entry_ref, QueryLooper *> querymap;
+typedef map<BString, BMenu *> querymenumap;
+typedef map<entry_ref, bool> querydirtymap;
 
 class _EXPORT IM_DeskbarIcon : public BView
 {
@@ -66,7 +70,9 @@ class _EXPORT IM_DeskbarIcon : public BView
 			SETTINGS_WINDOW_CLOSED = 'swcl',
 			
 			OPEN_QUERY		= 'opqu',
-			LAUNCH_FILE		= 'lafi'
+			LAUNCH_FILE		= 'lafi',
+			
+			OPEN_QUERY_DIR	= 'opqd'
 		};
 		enum {
 			isOffline = 0,
@@ -75,7 +81,6 @@ class _EXPORT IM_DeskbarIcon : public BView
 		};
 			
 		void				_init();
-//		BBitmap 			*GetBitmap( const char * name );
 		void				reloadSettings();
 		
 		BResources			fResource;
@@ -89,25 +94,32 @@ class _EXPORT IM_DeskbarIcon : public BView
 		
 		int					fStatus;
 		
-		// for flashing
+//		Flashing stuff
 		int					fFlashCount, fBlink;
 		list<BMessenger>	fMsgrs;
 		BMessageRunner *	fMsgRunner;
 		
-		// settings
+//		Settings
 		bool				fShouldBlink;
-
-		bool				fDirtyStatus;	// Need to re-fetch the Statuses
-		bool				fDirtyMenu;		// Need to re-make the right click Menu
-		BubbleHelper *		fTip;
-		BString				fTipText;
-		map<string, string>	fStatuses;
-		BPopUpMenu			*fMenu;
-		
 		const char			*fPeopleApp;
-		
+
+		BubbleHelper 		*fTip;
+		BString				fTipText;
+		BPopUpMenu			*fMenu;	
+
+//		Status menu
+		bool				fDirtyStatusMenu;	// Does the menu need rebuilding?
+		BMenu				*fStatusMenu;
+		map<string, string>	fStatuses;
+		bool				fDirtyStatus;		// Are our statuses out of date?
+
+//		Query Menu stuff
+		bool				fDirtyQueryMenu;
 		querymap			fQueries;
-		
+		querymenumap		fQueryMenu;
+		querydirtymap		fDirtyQuery;
+		status_t			ExtractVolumes(BNode *node, vollist *volumes);
+
 };
 
 extern "C" _EXPORT BView * instantiate_deskbar_item();

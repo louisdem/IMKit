@@ -33,6 +33,7 @@ TYPE= APP
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
 SRCS= im_server.cpp im_server_main.cpp Protocol.cpp DeskbarIcon.cpp AwayMessageWindow.cpp
+SRCS+= QueryLooper.cpp
 SRCS+=  $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/BubbleHelper.cpp $(TOPDIR)/common/IconMenuItem.cpp
 
 #	specify the resource files to use

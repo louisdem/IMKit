@@ -15,6 +15,9 @@
 #include <Path.h>
 #include <FindDirectory.h>
 
+const char *kTrackerQueryVolume = "_trk/qryvol1";
+const char *kTrackerQueryPredicate = "_trk/qrystr";
+
 BView *
 instantiate_deskbar_item()
 {
@@ -36,35 +39,29 @@ IM_DeskbarIcon::Instantiate( BMessage * archive )
 
 
 IM_DeskbarIcon::IM_DeskbarIcon()
-:	BView( 
-		BRect(0,0,15,15), 
-		DESKBAR_ICON_NAME, 
-		B_FOLLOW_NONE, 
-		B_WILL_DRAW 
-	)
-{
+	: BView(BRect(0,0,15,15), DESKBAR_ICON_NAME, B_FOLLOW_NONE, B_WILL_DRAW) {
+
 	_init();
 }
 
-IM_DeskbarIcon::IM_DeskbarIcon( BMessage * archive )
-:	BView( archive )
-{
+IM_DeskbarIcon::IM_DeskbarIcon(BMessage * archive)
+	: BView(archive) {
+
 	_init();
 }
 
-IM_DeskbarIcon::~IM_DeskbarIcon()
-{
+IM_DeskbarIcon::~IM_DeskbarIcon() {
 	delete fTip;
 	delete fAwayIcon;
 	delete fOnlineIcon;
 	delete fOfflineIcon;
 	delete fFlashIcon;
 	delete fMenu;
+//	delete fQueryMenu;
 }
 
 void
-IM_DeskbarIcon::_init()
-{
+IM_DeskbarIcon::_init() {
 	BPath userDir;
 	find_directory(B_USER_SETTINGS_DIRECTORY, &userDir, true);
 
@@ -103,9 +100,11 @@ IM_DeskbarIcon::_init()
 	fShouldBlink = true;
 	
 	fTip = new BubbleHelper();
+
+	fDirtyStatusMenu = true;
+	fStatusMenu = NULL;
 	
 	fDirtyStatus = true;
-	fDirtyMenu = true;
 	fMenu = NULL;
 	
 	SetDrawingMode(B_OP_OVER);
@@ -144,6 +143,9 @@ IM_DeskbarIcon::_init()
 			fCurrIcon = fModeIcon =  fOfflineIcon;
 		};
 	};
+	
+	fDirtyQueryMenu = true;
+//	fQueryMenu = NULL;
 }
 
 void
@@ -293,7 +295,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			switch (im_what) {
 				case IM::STATUS_SET: {			
 					fDirtyStatus = true;
-					fDirtyMenu = true;
+					fDirtyStatusMenu = true;
 				
 					const char *status = msg->FindString("total_status");
 								
@@ -336,25 +338,30 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 						msg->FindString("name", &name);
 						printf("Set name: %s\n", strerror(ref.set_name(name)));
 
-printf("Ref from: %i/%i/%s (%s)\n", ref.device, ref.directory, ref.name, name);
-						
 						BNode node(&ref);
 						BQuery *query = new BQuery();
 						
 						int32 length = 0;
-						char *queryFormula = ReadAttribute(node, "_trk/qrystr", &length);
-						queryFormula = (char *)realloc(queryFormula, sizeof(char) * (length + 1));
-						queryFormula[length] = '\0';
+						char *predicate = ReadAttribute(node, kTrackerQueryPredicate, &length);
+						predicate = (char *)realloc(predicate, sizeof(char) * (length + 1));
+						predicate[length] = '\0';
 
-						query->SetPredicate(queryFormula);
-						query->SetVolume(&bootVol);
-						query->SetTarget(target);
-								
-						fQueries[ref] = query;
-						free(queryFormula);
-				
+						vollist volumes;
+						if (ExtractVolumes(&node, &volumes) != B_OK) {
+							free(predicate);
+							LOG("deskbar", liMedium, "Extracting volume information from query "
+								"\"%s\" failed! Skipped!", ref.name);
+							return;
+						};
+
+						QueryLooper *looper = new QueryLooper(predicate, volumes,
+							ref.name, this, LAUNCH_FILE);
+							
+						free(predicate);
 						
-						printf("Fetch node: %s\n", strerror(query->Fetch()));
+						fQueries[ref] = looper;
+						fDirtyQuery[ref] = true;
+
 					} break;
 					
 //					We currently only handle the case of the user *adding* a new query
@@ -369,9 +376,22 @@ printf("Ref from: %i/%i/%s (%s)\n", ref.device, ref.directory, ref.name, name);
 			};
 		} break;
 
-		case B_QUERY_UPDATE: {
-//			msg->PrintToStream();
-			fDirtyMenu = true;
+		case QUERY_UPDATED: {
+			fDirtyQueryMenu = true;
+
+			const char *name;
+			entry_ref ref;
+			BPath queryPath;
+			if (msg->FindString("qlName", &name) != B_OK) return;
+			
+			find_directory(B_USER_SETTINGS_DIRECTORY, &queryPath, true);
+			queryPath.Append("im_kit/queries");
+			queryPath.Append(name);
+
+			if (get_ref_for_path(queryPath.Path(), &ref) != B_OK) return;
+			
+			querydirtymap::iterator qdIt = fDirtyQuery.find(ref);
+			if (qdIt != fQueries.end()) qdIt->second = true;
 		} break;
 		
 		case LAUNCH_FILE: {
@@ -384,9 +404,8 @@ printf("Ref from: %i/%i/%s (%s)\n", ref.device, ref.directory, ref.name, name);
 			mime = (char *)realloc(mime, (length + 1) * sizeof(char));
 			mime[length] = '\0';
 			
-			if (strcmp(mime, "application/x-person") == 0) {
-				handler = fPeopleApp;
-			};
+			if (strcmp(mime, "application/x-person") == 0) handler = fPeopleApp;
+			free(mime);
 			
 			BMessage openMsg(B_REFS_RECEIVED);
 			openMsg.AddRef("refs", &fileRef);
@@ -404,6 +423,22 @@ printf("Ref from: %i/%i/%s (%s)\n", ref.device, ref.directory, ref.name, name);
 			open_msg.AddRef("refs", &queryRef);
 			
 			be_roster->Launch("application/x-vnd.Be-TRAK", &open_msg);
+		} break;
+
+		case OPEN_QUERY_DIR: {
+			BPath queryPath;
+			entry_ref ref;
+			
+			find_directory(B_USER_SETTINGS_DIRECTORY, &queryPath, true);
+			queryPath.Append("im_kit/queries");
+
+			if (get_ref_for_path(queryPath.Path(), &ref) == B_OK) {
+				BMessage open(B_REFS_RECEIVED);
+				open.AddRef("refs", &ref);
+				
+				be_roster->Launch("application/x-vnd.Be-TRAK", &open);
+			};
+		
 		} break;
 
 		default:
@@ -434,7 +469,7 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 			man.SendMessage(new BMessage(IM::GET_OWN_STATUSES), &protStatus);
 	
 			fTipText = "Online Status:";
-			for ( int i=0; protStatus.FindString("protocol",i); i++ ) {
+			for (int i = 0; protStatus.FindString("protocol",i); i++ ) {
 				const char *protocol = protStatus.FindString("protocol",i);
 				const char *status = protStatus.FindString("status", i);
 	
@@ -448,25 +483,25 @@ void IM_DeskbarIcon::MouseMoved(BPoint point, uint32 transit, const BMessage *ms
 
 		fTip->SetHelp(Parent(), (char *)fTipText.String());
 		fTip->EnableHelp();
-	};		
+	};
+	
 };
 
 
-void
-IM_DeskbarIcon::MouseDown( BPoint p )
-{
+void IM_DeskbarIcon::MouseDown(BPoint p) {
 	int32 buttons;
 	Window()->CurrentMessage()->FindInt32("buttons", &buttons);
 	
-	if ( buttons & B_SECONDARY_MOUSE_BUTTON )
-	{
-		if ((fDirtyMenu) || (fMenu->CountItems() == 2)) {
-			delete fMenu;
-			fMenu = new BPopUpMenu("im_db_menu", false, false);
-			fMenu->SetFont(be_plain_font);
-			
-			// set status
-			BMenu * status = new BMenu("Set status");
+	if (buttons & B_SECONDARY_MOUSE_BUTTON) {
+//		delete fMenu;
+
+		fMenu = new BPopUpMenu("im_db_menu", false, false);
+		fMenu->SetFont(be_plain_font);
+		
+		if (fDirtyStatusMenu) {
+			if (fStatusMenu) delete fStatusMenu;
+			fStatusMenu = new BMenu("Set Status");
+		
 			BMenu *total = new BMenu("All Protocols");
 			BMessage msg(SET_STATUS);
 			total->AddItem(new BMenuItem(ONLINE_TEXT, new BMessage(msg)) );	
@@ -474,10 +509,10 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 			total->AddItem(new BMenuItem(OFFLINE_TEXT, new BMessage(msg)) );	
 			total->ItemAt(fStatus)->SetMarked(true);
 			total->SetTargetForItems(this);
-			status->AddItem(total);
-			status->AddSeparatorItem();
+			fStatusMenu->AddItem(total);
+			fStatusMenu->AddSeparatorItem();
 			
-			status->SetFont(be_plain_font);
+			fStatusMenu->SetFont(be_plain_font);
 			total->SetFont(be_plain_font);
 			
 			map <string, string>::iterator it;
@@ -501,103 +536,89 @@ IM_DeskbarIcon::MouseDown( BPoint p )
 				
 				protocol->SetFont(be_plain_font);
 				
-				status->AddItem(protocol);
+				fStatusMenu->AddItem(protocol);
 			};
 			
-			status->SetTargetForItems( this );
-	
-			fMenu->AddItem(status);
-
-			if (fQueries.size() > 0 ) {
-				BMenu *queries = new BMenu("Queries");
-				querymap::iterator qIt;
-				
-				BVolumeRoster volRoster;
-				BVolume bootVol;		
-				BMessenger target(this, NULL, NULL);
-				
-				volRoster.GetBootVolume(&bootVol);
-				
-				for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) {
-					BMenu *menu = new BMenu(qIt->first.name);
-					BQuery *query = qIt->second;
-					entry_ref ref;
-					
-					BBitmap *icon = ReadNodeIcon(BPath(&qIt->first).Path());
-					BMessage *queryMsg = new BMessage(OPEN_QUERY);
-					queryMsg->AddRef("queryRef", &qIt->first);
-
-					IconMenuItem *item = new IconMenuItem(icon, "Open In Tracker",
-						"Empty", queryMsg);
-
-					menu->AddItem(item);
-					menu->AddSeparatorItem();
-					
-					while (query->GetNextRef(&ref) == B_OK) {
-						BMessage *itemMsg = new BMessage(LAUNCH_FILE);
-						itemMsg->AddRef("fileRef", &ref);
-						
-						icon = ReadNodeIcon(BPath(&ref).Path());
-						item = new IconMenuItem(icon , ref.name, "", itemMsg);
-
-						menu->AddItem(item);						
-					};
-					
-//					Recreate query
-					int32 predLength = query->PredicateLength();
-					char *predicate = (char *)calloc(predLength + 1, sizeof(char));
-					query->GetPredicate(predicate, predLength);
-					predicate[predLength] = 0;
-
-					query->Clear();
-					query->SetVolume(&bootVol);
-					query->SetTarget(target);
-					query->SetPredicate(predicate);
-
-					free(predicate);
-					query->Fetch();
-					
-					menu->SetFont(be_plain_font);
-					menu->SetTargetForItems(this);
-					
-					queries->AddItem(menu);
-				};
-				
-				queries->SetFont(be_plain_font);
-				fMenu->AddSeparatorItem();
-				fMenu->AddItem(queries);
-				
-			};
-				
-//			settings
-			fMenu->AddSeparatorItem();
-			fMenu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
-		
-//			Quit
-			fMenu->AddSeparatorItem();
-			fMenu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
-	
-			fMenu->SetTargetForItems( this );
+			fStatusMenu->SetTargetForItems(this);
 			
-//			fDirtyMenu = false;
+			fDirtyStatusMenu = false;
 		};
 		
+		fMenu->AddItem(fStatusMenu);
+
+		if (fDirtyQuery.size() > 0) {
+			querydirtymap::iterator qdIt;
+			for (qdIt = fDirtyQuery.begin(); qdIt != fDirtyQuery.end(); qdIt++) {
+				printf("%s:%i\n", qdIt->first.name, qdIt->second);
+				if (qdIt->second == true) {
+
+					entry_ref queryRef = qdIt->first;
+					querymap::iterator qIt = fQueries.find(queryRef);
+									
+					if (qIt != fQueries.end()) {
+						QueryLooper *loop = qIt->second;
+						BMenu *menu = loop->Menu();
+								
+						BBitmap *icon = ReadNodeIcon(BPath(&queryRef).Path());
+						BMessage *queryMsg = new BMessage(OPEN_QUERY);
+						queryMsg->AddRef("queryRef", &queryRef);
+
+						IconMenuItem *item = new IconMenuItem(icon, "Open In Tracker",
+							"Empty", queryMsg);
+
+						menu->AddItem(item, 0);
+						menu->AddItem(new BSeparatorItem(), 1);
+
+						menu->SetFont(be_plain_font);
+						menu->SetTargetForItems(this);
+	
+						fQueryMenu[queryRef.name] = menu;
+						
+						qdIt->second = false;
+					};
+				};
+			};
+		};
+
+		querymenumap::iterator qmIt;
+		BMenu *queryMenu = new BMenu("Queries");
+		queryMenu->SetTargetForItems(this);
+		queryMenu->SetFont(be_plain_font);
+
+		for (qmIt = fQueryMenu.begin(); qmIt != fQueryMenu.end(); qmIt++) {
+			queryMenu->AddItem(qmIt->second);
+		};
+
+//		Queries
+		fMenu->AddSeparatorItem();
+		fMenu->AddItem(queryMenu);
+		fMenu->AddItem(new BMenuItem("Open Query directory", new BMessage(OPEN_QUERY_DIR)));
+
+//		settings
+		fMenu->AddSeparatorItem();
+		fMenu->AddItem( new BMenuItem("Settings", new BMessage(OPEN_SETTINGS)) );
+		
+//		Quit
+		fMenu->AddSeparatorItem();
+		fMenu->AddItem(new BMenuItem("Quit", new BMessage(CLOSE_IM_SERVER)));
+	
+		fMenu->SetTargetForItems( this );
+
 		ConvertToScreen(&p);
 		BRect r(p, p);
 		r.InsetBySelf(-2, -2);
 		
-		fMenu->Go(p, true, true, r, true);	
-	}
+		fMenu->Go(p, true, true, r, true);
+		
+	};
 	
-	if ( buttons & B_PRIMARY_MOUSE_BUTTON )
-	{
+	if (buttons & B_PRIMARY_MOUSE_BUTTON) {
 		list<BMessenger>::iterator i = fMsgrs.begin();
 		
-		if ( i != fMsgrs.end() )
-		{
+		if (i != fMsgrs.end()) {
 			(*i).SendMessage( IM::DESKBAR_ICON_CLICKED );
-		}
-	}
+		};
+	};
 	
 
 	if ((buttons & B_TERTIARY_MOUSE_BUTTON) || (modifiers() & B_COMMAND_KEY)) {
@@ -649,24 +670,27 @@ IM_DeskbarIcon::AttachedToWindow()
 
 	for (int32 i = 0; queryDir.GetNextRef(&queryRef) == B_OK; i++) {
 		BNode node(&queryRef);
-		BQuery *query = new BQuery();
-		
 		int32 length = 0;
-		char *queryFormula = ReadAttribute(node, "_trk/qrystr", &length);
-		queryFormula = (char *)realloc(queryFormula, sizeof(char) * (length + 1));
-		queryFormula[length] = '\0';
+		char *predicate = ReadAttribute(node, kTrackerQueryPredicate, &length);
+		predicate = (char *)realloc(predicate, sizeof(char) * (length + 1));
+		predicate[length] = '\0';
 
-		query->SetPredicate(queryFormula);
-		query->SetVolume(&bootVol);
-		query->SetTarget(target);
-				
-		fQueries[queryRef] = query;
-		free(queryFormula);
-	
-		query->Fetch();	
+		vollist volumes;
+		if (ExtractVolumes(&node, &volumes) != B_OK) {
+			free(predicate);
+			LOG("deskbar", liMedium, "Extracting volume information from query "
+				"\"%s\" failed! Skipped!", queryRef.name);
+			continue;
+		};
 
+		QueryLooper *looper = new QueryLooper(predicate, volumes, queryRef.name,
+			this, LAUNCH_FILE);
+
+		fQueries[queryRef] = looper;
+		fDirtyQuery[queryRef] = true;
+
+		free(predicate);
 	};
-	
 }
 
 void
@@ -691,3 +715,103 @@ IM_DeskbarIcon::reloadSettings()
 			
 	LOG("deskbar", liMedium, "IM: Settings applied");
 }
+
+status_t IM_DeskbarIcon::ExtractVolumes(BNode *node, vollist *volumes) {
+	int32 length = 0;
+	char *attr = ReadAttribute(*node, kTrackerQueryVolume, &length);
+	BVolumeRoster roster;
+
+	if (attr == NULL) {
+		roster.Rewind();
+		BVolume vol;
+		
+		while (roster.GetNextVolume(&vol) == B_NO_ERROR) {
+			volumes->push_back(vol);
+		};
+	} else {
+		BMessage msg;
+		msg.Unflatten(attr);
+
+//		!*YOINK*!d from that project... with the funny little doggie as a logo...
+//		OpenTracker, that's it!
+			
+		time_t created;
+		off_t capacity;
+		
+		for (int32 index = 0; msg.FindInt32("creationDate", index, &created) == B_OK;
+			index++) {
+			
+			if ((msg.FindInt32("creationDate", index, &created) != B_OK)
+				|| (msg.FindInt64("capacity", index, &capacity) != B_OK))
+				return B_ERROR;
+		
+			BVolume volume;
+			BString deviceName = "";
+			BString volumeName = "";
+			BString fshName = "";
+		
+			if (msg.FindString("deviceName", &deviceName) == B_OK
+				&& msg.FindString("volumeName", &volumeName) == B_OK
+				&& msg.FindString("fshName", &fshName) == B_OK) {
+				// New style volume identifiers: We have a couple of characteristics,
+				// and compute a score from them. The volume with the greatest score
+				// (if over a certain threshold) is the one we're looking for. We
+				// pick the first volume, in case there is more than one with the
+				// same score.
+				int foundScore = -1;
+				roster.Rewind();
+				while (roster.GetNextVolume(&volume) == B_OK) {
+					if (volume.IsPersistent() && volume.KnowsQuery()) {
+						// get creation time and fs_info
+						BDirectory root;
+						volume.GetRootDirectory(&root);
+						time_t cmpCreated;
+						fs_info info;
+						if (root.GetCreationTime(&cmpCreated) == B_OK
+							&& fs_stat_dev(volume.Device(), &info) == 0) {
+							// compute the score
+							int score = 0;
+		
+							// creation time
+							if (created == cmpCreated)
+								score += 5;
+							// capacity
+							if (capacity == volume.Capacity())
+								score += 4;
+							// device name
+							if (deviceName == info.device_name)
+								score += 3;
+							// volume name
+							if (volumeName == info.volume_name)
+								score += 2;
+							// fsh name
+							if (fshName == info.fsh_name)
+								score += 1;
+		
+							// check score
+							if (score >= 9 && score > foundScore) {
+								volumes->push_back(volume);
+							}
+						}
+					}
+				}
+			} else {
+				// Old style volume identifiers: We have only creation time and
+				// capacity. Both must match.
+				roster.Rewind();
+				while (roster.GetNextVolume(&volume) == B_OK)
+					if (volume.IsPersistent() && volume.KnowsQuery()) {
+						BDirectory root;
+						volume.GetRootDirectory(&root);
+						time_t cmpCreated;
+						root.GetCreationTime(&cmpCreated);
+						if (created == cmpCreated && capacity == volume.Capacity()) {
+							volumes->push_back(volume);
+						}
+					}
+			}
+		};
+	};
+
+	return B_OK;	
+};

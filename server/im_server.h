@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <string>
+
 #include <Application.h>
 #include <Messenger.h>
 #include <Query.h>
@@ -149,6 +150,12 @@ class Server : public BApplication
 		map<Contact,string>			fPreferredProtocol;
 		
 		BMessage					fIcons;
+//		Names for SVG icons, only used on Zeta
+//#ifdef B_BEOS_VERSION = B_ZETA_VERSION
+//#define SVG_ONLINE_TEXT "svg_online"
+//#define SVG_AWAY_TEXT "svg_away"
+//#define SVG_OFFLINE_TEXT "svg_offline"
+//#endif
 		
 		BMessenger					fDeskbarMsgr;
 };
