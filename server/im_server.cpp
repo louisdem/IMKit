@@ -536,6 +536,7 @@ Server::Process( BMessage * msg )
 		case STATUS_CHANGED:
 		case CONTACT_LIST:
 		case CONTACT_INFO:
+		case CONTACT_AUTHORIZED:
 		{
 			MessageFromProtocols(msg);
 		}	break;
@@ -741,7 +742,7 @@ Server::CreateContact( const char * proto_id )
 	msg.AddRef("contact", result);
 	
 	PostMessage(&msg);
-	
+
 	LOG("im_server", DEBUG, "  done.");
 	
 	return result;
@@ -1209,6 +1210,15 @@ Server::MessageFromProtocols( BMessage * msg )
 		if ( contact.InitCheck() != B_OK )
 		{ // No matching contact, create a new one!
 			contact.SetTo( CreateContact( proto_id.c_str() ) );
+
+			// register the contact we created
+			BMessage connection(MESSAGE);
+			connection.AddInt32("im_what", REGISTER_CONTACTS);
+			connection.AddString("id", id);
+
+			Protocol * p = fProtocols[protocol];
+			
+			p->Process( &connection );			
 		}
 	}
 	
@@ -1251,8 +1261,12 @@ Server::MessageFromProtocols( BMessage * msg )
 		handleDeskbarMessage(msg);
 	}
 	
-	// send it
-	Broadcast(msg);
+	if ( im_what == CONTACT_AUTHORIZED && protocol != NULL ) {
+		LOG("im_server", DEBUG, "Creating new contact on authorization. ID : %s", id);
+	} else {
+		// send it
+		Broadcast(msg);
+	}
 }
 
 void

@@ -643,7 +643,7 @@ ICQProtocol::Process( BMessage * msg )
 					
 					if (button == 0) {
 						LOG("icq", DEBUG, "Authorization granted to %s", id);
-						authreply = true;
+						authreply = true;												
 					} else {
 						LOG("icq", DEBUG, "Authorization rejected to %s", id);
 						authreply = false;					
@@ -654,6 +654,18 @@ ICQProtocol::Process( BMessage * msg )
 					AuthAckEvent * ev = new AuthAckEvent(c, authreply);
 
 					fClient.icqclient.SendEvent( ev );									
+					
+					if (authreply) {
+						// Create a new contact now that we authorized him/her/it.
+						BMessage im_msg(IM::MESSAGE);
+						im_msg.AddInt32("im_what", IM::CONTACT_AUTHORIZED);
+						im_msg.AddString("protocol", "ICQ");
+						im_msg.AddString("id", id);
+						im_msg.AddString("message", "" );
+						//im_msg.AddInt32("charset",fEncoding);
+	
+						fMsgr.SendMessage(&im_msg);
+					}
 				}
 				default:
 					break;
