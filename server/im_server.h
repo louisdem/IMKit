@@ -73,10 +73,11 @@ class Server : public BApplication
 		void	StartQuery();
 		void	HandleContactUpdate( BMessage * );
 		
-		Contact	FindContact( const char * proto_id );
+		Contact			FindContact( const char * proto_id );
 		list<Contact>	FindAllContacts( const char * proto_id );
-		Contact	CreateContact( const char * proto_id , const char *namebase );
+		Contact			CreateContact( const char * proto_id , const char *namebase );
 		
+		void		RegisterSoundEvents();
 		status_t	LoadAddons();
 		void		UnloadAddons();
 		

@@ -24,10 +24,18 @@
 #include <String.h>
 #include <Invoker.h>
 #include <algorithm>
+#include <Beep.h>
 
 using namespace IM;
 
 #define AUTOSTART_APPSIG_SETTING "autostart_appsig"
+
+#define kImConnectedSound		"IM Connected"
+#define kImDisconnectedSound	"IM Disconnected"
+
+#define kImStatusOnlineSound	"IM Status: Available"
+#define kImStatusAwaySound 		"IM Status: Away"
+#define kImStatusOfflineSound	"IM Status: Offline"
 
 void
 _ERROR( const char * error, BMessage * msg )
@@ -135,6 +143,8 @@ Server::Server()
 		iconPath.String(), BEOS_LARGE_ICON_ATTRIBUTE));
 	
 	StartQuery();
+	
+	RegisterSoundEvents();
 	
 	SetAllOffline();
 	
@@ -1327,6 +1337,19 @@ Server::UpdateStatus( BMessage * msg )
 		if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
 			msg->AddString("total_status", total_status);
 	}
+	
+	// Play sound event if needed
+	if ( new_status != msg->FindString("old_status") ) {
+		if ( new_status == ONLINE_TEXT ) {
+			system_beep( kImStatusOnlineSound );
+		}
+		if ( new_status == AWAY_TEXT ) {
+			system_beep( kImStatusAwaySound );
+		}
+		if ( new_status == OFFLINE_TEXT ) {
+			system_beep( kImStatusOfflineSound );
+		}
+	}
 }
 
 
@@ -1386,6 +1409,7 @@ Server::UpdateContactStatusAttribute( Contact & contact )
 		{ // only update IM:status if not blocked
 			if ( strcmp(old_status, status) == 0 )
 			{ // status not changed, done
+				node.Unset();
 				return;
 			}
 			
@@ -1828,11 +1852,13 @@ Server::handle_STATUS_SET( BMessage * msg )
 			_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);
 			return;
 		}
-			
+		
 		Protocol * p = fProtocols[protocol];
-			
+		
 		// THIS IS NOT CORRECT! We need to do this on a "connected" message, not on
 		// status changed!
+		system_beep( kImConnectedSound );
+		
 		BMessage connections(MESSAGE);
 		connections.AddInt32("im_what", REGISTER_CONTACTS);
 		GetContactsForProtocol( p->GetSignature(), &connections );
@@ -1847,6 +1873,8 @@ Server::handle_STATUS_SET( BMessage * msg )
 			_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);
 			return;
 		}
+		
+		system_beep( kImDisconnectedSound );
 		
 		BMessage contacts;
 		
@@ -2287,4 +2315,17 @@ Server::ContactMonitor_Removed( ContactHandle handle )
 		}
 	}
 
+}
+
+void
+Server::RegisterSoundEvents()
+{
+	// protocol status
+	add_system_beep_event(kImConnectedSound, 0);
+	add_system_beep_event(kImDisconnectedSound, 0);
+	
+	// contact status
+	add_system_beep_event(kImStatusOnlineSound, 0);
+	add_system_beep_event(kImStatusAwaySound, 0);
+	add_system_beep_event(kImStatusOfflineSound, 0);
 }

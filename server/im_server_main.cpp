@@ -9,7 +9,14 @@
 void handle_ctrl_c( int sig )
 {
 	printf("Fatal signal received.\n");
-	BMessenger(be_app).SendMessage( B_QUIT_REQUESTED );
+	static bool has_sent_quit = false;
+	
+	if ( !has_sent_quit )
+	{
+		printf("Quiting im_server.\n");
+		BMessenger(be_app).SendMessage( B_QUIT_REQUESTED );
+		has_sent_quit = true;
+	}
 }
 
 int main( int numarg, const char ** argv )
