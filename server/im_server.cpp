@@ -727,6 +727,52 @@ Server::FindContact( const char * proto_id )
 	return result;
 }
 
+list<Contact>
+Server::FindAllContacts( const char * proto_id )
+{
+	BVolumeRoster 	vroster;
+	BVolume			vol;
+	char 			volName[B_FILE_NAME_LENGTH];
+
+	vroster.Rewind();
+	
+	list<Contact>	results;
+	
+	string pred = 
+		string( 
+			string("IM:connections=\"*") + 
+			string(proto_id) +
+			string("*\"")
+		);
+	
+	while ( vroster.GetNextVolume(&vol) == B_OK )
+	{
+		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
+			continue;
+		
+		vol.GetName(volName);
+		
+		BQuery query;
+		
+		query.SetPredicate( pred.c_str() );
+		
+		query.SetVolume(&vol);
+		
+		query.Fetch();
+		
+		entry_ref entry;
+		
+		while ( query.GetNextRef(&entry) == B_OK )
+		{
+			Contact hit;
+			hit.SetTo(entry);
+			results.push_back( hit );
+		}
+	}
+	
+	return results;
+}
+
 /**
 	Create a new People file with a unique name on the form "Unknown contact X"
 	and add the specified proto_id to it
@@ -734,7 +780,7 @@ Server::FindContact( const char * proto_id )
 	@param proto_id The protocol:id connection of the new contact
 */
 Contact
-Server::CreateContact( const char * proto_id , const char *namebase )
+Server::CreateContact( const char * proto_id, const char *namebase )
 {
 	LOG("im_server", liHigh, "Creating new contact for connection [%s]", proto_id);
 	
@@ -745,13 +791,20 @@ Server::CreateContact( const char * proto_id , const char *namebase )
 	BEntry entry;
 	char filename[512];
 	
+	// make sure we have a decent namebase
+	if ( !namebase || strlen(namebase) == 0 )
+		namebase = "Unknown contact";
+	
+	strcpy(filename, namebase);
+	
 	// make sure that the target directory exists before we try to create
 	// new files
-
+	
 	create_directory("/boot/home/people",0777);
 	
 	// create a new contact, try using the raw SN as the base filename
-	dir.CreateFile(namebase,&file,true);
+	
+	dir.CreateFile(filename,&file,true);
 	
 	for (int i=1; file.InitCheck() != B_OK; i++ )
 	{
@@ -1170,31 +1223,38 @@ Server::MessageFromProtocols( BMessage * msg )
 			
 			p->Process( &connection );			
 		}
-	}
-	
-	if ( contact.InitCheck() == B_OK )
-	{
-		msg->AddRef("contact",contact);
 		
-		if ( im_what == MESSAGE_RECEIVED )
-		{ // message received from contact, store the protocol in fPreferredProtocol
-			char status[256];
-			contact.GetStatus(status,sizeof(status));
+		// add all matching contacts to message
+		list<Contact> contacts = FindAllContacts( proto_id.c_str() );
+		
+		for ( list<Contact>::iterator iter = contacts.begin(); iter != contacts.end(); iter++ )
+		{
+			if ( im_what == MESSAGE_RECEIVED )
+			{ // message received from contact, store the protocol in fPreferredProtocol
+				char status[256];
+				contact.GetStatus(status,sizeof(status));
 			
-			if ( strcmp(status,BLOCKED_TEXT) == 0 )
-			{ // contact blocked, dropping message!
-				LOG("im_server", liHigh, "Dropping message from blocked contact [%s:%s]", protocol, id);
-				return;
+				if ( strcmp(status,BLOCKED_TEXT) == 0 )
+				{ // contact blocked, dropping message!
+					LOG("im_server", liHigh, "Dropping message from blocked contact [%s:%s]", protocol, id);
+				} else {
+					msg->AddRef( "contact", *iter );
+					if ( fPreferredProtocol[*iter] != protocol )
+					{
+						fPreferredProtocol[*iter] = protocol;
+						LOG("im_server", liLow, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
+					}
+				}
+			} else {
+				// always add contact to other messages
+				msg->AddRef( "contact", *iter );
 			}
-			
-			fPreferredProtocol[contact] = protocol;
-			LOG("im_server", liLow, "Setting preferred protocol for [%s:%s] to %s", protocol, id, protocol );
 		}
 	}
 	
 	if ( im_what == STATUS_CHANGED && protocol != NULL && id != NULL )
 	{ // update status list on STATUS_CHANGED
-		UpdateStatus(msg,contact);
+		UpdateStatus(msg);
 	}
 	
 	if ( im_what == STATUS_SET && protocol != NULL )
@@ -1211,14 +1271,13 @@ Server::MessageFromProtocols( BMessage * msg )
 }
 
 /**
-	Update the status of a given contact. Set im_server internal
+	Update the status of contacts in a STATUS_CHANGED message. Set im_server internal
 	status and calls UpdateContactStatusAttribute to update IM:status attribute
 	
 	@param msg 			The message is a STATUS_CHANGED message.
-	@param contact 		The contact to update
 */
 void
-Server::UpdateStatus( BMessage * msg, Contact & contact )
+Server::UpdateStatus( BMessage * msg )
 {
 	const char * status = msg->FindString("status");
 	const char * protocol = msg->FindString("protocol");
@@ -1246,16 +1305,28 @@ Server::UpdateStatus( BMessage * msg, Contact & contact )
 	fStatus[proto_id] = new_status;
 	
 	// Add old total status to msg, to remove duplicated message to user
-	char total_status[512];
-	if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
-		msg->AddString("old_total_status", total_status);
-	
-	// calculate total status for contact
-	UpdateContactStatusAttribute(contact);
-
-	// Add new total status to msg, to remove duplicated message to user
-	if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
-		msg->AddString("total_status", total_status);
+	entry_ref ref;
+	for ( int i=0; msg->FindRef("contact", i, &ref) == B_OK; i++ ) 
+	{
+		Contact contact;
+		contact.SetTo(&ref);
+		
+		char total_status[512];
+		if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
+			msg->AddString("old_total_status", total_status);
+		
+		// calculate total status for contact
+		// Switch this to query for all contacts on all drives that have this connection
+		// and update status for all of them.
+		list<Contact> contacts = FindAllContacts( proto_id.c_str() );
+		for ( list<Contact>::iterator iter=contacts.begin(); iter != contacts.end(); iter++ ) {
+			UpdateContactStatusAttribute( *iter );
+		}
+		
+		// Add new total status to msg, to remove duplicated message to user
+		if ( contact.GetStatus(total_status, sizeof(total_status)) == B_OK )
+			msg->AddString("total_status", total_status);
+	}
 }
 
 
@@ -2096,7 +2167,7 @@ Server::ContactMonitor_Modified( ContactHandle handle )
 				if ( k == connections.end() )
 				{ // connection removed!
 					removed.push_back( j->c_str() );
-					LOG("im_server", liDebug, "Connection removed: %s\n", j->c_str() );
+					LOG("im_server", liDebug, "Connection removed: %s", j->c_str() );
 					
 					Connection conn( j->c_str() );
 					
@@ -2129,7 +2200,7 @@ Server::ContactMonitor_Modified( ContactHandle handle )
 				if ( k == (*i).second->end() )
 				{ // connection added!
 					(*i).second->push_back( j->c_str() );
-					LOG("im_server", liDebug, "Connection added: %s\n", j->c_str() );
+					LOG("im_server", liDebug, "Connection added: %s", j->c_str() );
 					
 					Connection conn( j->c_str() );
 					
@@ -2182,7 +2253,13 @@ Server::ContactMonitor_Removed( ContactHandle handle )
 			for ( list<string>::iterator j = i->second->begin(); j != i->second->end(); j++ )
 			{ // unregister connections
 				Connection conn( j->c_str() );
-						
+				
+				Contact other_contact = FindContact( j->c_str() );
+				
+				if ( other_contact.InitCheck() == B_OK )
+					// don't unregister if there's a contact still using it
+					continue;
+				
 				if ( fProtocols.find(conn.Protocol()) != fProtocols.end() )
 				{ // protocol loaded, unregister connection
 					BMessage remove(MESSAGE);
@@ -2191,7 +2268,7 @@ Server::ContactMonitor_Removed( ContactHandle handle )
 					
 					(fProtocols[conn.Protocol()])->Process(&remove);
 				}
-
+				
 				// remove from fStatus too
 				map<string,string>::iterator iter = fStatus.find(*j);
 				if ( iter != fStatus.end() )

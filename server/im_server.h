@@ -74,6 +74,7 @@ class Server : public BApplication
 		void	HandleContactUpdate( BMessage * );
 		
 		Contact	FindContact( const char * proto_id );
+		list<Contact>	FindAllContacts( const char * proto_id );
 		Contact	CreateContact( const char * proto_id , const char *namebase );
 		
 		status_t	LoadAddons();
@@ -96,7 +97,7 @@ class Server : public BApplication
 		void	MessageToProtocols(BMessage*);
 		void	MessageFromProtocols(BMessage*);
 		
-		void	UpdateStatus(BMessage*,Contact &);
+		void	UpdateStatus(BMessage*);
 		void	SetAllOffline();
 		void	handle_STATUS_SET( BMessage * );
 		void	UpdateContactStatusAttribute( Contact & );
