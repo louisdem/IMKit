@@ -54,6 +54,11 @@ enum im_what_code {
 	SET_BUDDY_ICON = 24,
 	// Clients get this when a buddy icon is updated
 	BUDDY_ICON_UPDATED = 25,
+	
+	
+	// these are forwarded to 
+	SPECIAL_TO_PROTOCOL = 1000,
+	SPECIAL_FROM_PROTOCOL = 1001
 };
 
 /**

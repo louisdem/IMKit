@@ -631,6 +631,7 @@ Server::Process( BMessage * msg )
 		case SEND_AUTH_ACK:
 		case USER_STARTED_TYPING:
 		case USER_STOPPED_TYPING:
+		case SPECIAL_TO_PROTOCOL:
 		{
 			MessageToProtocols(msg);
 		}	break;
@@ -647,6 +648,7 @@ Server::Process( BMessage * msg )
 		case CONTACT_STOPPED_TYPING:
 		case SET_BUDDY_ICON:
 		case PROGRESS:
+		case SPECIAL_FROM_PROTOCOL:
 		{
 			MessageFromProtocols(msg);
 		}	break;
