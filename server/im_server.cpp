@@ -782,10 +782,25 @@ Server::HandleContactUpdate( BMessage * msg )
 Contact
 Server::FindContact( const char * proto_id )
 {
+	BString protoUpper(proto_id), protoLower(proto_id);
+	protoUpper.ToUpper();
+	protoLower.ToLower();
+	
+	BString regexp;
+	for ( int i=0; i<protoUpper.Length(); i++ )
+	{
+		regexp << "[";
+		regexp << protoUpper[i];
+		regexp << protoLower[i];
+		regexp << "]";
+	}
+	
+	proto_id = regexp.String();
+	
 	BVolumeRoster 	vroster;
 	BVolume			vol;
 	char 			volName[B_FILE_NAME_LENGTH];
-
+	
 	vroster.Rewind();
 	
 	Contact result;

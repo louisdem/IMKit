@@ -14,7 +14,7 @@ default:
 else
 
 # specify the name of the binary
-NAME= Jabber
+NAME= jabber
 SVG_ICON= Jabber.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/protocols

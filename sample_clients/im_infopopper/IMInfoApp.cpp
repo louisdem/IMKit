@@ -205,19 +205,19 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			
 //			Message to display
 			if ( text != "" ) {
-				LOG("im_infopopper", liDebug, "Displaying message <%s>\n", text.String() );
+				LOG("im_infopopper", liDebug, "Displaying message <%s>", text.String() );
 				
 				BMessage pop_msg(InfoPopper::AddMessage);
 				pop_msg.AddString("appTitle", "IM Kit");
 				pop_msg.AddString("title", title);
 				pop_msg.AddString("content", text);
 				pop_msg.AddInt8("type", (int8)type);
-	
+				
 				if (icon) {
 					BMessage image;
 					icon->Archive(&image);
 					pop_msg.AddMessage("icon", &image);
-					LOG("im_infopopper", liDebug, "Icon size: %.2f\n", icon->Bounds().Width());
+					LOG("im_infopopper", liDebug, "Icon size: %.2f", icon->Bounds().Width());
 					
 					pop_msg.AddRef("overlayIconRef", &protoRef);
 					pop_msg.AddInt32("overlayIconType", InfoPopper::Attribute);
@@ -228,7 +228,7 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 				
 				pop_msg.AddString("onClickApp", "application/x-person");
 				pop_msg.AddRef("onClickRef", &ref);
-
+				
 				BMessenger(InfoPopperAppSig).SendMessage(&pop_msg);				
 			};
 		} break;

@@ -6,7 +6,7 @@
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size, bool override = false);
 const char *kThreadName = "IM Kit: AIM Connection";
-const char *kProtocolName = "AIM";
+const char *kProtocolName = "aim";
 
 AIMConnection::AIMConnection(const char *server, uint16 port, AIMManager *man,
 	const char *name = "AIM Connection", conn_type type = connBOS)

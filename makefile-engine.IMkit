@@ -287,23 +287,23 @@ endif
 #	create the resource instruction
 ifeq ($(RSRCS), )
 	DO_RSRCS := \
-	if [ -f "$(NAME).svg" ]; then \
+	if [ -f "$(SVG_ICON)" ]; then \
 		if [ -f "/bin/IconTool" ] ; then \
-			IconTool "$(TARGET)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; \
+			IconTool "$(TARGET)" Build STD_ICON 1 -1 SVG "$(SVG_ICON)"; \
 		fi; \
 		if [ -f "/boot/home/config/bin/loadicon" ]; then \
-			loadicon "$(NAME).svg" "$(TARGET)"; \
+			loadicon "$(SVG_ICON)" "$(TARGET)"; \
 		fi; \
 	fi 
 else
 	DO_RSRCS := \
 	$(XRES) -o $(TARGET) $(RSRCS) ; \
-	if [ -f "$(NAME).svg" ] ; then \
+	if [ -f "$(SVG_ICON)" ] ; then \
 		if [ -f "/bin/IconTool" ] ; then \
-			IconTool "$(TARGET)" Build STD_ICON 1 -1 SVG "$(NAME).svg"; \
+			IconTool "$(TARGET)" Build STD_ICON 1 -1 SVG "$(SVG_ICON)"; \
 		fi; \
 		if [ -f "/boot/home/config/bin/loadicon" ]; then \
-			loadicon "$(NAME).svg" "$(TARGET)"; \
+			loadicon "$(SVG_ICON)" "$(TARGET)"; \
 		fi;\
 	fi
 endif

@@ -11,7 +11,7 @@
 
 #include <UTF8.h>
 
-const char *kProtocolName = "MSN";
+const char *kProtocolName = "msn";
 const char *kThreadName = "IMKit: MSN Protocol";
 
 extern "C"

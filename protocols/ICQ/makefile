@@ -16,7 +16,7 @@ default:
 else
 
 # specify the name of the binary
-NAME= ICQ
+NAME= icq
 SVG_ICON=ICQ.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/protocols

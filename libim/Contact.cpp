@@ -151,6 +151,10 @@ Contact::LoadConnections()
 			{
 				conn[curr-start] = 0;
 				
+				BString toLower(conn);
+				toLower.ToLower();
+				strcpy(conn, toLower.String());
+				
 				if ( connection_protocol(conn).size() > 0  && connection_id(conn).size() > 0 )
 				{
 					fConnections.AddItem(conn);
@@ -166,6 +170,11 @@ Contact::LoadConnections()
 	if ( start != curr )
 	{
 		conn[curr-start] = 0;
+
+		BString toLower(conn);
+		toLower.ToLower();
+		strcpy(conn, toLower.String());
+				
 		if ( connection_protocol(conn).size() > 0  && connection_id(conn).size() > 0 )
 			fConnections.AddItem(conn);
 	} else

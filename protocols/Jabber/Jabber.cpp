@@ -6,7 +6,7 @@
 #include "States.h"
 #include "string.h"
 
-const char *  kProtocolName = "Jabber";
+const char *  kProtocolName = "jabber";
 
 int64 idsms=0;
 

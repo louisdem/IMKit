@@ -10,7 +10,9 @@
 #include "MSNObject.h"
 
 const char *kClientVer = "0x0409 win 4.10 i386 MSNMSGR 6.0.0602 MSMSGS";
+//const char *kClientVer = "0x0409 winnt 5.1 i386 MSNMSGR 4.7.3001 WindowsMessenger";
 const char *kProtocolsVers = "MSNP10 MSNP9 CVR0";
+//const char *kProtocolsVers = "MSNP8 CVR0";
 
 const int16 kDefaultPort = 1863;
 const uint32 kOurCaps = ccUnknown2 | ccMSNC1;
@@ -441,6 +443,7 @@ int32 MSNConnection::NetworkSend(Command *command) {
 		int32 data_size = command->FlattenedSize();
 		int32 sent_data = 0;
 		
+		// uncomment following to see exactly what's sent
 /*		char * blah = (char*)malloc(data_size+1);
 		memcpy(blah, data, data_size);
 		blah[data_size] = 0;
@@ -528,7 +531,8 @@ ServerAddress MSNConnection::ExtractServerDetails(char *details) {
 
 status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	HTTPFormatter **recv) {
-	int err=B_ERROR;
+
+	int err=B_OK;
 	int sd;
 	struct sockaddr_in sa;
 	struct hostent *hp;
@@ -544,13 +548,13 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	SSL_load_error_strings();
 	ctx = SSL_CTX_new (meth);                        CHK_NULL(ctx);
 
-	CHK_SSL(err);
+//	CHK_SSL(err);
   
 	/* ----------------------------------------------- */
 	/* Create a socket and connect to server using normal socket calls. */
 	
 	sd = socket (AF_INET, SOCK_STREAM, 0);       CHK_ERR(sd, "socket");
-	
+
 	// clear sa
 	memset (&sa, '\0', sizeof(sa));
 	
@@ -914,14 +918,15 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	
 	Progress("MSN Login", "MSN: Requesting ticket..", 0.25);
 	
-	HTTPFormatter *send = new HTTPFormatter("nexus.passport.com",
-		"/rdr/pprdr.asp");
+	const char * login_host = "nexus.passport.com";
+	
+	HTTPFormatter *send = new HTTPFormatter(login_host, "/rdr/pprdr.asp");
 	HTTPFormatter *recv = NULL;
 
-	int32 recvdBytes = SSLSend("nexus.passport.com", send, &recv);
+	int32 recvdBytes = SSLSend(login_host, send, &recv);
 
 	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
-		this, recvdBytes, "nexus.passport.com");
+		this, recvdBytes, login_host);
 
 	if (recvdBytes < 0) {
 		Error( "MSN Connect fail: Error making secure handshake" );

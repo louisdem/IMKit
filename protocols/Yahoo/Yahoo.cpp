@@ -4,7 +4,7 @@
 #include <libim/Helpers.h>
 #include "YahooConnection.h"
 
-const char *  kProtocolName = "Yahoo";
+const char *  kProtocolName = "yahoo";
 
 extern "C" IM::Protocol * load_protocol()
 {

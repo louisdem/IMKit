@@ -23,7 +23,7 @@ default:
 else
 
 # specify the name of the binary
-NAME= Yahoo
+NAME= yahoo
 SVG_ICON=Yahoo.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/protocols

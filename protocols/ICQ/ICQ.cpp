@@ -57,6 +57,8 @@
 
 bool g_is_quiting = false;
 
+const char * kProtocolName = "icq";
+
 // ------------------------------------------------------------------
 //  Simple Client
 // ------------------------------------------------------------------
@@ -206,7 +208,7 @@ void SimpleClient::connected_cb(ConnectedEvent */*c*/) {
   
   BMessage msg(IM::MESSAGE);
   msg.AddInt32("im_what", IM::STATUS_SET);
-  msg.AddString("protocol", "ICQ");
+  msg.AddString("protocol", "icq");
   msg.AddString("status", ONLINE_TEXT);
   fMsgr.SendMessage(&msg);
 
@@ -223,9 +225,15 @@ void SimpleClient::disconnected_cb(DisconnectedEvent *c) {
     LOG("icq", liMedium, "Disconnected as requested");
   } else {
     switch(c->getReason()) {
-    case DisconnectedEvent::FAILED_LOWLEVEL:
+    case DisconnectedEvent::FAILED_LOWLEVEL: {
       LOG("icq", liHigh, "Problem connecting: socket problems");
-      break;
+
+	  BMessage msg(IM::ERROR);
+	  msg.AddString("protocol", kProtocolName);
+	  msg.AddString("error", "Problem connecting: socket problems");
+	  fMsgr.SendMessage(&msg);
+  
+    }  break;
     case DisconnectedEvent::FAILED_BADUSERNAME:
       LOG("icq", liHigh, "Problem connecting: Bad Username");
       break;
@@ -248,7 +256,7 @@ void SimpleClient::disconnected_cb(DisconnectedEvent *c) {
 
   BMessage msg(IM::MESSAGE);
   msg.AddInt32("im_what", IM::STATUS_SET);
-  msg.AddString("protocol", "ICQ");
+  msg.AddString("protocol", "icq");
   msg.AddString("status", OFFLINE_TEXT);
   fMsgr.SendMessage(&msg);
   
@@ -272,7 +280,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
 	
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
-	im_msg.AddString("protocol", "ICQ");
+	im_msg.AddString("protocol", "icq");
 	im_msg.AddString("id", uin_string);
 	im_msg.AddString("message", msg->getMessage().c_str() );
 	im_msg.AddInt32("charset",fEncoding);
@@ -288,7 +296,7 @@ void SimpleClient::message_cb(MessageEvent *c) {
 
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::AUTH_REQUEST);
-	im_msg.AddString("protocol", "ICQ");
+	im_msg.AddString("protocol", "icq");
 	im_msg.AddString("id", uin_string);
 	im_msg.AddString("message", msg->getMessage().c_str() );
 	im_msg.AddInt32("charset",fEncoding);
@@ -317,7 +325,7 @@ void SimpleClient::contact_userinfo_change_cb( UserInfoChangeEvent * e )
 	
 	BMessage * msg = new BMessage(IM::MESSAGE);
 	msg->AddInt32("im_what", IM::CONTACT_INFO);
-	msg->AddString("protocol", "ICQ");
+	msg->AddString("protocol", "icq");
 	msg->AddInt32("charset", fEncoding );
 	msg->AddString("id", contact->getStringUIN().c_str() );
 	
@@ -376,7 +384,7 @@ void SimpleClient::contact_status_change_cb(StatusChangeEvent *ev)
 	
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what",IM::STATUS_CHANGED);
-	msg.AddString("protocol","ICQ");
+	msg.AddString("protocol","icq");
 	msg.AddString("id",uin_string);
 	msg.AddString("status",status);
 	fMsgr.SendMessage( &msg );
@@ -415,7 +423,7 @@ void SimpleClient::self_status_change_cb(StatusChangeEvent *ev)
 	
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what",IM::STATUS_SET);
-	msg.AddString("protocol","ICQ");
+	msg.AddString("protocol","icq");
 	msg.AddString("status",status);
 	fMsgr.SendMessage( &msg );
 	
@@ -432,7 +440,7 @@ SimpleClient::server_based_contact_list_cb( ServerBasedContactEvent * ev )
 	ContactList::iterator i(list.begin());
 	
 	BMessage msg( IM::SERVER_BASED_CONTACT_LIST );
-	msg.AddString("protocol","ICQ");
+	msg.AddString("protocol","icq");
 	
 	for ( ; i != list.end(); i++ )
 	{
@@ -672,7 +680,7 @@ ICQProtocol::Process( BMessage * msg )
 					
 					BMessage replyMsg(IM::MESSAGE);
 					replyMsg.AddInt32("im_what", IM::MESSAGE_SENT);
-					replyMsg.AddString("protocol", "ICQ");
+					replyMsg.AddString("protocol", "icq");
 					replyMsg.AddString("id", id);
 					replyMsg.AddString("message", message_text);
 					replyMsg.AddInt32("charset", charset);
@@ -707,7 +715,7 @@ ICQProtocol::Process( BMessage * msg )
 						// Create a new contact now that we authorized him/her/it.
 						BMessage im_msg(IM::MESSAGE);
 						im_msg.AddInt32("im_what", IM::CONTACT_AUTHORIZED);
-						im_msg.AddString("protocol", "ICQ");
+						im_msg.AddString("protocol", "icq");
 						im_msg.AddString("id", id);
 						im_msg.AddString("message", "" );
 						//im_msg.AddInt32("charset",fEncoding);
@@ -730,7 +738,7 @@ ICQProtocol::Process( BMessage * msg )
 const char *
 ICQProtocol::GetSignature()
 {
-	return "ICQ";
+	return "icq";
 }
 
 BMessage
@@ -839,6 +847,7 @@ Progress( BMessenger & msgr, const char * message, float progress )
 	msg.AddInt32("state", IM::impsConnecting);
 	msg.AddString("progressID", "ICQ Login");
 	msg.AddString("message", message);
+	msg.AddString("protocol", "icq");
 	msg.AddFloat("progress", progress);
 	
 	msgr.SendMessage( &msg );

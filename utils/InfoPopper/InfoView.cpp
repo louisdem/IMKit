@@ -25,11 +25,12 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 
 :	BView( BRect(0,0,win->ViewWidth(),1), "InfoView", B_FOLLOW_LEFT_RIGHT, B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE|B_FRAME_EVENTS ),
 
+	fParent(win),
 	fType(type),
 	fRunner(NULL),
 	fDetails(details),
-	fBitmap(NULL),
-	fParent(win) {
+	fBitmap(NULL)
+	{
 	
 	fBitmap = ExtractIcon("icon", fDetails, fParent->IconSize());
 	fOverlayBitmap = ExtractIcon("overlayIcon", fDetails, fParent->IconSize() / 4);
@@ -162,8 +163,8 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 	};
 };
 
-void InfoView::Draw(BRect drawBounds) {
-	BRect bound = Bounds();
+void InfoView::Draw(BRect /*drawBounds*/) {
+//	BRect bound = Bounds();
 	BRect progRect;
 	
 	// draw progress background
@@ -542,7 +543,7 @@ status_t InfoView::GetSupportedSuites(BMessage *msg) {
 	return BView::GetSupportedSuites(msg); 		
 };
 
-void InfoView::FrameResized( float w, float h ) {
+void InfoView::FrameResized( float w, float /*h*/ ) {
 	// SetText again to re-wrap lines to new view width
 	BString app(fApp), title(fTitle), text(fText);
 	

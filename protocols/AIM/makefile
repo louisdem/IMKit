@@ -31,7 +31,7 @@ default:
 
 else 
 # specify the name of the binary
-NAME= AIM
+NAME= aim
 SVG_ICON=AIM.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/protocols
