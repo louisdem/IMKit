@@ -8,6 +8,7 @@
 
 # specify the name of the binary
 NAME= Yahoo
+SVG_ICON=Yahoo.svg
 TOPDIR=../..
 TARGET_DIR=$(TOPDIR)/build/protocols
 
