@@ -833,6 +833,7 @@ status_t AIMManager::Send(Flap *f) {
 			
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
 				AIMConnection *con = (*i);
+				if (con == NULL) continue;
 				if (con->Supports(family) == true) {
 					LOG(kProtocolName, liLow, "Sending SNAC (0x%04x) via %s:%i", family,
 						con->Server(), con->Port());
