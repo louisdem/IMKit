@@ -30,13 +30,18 @@ enum {
 	AMAN_FLAP_CLOSE_CON = 'amcc'
 };
 
+enum {
+	AMAN_OFFLINE,
+	AMAN_CONNECTING,
+	AMAN_AWAY,
+	AMAN_ONLINE
+};
+
 class AIMManager : public BLooper {
 	public:
 						AIMManager(BMessenger im_kit);
 						~AIMManager(void);
 						
-			status_t	Login(const char *server, uint16 port,
-							const char *username, const char *password);
 			status_t	Send(Flap *f);
 			
 			void		MessageReceived(BMessage *message);
@@ -44,6 +49,11 @@ class AIMManager : public BLooper {
 			status_t	MessageUser(const char *screenname, const char *message);
 			status_t	AddBuddy(const char *buddy);
 			int32		Buddies(void) const;
+
+			status_t	Login(const char *server, uint16 port,
+							const char *username, const char *password);
+			uchar		IsConnected(void) const;
+			status_t	LogOff(void);
 			
 	private:
 			void		StartMonitor(void);
@@ -68,7 +78,7 @@ class AIMManager : public BLooper {
 		BMessageRunner	*fRunner;
 		BMessageRunner	*fKeepAliveRunner;
 		BMessenger		fIMKit;
-		bool			fLoggingOn;
+		uchar			fConnectionState;
 };
 
 #endif

@@ -41,6 +41,7 @@ status_t AIMProtocol::Init(BMessenger msgr) {
 }
 
 status_t AIMProtocol::Shutdown() {
+	fManager->LogOff();
 	if (fManager->Lock()) fManager->Quit();
 	
 	LOG("icq", MEDIUM, "AIMProtocol::Shutdown() done");
@@ -67,59 +68,20 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					}
 				}	break;
 				
-				case IM::SET_STATUS:
-				{
-					fManager->Login("login.oscar.aol.com", (uint16)5190,
-						fScreenName, fPassword);
-/*					if (fManager->Login("login.oscar.aol.com", (uint16)5190, fScreenName, fPassword) == B_OK) {
-						BMessage msg(IM::MESSAGE);
-						msg.AddInt32("im_what",IM::STATUS_SET);
-						msg.AddString("protocol","AIM");
-						msg.AddString("status", ONLINE_TEXT);
-						fMsgr.SendMessage( &msg );
-	
-						LOG("AIM", HIGH, "Logged on!");
+				case IM::SET_STATUS: {
+					const char *status = msg->FindString("status");
+					
+					if (strcmp(status, OFFLINE_TEXT) == 0) {
+						fManager->LogOff();
 					};
-*/				} break;
-/*						
-					const char * status = msg->FindString("status");
-				
-					if ( !status )
-						return B_ERROR;
-			
-					if ( find_thread(ICQ_THREAD_NAME) == B_NAME_NOT_FOUND )
-					{ // icq thread not running, start it
-						LOG("icq", HIGH, "Starting thread 'ICQ client'");
+					if (strcmp(status, AWAY_TEXT) == 0) {
+					};
+					if (strcmp(status, ONLINE_TEXT) == 0) {	
+						fManager->Login("login.oscar.aol.com", (uint16)5190,
+							fScreenName, fPassword);
+					};
+				} break;
 
-						
-						fThread = spawn_thread(
-							client_thread,
-							ICQ_THREAD_NAME,
-							B_NORMAL_PRIORITY,
-							&fClient
-						);
-						
-						resume_thread(fThread);
-					} else
-					{
-						if ( strcmp(status,OFFLINE_TEXT) == 0 )
-						{
-//							fClient.icqclient.setStatus(STATUS_OFFLINE);
-						} else
-						if ( strcmp(status,AWAY_TEXT) == 0 )
-						{
-//							fClient.icqclient.setStatus(STATUS_AWAY);
-						} else
-						if ( strcmp(status,ONLINE_TEXT) == 0 )
-						{
-//							fClient.icqclient.setStatus(STATUS_ONLINE);
-						} else
-						{ // invalid status code
-							return B_ERROR;
-						}
-					}
-				}	break;
-*/		
 				case IM::GET_CONTACT_INFO:
 				{
 					printf("Getting contact info\n");

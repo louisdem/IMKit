@@ -99,7 +99,7 @@ SYMBOLS = TRUE
 DEBUGGER = TRUE 
 
 #	specify additional compiler flags for all files
-COMPILER_FLAGS = -g -fcheck-memory-usage -D_NO_INLINE_ASM=1
+#COMPILER_FLAGS = -g -fcheck-memory-usage -D_NO_INLINE_ASM=1
 
 #	specify additional linker flags
 LINKER_FLAGS =
