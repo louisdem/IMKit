@@ -1401,23 +1401,33 @@ Server::MessageFromProtocols( BMessage * msg )
 		int32 bytes = -1;
 		entry_ref ref;
 		
-		if (msg->FindRef("contact", &ref) != B_OK) return;
-		if (msg->FindData("icondata", B_RAW_TYPE, (const void **)&data, &bytes) ==  B_OK) {		
+		if (msg->FindRef("contact", &ref) != B_OK) {
+			LOG("im_server", liHigh, "No contact in buddy message.");
+			return;
+		}
+		if (msg->FindData("icondata", B_RAW_TYPE, (const void **)&data, &bytes) !=  B_OK) {
+			LOG("im_server", liHigh, "No icondata in buddy message.");
+		} else {
 			Contact contact(ref);
 			
 			BMallocIO buffer;
 			buffer.WriteAt(0, data, bytes);
 			BBitmap *icon = BTranslationUtils::GetBitmap(&buffer);
-			printf("Settings %s's icon to be %p\n", protocol, icon);
 			
-			status_t ret = contact.SetBuddyIcon(protocol, icon);
-			printf("Gets: %s (%i)\n", strerror(ret), ret);
+			if ( !icon ) {
+				LOG("im_server", liHigh, "Unable to decode buddy icon.");
+			} else {
+				printf("Setting %s's icon to be %p\n", protocol, icon);
 			
-			BMessage update(MESSAGE);
-			update.AddInt32("im_what", BUDDY_ICON_UPDATED);
-			update.AddRef("contact", &ref);
+				status_t ret = contact.SetBuddyIcon(protocol, icon);
+				printf("Gets: %s (%i)\n", strerror(ret), ret);
 			
-			Broadcast(&update);
+				BMessage update(MESSAGE);
+				update.AddInt32("im_what", BUDDY_ICON_UPDATED);
+				update.AddRef("contact", &ref);
+				
+				Broadcast(&update);
+			}
 		};
 		
 		return;

@@ -1,24 +1,21 @@
 This is a list of bugs that need to be fixed, features that have been requested and such. If you
 feel like coding something and don't know what to do, this is the place to go! :)
 
+Please visit the BeClan bug tracker, since I'm moving all this over there.
+
+http://www.beclan.org/bugs
 
 ___ Things to fix
 
 * Protocol doc needs to be updated and extended to describe Deskbar add-on and probably more.
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
-* long message bug in LOG(), make buffer dynamic somehow?
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
 * Extract Deskbar icon from im_server, let it live it's own life
 * Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to Zeta bug? Fixed?
-* im_client: when settings are changed, make them apply to existing windows too
-* MSN and AIM: Add support for UNREGISTER_CONTACTS message
 * Change 'command sends message' option to a one-of-two menu
 * Make the clients handle the new 'multiple contacts per message' thing
 * Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
-* MSN: Don't create connections for blocked contacts.
-* MSN: Crashes if trying to log in with no net connection
-* Crashes when chatting on ICQ - typing notifcations?
 * binlog viewer: auto-wrap long lines, if we support variable height list items?
 * Add to readme/documentation, german docs: http://besly.mittilgart.de
 * im_server: ContactMonitor_Modified, merging "online" > "offline". Several AIM.
@@ -30,41 +27,23 @@ Re-add libbsvg code for R5 SVG support
 
 Setting something so ICQ displays as online with it's webfeatures
 
-Connect on startup, per protocol setting
-
-Show im_client on all workspaces option
-
 Support for wide char encodings (utf-16 etc)?
 	Need to move all text to data fields instead of string ones, lots of work.
-
-Per connection encoding setting
 
 Auto-send a user defined message to blocked contacts if they send a message (don't send again
 if already sent in the last 30 seconds, to prevent ping pong flood)
 
-Auto-reconnect if disconnected by server - im_server should handle this
-
 Change Merge contacts, or make a new one, so it can be used from the Terminal
 
-Scrollable settings in preflet
-
-Protocol icons in Info Popper status updates
-
 Invisibility
-
-New setting: Play sound on -every- message received
 
 More attributes for info like timezone, location, etc?
 
 Option for im_server - Don't fetch serverside contact lists
 
-Message filters - For implementing things like transparent encryption etc (key as attribute?)
-
 * More possible statuses, like Busy etc. Separate into sub-status? Away:Working, Away:Busy etc
 * Add a new attribute, IM Specific Status, for network-specific status (well, d'uh.)
 For things like "out to lunch" or whatever messages you can set on e.g. MSN.
-
-File transfers
 
 Serverside contact list manager:
 	Search for contacts
