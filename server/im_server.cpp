@@ -796,7 +796,19 @@ Server::CreateContact( const char * proto_id, const char *namebase )
 	
 	Contact result;
 	
-	BDirectory dir("/boot/home/people");
+	BPath path;
+	
+	if (find_directory(B_USER_DIRECTORY,&path,true,NULL) != B_OK)
+		// should never fail..
+		return result;
+	
+	path.Append("people");
+	
+	// make sure that the target directory exists before we try to create
+	// new files
+	create_directory( path.Path(), 0777);
+	
+	BDirectory dir( path.Path() );
 	BFile file;
 	BEntry entry;
 	char filename[512];
@@ -806,11 +818,6 @@ Server::CreateContact( const char * proto_id, const char *namebase )
 		namebase = "Unknown contact";
 	
 	strcpy(filename, namebase);
-	
-	// make sure that the target directory exists before we try to create
-	// new files
-	
-	create_directory("/boot/home/people",0777);
 	
 	// create a new contact, try using the raw SN as the base filename
 	

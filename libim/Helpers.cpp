@@ -8,6 +8,8 @@
 #include <Entry.h>
 #include <string.h>
 #include <stdlib.h>
+#include <Path.h>
+#include <FindDirectory.h>
 
 log_importance g_verbosity_level = liDebug;
 
@@ -59,9 +61,17 @@ check_for_tty()
 	
 	if ( !isatty(STDOUT_FILENO) )
 	{ // redirect output to ~/im_kit.log if not run from Terminal
+		BPath path;
+	
+		if (find_directory(B_USER_DIRECTORY,&path,true,NULL) != B_OK)
+			// This should never fail..
+			return;
+		
+		path.Append("im_kit.log");
+		
 		close(STDOUT_FILENO);
-		open("/boot/home/im_kit.log", O_WRONLY|O_CREAT|O_APPEND|O_TEXT);
-		chmod("/boot/home/im_kit.log", 0x600 );
+		open( path.Path(), O_WRONLY|O_CREAT|O_APPEND|O_TEXT);
+		chmod( path.Path(), 0x600 );
 	}
 }
 
@@ -272,61 +282,57 @@ im_load_template( const char * path, BMessage * msg )
 status_t
 im_load_protocol_settings( const char * protocol, BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	// get path to settings file
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-		protocol
-	);
-	
-	return im_load_settings( settings_path, msg );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/add-ons/protocols");
+	path.Append( protocol );
+		
+	return im_load_settings( path.Path(), msg );
 }
 
 status_t
 im_load_protocol_template( const char * protocol, BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	// get path to settings file
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-		protocol
-	);
-	
-	return im_load_template( settings_path, msg );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/add-ons/protocols");
+	path.Append( protocol );
+		
+	return im_load_template( path.Path(), msg );
 }
 
 status_t
-im_load_client_settings( const char * protocol, BMessage * msg )
+im_load_client_settings( const char * client, BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	// get path to settings file
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/clients/%s",
-		protocol
-	);
-	
-	return im_load_settings( settings_path, msg );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/clients");
+	path.Append( client );
+		
+	return im_load_settings( path.Path(), msg );
 }
 
 status_t
-im_load_client_template( const char * protocol, BMessage * msg )
+im_load_client_template( const char * client, BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	// get path to settings file
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/clients/%s",
-		protocol
-	);
-	
-	return im_load_template( settings_path, msg );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/clients");
+	path.Append( client );
+		
+	return im_load_template( path.Path(), msg );
 }
 
 // SAVE SETTINGS
@@ -344,59 +350,59 @@ im_save_template( const char * path, const BMessage * settings )
 }
 
 status_t
-im_save_protocol_settings( const char * protocol, const BMessage * settings )
+im_save_protocol_settings( const char * protocol, const BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-		protocol
-	);
-	
-	return im_save_settings( settings_path, settings );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/add-ons/protocols");
+	path.Append( protocol );
+		
+	return im_save_settings( path.Path(), msg );
 }
 
 status_t
-im_save_protocol_template( const char * protocol, const BMessage * settings )
+im_save_protocol_template( const char * protocol, const BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/add-ons/protocols/%s",
-		protocol
-	);
-	
-	return im_save_template( settings_path, settings );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/add-ons/protocols");
+	path.Append( protocol );
+		
+	return im_save_template( path.Path(), msg );
 }
 
 status_t
-im_save_client_settings( const char * client, const BMessage * settings )
+im_save_client_settings( const char * client, const BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/clients/%s",
-		client
-	);
-	
-	return im_save_settings( settings_path, settings );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/clients");
+	path.Append( client );
+		
+	return im_save_settings( path.Path(), msg );
 }
 
 status_t
-im_save_client_template( const char * client, const BMessage * settings )
+im_save_client_template( const char * client, const BMessage * msg )
 {
-	char settings_path[512];
+	BPath path;
 	
-	sprintf(
-		settings_path,
-		"/boot/home/config/settings/im_kit/clients/%s",
-		client
-	);
-	
-	return im_save_template( settings_path, settings );
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return B_ERROR;
+		
+	path.Append("im_kit/clients");
+	path.Append( client );
+		
+	return im_save_template( path.Path(), msg );
 }
 
 // CLIENT / PROTOCOL LIST
@@ -417,13 +423,31 @@ im_get_file_list( const char * path, const char * msg_field, BMessage * msg )
 void
 im_get_protocol_list( BMessage * list )
 {
-	return im_get_file_list("/boot/home/config/settings/im_kit/add-ons/protocols", "protocol", list);
+	BPath path;
+	
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return;
+	
+	path.Append("im_kit/add-ons/protocols");
+	
+	printf("%s\n", path.Path() );
+	
+	im_get_file_list( path.Path(), "protocol", list);
 }
 
 void
 im_get_client_list( BMessage * list )
 {
-	return im_get_file_list("/boot/home/config/settings/im_kit/clients", "client", list);
+	BPath path;
+	
+	if (find_directory(B_USER_SETTINGS_DIRECTORY,&path,true,NULL) != B_OK)
+		return;
+	
+	path.Append("im_kit/clients");
+	
+	printf("%s\n", path.Path() );
+
+	im_get_file_list( path.Path(), "client", list);
 }
 
 void

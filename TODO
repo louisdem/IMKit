@@ -18,14 +18,18 @@ ___ Things to fix
 * Change 'command sends message' option to a one-of-two menu
 * Info popper: the title should have a say when deciding the window size
 * Make the clients handle the new 'multiple contacts per message' thing
-* Remove charset setting from MSN, it's not used anyway.
 * Add ~/people to Deskbar context menu
 * Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
 * There are lots of hard-coded paths that should be using find_directory(), in Helpers.cpp etc.
+* MSN: Don't create connections for blocked contacts.
 
 ___ New features
 
-Show im_client on all workspaces
+Connect on startup, per protocol setting
+
+Progress indicator when logging in
+
+Show im_client on all workspaces option
 
 Add B_MS_WINDOWS_1251_CONVERSION to protocols
 
@@ -45,8 +49,6 @@ Scrollable settings in preflet
 Protocol icons in Info Popper status updates
 
 Invisibility
-
-Connect/disconnect sounds
 
 New setting: Play sound on -every- message receive
 

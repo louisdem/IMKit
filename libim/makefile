@@ -55,6 +55,14 @@ RSRCS=
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
 LIBS= be
 
+# Zeta needs find_directory_r() which is in libzeta, do a check
+ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
+# Is a BeOS build
+else
+# Zeta build
+LIBS += zeta
+endif
+
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
 #	or paths relative to the makefile.  The paths included may not
