@@ -27,6 +27,7 @@
 #include <libim/Manager.h>
 
 #include "../common/IMKitUtilities.h"
+#include "../common/BubbleHelper.h"
 
 #include <map>
 

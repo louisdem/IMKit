@@ -43,6 +43,7 @@ ChatApp::ChatApp()
 	autostart.AddString("description", "Auto-start");
 	autostart.AddInt32("type", B_BOOL_TYPE);
 	autostart.AddBool("default", true);
+	autostart.AddString("help", "Should im_server start this automatically?");
 	
 	BMessage appsig;
 	appsig.AddString("name", "app_sig");
@@ -55,7 +56,8 @@ ChatApp::ChatApp()
 	iconSize.AddString("description", "Menubar Icon Size");
 	iconSize.AddInt32("type", B_INT32_TYPE);
 	iconSize.AddInt32("default", kLargeIcon);
-
+	iconSize.AddString("help", "Size of menu bar icons");
+	
 #ifndef B_ZETA_VERSION
 	iconSize.AddInt32("valid_value", kSmallIcon);
 	iconSize.AddInt32("valid_value", kLargeIcon);
@@ -66,6 +68,7 @@ ChatApp::ChatApp()
 	showsend.AddString("description", "Show 'Send' button");
 	showsend.AddInt32("type", B_BOOL_TYPE);
 	showsend.AddBool("default", true);
+	showsend.AddString("help", "Should the 'Send' button be visible?");
 	
 //	BMessage userColor;
 //	userColor.AddString("name", "user_colour");
@@ -77,12 +80,16 @@ ChatApp::ChatApp()
 	useCommand.AddString("description", "Send messages with CMD-Enter instead of Enter");
 	useCommand.AddInt32("type", B_BOOL_TYPE);
 	useCommand.AddBool("default", true);
+	useCommand.AddString("help", "Should messages be sent when pressing CMD-Enter"
+	" instead of just Enter?\n"
+	"Use this if you send lots of multi line messages");
 	
 	BMessage peopleHandler;
 	peopleHandler.AddString("name", "people_handler");
 	peopleHandler.AddString("description", "MIME type for default People handler");
 	peopleHandler.AddInt32("type", B_STRING_TYPE);
 	peopleHandler.AddString("default", kDefaultPeopleHandler);
+	peopleHandler.AddString("help", "Defines what app should be opened when clicking the People icon");
 	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);

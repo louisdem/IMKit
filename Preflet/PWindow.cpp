@@ -15,6 +15,8 @@ const float kControlOffset = 5.0;
 const float kEdgeOffset = 5.0;
 const float kDividerWidth = 100;
 
+BubbleHelper gHelper;
+
 PWindow::PWindow(void)
 	: BWindow(BRect(25, 25, 480, 285), "Instant Messaging", B_TITLED_WINDOW,
 	 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS) {
@@ -260,7 +262,8 @@ PWindow::PWindow(void)
 	
 	fListView->SetSelectionMessage(new BMessage(LISTCHANGED));
 	fListView->SetTarget(this);
-
+	
+	
 };
 
 bool PWindow::QuitRequested(void) {
@@ -622,6 +625,11 @@ float PWindow::BuildGUI(BMessage viewTemplate, BMessage settings, BView *view) {
 				((BMenuField *)control)->SetDivider(kDividerWidth);
 			};
 		};
+		
+		if ( curr.FindString("help") )
+		{
+			gHelper.SetHelp(control, strdup(curr.FindString("help")));
+		}
 		
 		view->AddChild(control);
 			
