@@ -5,11 +5,12 @@
 const float kEdgeOffset = 2.0;
 const rgb_color kHighlight = {140, 140, 140, 255};
 
-IconCountItem::IconCountItem(const char *text, BBitmap *icon = NULL) 
+IconCountItem::IconCountItem(const char *text, BBitmap *icon = NULL, bool isNew = false) 
 	: fIcon(NULL),
 	fIconHeight(0),
 	fIconWidth(0) {
 
+	fNew = isNew;
 	fText = text;
 	fIcon = icon;
 	fCount = 0;
@@ -50,9 +51,15 @@ void IconCountItem::DrawItem(BView *owner, BRect frame, bool complete) {
 		frame.bottom - fFontOffset);
 		
 	BString text = fText;
-	if (GetCount() > 0) text << " (" << GetCount() << ")";
+	if (Count() > 0) text << " (" << Count() << ")";
 
+	if (IsNew()) {
+		owner->PushState();
+		owner->SetHighColor(255, 0, 0);
+	};
 	owner->DrawString(text.String());
+
+	if (IsNew()) owner->PopState();
 };
 
 const char *IconCountItem::Text(void) const {
@@ -85,10 +92,18 @@ void IconCountItem::Update(BView */*owner*/, const BFont *font) {
 	};	
 };
 
-void IconCountItem::SetCount(int32 count) {
+void IconCountItem::Count(int32 count) {
 	fCount = count;
 };
 
-int32 IconCountItem::GetCount(void) {
+int32 IconCountItem::Count(void) {
 	return fCount;
+};
+
+bool IconCountItem::IsNew(void) {
+	return fNew;
+};
+
+void IconCountItem::IsNew(bool isnew) {
+	fNew = isnew;
 };

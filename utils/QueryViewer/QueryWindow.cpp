@@ -56,7 +56,11 @@ QueryWindow::QueryWindow(BRect rect)
 		fCurrentQView = NULL;
 		BMessage msg(qwQuerySelected);
 		msg.AddInt32("index", 1);
+#ifdef B_BEOS_VERSION > B_BEOS_VERSION_5
 		BMessenger(this).SendMessage(msg);
+#else
+		BMessenger(this).SendMessage(&msg);
+#endif
 	};
 };
 
@@ -73,6 +77,8 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 			if (msg->FindInt32("index", &index) != B_OK) return;
 			
 			IconCountItem *item = reinterpret_cast<IconCountItem *>(fQueryList->ItemAt(index));
+			item->IsNew(false);
+			fQueryList->Invalidate();
 			
 			if (fQueryList->CountItemsUnder(item, false) == 0) {
 				BString name = item->Text();
@@ -112,7 +118,16 @@ void QueryWindow::MessageReceived(BMessage *msg) {
 
 			item = reinterpret_cast<IconCountItem *>(item);
 			
-			item->SetCount(count);
+			item->Count(count);
+			item->IsNew(true);
+			BListItem *i = item;
+			BListItem *super = NULL;
+			
+			while ((super = fQueryList->Superitem(i)) != NULL) {
+				((IconCountItem *)super)->IsNew(true);
+				i = super;
+			};
+			
 			CountItemEntries(fRootItem);
 			
 			fQueryList->Invalidate();
@@ -213,7 +228,7 @@ void QueryWindow::CreateGroups(BDirectory dir, BListItem *under, BRect rect) {
 				updateMsg->AddPointer("itemPointer", item);
 				
 				QueryColumnListView *view = new QueryColumnListView(rect,
-					path.Path(), B_FOLLOW_ALL_SIDES, B_WILL_DRAW, ref,
+					path.Path(), B_FOLLOW_ALL_SIDES, B_WILL_DRAW | B_PULSE_NEEDED, ref,
 					updateMsg, new BMessenger(this), 
 					B_FANCY_BORDER);
 				fQueryViews[path.Path()] = view;
@@ -238,9 +253,9 @@ int32 QueryWindow::CountItemEntries(IconCountItem *item) {
 			if (child) ret += CountItemEntries((IconCountItem *)child);
 		};
 		
-		item->SetCount(ret);
+		item->Count(ret);
 	} else {
-		ret = item->GetCount();
+		ret = item->Count();
 	};
 	
 	return ret;
