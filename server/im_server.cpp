@@ -1,6 +1,7 @@
 #include "im_server.h"
 
-#include "../libim/Constants.h"
+#include <libim/Constants.h>
+#include "DeskbarIcon.h"
 
 #include <image.h>
 #include <Roster.h>
@@ -12,6 +13,8 @@
 #include <Volume.h>
 #include <UTF8.h>
 #include <libim/Helpers.h>
+#include <Deskbar.h>
+#include <Roster.h>
 
 using namespace IM;
 
@@ -57,6 +60,19 @@ Server::Server()
 	
 	LoadAddons();
 	
+	// add deskbar icon
+	BDeskbar db;
+	entry_ref ref;
+	
+	if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
+	{
+		if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
+			LOG("Error removing deskbar icon (this is ok..)");
+		
+		if ( db.AddItem( &ref, &fDeskbarIconID ) != B_OK )
+			LOG("Error adding icon to deskbar!");
+	}
+	
 	Run();
 }
 
@@ -68,6 +84,9 @@ Server::~Server()
 	UnloadAddons();
 	
 	SetAllOffline();
+
+	BDeskbar db;
+	db.RemoveItem( DESKBAR_ICON_NAME );
 }
 
 /**
@@ -884,16 +903,30 @@ Server::MessageToProtocols( BMessage * msg )
 	
 	if ( msg->FindString("protocol") == NULL )
 	{ // no protocol specified, send to all?
-/*		map<string,Protocol*>::iterator i;
+		LOG("No protocol specified");
 		
-		for ( i=fProtocols.begin(); i != fProtocols.end(); i++ )
-		{
-			if ( i->right->Process(msg) != B_OK )
+		int32 im_what=-1;
+		msg->FindInt32("im_what", &im_what);
+		
+		switch ( im_what )
+		{ // send these messages to all loaded protocols
+			case SET_STATUS:
 			{
-				_ERROR("Protocol reports error processing message");
-			}
+				LOG("  SET_STATUS - Sending to all protocols");
+				map<string,Protocol*>::iterator i;
+				
+				for ( i=fProtocols.begin(); i != fProtocols.end(); i++ )
+				{
+					if ( i->second->Process(msg) != B_OK )
+					{
+						_ERROR("Protocol reports error processing message");
+					}
+				}
+			}	break;
+			default:
+				_ERROR("Invalid message", msg);
 		}
-*/
+		return;
 	} else
 	{ // protocol mapped
 		if ( fProtocols.find(msg->FindString("protocol")) == fProtocols.end() )

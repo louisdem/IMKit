@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= IM\ Start\ conversation
+NAME= IM_Start_conversation
 
 # specify the type of binary
 #	APP:	Application

@@ -3,6 +3,7 @@
 #include <Message.h>
 #include <Messenger.h>
 #include <TrackerAddOn.h>
+#include <Application.h>
 
 void
 process_refs(entry_ref dir, BMessage * msg, void * )
@@ -22,8 +23,8 @@ process_refs(entry_ref dir, BMessage * msg, void * )
 		if ( strcmp(type,"application/x-person") != 0 )
 			continue;
 		
-		BMessage msg('newc');
-		msg.AddRef("contact",&ref);
+		BMessage msg(B_REFS_RECEIVED);
+		msg.AddRef("refs",&ref);
 		
 		BMessenger msgr("application/x-vnd.m_eiman.sample_im_client");
 		msgr.SendMessage(&msg);

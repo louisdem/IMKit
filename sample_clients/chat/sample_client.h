@@ -16,11 +16,12 @@ class MyApp : public BApplication
 {
 	public:
 		MyApp();
-		~MyApp();
+		virtual ~MyApp();
 		
-		bool QuitRequested();
+		virtual bool QuitRequested();
 		
-		void MessageReceived( BMessage * );
+		virtual void MessageReceived( BMessage * );
+		virtual void RefsReceived( BMessage * );
 		
 		bool IsQuiting();
 		
@@ -58,29 +59,6 @@ class ChatWindow : public BWindow
 		IM::Manager		* fMan;
 		bool			fChangedNotActivated;
 		char			fTitleCache[512];
-};
-
-class SettingsWindow : public BWindow
-{
-	public:
-		SettingsWindow( const char * protocol );
-		~SettingsWindow();
-		
-		void MessageReceived( BMessage * );
-		bool QuitRequested();
-		
-	private:
-		void rebuildUI();
-		
-		enum {
-			APPLY_SETTINGS	= 1234,
-			ALTER_STATUS,
-			SELECT_PROTOCOL
-		};
-		BMessage	fTemplate;
-		char		fProtocol[128];
-		
-		IM::Manager	* fMan;
 };
 
 #endif

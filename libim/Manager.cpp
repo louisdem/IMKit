@@ -7,9 +7,15 @@
 
 using namespace IM;
 
+Manager::Manager()
+:	fIsListening(false),
+	fIsRegistered(false),
+	fMsgr(IM_SERVER_SIG)
+{
+}
+
 Manager::Manager( BMessenger target )
-:	BLooper(),
-	fIsListening(false),
+:	fIsListening(false),
 	fIsRegistered(false),
 	fMsgr(IM_SERVER_SIG),
 	fTarget(target)
@@ -139,6 +145,23 @@ Manager::RemoveEndpoint( BMessenger msgr )
 	fMsgr.SendMessage(&msg);
 	
 	fIsRegistered = false;
+}
+
+/**
+	Forward a single, one-shot, message to the im_server
+*/
+status_t
+Manager::OneShotMessage( BMessage * msg )
+{
+	BMessenger msgr(IM_SERVER_SIG);
+	
+	if ( !msgr.IsValid() )
+	{
+		printf("Manager::SendMessage: fMsgr invalid\n");
+		return B_ERROR;
+	}
+	
+	return msgr.SendMessage(msg,(BHandler*)NULL);
 }
 
 /**

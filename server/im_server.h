@@ -61,6 +61,8 @@ class Server : public BApplication
 		map<string,string>			fStatus;// proto_id_string,status_string
 		
 		map<node_ref,list<pair<string,string> > >	contacts_protocols_ids;
+		
+		int32		fDeskbarIconID;
 };
 
 };

@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= IM\ Merge\ contacts
+NAME= IM_Merge_contacts
 
 # specify the type of binary
 #	APP:	Application

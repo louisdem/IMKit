@@ -9,14 +9,16 @@ namespace IM {
 class Manager : public BLooper
 {
 	public:
+		Manager();
 		Manager( BMessenger target );
 		~Manager();
 		
 		void StartListening();
 		void StopListening();
 		
+		static status_t OneShotMessage( BMessage * msg );
+
 		status_t SendMessage( BMessage * msg, BMessage * reply=NULL );
-		
 		
 		// 
 		void MessageReceived( BMessage * );
