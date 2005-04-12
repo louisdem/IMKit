@@ -1,6 +1,7 @@
 # makefile for all sample code
 
 SUBDIRS = \
+	DeskbarIcon \
 	gimicq-import \
 	mimetype \
 	InfoPopper \

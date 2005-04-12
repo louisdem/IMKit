@@ -43,24 +43,28 @@ IM_DeskbarIcon::Instantiate( BMessage * archive )
 	}
 	
 	LOG("deskbar", liHigh, "IM_DeskbarIcon::Instantiate() ok");
-
+	
 	return new IM_DeskbarIcon(archive);
 }
 
 
 IM_DeskbarIcon::IM_DeskbarIcon()
 	: BView(BRect(0,0,15,15), DESKBAR_ICON_NAME, B_FOLLOW_NONE, B_WILL_DRAW) {
+	LOG("deskbar", liHigh, "IM_DeskbarIcon::IM_DeskbarIcon()");
 
 	_init();
 }
 
 IM_DeskbarIcon::IM_DeskbarIcon(BMessage * archive)
 	: BView(archive) {
+	LOG("deskbar", liHigh, "IM_DeskbarIcon::IM_DeskbarIcon(BMessage*)");
 
 	_init();
 }
 
 IM_DeskbarIcon::~IM_DeskbarIcon() {
+	LOG("deskbar", liHigh, "IM_DeskbarIcon::~IM_DeskbarIcon()");
+
 	delete fTip;
 	delete fAwayIcon;
 	delete fOnlineIcon;
@@ -76,7 +80,7 @@ IM_DeskbarIcon::_init() {
 
 	BPath userDir;
 	find_directory(B_USER_SETTINGS_DIRECTORY, &userDir, true);
-
+	
 	BPath iconDir = userDir;
 	iconDir.Append("im_kit/icons");
 	
@@ -222,10 +226,12 @@ IM_DeskbarIcon::Draw( BRect /*rect*/ )
 status_t
 IM_DeskbarIcon::Archive( BMessage * msg, bool deep ) const
 {
+	LOG("deskbar", liHigh, "IM_DeskbarIcon::Archive()");
+	
 	status_t res = BView::Archive(msg,deep);
 	
-	msg->AddString("add_on", IM_SERVER_SIG );
-	msg->AddString("add-on", IM_SERVER_SIG );
+	msg->AddString("add_on", DESKBAR_ICON_SIG );
+	msg->AddString("add-on", DESKBAR_ICON_SIG );
 	
 	msg->AddString("class", "IM_DeskbarIcon");
 	
@@ -681,6 +687,8 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 void
 IM_DeskbarIcon::AttachedToWindow()
 {
+	LOG("deskbar", liHigh, "IM_DeskbarIcon::AttachedToWindow()");
+
 	// give im_server a chance to start up
 	snooze(500*1000);	
 	reloadSettings();
@@ -758,6 +766,8 @@ IM_DeskbarIcon::AttachedToWindow()
 }
 
 void IM_DeskbarIcon::DetachedFromWindow() {
+	LOG("deskbar", liHigh, "IM_DeskbarIcon::DetachedFromWindow()");
+	
 	querymap::iterator qIt;
 	
 	for (qIt = fQueries.begin(); qIt != fQueries.end(); qIt++) {

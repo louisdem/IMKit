@@ -7,10 +7,9 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= im_server
-SVG_ICON=im_server.svg
-TOPDIR=..
-TARGET_DIR = $(TOPDIR)/build
+NAME= IMDeskbarIcon
+TOPDIR=../..
+TARGET_DIR=$(TOPDIR)/build/utils
 BUILD_REVISION = $(shell svn info makefile | grep "Revision" | sed -e s/evision:\ //g)
 BUILD_DATE := $(shell date +%Y-%m-%d)
 
@@ -19,7 +18,7 @@ BUILD_DATE := $(shell date +%Y-%m-%d)
 #	SHARED:	Shared library or add-on
 #	STATIC:	Static library archive
 #	DRIVER: Kernel Driver
-TYPE= APP
+TYPE= SHARED
 
 #	add support for new Pe and Eddie features
 #	to fill in generic makefile
@@ -35,13 +34,11 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= im_server.cpp im_server_main.cpp Protocol.cpp AwayMessageWindow.cpp
-SRCS+= QueryLooper.cpp
-SRCS+=  $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/BubbleHelper.cpp $(TOPDIR)/common/IconMenuItem.cpp
+SRCS= DeskbarIcon.cpp AwayMessageWindow.cpp $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/BubbleHelper.cpp $(TOPDIR)/common/IconMenuItem.cpp QueryLooper.cpp
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS= im_server.rsrc
+RSRCS= IMDeskbarIcon.rsrc
 
 # @<-src@ 
 #%}
@@ -58,22 +55,7 @@ RSRCS= im_server.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be translation im stdc++.r4 textencoding
-
-# Zeta needs find_directory_r() which is in libzeta, do a check
-ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
-# Is a BeOS build
-else
-# Zeta build
-LIBS += zeta tracker
-endif
-
-ifeq ($(wildcard /boot/beos/system/lib/libicon.so), )
-# BeOS or Zeta > RC2 build
-else
-# Zeta < RC3 build
-LIBS += icon
-endif
+LIBS= be stdc++.r4 im
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -81,7 +63,7 @@ endif
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS=
+LIBPATHS= 
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
@@ -91,11 +73,11 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = ../common
+LOCAL_INCLUDE_PATHS =
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
-OPTIMIZE= SOME
+OPTIMIZE= NONE
 
 #	specify any preprocessor symbols to be defined.  The symbols will not
 #	have their values set automatically; you must supply the value (if any)
@@ -118,7 +100,7 @@ SYMBOLS = TRUE
 #	specify debug settings
 #	if TRUE will allow application to be run from a source-level
 #	debugger.  Note that this will disable all optimzation.
-DEBUGGER = 
+DEBUGGER =
 
 #	specify additional compiler flags for all files
 COMPILER_FLAGS =
@@ -156,14 +138,20 @@ ifeq ($(DEBUG_BUILD), true)
 
 endif
 
+
 #Detect Zeta
 ifeq ($(wildcard /boot/beos/system/lib/libzeta.so), )
 # BeOS
 else
 #Zeta
-    DEFINES += ZETA
+  ifeq ($(shell nm --demangle /system/lib/libicon.so | grep " GetNodeIcon"), )
+    DEFINES += GET_TRACKER_ICON
+  else
+    DEFINES += GET_NODE_ICON
+  endif
+  LIBS += zeta tracker
 endif
 
-INSTALL_DIR= /boot/home/config/servers
+INSTALL_DIR= $(TOPDIR)/build/utils
 
 include $(TOPDIR)/makefile-engine.IMkit

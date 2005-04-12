@@ -109,7 +109,8 @@ Server::Server()
 	
 	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
 		LOG("im_server", liDebug, "Error removing deskbar icon (this is ok..)");
-	
+*/	
+/*	This is taken care of by the UpdateOwnSettings() function now.
 	IM_DeskbarIcon * i = new IM_DeskbarIcon();
 	
 	if ( db.AddItem( i ) != B_OK )
@@ -129,7 +130,7 @@ Server::Server()
 	}
 	
 	delete i;
-*/	
+*/
 	prefsPath.Append("im_kit/icons");
 	
 	// load icons for "change icon depending on state"
@@ -2059,30 +2060,37 @@ Server::UpdateOwnSettings( BMessage & settings )
 
 	BDeskbar db;
 	
-	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
-		LOG("im_server", liDebug, "Error removing deskbar icon (this is ok..)");
-		
+//	if ( db.RemoveItem( DESKBAR_ICON_NAME ) != B_OK )
+//		LOG("im_server", liDebug, "Error removing deskbar icon (this is ok..)");
+	
 	if ( deskbar_icon )
 	{
-		IM_DeskbarIcon * i = new IM_DeskbarIcon();
+//		IM_DeskbarIcon * i = new IM_DeskbarIcon();
 		
-		if ( db.AddItem( i ) != B_OK )
+		int32 id=-1;
+		
+//		if ( db.AddItem( i, &id ) == B_OK )
+//		{
+//			LOG("im_server", liDebug, "Added Deskbar icon (locally created, id %ld)", id);
+//		} else
 		{ // couldn't add BView, try entry_ref
 			entry_ref ref;
-	
-			if ( be_roster->FindApp(IM_SERVER_SIG,&ref) == B_OK )
+			
+			if ( be_roster->FindApp("application/x-vnd.beclan.im_kit-DeskbarIcon"/*IM_SERVER_SIG*/,&ref) == B_OK )
 			{
 				BPath p(&ref);
-		
-				if ( db.AddItem( &ref ) != B_OK )
+				
+				if ( db.AddItem( &ref, &id ) != B_OK )
 					LOG("im_server", liHigh, "Error adding icon to deskbar!");
+				else
+					LOG("im_server", liDebug, "Added Deskbar icon (with ref, id %ld)", id);
 			} else
 			{
 				LOG("im_server", liHigh, "be_roster->FindApp() failed");
 			}
 		}
 		
-		delete i;
+//		delete i;
 	}
 	
 	return B_OK;

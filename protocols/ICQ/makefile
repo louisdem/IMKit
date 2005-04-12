@@ -81,7 +81,7 @@ SYSTEM_INCLUDE_PATHS = /boot/home/config/include /boot/home/config/include/sigc+
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = 
+LOCAL_INCLUDE_PATHS =
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL

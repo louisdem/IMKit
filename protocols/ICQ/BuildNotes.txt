@@ -1,34 +1,42 @@
-You need to fetch and install libyahoo2.
+NOTE: These instructions aren't complete for the latest version of Zeta.
+We'll whip up a binary package with the required libs and includes that
+you can download and install from the bebits page at some point.
 
-http://libyahoo2.sf.net/
+  * The ICQ add-on is built by the enclosed makefiles, but it requires that you
+    download and build/install the following libraries. If you don't wish to
+    build the add-on then remove the entry from src/protocols/makefile.
+    - libsigc++ (http://sourceforge.net/projects/libsigc/)
+      Get version 1.0.4 of libsigc++, I don't think 1.2.x will compile on BeOS.
+    Configure with --prefix=/boot/home/config and "make install" them.
+    - libicq2000 (http://libicq2000.sourceforge.net/)
 
-We've been using 0.7.5, not sure if other versions will work.
+Building libicq2k:
+Edit "configure", add "-lbind" where it says "LIBS += -lsocket" or some such.
 
-To get it to build you need to fiddle a bit with the makefile:
+Run "configure --prefix=/boot/home/config"
 
-	configure --prefix=/boot/home/config  --with-struct-callbacks
+In "examples/Select.cpp", move "using std::make_pair;" on line 41 to line 29.
 
-Then edit src/makefile:
+In "src/Makefile":
 
-	remove -ansi from the CFLAGS line
+Change the line:
+	CXXLINK = $(LIBTOOL) --mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) 
+to:
+	CXXLINK = $(LIBTOOL) --mode=link $(CXXLD) -no-undefined  $(AM_CXXFLAGS) $(CXXFLAGS) 
 
-	change the line:
-		LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	to:
-		LINK = $(LIBTOOL) --mode=link $(CCLD) -no-undefined  $(AM_CFLAGS) $(CFLAGS) \
-	
-	R5:
-		Change the line:
-			LIBS =  $(GLIB_LIBS)
-		to
-			LIBS =  $(GLIB_LIBS) -lbind -lsocket
-	Zeta:
-		where it says -lsocket, also add -lbind on the same line, right after -lsocket.
-	
+and add "-lstdc++.r4" to the line with "-lsocket -lbind".
 
-Edit src/sample_client.c, line 1020: 
+run "make" and then "make install".
 
-	change (socklen_t*) to (int*)
 
-Then you should be able to run "make ; make install", after which the Yahoo add-on
-should compile.
+Note:
+
+If make errors out with:
+
+"...	 /boot/home/config/include/sigc++-1.0/sigc++/slot.h:25:
+sigc++config.h: No such file or directory"
+
+then open up /boot/home/config/lib/sigc++-1.0/include.
+
+Do you see sigc++config.h? If so, move it to
+/boot/home/config/lib/sigc++-1.0/sigc++config.h
