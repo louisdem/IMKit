@@ -1,21 +1,29 @@
-
-//#include "MWindow.h"
 #include "pluginproto.h"
 
-//class MixerWindow: public MWindow
-//{
-//	private:
-//		float pitch0;
-//		float pitch1;
-//		PlaylistPtr track0;
-//		PlaylistPtr track1;
-//
-//	public:
-//		MixerWindow(SoundPlayController *);
-//		virtual ~MixerWindow();
-//		virtual void MessageReceived(BMessage *mes);
-//		virtual bool QuitRequested();
-//		virtual void Show();
-//
-//		SoundPlayController *ctrl;
-//};
+#include <Menu.h>
+#include <MenuField.h>
+#include <MenuItem.h>
+#include <TextControl.h>
+#include <Window.h>
+#include <View.h>
+
+const int kPadding = 5;
+
+class SPIPConfigView : public BView {
+	public:
+						SPIPConfigView(BMessage *config);
+						~SPIPConfigView(void);
+						
+				void	AttachedToWindow(void);
+				void	MessageReceived(BMessage *msg);
+
+	private:
+			BMessage	*fConfig;
+			
+		BTextControl	*fTitleCtrl;
+		BTextControl	*fMainCtrl;
+			
+			BMenuField	*fBehaviourField;
+				BMenu	*fBehaviour;
+	
+};
