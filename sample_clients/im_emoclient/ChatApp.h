@@ -7,7 +7,7 @@ class BApplication;
 class ChatWindow;
 class RunView;
 
-typedef map<BString, RunView *> RunMap;
+typedef map<entry_ref, RunView *> RunMap;
 extern const char *kDefaultPeopleHandler;
 
 class ChatApp : public BApplication
@@ -26,8 +26,8 @@ class ChatApp : public BApplication
 				void	Flash( BMessenger );
 				void	NoFlash( BMessenger );
 			
-			status_t	StoreRunView(const char *id, RunView *rv);
-			RunView		*GetRunView(const char *id);
+			status_t	StoreRunView(/*const char *id*/ entry_ref, RunView *rv);
+			RunView		*GetRunView(/*const char *id*/ entry_ref);
 		
 		BList			chat_windows;
 		

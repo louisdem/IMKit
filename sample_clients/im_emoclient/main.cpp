@@ -2,6 +2,10 @@
 
 #define SIGN	"application/x-vnd.xeD.im_emoclient"
 
+// defined in SmileTextRender.h
+float gEmoticonSize = 16.0;
+
+
 void
 setAttributeIfNotPresent( entry_ref ref, const char * attr, const char * value )
 {

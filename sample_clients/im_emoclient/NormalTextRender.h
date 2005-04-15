@@ -13,7 +13,8 @@ class NormalTextRender : public TextRender
           NormalTextRender(BFont f):TextRender(){
                         	font=f;
           }
-                        
+          virtual ~NormalTextRender() {};
+          
        virtual void     Render(BView *target,const char* txt,int16 num,BPoint pos)  {
            
            target->SetFont(&font);   

@@ -7,7 +7,7 @@ public:
 	BMenu*			CreateMenu(BMessage*,int32 messid);
 	BPopUpMenu*			CreateMenuP(BMessage*,int32 messid);	
 private:
-	BBitmap*		LoadBitmap(int32 i, int32 j,BMessage*);
+	BBitmap*		LoadBitmap(int32 i, BMessage*);
 
 };
 

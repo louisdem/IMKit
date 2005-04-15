@@ -327,30 +327,30 @@ ChatWindow::ChatWindow(entry_ref & ref)
 
 	fTheme->WriteUnlock();
 	
-	IM::Contact con(&fEntry);
-	char id[256];
-	con.ConnectionAt(0, id);
+//	IM::Contact con(&fEntry);
+//	char id[256];
+//	con.ConnectionAt(0, id);
 
-	fText = ((ChatApp *)be_app)->GetRunView(id);
+	fText = ((ChatApp *)be_app)->GetRunView(/*id*/ fEntry);
 	if (fText == NULL) {
 		fText = new RunView(
 			textRect, "text", fTheme,
 			B_FOLLOW_ALL, B_WILL_DRAW
 		);
-	};
-	
-	fText->SetTimeStampFormat(NULL);
 
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
-	fText->SetViewUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
-	fText->SetLowUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
-	fText->SetHighUIColor(B_UI_DOCUMENT_TEXT_COLOR);
+		fText->SetViewUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
+		fText->SetLowUIColor(B_UI_DOCUMENT_BACKGROUND_COLOR);
+		fText->SetHighUIColor(B_UI_DOCUMENT_TEXT_COLOR);
 #else
-	fText->SetViewColor(245, 245, 245, 0);
-	fText->SetLowColor(245, 245, 245, 0);
-	fText->SetHighColor(0, 0, 0, 0);
+		fText->SetViewColor(245, 245, 245, 0);
+		fText->SetLowColor(245, 245, 245, 0);
+		fText->SetHighColor(0, 0, 0, 0);
 #endif
 
+		fText->SetTimeStampFormat(NULL);
+	};
+	
 	fTextScroll = new BScrollView(
 		"scroller", fText,
 		B_FOLLOW_ALL, 0,
@@ -360,9 +360,10 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	AddChild(fTextScroll);
 	fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
 	
-	fText->Show();
+	if ( fText->IsHidden() )
+		fText->Show();
 	fText->ScrollToBottom();
-
+	
 	fInput->MakeFocus();
 	
 	// add input filter that generates "user typing" messages and routes copy-commands
@@ -386,7 +387,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	
 	// this message runner needed to fix a BMenuField bug.
 	BMessage protoHack(PROTOCOL_SELECTED2);
-	fProtocolHack = new BMessageRunner( BMessenger(this), &protoHack, 1000, 1 );
+	fProtocolHack = new BMessageRunner( BMessenger(this), &protoHack, 10000, 1 );
 }
 
 ChatWindow::~ChatWindow()
@@ -426,11 +427,11 @@ ChatWindow::~ChatWindow()
 	
 	if(fTheme)
 	{
-		if(fTheme->TextRenderAt(F_EMOTICON)) 
-			delete fTheme->TextRenderAt(F_EMOTICON);
+//		if(fTheme->TextRenderAt(F_EMOTICON)) 
+//			delete fTheme->TextRenderAt(F_EMOTICON);
 			
-		if(fTheme->TextRenderAt(F_TEXT)) 
-			delete fTheme->TextRenderAt(F_TEXT);
+//		if(fTheme->TextRenderAt(F_TEXT)) 
+//			delete fTheme->TextRenderAt(F_TEXT);
 	}	
 	
 	fMan->Lock();
@@ -442,19 +443,19 @@ ChatWindow::~ChatWindow()
 bool
 ChatWindow::QuitRequested()
 {
+	fText->RemoveSelf();
+	
 	if (fTextScroll != NULL) {
 		fTextScroll->RemoveSelf();
 //		Deleting the fTextScroll here causes a crash when you re open the window.
 //		This makes Baby Mikey cry
-//		delete fTextScroll;
+		delete fTextScroll;
 	};
 
-	fText->RemoveSelf();
-
-	IM::Contact con(&fEntry);
-	char id[256];
-	con.ConnectionAt(0, id);
-	((ChatApp *)be_app)->StoreRunView(id, fText);
+//	IM::Contact con(&fEntry);
+//	char id[256];
+//	con.ConnectionAt(0, id);
+	((ChatApp *)be_app)->StoreRunView(/*id*/ fEntry, fText);
 	((ChatApp *)be_app)->chat_windows.RemoveItem(this);
 
 	return true;

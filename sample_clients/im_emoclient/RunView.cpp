@@ -363,7 +363,7 @@ RunView::Draw (BRect frame)
 
     height = line->fTop;
 
-    for (int16 sit = 0; sit < line->fSoftie_used; ++sit)
+    for (int16 sit = 0; sit < line->fSoftie_used; /*++sit*/sit++)
     {
       int16 last_len (UTF8_CHAR_LEN (line->fText[line->fSofties[sit].fOffset]));
       float left (indent);
@@ -525,12 +525,18 @@ RunView::Draw (BRect frame)
 
         SetDrawingMode (B_OP_OVER);
 
-		if(tr)
+//		if(tr)
+		if ( sit >= line->fSoftie_used )
+		{
+			printf("bah. sit is %d and fSoftie_used is %d\n", sit, line->fSoftie_used);
+		} else
+		{
+//			printf("ooh. sit is %d and fSoftie_used is %d\n", sit, line->fSoftie_used);
         tr->Render(this,
           line->fText + place,
           min_c (fLength, line->fLength - place - 1),
           BPoint (left, height + line->fSofties[sit].fAscent));
-
+		}
 
 /*        DrawString (
           line->fText + place,
@@ -2177,7 +2183,7 @@ Line::FigureEdges (
       ccount,
       eshift);*/
 
-	if(tr)
+//	if(tr)
     tr->GetEscapements (
       fText + fFcs[cur_fFcs].fOffset,
       ccount,
@@ -2189,7 +2195,8 @@ Line::FigureEdges (
     int16 i;
      float size=0;
     
-    if(tr) size=tr->Size();
+//    if(tr) 
+    size=tr->Size();
     
     
     float incrementor = (fEdge_count > 0) ? fEdges[fEdge_count - 1] : 0;
@@ -2281,7 +2288,7 @@ Line::AddSoftBreak (SoftBreakEnd sbe, float &start, uint16 &fText_place,
       font_height fh;
       float height;
 
-        tr->GetHeight (&fh);
+      tr->GetHeight (&fh);
 
       height = ceil (fh.ascent + fh.descent + fh.leading);
       if (fSofties[fSoftie_used].fHeight < height)

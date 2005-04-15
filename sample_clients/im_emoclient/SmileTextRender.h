@@ -12,11 +12,14 @@
 
 #include "Emoticor.h"
 
+extern float gEmoticonSize;
+
 class SmileTextRender : public TextRender
 {
     public:
           SmileTextRender():TextRender(){};
-                        
+          
+          virtual ~SmileTextRender() {};        
        
        virtual void Render(BView *target,const char* txt,int16 num,BPoint pos)  {
            
@@ -25,21 +28,33 @@ class SmileTextRender : public TextRender
             
           	if(emoticor->config->FindPointer(f.String(),(void**)&pointer)==B_OK)
           	{
-          	 	target->DrawBitmapAsync(pointer,pos-BPoint(0,12));
+          		target->SetDrawingMode( B_OP_ALPHA );
+          	 	target->DrawBitmapAsync( pointer,BPoint(pos.x, pos.y- (gEmoticonSize/2)) );
+          		target->SetDrawingMode( B_OP_OVER );
+          		
+/*		       	BRect r = pointer->Bounds();
+          		r.OffsetTo(pos);
+          		r.OffsetBy(0, - (gEmoticonSize/2 + 2) );
+          		r.InsetBy(-1,-1);
+          		
+          		rgb_color oldCol = target->HighColor();
+          		target->SetHighColor( 255,0,0 );
+          		target->StrokeRect( r );
+          		target->SetHighColor( oldCol );
+*/
           	}
         }; 
        
        
-       virtual float Size(){ return 24 ;}
+       virtual float Size(){ return gEmoticonSize;}
        
        virtual void GetHeight(font_height *h)
        { 
-       		h->ascent=12;
-       		h->descent=12;
+       		h->ascent=gEmoticonSize/2;
+       		h->descent=gEmoticonSize/2;
        		h->leading=0;
        	};
-    
-    
+    	
 	   virtual void		
 	   GetEscapements(const char charArray[], int32 numChars,float escapementArray[])
 	   {

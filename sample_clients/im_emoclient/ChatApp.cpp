@@ -108,7 +108,7 @@ ChatApp::ChatApp()
 	smiley.AddString("name", "smiley_config");
 	smiley.AddString("description", "Smiley Config file");
 	smiley.AddInt32("type", B_STRING_TYPE);
-	smiley.AddString("default", "/boot/home/config/settings/im_kit/smileys/settings.xml");
+	smiley.AddString("default", "/boot/home/config/settings/im_kit/smileys/settings_svg.xml");
 	smiley.AddString("help", "Defines the location of the smiley configuration file");
 
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
@@ -201,26 +201,29 @@ ChatApp::QuitRequested()
 	RunMap::const_iterator it = fRunViews.begin();
 	
 	for (; it != fRunViews.end(); ++it) {
-		BString key = it->first;
+//		BString key = it->first;
+		entry_ref key = it->first;
 		RunView *rv = it->second;
 
+		BPath path(&key);
+		
 		if (rv != NULL) {
 			BWindow *win = rv->Window();
-
+			
 			if (win != NULL) {
 				LOG("im_emoclient", liLow, "RunView for %s has a Parent(), Lock()ing and "
-					"RemoveSelf()ing.", key.String());
+					"RemoveSelf()ing.", /*key.String()*/ path.Path());
 				win->Lock();
 				rv->RemoveSelf();
 				win->Unlock();
 			} else {
-				LOG("im_emoclient", liLow, "RunView for %s doesn't have a Parent()", key.String());
+				LOG("im_emoclient", liLow, "RunView for %s doesn't have a Parent()", /*key.String()*/ path.Path());
 				rv->RemoveSelf();
 			};
 			
 			delete rv;
 		} else {
-			LOG("im_emoclient", liLow, "RunView for %s was already NULL", key.String());
+			LOG("im_emoclient", liLow, "RunView for %s was already NULL", /*key.String()*/ path.Path());
 		};
 	};
 
@@ -457,20 +460,23 @@ ChatApp::NoFlash( BMessenger msgr )
 }
 
 status_t
-ChatApp::StoreRunView(const char *id, RunView *rv) {
-	LOG("im_emoclient", liLow, "Setting RunView for %s to %p", id, rv);
+ChatApp::StoreRunView(/*const char *id*/ entry_ref ref, RunView *rv) {
+	BPath path(&ref);
+	LOG("im_emoclient", liLow, "Setting RunView for %s to %p", path.Path(), rv);
 	
-	BString nick = id;
-	fRunViews[nick] = rv;
+//	BString nick = id;
+	fRunViews[/*nick*/ ref] = rv;
 
 	return B_OK;
 }
 
 RunView *
-ChatApp::GetRunView(const char *id) {
-	BString nick = id;
+ChatApp::GetRunView(/*const char *id*/ entry_ref ref) {
+	BPath path(&ref);
+//	BString nick = id;
 	
-	LOG("im_emoclient", liLow, "RunView for %s is %p", id, fRunViews[nick]);
+	LOG("im_emoclient", liLow, "RunView for %s is %p", /*id*/path.Path(), fRunViews[/*nick*/ref]);
 	
-	return fRunViews[nick];
+	//return NULL;
+	return fRunViews[/*nick*/ref];
 }

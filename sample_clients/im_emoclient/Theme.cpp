@@ -59,8 +59,9 @@ Theme::Theme (
   fores = new rgb_color [fore_count];
   backs = new rgb_color [back_count];
   //text_renders = new BFont     [font_count];
-   text_renders = (TextRender**)malloc(render_count*sizeof(TextRender*));
-
+  text_renders = (TextRender**)malloc(render_count*sizeof(TextRender*));
+	for ( int i=0; i<render_count; i++ )
+		text_renders[i] = NULL;
 	
 
   sid = create_sem (NUMBER_THEME_READERS, name);
@@ -86,7 +87,11 @@ Theme::~Theme (void)
   delete_sem (sid);
 
   //delete [] fonts;
-  free(text_renders);
+  	for ( int i=0; i<render_count; i++ )
+		if ( text_renders[i] )
+			delete text_renders[i];
+	free(text_renders);
+  
   delete [] backs;
   delete [] fores;
   delete [] name;
@@ -176,11 +181,16 @@ Theme::FontAt (int16 which) const
 TextRender*
 Theme::TextRenderAt (int16 which) 
 {
-  
-  if (which >= render_count || which < 0)
-    return NULL;
-  
-  
+  if ( which < 0 )
+  {
+  	printf("Theme::TextRenderAt(): which < 0 (%d)\n", which);
+  	return NULL;
+  }
+  if ( which >= render_count )
+  {
+  	printf("Theme::TextRenderAt(): which >= render_count (%d, %d)\n", which, render_count);
+  	return NULL;
+  }
   
   return text_renders[which];
 }
