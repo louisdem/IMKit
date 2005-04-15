@@ -52,7 +52,7 @@ RSRCS=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be _APP_ tracker
+LIBS= be _APP_ tracker libxml2.a iconv z
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -116,6 +116,13 @@ APP_VERSION =
 #	~/add-ons/kernel/drivers/dev/video/usb, so that your driver will appear at
 #	/dev/video/usb when loaded. Default is "misc".
 DRIVER_PATH = 
+
+#	Detect BONE
+ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
+	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
+	LIBS += socket bind
+	DEFINES += BONE
+endif
 
 #   Custom overrides that can be set from the command line.
 ifeq ($(DEBUG_BUILD), true)

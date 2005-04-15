@@ -2,6 +2,7 @@
 #define INFOPOPPERSENDER_H
 
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <Entry.h>
 #include <Looper.h>
@@ -12,11 +13,17 @@
 
 #include "pluginproto.h"
 
+#include <libxml/nanohttp.h>
+#include <libxml/tree.h>
+#include <libxml/xpath.h>
+#include <libxml/xpathInternals.h>
+#include <libxml/debugXML.h>
+
 const uint32 kCheckTrack = 'ips1';
 
 enum updateTypes {
 	updateConstant = 0,
-	updateFileChange = 1,
+	updateChange = 1,
 };
 
 class InfoPopperSender : public BLooper {
@@ -38,11 +45,17 @@ class InfoPopperSender : public BLooper {
 				const char	*MainText(void);
 
 	private:
+						int	FetchAlbumCover(BString albumPath, BString search);
+					BString	GetNodeContents(xmlNode *node);
+					void	URLEncode(BString *str);
+	
 		SoundPlayController	*fController;
 			BMessageRunner	*fRunner;
 			PlaylistPtr		fTrack;
 					BString	fAlbumPath;
+
 				entry_ref	fLastRef;
+					float	fLastPitch;
 
 					int8	fUpdateType;
 					BString	fTitleText;

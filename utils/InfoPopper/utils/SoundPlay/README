@@ -5,3 +5,5 @@ After building you'll need to copy / symlink the file obj.x86/SPInfoPopper to yo
 Album covers can be placed in;
 ~/config/settings/BeClan/InfoPopper/SoundPlay/AlbumCovers/{Artist Name}_{Album Name}
 But don't get too comfortable with this, it'll be changed
+
+If an album cover doesn't exist Amazon will be queried for one. You'll need a copy of libxml2 for your netstack that has a working nanoHTTP module. I use a static lib probably should use a shared one, but I don't have a working shared build

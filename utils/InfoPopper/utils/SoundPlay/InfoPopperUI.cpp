@@ -92,7 +92,7 @@ void setconfig(void *data, BMessage *config) {
 	
 	int8 updateType = config->FindInt8("updateType");
 	if (updateType != B_OK) {
-		sender->UpdateType(updateFileChange);
+		sender->UpdateType(updateChange);
 	} else {
 		sender->UpdateType(updateType);
 	};
@@ -165,7 +165,7 @@ void SPIPConfigView::AttachedToWindow(void) {
 
 	fBehaviour = new BMenu("Behaviour");
 	fBehaviour->AddItem(new BMenuItem("Constantly", new BMessage(msgUpdateNotify)));
-	fBehaviour->AddItem(new BMenuItem("On a new song", new BMessage(msgUpdateNotify)));
+	fBehaviour->AddItem(new BMenuItem("On change", new BMessage(msgUpdateNotify)));
 	
 	float w = 0;
 	float h = 0;
@@ -178,7 +178,7 @@ void SPIPConfigView::AttachedToWindow(void) {
 		+ kPadding);
 
 	int8 updateType = fConfig->FindInt8("updateType");
-	if (updateType < B_OK) updateType = updateFileChange;
+	if (updateType < B_OK) updateType = updateChange;
 	fBehaviour->SetTargetForItems(this);
 	fBehaviour->SetLabelFromMarked(true);
 	fBehaviour->ItemAt(updateType)->SetMarked(true);
