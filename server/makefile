@@ -35,7 +35,7 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= im_server.cpp im_server_main.cpp Protocol.cpp AwayMessageWindow.cpp
+SRCS= im_server.cpp im_server_main.cpp Protocol.cpp AwayMessageWindow.cpp DeskbarIcon.cpp
 SRCS+= QueryLooper.cpp
 SRCS+=  $(TOPDIR)/common/IMKitUtilities.cpp $(TOPDIR)/common/BubbleHelper.cpp $(TOPDIR)/common/IconMenuItem.cpp
 
