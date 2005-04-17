@@ -1,5 +1,8 @@
 #include "IMKitUtilities.h"
 
+#include <string.h>
+#include <stdlib.h>
+
 #include <stdio.h>
 
 const int32 kSmallIcon = 16;
@@ -163,6 +166,8 @@ status_t WriteAttribute(BNode node, const char *attribute, const char *value,
 BBitmap * rescale_bitmap( const BBitmap * src, int32 width, int32 height )
 {
 	width--; height--;
+	
+	if (!src || !src->IsValid()) return NULL;
 	
 	BRect srcSize = src->Bounds();
 	
