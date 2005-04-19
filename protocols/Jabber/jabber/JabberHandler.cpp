@@ -4,7 +4,7 @@
 
 #ifdef NETSERVER_BUILD 
 #	include <netdb.h> 
-#	include <socket.h> 
+#	include <sys/socket.h> 
 #	include <Locker.h>
 #endif 
 
@@ -418,7 +418,7 @@ JabberHandler::Send(const BString & xml)
 	if (fSocket) 
 	{
 #ifdef NETSERVER_BUILD 
-		fEndPointLock->Lock(); 
+		fEndpointLock->Lock(); 
 #endif	
 #ifdef STDOUT
 		printf("\n>> %s\n", xml.String());
@@ -426,7 +426,7 @@ JabberHandler::Send(const BString & xml)
 		if(send(fSocket, xml.String(), xml.Length(), 0) == -1)
 			Disconnected("Could not send");
 #ifdef NETSERVER_BUILD 
-		fEndPointLock->Unlock(); 
+		fEndpointLock->Unlock(); 
 #endif
 	} 
 	else
