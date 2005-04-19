@@ -6,12 +6,12 @@
 
 ## Application Specific Settings ---------------------------------------------
 
-ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
+#ifeq ($(wildcard /boot/develop/headers/be/bone/arpa/inet.h),)
 
-.PHONY: default
-default:
-	@echo The Jabber add-on requires BONE. Ignoring Jabber add-on.
-else
+#.PHONY: default
+#default:
+#	@echo The Jabber add-on requires BONE. Ignoring Jabber add-on.
+#else
 
 # specify the name of the binary
 NAME= jabber
@@ -153,6 +153,8 @@ ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot
 	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
 	LIBS += socket bind
 	DEFINES += BONE_BUILD
+else
+	DEFINES += NETSERVER_BUILD	
 endif
 
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
@@ -165,4 +167,4 @@ $(TARGET): _APP_
 _APP_: $(TOPDIR)/build/im_server
 	-ln -sf $< $@
 
-endif    #Bone check.
+#endif    #Bone check.
