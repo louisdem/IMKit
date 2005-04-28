@@ -148,13 +148,14 @@ endif
 
 
 
-#	Detect BONE
+#Detect BONE
 ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
 	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
 	LIBS += socket bind
 	DEFINES += BONE_BUILD
 else
 	DEFINES += NETSERVER_BUILD	
+	LIBS += net
 endif
 
 INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
