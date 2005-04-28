@@ -41,6 +41,12 @@ void InfoPopperSender::MessageReceived(BMessage *msg) {
 			struct file_info info;
 			int index = fTrack->CurrentID();
 			const char *path = fTrack->PathForItem(index);
+			
+			if (path == NULL) {
+				fTrack->Unlock();
+				return;
+			};
+			
 			entry_ref ref;
 			float pitch = fTrack->Pitch();
 
@@ -103,7 +109,7 @@ void InfoPopperSender::MessageReceived(BMessage *msg) {
 				coverPath.Append(aBuffer, aLength);
 				
 				searchStr.Append(aBuffer, aLength);
-				searchStr << " ";
+				if (searchStr.Length() > 0) searchStr << " ";
 				free(aBuffer);
 	
 				coverPath.Append("_");
@@ -194,6 +200,8 @@ const char *InfoPopperSender::MainText(void) {
 //#pragma mark -
 
 int	InfoPopperSender::FetchAlbumCover(BString albumPath, BString search) {
+	if ((albumPath.Length() <= 0) || (search.Length() <= 0) ) return -1;
+
 	BString xmlURL = "http://xml.amazon.com/onca/xml3?locale=us&t=t&dev-t=t&mode=music&sort=+pmrank&offer=All&type=lite&page=1&f=xml&ResponseGroup=Images";
 	xmlURL << "&KeywordSearch=" << search;
 

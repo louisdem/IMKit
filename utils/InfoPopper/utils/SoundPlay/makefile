@@ -8,7 +8,7 @@
 
 # specify the name of the binary
 NAME= SPInfoPopper
-TOPDIR=../../..
+TOPDIR=$(CURDIR)/../../../..
 
 # specify the type of binary
 #	APP:	Application
