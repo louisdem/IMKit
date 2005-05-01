@@ -781,33 +781,25 @@ void IM_DeskbarIcon::DetachedFromWindow() {
 }
 
 void IM_DeskbarIcon::AboutRequested(void) {
-	BString text;
-	text
-		<< _T( "SVN Version: " ) << BUILD_REVISION << "\n"
-		<< _T( "Built on: " ) << BUILD_DATE << "\n\n"
-		<< _T( "The IM Kit is a collaborative effort released under the BeClan banner." )
-		<< _T( " Collaborators include:" ) << "\n"
-		<<     "  - Mikael \"m_eiman\" Eiman\n"
-		<<     "  - Mikael \"tic\" Jansson\n"
-		<<     "  - B \"Lazy Sod ;)\" GA\n"
-		<<     "  - Andrea \"xeD\" Anzani\n"
-		<<     "  - Oliver \"OliverH\" Hartmann\n";
+	BString text = "";
+	text << _T("SVN Version: ") << BUILD_REVISION << "\n"
+		<< _T("Built on: " ) << BUILD_DATE << "\n\n"
+		<< _T("The IM Kit is a collaborative effort released under the BeClan banner.")
+		<< _T(" Collaborators include:" ) << "\n"
+		<< "  - Mikael \"m_eiman\" Eiman\n"
+		<< "  - Mikael \"tic\" Jansson\n"
+		<< "  - B \"Lazy Sod ;)\" GA\n"
+		<< "  - Andrea \"xeD\" Anzani\n"
+		<< "  - Oliver \"OliverH\" Hartmann\n"
+		<< "  - Michael \"slaad\" Davidson\n";
 
 	BAlert *alert = new BAlert("About",
-		text.String(),
-//		"SVN Version: " BUILD_REVISION "\n"
-//		"Built on: " BUILD_DATE "\n\n"
-//		"The IM Kit is a collaborative effort released under the BeClan banner."
-//		" Collaborators include: \n"
-//		"  - Mikael \"m_eiman\" Eiman\n"
-//		"  - Mikael \"tic\" Jansson\n"
-//		"  - B \"Lazy Sod ;)\" GA\n"
-//		"  - Michael \"slaad\" Davidson\n",
-		"Wow!", NULL, NULL, B_WIDTH_AS_USUAL,
-		B_EVEN_SPACING, B_INFO_ALERT);
+		text.String(), "Wow!", NULL, NULL, B_WIDTH_AS_USUAL, B_EVEN_SPACING,
+		B_INFO_ALERT);
 	alert->SetShortcut(0, B_ESCAPE);
 	alert->SetFeel(B_NORMAL_WINDOW_FEEL);
 	alert->Go(NULL);
+	
 };
 
 void
