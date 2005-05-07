@@ -11,10 +11,10 @@
 #include "MSNHandler.h"
 
 void PrintHex(const unsigned char* buf, size_t size) {
-//	if ( g_verbosity_level != liDebug ) {
-//		// only print this stuff in debug mode
-//		return;
-//	}
+	if ( g_verbosity_level != liDebug ) {
+		// only print this stuff in debug mode
+		return;
+	}
 	
 	int i = 0;
 	int j = 0;
@@ -199,8 +199,6 @@ void MSNManager::MessageReceived(BMessage *msg) {
 			char *host = NULL;
 			const char *type = NULL;
 
-			printf("Got a new connection, request was TrID: %i\n", msg->FindInt32("trid"));
-			
 			if (msg->FindString("host", (const char **)&host) != B_OK) {
 				LOG(kProtocolName, liLow, "Got a malformed new connection message"
 					" (Host)");

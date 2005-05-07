@@ -86,46 +86,46 @@ MSNSBConnection::handleIRO( Command * cmd )
 //	fParticipants.push_back( cmd->Param(2) );
 	fParticipants.push_back(bud);
 
-	if (bud) {
-		MSNObject *obj = bud->DisplayPicture();
-		if (obj) {
-			Command *com = new Command("MSG");
-			com->AddParam("A");
-			com->AddPayload("MIME-Version: 1.0\r\n");
-			com->AddPayload("Content-Type: application/x-msnmsgrp2p\r\n");
-			com->AddPayload("P2P-Dest: imkitaim@netscape.net\r\n\r\n");
-	
-			P2PHeader *head = new P2PHeader("INVITE", bud->Passport());
-			head->AddField("To","<msnmsgr:imkitaim@netscape.net>");
-			head->AddField("From", "<msnmsgr:industroslaad@netscape.net>");
-			head->AddField("Via", "MSNLP/1.0/TLP ;branch={33517CE4-02FC-4428-B6F4-39927229B722}");
-			head->AddField("CSeq", "0 ");
-			head->AddField("Call-ID", "{9D79AE57-1BD5-444B-B14E-3FC9BB2B5D58}");
-			head->AddField("Max-Forwards", "0");
-			head->AddField("Content-Type", "application/x-msnmsgr-sessionreqbody");
-			head->Identifier(132413);
-			head->AckSessionID(24321451);
-			head->AckUniqueID(3214213);
-			head->Flags(0);
-	
-			P2PContents *content = new P2PContents();
-			content->AddField("EUF-GUID", "{A4268EEC-FEC5-49E5-95C3-F126696BDBF6}");
-			content->AddField("SessionID", "0");
-			content->AddField("AppID", "1");
-	
-			content->AddField("Context", obj->Base64Encoded());
-	
-			head->Content(content);
+//	if (bud) {
+//		MSNObject *obj = bud->DisplayPicture();
+//		if (obj) {
+//			Command *com = new Command("MSG");
+//			com->AddParam("A");
+//			com->AddPayload("MIME-Version: 1.0\r\n");
+//			com->AddPayload("Content-Type: application/x-msnmsgrp2p\r\n");
+//			com->AddPayload("P2P-Dest: imkitaim@netscape.net\r\n\r\n");
+//	
+//			P2PHeader *head = new P2PHeader("INVITE", bud->Passport());
+//			head->AddField("To","<msnmsgr:imkitaim@netscape.net>");
+//			head->AddField("From", "<msnmsgr:industroslaad@netscape.net>");
+//			head->AddField("Via", "MSNLP/1.0/TLP ;branch={33517CE4-02FC-4428-B6F4-39927229B722}");
+//			head->AddField("CSeq", "0 ");
+//			head->AddField("Call-ID", "{9D79AE57-1BD5-444B-B14E-3FC9BB2B5D58}");
+//			head->AddField("Max-Forwards", "0");
+//			head->AddField("Content-Type", "application/x-msnmsgr-sessionreqbody");
+//			head->Identifier(132413);
+//			head->AckSessionID(24321451);
+//			head->AckUniqueID(3214213);
+//			head->Flags(0);
+//	
+//			P2PContents *content = new P2PContents();
+//			content->AddField("EUF-GUID", "{A4268EEC-FEC5-49E5-95C3-F126696BDBF6}");
+//			content->AddField("SessionID", "1980589");
+//			content->AddField("AppID", "1");
+//	
+//			content->AddField("Context", obj->Base64Encoded());
+//	
+//			head->Content(content);
 //			printf("Head:\n");
 //			head->Debug();
-//			
-			com->AddPayload(head->Flatten(), head->FlattenedLength());
+////			
+//			com->AddPayload(head->Flatten(), head->FlattenedLength());
 //			printf("--\n\n\n\n\n--Command:\n");
 //			com->Debug();
-			
+//			
 //			Send(com);
-		};
-	};
+//		};
+//	};
 	
 	return B_OK;
 };

@@ -9,16 +9,14 @@
 
 #include "MSNObject.h"
 
-const char *kClientVer = "0x0409 win 4.10 i386 MSNMSGR 6.0.0602 MSMSGS";
-//const char *kClientVer = "0x0409 winnt 5.1 i386 MSNMSGR 4.7.3001 WindowsMessenger";
-const char *kProtocolsVers = "MSNP10 MSNP9 CVR0";
-//const char *kProtocolsVers = "MSNP8 CVR0";
+const char *kClientVer = "0x0409 winnt 5.1 i386 MSNMSGR 6.1.0211 MSMSGS";
+const char *kProtocolsVers = "MSNP11 CVR0";
 
 const int16 kDefaultPort = 1863;
 const uint32 kOurCaps = ccUnknown2 | ccMSNC1;
 
-extern const char *kClientIDString = "msmsgs@msnmsgr.com";
-extern const char *kClientIDCode = "Q1P7W2E4J9R8U3S5";
+extern const char *kClientID = "PROD0090YUAUV{2B";
+extern const char *kClientCode = "YMM8C_H7KCQ2S_KL";
 
 void remove_html(char *msg);
 void PrintHex(const unsigned char* buf, size_t size);
@@ -67,22 +65,7 @@ char *Base64Encode(const char *in, off_t length) {
 	
 	out[k] = '\0';
 	return out;
-}
-
-
-void MD5(unsigned char *text, char * digest)
-{
-	MD5state_st state;
-	unsigned char md5data[32];
-	
-	MD5_Init(&state);
-	MD5_Update(&state, text, (unsigned short)strlen((const char*)text));
-	MD5_Final(md5data, &state);
-	
-	for (int32 i = 0; i < MD5_DIGEST_LENGTH; i++)
-		sprintf(&(digest[i*2]),"%02x",md5data[i]);
-}
-
+};
 
 MSNConnection::MSNConnection()
 : BLooper("MSNConnection looper") {
@@ -263,11 +246,7 @@ int32 MSNConnection::Receiver(void *con) {
 	MSNConnection *connection = reinterpret_cast<MSNConnection *>(con);
 
 	const uint32 kSleep = 2000000;
-//	const char *kHost = strdup(connection->Server()); // memory leak.
-//	const uint16 kPort = connection->Port();
 	BMessenger **kMsgr = &connection->fSockMsgr;
-//	BMessenger kManMsgr = connection->fManMsgr;
-	
 	int32 socket = 0;
 	
 	if ( !(*kMsgr)->IsValid() ) {
@@ -276,18 +255,6 @@ int32 MSNConnection::Receiver(void *con) {
 	}
 	
 	BMessage reply;
-/*
-	status_t ret = 0;
-	if ((ret = (*kMsgr)->SendMessage(msnmsgGetSocket, &reply)) == B_OK) {
-		if ((ret = reply.FindInt32("socket", &socket)) != B_OK) {
-			LOG(kProtocolName, liLow, "C[r] %lX: Couldn't get socket: %i", connection, ret);
-			return B_ERROR;
-		};
-	} else {
-		LOG(kProtocolName, liLow, "C[r] %lX: Couldn't obtain socket: %i", connection, ret);
-		return B_ERROR;
-	}
-*/
 	socket = connection->fSock;
 		
 	struct fd_set read;
@@ -626,7 +593,6 @@ void MSNConnection::ClearQueues(void) {
 };
 
 status_t MSNConnection::ProcessCommand(Command *command) {
-//	command->Debug();
 	if (command->Type() == "VER") {
 		return handleVER( command );
 	} else
@@ -853,25 +819,80 @@ status_t MSNConnection::handleXFR( Command * command ) {
 
 status_t MSNConnection::handleCHL( Command * command ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing CHL", this);
-	BString chal = command->Param(0);
-	chal << kClientIDCode;
-	
-	Command *reply = new Command("QRY");
-	reply->AddParam(kClientIDString);
 
-	char digest[33];
+	const char *challenge = command->Param(0);
+	int i = 0;
+	unsigned char buf[256];
+	char chlString[128];
+	long long high = 0;
+	long long low = 0;
+	long long temp = 0;
+	long long key = 0;
+	long long bskey = 0;
+	int *chlStringArray = (int *)chlString;
+	int *md5hash = (int *)buf;
+	char hash1a[17];
+	char hash2a[17];
+	long long hash1 = 0;
+	long long hash2 = 0;
 	
-	MD5( (uchar*)chal.String(), digest );
+	sprintf((char *)buf + 16, "%s%s", challenge, kClientCode);
+	MD5(buf + 16, strlen((char *)buf + 16), buf);
+	for (i = 0; i < 16; i++) {
+		sprintf((char *)buf + 16 + i * 2,"%02x", buf[i]);
+	};
 	
-	PrintHex((uchar *)digest, 32);
+	for (i = 0; i < 4; i++) {
+	   md5hash[i] = md5hash[i] & 0x7FFFFFFF;
+	};
 	
-	reply->AddPayload(digest, 32);
-	reply->Debug();
+	i = (strlen(challenge) + strlen(kClientID) + 7) & 0xF8;
+	sprintf(chlString,"%s%s00000000", challenge, kClientID);
+	chlString[i] = 0;
+	
+	for (i = 0; i < strlen(chlString) / 4; i += 2) {
+		temp = chlStringArray[i];
+		
+		temp = (0x0E79A9C1 * temp) % 0x7FFFFFFF;
+		temp += high;
+		temp = md5hash[0] * temp + md5hash[1];
+		temp = temp % 0x7FFFFFFF;
+		
+		high = chlStringArray[i + 1];
+		high = (high + temp) % 0x7FFFFFFF;
+		high = md5hash[2] * high + md5hash[3];
+		high = high % 0x7FFFFFFF;
+		
+		low = low + high + temp;
+	};
+	
+	high = (high + md5hash[1]) % 0x7FFFFFFF;
+	low = (low + md5hash[3]) % 0x7FFFFFFF;
+	
+	key = (low << 32) + high;
+	for (i= 0; i < 8; i++) {
+		bskey <<= 8;
+		bskey += key & 255;
+		key >>=8;
+	};
+	
+	strncpy((char *)hash1a, (char *)buf + 16, 16);
+	strncpy((char *)hash2a, (char *)buf + 32, 16);
+	hash1a[16] = '\0';
+	hash2a[16] = '\0';
+	
+	sprintf((char *)buf, "%llx%llx", strtoull(hash1a,NULL,16) ^ bskey,
+		strtoull(hash2a,NULL,16) ^ bskey);
+
+	Command *reply = new Command("QRY");
+	reply->AddParam(kClientID);
+	reply->AddPayload((char *)buf, 32);
 	
 	Send(reply);
-
+	reply->Debug();
+	
 	return B_OK;
-}
+};
 
 status_t MSNConnection::handleUSR( Command * command ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing USR", this);
@@ -917,16 +938,25 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		return B_OK;
 	};
 	
+	command->Debug();
+	
 	Progress("MSN Login", "MSN: Requesting ticket..", 0.25);
-	
-	const char * login_host = "nexus.passport.com";
-	
-	HTTPFormatter *send = new HTTPFormatter(login_host, "/rdr/pprdr.asp");
+
+	HTTPFormatter *send = NULL;
 	HTTPFormatter *recv = NULL;
+	int32 begin = -1;
+	BString loginHost = "";
+
+//	XXX - nexus.passport.com seems to have vanished. nexus.passport-int.com works
+	
+	const char *login_host = "nexus.passport-int.com";
+	
+	send = new HTTPFormatter(login_host, "/rdr/pprdr.asp");
+	recv = NULL;
 
 	int32 recvdBytes = SSLSend(login_host, send, &recv);
 
-	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
+	LOG(kProtocolName, liHigh, "C %lX: got %i bytes` from SSL connection to %s",
 		this, recvdBytes, login_host);
 
 	if (recvdBytes < 0) {
@@ -942,8 +972,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	
 	
 	BString passportURLs = recv->HeaderContents("PassportURLs");
-	int32 begin = passportURLs.FindFirst("DALogin=");
-	BString loginHost = "";
+	begin = passportURLs.FindFirst("DALogin=");
+
 	if (begin != B_ERROR) {
 		int32 end = passportURLs.FindFirst(",", begin);
 		passportURLs.CopyInto(loginHost, begin + strlen("DALogin="),
@@ -961,7 +991,8 @@ status_t MSNConnection::handleUSR( Command * command ) {
 //	XXX - We should connect to the host above and get redired around a bit. But
 //	That's pissing me off!
 
-	loginHost = "login.passport.com";
+//	loginHost = "login.passport.com";
+	loginHost = "loginnet.passport.com";
 	loginDocument = "/login2.srf?lc=1033";
 		
 	delete send;

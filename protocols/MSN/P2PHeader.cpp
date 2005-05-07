@@ -106,6 +106,7 @@ const char *P2PHeader::Flatten(void) {
 		fFlattened.Write((char *)&fAckUniqID, sizeof(fAckUniqID));
 		fFlattened.Write((char *)&fAckDataSize, sizeof(fAckDataSize));
 
+		fFlattened.Write("\r\n", strlen("\r\n"));
 		fFlattened.Write(fMethod.String(), fMethod.Length());
 		fFlattened.Write(" MSNMSGR:", strlen(" MSNMSGR:"));
 		fFlattened.Write(fRecipient.String(), fRecipient.Length());
@@ -161,7 +162,7 @@ const char *P2PHeader::Flatten(void) {
 
 // Culprint here, fooooooooooooooo!!!!!!!
 
-		fMessageSize = fFlattened.BufferLength() - 48 - 2; // Header;
+		fMessageSize = fFlattened.BufferLength() - 48 - 4; // Header;
 		fSize = fMessageSize;
 		fFlattened.WriteAt(offset, (char *)&fSize, sizeof(fSize));
 		fFlattened.WriteAt(offset + sizeof(fSize), b, sizeof(b));

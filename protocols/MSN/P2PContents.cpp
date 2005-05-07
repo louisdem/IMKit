@@ -93,7 +93,8 @@ char *P2PContents::Flatten(void) {
 		
 		fFlattened.Write(fContents.Buffer(), fContents.BufferLength());
 		fFlattened.Write("\r\n", strlen("\r\n"));
-		int8 null = 0;
+//		int8 null = 0;
+		char null = '\0';
 		fFlattened.Write((char *)&null, sizeof(null));
 		
 		fDirty = false;

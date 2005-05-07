@@ -170,7 +170,7 @@ char *MSNObject::Base64Encode(const char *in, off_t length) {
 	}
 	
 	out[k] = '\0';
-	printf("Out: %s\n", out);
+
 	return out;
 }
 

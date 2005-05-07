@@ -14,10 +14,11 @@
 const char *kProtocolName = "msn";
 const char *kThreadName = "IMKit: MSN Protocol";
 
-extern "C"
-IM::Protocol * load_protocol() {
-	return new MSNProtocol();
-}
+extern "C" {
+	IM::Protocol *load_protocol() {	
+		return new MSNProtocol();
+	};
+};
 
 MSNProtocol::MSNProtocol()
 	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST ),

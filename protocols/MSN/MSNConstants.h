@@ -10,8 +10,8 @@ extern const char *kProtocolsVers;
 extern const int16 kDefaultPort;
 
 extern const uint32 kOurCaps;
-extern const char *kClientIDString;
-extern const char *kClientIDCode;
+extern const char *kClientID;
+extern const char *kClientCode;
 
 enum online_types {
 	otOnline,
