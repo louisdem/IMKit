@@ -134,7 +134,7 @@ class ChatWindow : public BWindow {
 					Theme	*fTheme;
 					
 					float	fFontHeight;
-				IconBar		*fDock;
+				IconBar	*fDock;
 					
 				BMenuField	*fProtocolMenu;
 				StatusBar	*fStatusBar;

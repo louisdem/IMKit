@@ -10,7 +10,8 @@
 class NormalTextRender : public TextRender
 {
     public:
-          NormalTextRender(BFont f):TextRender(){
+    	  
+    	 NormalTextRender(BFont f):TextRender(){
                         	font=f;
           }
           virtual ~NormalTextRender() {};

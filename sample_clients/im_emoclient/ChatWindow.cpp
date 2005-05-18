@@ -34,6 +34,8 @@ const int32 kTypingStoppedRate = 5 * 1000 * 1000;
 extern BPopUpMenu* 	popup;
 extern BMenu* 	 		iconmenu;
 
+SmileTextRender	str;
+
 ChatWindow::ChatWindow(entry_ref & ref)
 :	BWindow( 
 		BRect(100,100,400,300), 
@@ -117,6 +119,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 
 	dockRect.bottom = iconBarSize + kDockPadding;
 	fDock = new IconBar(dockRect);
+	
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -293,24 +296,24 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	
 	fTheme = new Theme("ChatWindow", MAX_COLORS + 1, MAX_COLORS + 1, MAX_FONTS + 1);
 
-	NormalTextRender *ntr=new NormalTextRender(be_plain_font);
+	//NormalTextRender *ntr=new NormalTextRender(be_plain_font);
 	
 	fTheme->WriteLock();
 	fTheme->SetForeground(C_URL, 5, 5, 150);
 	fTheme->SetBackground(C_URL, 255, 255, 255);
-	fTheme->SetTextRender(C_URL, ntr);
+	//fTheme->SetTextRender(C_URL, ntr);
 	
 	fTheme->SetForeground(C_TIMESTAMP, 130, 130, 130);
 	fTheme->SetBackground(C_TIMESTAMP, 255, 255, 255);
-	fTheme->SetTextRender(F_TIMESTAMP, ntr);
+	//fTheme->SetTextRender(F_TIMESTAMP, ntr);
 
 	fTheme->SetForeground(C_TEXT, 0, 0, 0);
 	fTheme->SetBackground(C_TEXT, 255, 255, 255);
-	fTheme->SetTextRender(F_TEXT, ntr);
+	//fTheme->SetTextRender(F_TEXT, ntr);
 	
 	fTheme->SetForeground(C_ACTION, 0, 0, 0);
 	fTheme->SetBackground(C_ACTION, 255, 255, 255);
-	fTheme->SetTextRender(F_ACTION, ntr);
+	//fTheme->SetTextRender(F_ACTION, ntr);
 	
 	fTheme->SetForeground(C_SELECTION, 255, 255, 255);
 	fTheme->SetBackground(C_SELECTION, 0, 0, 0);
@@ -321,8 +324,8 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fTheme->SetForeground(C_OTHERNICK, 255, 0, 0);
 	fTheme->SetBackground(C_OTHERNICK, 255, 255, 255);
 	
-	SmileTextRender *str=new SmileTextRender();
-	fTheme->SetTextRender(F_EMOTICON,str);	
+	//SmileTextRender *str=new SmileTextRender();
+	fTheme->SetTextRender(F_EMOTICON,&str);	
 	
 
 	fTheme->WriteUnlock();
@@ -1194,7 +1197,7 @@ void ChatWindow::RebuildDisplay(void) {
 	if (iconBarSize <= 0) iconBarSize = kLargeIcon;
 	
 	printf("Resizing to %i\n", iconBarSize);
-	fDock->ResizeTo(Bounds().Width(), iconBarSize + kDockPadding);
+	//fDock->ResizeTo(Bounds().Width(), iconBarSize + kDockPadding);
 #endif
 };
 

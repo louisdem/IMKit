@@ -30,6 +30,7 @@
 #include "TextRender.h"
 
 class BView;
+class NormalTextRender;
 
 class Theme
 {
@@ -101,6 +102,8 @@ class Theme
 	
 	void					AddView (BView *);
 	void					RemoveView (BView *);
+	
+	NormalTextRender	*normal_textrender;
 };
 
 #endif

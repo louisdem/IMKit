@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include "StdBevels.h"
 
 ImageButton::ImageButton( BRect rect, const char * name, BMessage * msg, uint32 resizing, uint32 flags, BBitmap * bitmap, const char * label )
 :	BControl(rect,name,label,msg,resizing,flags)
@@ -43,6 +44,18 @@ ImageButton::MouseMoved( BPoint /*where*/, uint32 transition, const BMessage * /
 			fMouseOver = false;
 			Invalidate();
 			break;
+		case B_INSIDE_VIEW:
+			if(!fMouseOver){
+				fMouseOver=true;
+				Invalidate();
+			}
+			break;
+		case B_OUTSIDE_VIEW:
+			if(fMouseOver){
+				fMouseOver=false;
+				Invalidate();
+			}
+			break;
 	}
 }
 
@@ -60,47 +73,22 @@ ImageButton::MouseUp( BPoint where )
 }
 
 void
-ImageButton::Draw( BRect /*update_rect*/ )
+ImageButton::Draw( BRect update_rect )
 {
-	rgb_color view_color = ViewColor();
-	
-	rgb_color highlight = tint_color( view_color, B_DARKEN_1_TINT );
-	rgb_color light = tint_color( view_color, B_LIGHTEN_2_TINT );
-	rgb_color dark = tint_color( view_color, B_DARKEN_2_TINT );
-	
-	rgb_color first, second;
-	
 	if ( fMouseDown )
 	{
-		SetHighColor( highlight );
+		SetHighColor( tint_color( ViewColor(), B_DARKEN_1_TINT ) );
 		FillRect( Bounds() );
-	}
-	
-	if ( fMouseOver )
-	{
-		first = light;
-		second = dark;
-	}
-	
-	if ( fMouseDown )
-	{
-		first = dark;
-		second = light;
-	}
-	
-	if ( fMouseOver || fMouseDown )
-	{
-		MovePenTo( 0, Bounds().bottom );
+		StdBevels::DrawBorderBevel(this, update_rect, StdBevels::DEPRESSED_BEVEL);
 
-		SetHighColor( first );
-		StrokeLine( BPoint(0,0) );
-		StrokeLine( BPoint(Bounds().right, 0) );
-		
-		SetHighColor( second );
-		StrokeLine( BPoint(Bounds().right, Bounds().bottom) );
-		StrokeLine( BPoint(0, Bounds().bottom) );
 	}
+	else
+	if ( fMouseOver )
+	{	
+		StdBevels::DrawBorderBevel(this, update_rect, StdBevels::NORMAL_BEVEL);
 	
+	}
+
 	SetHighColor(0,0,0);
 	
 	float center = Bounds().Width() / 2;

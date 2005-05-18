@@ -29,6 +29,7 @@
 #include <stdio.h> //fix
 
 #include "Theme.h"
+#include "NormalTextRender.h"
 
 int16 Theme::TimestampFore      = 0;
 int16 Theme::TimestampBack      = 0;
@@ -40,6 +41,9 @@ int16 Theme::NormalFore         = 2;
 int16 Theme::NormalBack         = 2;
 int16 Theme::NormalFont         = 2;
 int16 Theme::SelectionBack      = 3;
+
+//at least we use a 'normal' text render
+
 
 Theme::Theme (
   const char *n,
@@ -58,12 +62,15 @@ Theme::Theme (
 
   fores = new rgb_color [fore_count];
   backs = new rgb_color [back_count];
-  //text_renders = new BFont     [font_count];
+  
+  normal_textrender = new NormalTextRender(be_plain_font);
+  
   text_renders = (TextRender**)malloc(render_count*sizeof(TextRender*));
 	for ( int i=0; i<render_count; i++ )
-		text_renders[i] = NULL;
+		text_renders[i] = normal_textrender;
 	
-
+  
+	
   sid = create_sem (NUMBER_THEME_READERS, name);
 
   rgb_color def_timestamp_fore  = {200, 150, 150, 255};
@@ -89,8 +96,9 @@ Theme::~Theme (void)
   //delete [] fonts;
   	for ( int i=0; i<render_count; i++ )
 		if ( text_renders[i] )
-			delete text_renders[i];
-	free(text_renders);
+			text_renders[i]=NULL;
+	
+  delete normal_textrender;
   
   delete [] backs;
   delete [] fores;
@@ -181,15 +189,13 @@ Theme::FontAt (int16 which) const
 TextRender*
 Theme::TextRenderAt (int16 which) 
 {
-  if ( which < 0 )
-  {
-  	printf("Theme::TextRenderAt(): which < 0 (%d)\n", which);
-  	return NULL;
+  if ( which < 0 ){
+  	//printf("Theme::TextRenderAt(): which < 0 (%d)\n", which);
+  	return normal_textrender;
   }
-  if ( which >= render_count )
-  {
-  	printf("Theme::TextRenderAt(): which >= render_count (%d, %d)\n", which, render_count);
-  	return NULL;
+  if ( which >= render_count ){
+  	//printf("Theme::TextRenderAt(): which >= render_count (%d, %d)\n", which, render_count);
+  	return normal_textrender;
   }
   
   return text_renders[which];
@@ -221,7 +227,7 @@ Theme::SetTextRender(int16 which,TextRender *trender)
 {
 	
 	
-    if (which >= render_count || which < 0)
+    if (which >= render_count || which < 0 || !trender)
         return false;
         
    	text_renders[which] = trender;
