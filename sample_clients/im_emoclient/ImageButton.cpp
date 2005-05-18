@@ -73,19 +73,19 @@ ImageButton::MouseUp( BPoint where )
 }
 
 void
-ImageButton::Draw( BRect update_rect )
+ImageButton::Draw( BRect /* update_rect */ )
 {
 	if ( fMouseDown )
 	{
 		SetHighColor( tint_color( ViewColor(), B_DARKEN_1_TINT ) );
 		FillRect( Bounds() );
-		StdBevels::DrawBorderBevel(this, update_rect, StdBevels::DEPRESSED_BEVEL);
+		StdBevels::DrawBorderBevel(this, Bounds(), StdBevels::DEPRESSED_BEVEL);
 
 	}
 	else
 	if ( fMouseOver )
 	{	
-		StdBevels::DrawBorderBevel(this, update_rect, StdBevels::NORMAL_BEVEL);
+		StdBevels::DrawBorderBevel(this,  Bounds(), StdBevels::NORMAL_BEVEL);
 	
 	}
 
