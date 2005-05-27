@@ -7,6 +7,7 @@ InfoPopperSender::InfoPopperSender(SoundPlayController *controller)
 	
 	fMainText = "";
 	fTitleText = "";
+	fUpdateType = updateConstant;
 	
 	fController->Lock();
 

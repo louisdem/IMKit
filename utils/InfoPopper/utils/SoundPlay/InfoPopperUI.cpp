@@ -220,7 +220,12 @@ void SPIPConfigView::AttachedToWindow(void) {
 void SPIPConfigView::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case msgUpdateNotify: {
-			fConfig->ReplaceInt8("updateType", msg->FindInt32("index"));
+			int8 type = -1;
+			if (fConfig->FindInt8("updateType", &type) == B_OK) {
+				fConfig->ReplaceInt8("updateType", msg->FindInt32("index"));
+			} else {
+				fConfig->AddInt8("updateType", msg->FindInt32("index"));
+			};
 		} break;
 		
 		case msgUpdateTitleText: {
