@@ -11,6 +11,7 @@ Command::Command(const char *type)
 	fType.ToUpper();
 
 	gExpectsPayload["MSG"] = true;
+	gExpectsPayload["UBX"] = true;
 };
 
 Command::~Command(void) {
