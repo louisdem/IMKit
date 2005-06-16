@@ -2,7 +2,6 @@
 
 #include <libim/Constants.h>
 #include <libim/Helpers.h>
-#include "DeskbarIcon.h"
 #include <TranslationUtils.h>
 
 #include <image.h>
@@ -1048,7 +1047,8 @@ Server::selectConnection( BMessage * msg, Contact & contact )
 	
 	if ( fPreferredConnection[contact].length() > 0 )
 	{
-		strcpy(connection, fPreferredConnection[contact].c_str());
+		strncpy(connection, fPreferredConnection[contact].c_str(), sizeof(connection));
+		connection[sizeof(connection)-1] = 0;
 		
 		if ( fStatus[connection].length() > 0 && fStatus[connection] != OFFLINE_TEXT )
 		{
@@ -1064,7 +1064,7 @@ Server::selectConnection( BMessage * msg, Contact & contact )
 				return B_OK;
 			}
 		}
-		LOG("im_server", liDebug, "Preferred connection not online");
+		LOG("im_server", liDebug, "Preferred connection [%s] not online", connection);
 	}
 	
 	// look for an online protocol
@@ -1419,7 +1419,7 @@ Server::MessageFromProtocols( BMessage * msg )
 		for ( list<Contact>::iterator iter = contacts.begin(); iter != contacts.end(); iter++ )
 		{
 			if ( im_what == MESSAGE_RECEIVED )
-			{ // message received from contact, store the protocol in fPreferredProtocol
+			{ // message received from contact, store the connection in fPreferredProtocol
 				char status[256];
 				contact.GetStatus(status,sizeof(status));
 				
@@ -1428,12 +1428,10 @@ Server::MessageFromProtocols( BMessage * msg )
 					LOG("im_server", liHigh, "Dropping message from blocked contact [%s:%s]", protocol, id);
 				} else {
 					msg->AddRef( "contact", *iter );
-					if ( fPreferredConnection[*iter] != protocol )
-					{
-						char connection[512];
-						sprintf(connection, "%s:%s", protocol, id);
-						fPreferredConnection[*iter] = connection;
-						LOG("im_server", liLow, "Setting preferred connection for contact to %s", connection );
+					if ( fPreferredConnection[*iter] != proto_id )
+					{ // set preferred connection to this one if it's no already that
+						fPreferredConnection[*iter] = proto_id;
+						LOG("im_server", liLow, "Setting preferred connection for contact to %s", proto_id.c_str() );
 					}
 				}
 			} else {
