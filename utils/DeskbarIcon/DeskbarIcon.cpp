@@ -384,6 +384,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 					Invalidate();
 				} break; 
 			};
+			Invalidate(); // FIXME ugly hack to fix missing redraws
 		} break;
 
 		case B_NODE_MONITOR: {
