@@ -3,10 +3,10 @@
 #include <stdio.h>
 
 Command::Command(const char *type)
-	: fDirty(true),
-	fType(type),
-	fTrID(-1),
-	fUseTrID(true) {
+	: fTrID(-1),
+	fUseTrID(true),
+	fDirty(true),
+	fType(type) {
 		
 	fType.ToUpper();
 
@@ -92,7 +92,7 @@ const char *Command::Param(int32 index, bool decode = false) {
 	return param_string;
 };
 
-status_t Command::AddPayload(const char *payload, int32 length = -1, bool encode = true) {
+status_t Command::AddPayload(const char *payload, int32 length = -1, bool /*encode = true*/) {
 	fDirty = true;
 
 	if (length == -1) length = strlen(payload);
@@ -190,12 +190,12 @@ void Command::Debug(void) {
 
 	if (Payloads() > 0) {
 		int32 size = 0;
-		int32 c = 0;
+		//int32 c = 0;
 		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
 			size += (*j)->BufferLength();
 		};
 		
-		printf(" %i", size);
+		printf(" %i", (int)size);
 	};
 	
 	printf("\r\n");
@@ -203,7 +203,7 @@ void Command::Debug(void) {
 	if (Payloads() > 0) {
 		for (j = fPayloads.begin(); j != fPayloads.end(); j++) {
 			char *buffer = (char *)(*j)->Buffer();
-			for (int32 i = 0; i < (*j)->BufferLength(); i++) {
+			for (int32 i = 0; i < (int32)(*j)->BufferLength(); i++) {
 				if ((buffer[i] == '\r') || (buffer[i] == '\n'))
 					printf("%c", buffer[i]);
 				else if ((buffer[i] < 0x20) || (buffer[i] > 0x7e))
