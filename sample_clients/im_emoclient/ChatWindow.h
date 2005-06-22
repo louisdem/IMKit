@@ -94,6 +94,7 @@ class ChatWindow : public BWindow {
 					void	stopSelfTypingTimer(void);
 					void	RebuildDisplay(void);
 					
+									
 				BBitmap		*IconForHandler(const char *type, int32 size);
 				ImageButton	*MakeButton(BBitmap *icon, const char *help,
 								BMessage *msg, BRect rect);
@@ -116,7 +117,7 @@ class ChatWindow : public BWindow {
 					 };
 		
 				entry_ref	fEntry;
-					char	fName[512];
+					
 					
 				BTextView	*fInput;
 				RunView		*fText;
@@ -142,6 +143,9 @@ class ChatWindow : public BWindow {
 				BButton		*fSendButton;
 				
 			BString			fPeopleHandler;
+			BString			fOtherText;
+			BString			fName;
+
 					
 			BMessageRunner	*fTypingTimerSelf;
 			BMessageRunner	*fTypingTimer;

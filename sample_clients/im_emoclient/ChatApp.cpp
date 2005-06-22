@@ -19,7 +19,6 @@ Emoticor*	emoticor;
 BPopUpMenu*	popup;
 
 
-
 const char *kDefaultPeopleHandler = "application/x-vnd.Be-PEPL";
 
 ChatApp::ChatApp()
@@ -110,6 +109,13 @@ ChatApp::ChatApp()
 	smiley.AddInt32("type", B_STRING_TYPE);
 	smiley.AddString("default", "/boot/home/config/settings/im_kit/smileys/settings_svg.xml");
 	smiley.AddString("help", "Defines the location of the smiley configuration file");
+	
+	BMessage other;
+	other.AddString("name", "other");
+	other.AddString("description", "Other name");
+	other.AddInt32("type", B_STRING_TYPE);
+	other.AddString("default", "$name$ ($nickname$) ($protocol$) ");
+	other.AddString("help", "fix me please");
 
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);
@@ -119,6 +125,7 @@ ChatApp::ChatApp()
 	tmplate.AddMessage("setting", &useCommand);
 	tmplate.AddMessage("setting", &peopleHandler);
 	tmplate.AddMessage("setting", &smiley);
+	tmplate.AddMessage("setting", &other);
 	
 	im_save_client_template("im_emoclient", &tmplate);
 	
@@ -127,6 +134,8 @@ ChatApp::ChatApp()
 	bool temp;
 	int32 tmp;
 	BString smiley_config;
+	BString	aother;
+
 	
 	im_load_client_settings("im_emoclient", &settings);
 	if ( !settings.FindString("app_sig") )
@@ -149,7 +158,10 @@ ChatApp::ChatApp()
 		settings.AddString("smiley_config",smiley_config);
 	}
 	
-	
+	if (settings.FindString("other", &aother) != B_OK ) {
+		aother.SetTo( "$name$ ($nickname$) ($protocol$) ");
+		settings.AddString("other",aother);
+	}
 	im_save_client_settings("im_emoclient", &settings);
 	// done with template and settings.
 	

@@ -68,6 +68,9 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	if (chatSettings.FindString("people_handler", &fPeopleHandler) != B_OK) {
 		fPeopleHandler = kDefaultPeopleHandler;
 	};
+	if (chatSettings.FindString("other", &fOtherText) != B_OK ) {
+		fOtherText.SetTo( "$name$ ($nickname$) ($protocol$) ");
+	}
 	
 	// Set window size limits
 	SetSizeLimits(
@@ -209,7 +212,8 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		"input_scroller", fInput,
 		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM, 0,
 		false,
-		true
+		true,
+		B_PLAIN_BORDER
 	);
 
 	AddChild(fInputScroll);	
@@ -358,7 +362,8 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		"scroller", fText,
 		B_FOLLOW_ALL, 0,
 		false, // horiz
-		true // vert
+		true, // vert
+		B_PLAIN_BORDER
 	);
 	AddChild(fTextScroll);
 	fTextScroll->MoveTo(0,fDock->Bounds().bottom+1);
@@ -427,15 +432,6 @@ ChatWindow::~ChatWindow()
 
 	if ( fProtocolHack )
 		delete fProtocolHack;
-	
-	if(fTheme)
-	{
-//		if(fTheme->TextRenderAt(F_EMOTICON)) 
-//			delete fTheme->TextRenderAt(F_EMOTICON);
-			
-//		if(fTheme->TextRenderAt(F_TEXT)) 
-//			delete fTheme->TextRenderAt(F_TEXT);
-	}	
 	
 	fMan->Lock();
 	fMan->Quit();
@@ -654,22 +650,21 @@ ChatWindow::MessageReceived( BMessage * msg )
 					BString protocol = msg->FindString("protocol");
 					BString message = msg->FindString("message");
 					
+					
+										
 					if (protocol.Length() > 0) {
-						protocol.Prepend(" (");
-						protocol << ") ";
+						fName.ReplaceAll("$protocol$",protocol.String());
 					} else {
-						protocol = " ";
+						fName.ReplaceAll("$protocol$"," ");
 					};
 					
 					if (message.Compare("/me ", 4) == 0) {
 						fText->Append("* ", C_ACTION, C_ACTION, F_ACTION);
-						fText->Append(fName, C_ACTION, C_ACTION, F_ACTION);
-						fText->Append(protocol.String(), C_ACTION, C_ACTION, F_ACTION);
+						fText->Append(fName.String(), C_ACTION, C_ACTION, F_ACTION);
 						message.Remove(0, 4);
 						fText->Append(message.String(), C_ACTION, C_ACTION, F_ACTION);
 					} else {
-						fText->Append(fName, C_OTHERNICK, C_OTHERNICK, F_TEXT);
-						fText->Append(protocol.String(), C_OTHERNICK, C_OTHERNICK, F_TEXT);
+						fText->Append(fName.String(), C_OTHERNICK, C_OTHERNICK, F_TEXT);
 						fText->Append(": ", C_OTHERNICK, C_OTHERNICK, F_TEXT);
 						emoticor->AddText(fText,msg->FindString("message"), C_TEXT, F_TEXT,C_TEXT,F_EMOTICON); //by xeD
 
@@ -977,6 +972,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 	}
 }
 
+
 void
 ChatWindow::FrameResized( float /*w*/, float /*h*/ )
 {
@@ -1019,7 +1015,14 @@ ChatWindow::reloadContact()
 	if ( c.GetNickname(nick,sizeof(nick)) != B_OK )
 		strcpy(nick,_T("no nick"));
 	
-	sprintf(fName,"%s (%s)", name, nick );
+	fName.SetTo(fOtherText);
+	fName.ReplaceAll("$nickname$",nick);
+	fName.ReplaceAll("$name$",name);
+	
+	BString wintitle(fName);
+	wintitle.RemoveAll("$protocol$");
+	wintitle.RemoveAll("()");
+	
 	
 	BNode node(&fEntry);
 	
@@ -1035,7 +1038,7 @@ ChatWindow::reloadContact()
 		status[num_read] = 0;
 	
 	// rename window
-	sprintf(fTitleCache,"%s - %s", fName, _T(status));
+	sprintf(fTitleCache,"%s - %s", wintitle.String(), _T(status));
 	
 	if ( !fChangedNotActivated )
 	{
