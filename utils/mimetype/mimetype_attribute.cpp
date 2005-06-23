@@ -48,7 +48,7 @@ int main( int numarg, const char * argv[] )
 	bool isPublic = true;
 	bool isViewable = true;
 	bool isExtra = false;
-	
+
 	int displayWidth=60;
 	
 	// decode arguments
@@ -132,6 +132,7 @@ int main( int numarg, const char * argv[] )
 
 	// args ok, fetch current attributes
 	BMimeType mime(mimeType.String());
+	BMessage msg;
 	
 	if (mime.InitCheck() != B_OK) {
 		printf("Invalid MIME type\n");
@@ -143,12 +144,14 @@ int main( int numarg, const char * argv[] )
 		status_t status = mime.Install();
 		if (status != B_OK) printf("%s", strerror(status));
 		printf("\n");
+		
+		mime.SetAttrInfo(&msg);
 	};
 
-	BMessage msg;
 	
 	if (mime.GetAttrInfo(&msg) != B_OK) {
-		printf("Error getting current attributes.\n");
+		printf("Error getting current attributes: %s\n:", strerror(mime.GetAttrInfo(&msg)));
+		msg.PrintToStream();
 		return 3;
 	}
 	
