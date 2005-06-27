@@ -279,7 +279,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 				BMessage msg('blnk');
 				fMsgRunner = new BMessageRunner( BMessenger(this), &msg, 200*1000 );
 			}
-			LOG("deskbar", liDebug, "IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("deskbar", liDebug, "IM: fFlashCount: %ld", fFlashCount);
 		}	break;
 		case IM::STOP_FLASHING:
 		{	
@@ -290,7 +290,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			}
 			
 			fFlashCount--;
-			LOG("deskbar", liDebug, "IM: fFlashCount: %ld\n", fFlashCount);
+			LOG("deskbar", liDebug, "IM: fFlashCount: %ld", fFlashCount);
 			
 			if ( fFlashCount == 0 )
 			{
@@ -303,7 +303,7 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 			if ( fFlashCount < 0 )
 			{
 				fFlashCount = 0;
-				LOG("deskbar", liMedium, "IM: fFlashCount below zero, fixing\n");
+				LOG("deskbar", liMedium, "IM: fFlashCount below zero, fixing");
 			}
 		}	break;
 		
