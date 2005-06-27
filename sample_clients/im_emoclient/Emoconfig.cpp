@@ -41,12 +41,12 @@ Emoconfig::Emoconfig(const char* xmlfile):BMessage()
 	BFile* settings=new BFile(xmlfile,B_READ_ONLY);
 	off_t size;
 	settings->GetSize(&size);
-	printf("Original file %lld\n",size);
+//	printf("Original file %lld\n",size);
 	if(size)
 	{
 		void *buffer=malloc(size);
 		size=settings->Read(buffer,size);
-		printf("In memory file %lld\n",size);
+//		printf("In memory file %lld\n",size);
 		XML_Parse(fParser, (const char*)buffer, size, true);
 		free(buffer);
 	}
@@ -82,7 +82,7 @@ Emoconfig::StartElement(void * /*pUserData*/, const char * pName, const char ** 
 	} else
 	if(name.ICompare("svg")==0 && faces)
 	{
-		printf("File is SVG\n");
+//		printf("File is SVG\n");
 		svg=true;
 	} else
 	if(name.ICompare("size")==0)
@@ -129,7 +129,7 @@ Emoconfig::EndElement(void * pUserData, const char * pName)
 			icons=BTranslationUtils::GetBitmap(p.Path());
 		} else 
 		{ // svg icon
-			printf("SVG icon\n");
+//			printf("SVG icon\n");
 			
 			icons = NULL;
 			
@@ -150,12 +150,12 @@ Emoconfig::EndElement(void * pUserData, const char * pName)
 				svgView->SetSampleSize(4);
 				renderer->AddChild( svgView );
 				
-				renderer->Lock();
+/*				renderer->Lock();
 				printf("Created rendering stuff\n");
 				printf("renderer: "); renderer->Bounds().PrintToStream();
 				printf("svgView: "); svgView->Bounds().PrintToStream();
 				renderer->Unlock();
-			}
+*/			}
 			
 			renderer->Lock();
 			
@@ -179,7 +179,7 @@ Emoconfig::EndElement(void * pUserData, const char * pName)
 		//assign to faces;
 		fname=false;
 		
-		printf("Filename %s [%s]\n",p.Path(),path.Path());
+//		printf("Filename %s [%s]\n",p.Path(),path.Path());
 		if(!icons) return; 
 		
 		int 		i=0;

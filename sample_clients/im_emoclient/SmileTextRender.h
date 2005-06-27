@@ -56,7 +56,7 @@ class SmileTextRender : public TextRender
        	};
     	
 	   virtual void		
-	   GetEscapements(const char charArray[], int32 numChars,float escapementArray[])
+	   GetEscapements(const char * /*charArray*/, int32 numChars,float escapementArray[])
 	   {
   			//font.GetEscapements(charArray,numChars,escapementArray);
   			escapementArray[0]=1;
