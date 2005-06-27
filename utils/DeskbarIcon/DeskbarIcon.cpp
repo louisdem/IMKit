@@ -384,7 +384,6 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 					Invalidate();
 				} break; 
 			};
-			Invalidate(); // FIXME ugly hack to fix missing redraws
 		} break;
 
 		case B_NODE_MONITOR: {
@@ -482,7 +481,21 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		case B_ABOUT_REQUESTED: {
 			AboutRequested();
 		} break;
-
+		
+		case B_SOME_APP_LAUNCHED: {
+			const char * sig = NULL;
+			if ( msg->FindString("mime_sig", &sig) == B_OK ) {
+				if ( strcmp(sig, IM_SERVER_SIG) == 0 ) {
+					// register with im_server
+					LOG("deskbar", liDebug, "Registering with im_server");
+					BMessage msg(IM::REGISTER_DESKBAR_MESSENGER);
+					msg.AddMessenger( "msgr", BMessenger(this) );
+			
+					BMessenger(IM_SERVER_SIG).SendMessage(&msg);
+				}
+			}
+		} break;
+		
 		default:
 			BView::MessageReceived(msg);
 	}
@@ -691,7 +704,7 @@ IM_DeskbarIcon::AttachedToWindow()
 	LOG("deskbar", liHigh, "IM_DeskbarIcon::AttachedToWindow()");
 
 	// give im_server a chance to start up
-	snooze(500*1000);	
+	snooze(500*1000);
 	reloadSettings();
 	
 	// register with im_server
@@ -700,6 +713,9 @@ IM_DeskbarIcon::AttachedToWindow()
 	msg.AddMessenger( "msgr", BMessenger(this) );
 	
 	BMessenger(IM_SERVER_SIG).SendMessage(&msg);
+	
+	// Start listening to app launches and quits
+	be_roster->StartWatching( BMessenger(this) );
 	
 	BVolumeRoster volRoster;
 	BVolume bootVol;
