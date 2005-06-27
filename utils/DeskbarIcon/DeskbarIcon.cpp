@@ -484,13 +484,14 @@ IM_DeskbarIcon::MessageReceived( BMessage * msg )
 		
 		case B_SOME_APP_LAUNCHED: {
 			const char * sig = NULL;
-			if ( msg->FindString("mime_sig", &sig) == B_OK ) {
+			if ( msg->FindString("be:signature", &sig) == B_OK ) {
+//				LOG("deskbar", liDebug, "App started: %s", sig);
 				if ( strcmp(sig, IM_SERVER_SIG) == 0 ) {
 					// register with im_server
 					LOG("deskbar", liDebug, "Registering with im_server");
 					BMessage msg(IM::REGISTER_DESKBAR_MESSENGER);
 					msg.AddMessenger( "msgr", BMessenger(this) );
-			
+					
 					BMessenger(IM_SERVER_SIG).SendMessage(&msg);
 				}
 			}
@@ -715,7 +716,10 @@ IM_DeskbarIcon::AttachedToWindow()
 	BMessenger(IM_SERVER_SIG).SendMessage(&msg);
 	
 	// Start listening to app launches and quits
-	be_roster->StartWatching( BMessenger(this) );
+	if ( be_roster->StartWatching( BMessenger(this) ) != B_OK )
+	{
+		LOG("deskbar", liHigh, "Couldn't start watching app launches");
+	}
 	
 	BVolumeRoster volRoster;
 	BVolume bootVol;
