@@ -278,9 +278,9 @@ Server::MessageReceived( BMessage * msg )
 			reply_GET_CONTACTS_FOR_PROTOCOL(msg);
 			break;
 			
+		case REGISTER_DESKBAR_MESSENGER:
 		case FLASH_DESKBAR:
 		case STOP_FLASHING:
-		case REGISTER_DESKBAR_MESSENGER:
 			handleDeskbarMessage(msg);
 			break;
 		
@@ -1888,8 +1888,37 @@ Server::SetAllOffline()
 	to msg.
 */
 void
-Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
+Server::GetContactsForProtocol( const char * _protocol, BMessage * msg )
 {
+	BString orig_protocol(_protocol);
+	orig_protocol.ToLower();
+	
+	BString protoUpper(_protocol), protoLower(_protocol);
+	protoUpper.ToUpper();
+	protoLower.ToLower();
+	
+	BString regexp;
+	for ( int i=0; i<protoUpper.Length(); i++ )
+	{
+		if (!isalpha((int)(protoUpper[i])))
+		{
+			// "[--]" seems to have a special meaning for the query engine so it
+			// would fail if we did the same expansion we were doing as "-"
+			// would become "[--]". As it probably happens with other chars too,
+			// I am doing this isalpha() thing here. WARNING! Does it work with
+			// UTF8 at all?
+			regexp << protoUpper[i];
+		}
+		else
+		{
+			regexp << "[";
+			regexp << protoUpper[i];
+			regexp << protoLower[i];
+			regexp << "]";
+		}
+	}
+	const char * protocol = regexp.String();
+	
 	BVolumeRoster vroster;
 	BVolume	vol;
 	Contact result;
@@ -1904,7 +1933,7 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 			continue;
 		
 		vol.GetName(volName);
-		LOG("im_server", liLow, "GetContactsForProtocol: Looking for contacts on %s", volName);
+		LOG("im_server", liLow, "GetContactsForProtocol: Looking for contacts on %s with protocol %s", volName, protocol);
 		query.PushAttr("IM:connections");
 		query.PushString(protocol);
 		query.PushOp(B_CONTAINS);
@@ -1929,17 +1958,9 @@ Server::GetContactsForProtocol( const char * protocol, BMessage * msg )
 	for (iter = refs.begin(); iter != refs.end(); iter++) {
 		Contact c(*iter);
 		char conn[256];
-		char *id = NULL;
 		
-		if (c.FindConnection(protocol, conn) == B_OK) {
-			for (int i = 0; conn[i]; i++) {
-				if (conn[i] == ':') {
-					id = &conn[i+1];
-					break;
-				};
-			};
-
-			msg->AddString("id", id);
+		if (c.FindConnection(orig_protocol.String(), conn) == B_OK) {
+			msg->AddString("id", connection_id(conn).c_str() );
 		};
 	};
 	
@@ -2248,6 +2269,8 @@ Server::handle_STATUS_SET( BMessage * msg )
 			proto_id += ":";
 			proto_id += contacts.FindString("id", i);
 			
+			LOG("im_server", liDebug, "Protocol offline, setting %s offline", proto_id.c_str() );
+			
 			if ( fStatus[proto_id] != OFFLINE_TEXT  && fStatus[proto_id] != "" )
 			{ // only send a message if there's been a change.
 				BMessage update(MESSAGE);
@@ -2259,6 +2282,16 @@ Server::handle_STATUS_SET( BMessage * msg )
 				BMessenger(this).SendMessage( &update );
 				
 				fStatus[proto_id] = OFFLINE_TEXT;
+				
+				// update status attribute
+				list<Contact> contacts = FindAllContacts( proto_id.c_str() );
+				
+				for ( list<Contact>::iterator iter = contacts.begin(); iter != contacts.end(); iter++ )
+				{
+					UpdateContactStatusAttribute( *iter );
+				}
+			} else {
+				LOG("im_server", liDebug, "Already offline, or no previous status" );
 			}
 		}
 	}

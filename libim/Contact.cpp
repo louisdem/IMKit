@@ -12,11 +12,14 @@ using namespace IM;
 Connection::Connection( const char * str )
 :	fConn(str)
 {
-	int32 colon = fConn.FindFirst(":");
+/*	int32 colon = fConn.FindFirst(":");
 	
 	fConn.CopyInto( fProtocol, 0, colon );
 	
 	fConn.CopyInto( fID, colon+1, fConn.Length()-colon-1 );
+*/
+	fProtocol = connection_protocol(fConn.String()).c_str();
+	fID = connection_id(fConn.String()).c_str();
 }
 
 Connection::Connection( const Connection & c )
@@ -279,20 +282,21 @@ Contact::ConnectionAt( int index, char * buffer )
 }
 
 status_t
-Contact::FindConnection( const char * protocol, char * buffer )
+Contact::FindConnection( const char * _protocol, char * buffer )
 {
 	if ( fConnections.CountItems() == 0 )
 		LoadConnections();
 	
-	char proto[256];
+	BString str(_protocol);
+	str.ToLower();
 	
-	sprintf(proto,"%s:",protocol);
+	string protocol(str.String());
 	
 	for ( int i=0; i<fConnections.CountItems(); i++ )
 	{
 		const char * conn = (const char*)fConnections.ItemAt(i);
 		
-		if ( strstr(conn,proto) )
+		if ( protocol == connection_protocol(conn) )
 		{
 			strcpy(buffer,conn);
 			return B_OK;
