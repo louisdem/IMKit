@@ -37,7 +37,6 @@ InfoWindow::InfoWindow()
 	fDeskbarLocation = BDeskbar().Location();
 	
 	LoadSettings(true);
-	
 };
 
 InfoWindow::~InfoWindow(void) {
@@ -344,86 +343,77 @@ void InfoWindow::WriteDefaultSettings(BNode *node, bool writeWidth = true,
 void InfoWindow::LoadSettings( bool start_monitor )
 {
 	BPath path;
-	if (find_directory(B_USER_SETTINGS_DIRECTORY, &path, true, NULL) == B_OK) {
-		path.Append("BeClan/InfoPopper/settings");
-		BNode node(path.Path());
-		if (node.InitCheck() == B_OK) {
-			bool writeWidth = false;
-			bool writeIcon = false;
-			bool writeTimeout = false;
-			bool writeLayout = false;
-			
-			if (node.ReadAttr(kWidthName, B_FLOAT_TYPE, 0, (void *)&fWidth,
-				sizeof(fWidth)) < B_OK) {
-				writeWidth = true;
-				fWidth = kDefaultWidth;
-			};
-			
-			if (node.ReadAttr(kIconName, B_INT16_TYPE, 0, (void *)&fIconSize,
-				sizeof(fIconSize)) < B_OK) {
-				writeIcon = true;
-				fIconSize = kDefaultIconSize;
-			};
-			
-			if (node.ReadAttr(kTimeoutName, B_INT32_TYPE, 0, (void *)&fDisplayTime,
-				sizeof(fDisplayTime)) < B_OK) {
-				writeTimeout = true;
-				fDisplayTime = kDefaultDisplayTime;
-			};
-			
-			if (node.ReadAttr(kLayoutName, B_INT16_TYPE, 0, (void *)&fLayout,
-				sizeof(fLayout)) < B_OK) {
-				writeLayout = true;
-				fLayout = (infoview_layout)kDefaultLayout;
-			};
-			
-			if ( start_monitor )
-			{
-				// just write default settings once, at startup
-				WriteDefaultSettings(&node, writeWidth, writeIcon, writeTimeout,
-					writeLayout);
-				
-				node_ref nref;
-				node.GetNodeRef(&nref);
-				
-				if ( watch_node(&nref, B_WATCH_ATTR, BMessenger(this)) != B_OK )
-				{
-					BAlert *alert = new BAlert("InfoPopper", "Couldn't start settings "
-						" monitor. Live settings changes disabled.", "Darn.");
-					alert->Go();
-				}
-			}
-		} else {
-//			Lets just assume it's because the file doesn't exist.
-			BPath parPath;
-			path.GetParent(&parPath);
-			create_directory(parPath.Path(), 0777);
-			
-			BFile file(path.Path(), B_READ_WRITE | B_CREATE_FILE);
-			
-			fWidth = kDefaultWidth;
-			fIconSize = kDefaultIconSize;
-			fDisplayTime = kDefaultDisplayTime;
-			
-			WriteDefaultSettings(reinterpret_cast<BNode *>(&file));
-			
-			if ( start_monitor )
-			{
-				node_ref nref;
-				file.GetNodeRef(&nref);
-				
-				if ( watch_node(&nref, B_WATCH_ATTR, BMessenger(this)) != B_OK )
-				{
-					BAlert *alert = new BAlert("InfoPopper", "Couldn't start settings "
-						" monitor. Live settings changes disabled.", "Darn.");
-					alert->Go();
-				}
-			}
-		};
-	} else {
+	if (find_directory(B_USER_SETTINGS_DIRECTORY, &path, true, NULL) != B_OK) {
 		BAlert *alert = new BAlert("InfoPopper", "Couldn't find the settings "
 			" directory. This is very bad.", "Carp!");
 		alert->Go();
 		be_app_messenger.SendMessage(B_QUIT_REQUESTED);
+		return;
 	};
+	
+	fWidth = kDefaultWidth;
+	fIconSize = kDefaultIconSize;
+	fDisplayTime = kDefaultDisplayTime;
+	fLayout = (infoview_layout)kDefaultLayout;
+		
+	path.Append("BeClan/InfoPopper/settings");
+	BNode node(path.Path());
+	if (node.InitCheck() == B_OK) {
+		bool writeWidth = false;
+		bool writeIcon = false;
+		bool writeTimeout = false;
+		bool writeLayout = false;
+		
+		if (node.ReadAttr(kWidthName, B_FLOAT_TYPE, 0, (void *)&fWidth,
+			sizeof(fWidth)) < B_OK) {
+			writeWidth = true;
+			fWidth = kDefaultWidth;
+		};
+			
+		if (node.ReadAttr(kIconName, B_INT16_TYPE, 0, (void *)&fIconSize,
+			sizeof(fIconSize)) < B_OK) {
+			writeIcon = true;
+			fIconSize = kDefaultIconSize;
+		};
+		
+		if (node.ReadAttr(kTimeoutName, B_INT32_TYPE, 0, (void *)&fDisplayTime,
+			sizeof(fDisplayTime)) < B_OK) {
+			writeTimeout = true;
+			fDisplayTime = kDefaultDisplayTime;
+		};
+		
+		if (node.ReadAttr(kLayoutName, B_INT16_TYPE, 0, (void *)&fLayout,
+			sizeof(fLayout)) < B_OK) {
+			writeLayout = true;
+			fLayout = (infoview_layout)kDefaultLayout;
+		};
+		
+		WriteDefaultSettings(&node, writeWidth, writeIcon, writeTimeout, writeLayout);
+		
+	} else {
+//		Lets just assume it's because the file doesn't exist.
+		BPath parPath;
+		path.GetParent(&parPath);
+		create_directory(parPath.Path(), 0777);
+		
+		BFile file(path.Path(), B_READ_WRITE | B_CREATE_FILE);
+		
+		node.SetTo( path.Path() ); // so we can monitor changes on this new file
+		
+		WriteDefaultSettings(reinterpret_cast<BNode *>(&file));
+		
+	}
+
+	if ( start_monitor )
+	{
+		node_ref nref;
+		node.GetNodeRef(&nref);
+		
+		if ( watch_node(&nref, B_WATCH_ATTR, BMessenger(this)) != B_OK )
+		{
+			BAlert *alert = new BAlert("InfoPopper", "Couldn't start settings "
+				" monitor. Live settings changes disabled.", "Darn.");
+			alert->Go();
+		}
+	}
 }

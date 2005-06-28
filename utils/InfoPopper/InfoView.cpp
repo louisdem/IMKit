@@ -10,15 +10,15 @@
 #include <PropertyInfo.h>
 #include <Font.h>
 
-const float kEdgePadding = 2.0;
-const float kCloseWidth = 10.0;
+const float kEdgePadding = 2.0f;
+const float kCloseWidth = 10.0f;
 
 property_info message_prop_list[] = {
 	{ "content", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message contents"},
 	{ "title", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message title"},
 	{ "apptitle", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get message's app"},
 	{ "icon", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get icon as a flattened bitmap"},
-	0 // terminate list
+	NULL // terminate list
 };
 
 InfoView::InfoView(InfoWindow *win, info_type type,
@@ -247,7 +247,7 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 		font_height fh;
 		appLine->font.GetHeight( &fh );
 		
-		float title_bottom = fLines.back()->location.y + fh.descent;
+		float title_bottom = appLine->location.y + fh.descent;
 		
 		float ix = kEdgePadding;
 		float iy = 0;
