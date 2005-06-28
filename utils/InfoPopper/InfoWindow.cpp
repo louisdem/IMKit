@@ -5,7 +5,8 @@
 #include <stdio.h>
 
 property_info main_prop_list[] = {
-	{ "message", {B_GET_PROPERTY, B_COUNT_PROPERTIES, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
+	{ "message", {B_GET_PROPERTY, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
+	{ "message", {B_COUNT_PROPERTIES, 0}, {B_DIRECT_SPECIFIER, 0}, "count messages"},
 	{ "message", {B_CREATE_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "create a message"},
 	{ "message", {B_SET_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0 }, "modify a message" },
 	0 // terminate list
@@ -63,8 +64,6 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 		} break;
 
 		case B_COUNT_PROPERTIES: {
-			printf("counting!\n");
-
 			BMessage reply(B_REPLY);
 			BMessage specifier;
 			const char *property = NULL;
@@ -191,7 +190,6 @@ BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *sp
 			} break;
 
 			case B_COUNT_PROPERTIES: {
-				printf("Counting\n");
 				msg->PopSpecifier();
 				handler = this;
 			} break;
