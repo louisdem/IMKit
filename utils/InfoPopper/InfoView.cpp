@@ -14,8 +14,9 @@ const float kEdgePadding = 2.0;
 const float kCloseWidth = 10.0;
 
 property_info message_prop_list[] = {
-	{ "content", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
-	{ "title", {B_GET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get a message"},
+	{ "content", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message contents"},
+	{ "title", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message title"},
+	{ "apptitle", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get message's app"},
 	{ "icon", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get icon as a flattened bitmap"},
 	0 // terminate list
 };
@@ -91,29 +92,39 @@ void InfoView::MessageReceived(BMessage * msg) {
 		case B_GET_PROPERTY: {
 			BMessage specifier;
 			const char * property;
-			
-			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) return;
-			if (specifier.FindString("property", &property) != B_OK) return;
-			
 			BMessage reply(B_REPLY);
+			bool msgOkay = true;
 			
-			if (strcmp(property, "content") == 0) {
-				reply.AddString("result", fText);
+			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) msgOkay = false;
+			if (specifier.FindString("property", &property) != B_OK) msgOkay = false;
+
+			if (msgOkay) {
+				if (strcmp(property, "content") == 0) {
+					reply.AddString("result", fText);
+				};
+				
+				if (strcmp(property, "title") == 0)  {
+					reply.AddString("result", fTitle);
+				};
+				
+				if (strcmp(property, "apptitle") == 0) {
+					reply.AddString("result", fApp);
+				};
+				
+				if (strcmp(property, "icon") == 0) {
+/*					if (fBitmap) {
+						int32 bitmap_size = fBitmap->FlattenedSize();
+						char * bitmap_data = malloc( bitmap_size );
+						if (fBitmap->Flatten(bitmap_data, bitmap_size) == B_OK) {
+							reply.AddData("result", bitmap_data, bitmap_size);
+						};
+					}
+*/				};
+				reply.AddInt32("error", B_OK);
+			} else {
+				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
+				reply.AddInt32("error", B_ERROR);
 			};
-			
-			if (strcmp(property, "title") == 0)  {
-				reply.AddString("result", fTitle);
-			};
-			
-			if (strcmp(property, "icon") == 0) {
-/*				if ( fBitmap )
-				{
-					int32 bitmap_size = fBitmap->FlattenedSize();
-					char * bitmap_data = malloc( bitmap_size );
-					if ( fBitmap->Flatten(bitmap_data, bitmap_size) == B_OK )
-						reply.AddData("result", bitmap_data, bitmap_size);
-				}
-*/			};
 
 			msg->SendReply(&reply);
 		} break;
@@ -121,19 +132,43 @@ void InfoView::MessageReceived(BMessage * msg) {
 		case B_SET_PROPERTY: {
 			BMessage specifier;
 			const char * property;
-			
-			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) return;
-			if (specifier.FindString("property", &property) != B_OK) return;
-			
 			BMessage reply(B_REPLY);
+			bool msgOkay = true;
 			
-			if (strcmp(property, "content") == 0) {
-			};
+			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) msgOkay = false;
+			if (specifier.FindString("property", &property) != B_OK) msgOkay = false;
 			
-			if (strcmp(property, "title") == 0) {
-			};
-			
-			if (strcmp(property, "icon") == 0) {
+			if (msgOkay) {
+				BString app(fApp), title(fTitle), text(fText);
+				
+				if (strcmp(property, "content") == 0) {
+					msg->FindString("data", &text);
+				};
+				
+				if (strcmp(property, "apptitle") == 0) {
+					msg->FindString("data", &app);
+				};
+				
+				if (strcmp(property, "title") == 0) {
+					msg->FindString("data", &title);
+				};
+				
+				if (strcmp(property, "icon") == 0) {
+					
+				};
+
+	
+				SetText( 
+					app.Length() > 0 ? app.String() : NULL, 
+					title.Length() > 0 ? title.String() : NULL, 
+					text.Length() > 0 ? text.String() : NULL
+				);
+				Invalidate();
+				
+				reply.AddInt32("error", B_OK);
+			} else {
+				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
+				reply.AddInt32("error", B_ERROR);				
 			};
 
 			msg->SendReply(&reply);
@@ -306,7 +341,10 @@ void InfoView::MouseDown(BPoint point) {
 					if (be_roster->FindApp(launchString.String(), &appRef) == B_OK) useArgv = true;
 				};
 				if (fDetails->FindRef("onClickFile", &launchRef) == B_OK) {
-					if (be_roster->FindApp(&launchRef, &appRef) == B_OK) useArgv = true;
+					if (be_roster->FindApp(&launchRef, &appRef) == B_OK) {
+						printf("File to launch for %s is %s\n", launchRef.name, appRef.name);
+						 useArgv = true;
+					};
 				};
 				
 				if (fDetails->FindRef("onClickRef", &ref) == B_OK) {			
@@ -345,6 +383,7 @@ void InfoView::MouseDown(BPoint point) {
 				if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
 					be_roster->Launch(launchString.String(), &messages);
 				} else {
+				printf("Launching %s\n", launchRef.name);
 					be_roster->Launch(&launchRef, &messages);
 				};
 			};

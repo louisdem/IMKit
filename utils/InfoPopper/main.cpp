@@ -179,7 +179,7 @@ class InfoApp : public BApplication {
 			msg->AddString("suites", "suite/x-vnd.beclan.InfoPopper");
 			BPropertyInfo prop_info(main_prop_list);
 			msg->AddFlat("messages", &prop_info);
-			return BApplication::GetSupportedSuites(msg); 		
+			return BApplication::GetSupportedSuites(msg);
 		};
 		
 		BHandler * ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {

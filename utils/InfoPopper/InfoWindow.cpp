@@ -7,6 +7,7 @@
 property_info main_prop_list[] = {
 	{ "message", {B_GET_PROPERTY, B_COUNT_PROPERTIES, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
 	{ "message", {B_CREATE_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "create a message"},
+	{ "message", {B_SET_PROPERTY, 0}, {B_INDEX_SPECIFIER, 0 }, "modify a message" },
 	0 // terminate list
 };
 
@@ -53,13 +54,35 @@ void InfoWindow::WorkspaceActivated(int32 /*workspace*/, bool active) {
 
 void InfoWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
-		case B_NODE_MONITOR:
+		case B_NODE_MONITOR: {
 			LoadSettings();
-			break;
+		} break;
 		
 		case ResizeToFit: {
 			ResizeAll();
-		}	break;
+		} break;
+
+		case B_COUNT_PROPERTIES: {
+			printf("counting!\n");
+
+			BMessage reply(B_REPLY);
+			BMessage specifier;
+			const char *property = NULL;
+			bool msgOkay = true;
+			
+			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) msgOkay = false;
+			if (specifier.FindString("property", &property) != B_OK) msgOkay = false;
+			if (strcmp(property, "message") != 0) msgOkay = false;
+			
+			if (msgOkay) {
+				reply.AddInt32("result", fInfoViews.size());
+			} else {
+				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
+				reply.AddInt32("error", B_ERROR);
+			};
+				
+			msg->SendReply(&reply);
+		} break;
 		
 		case B_CREATE_PROPERTY:
 		case InfoPopper::AddMessage: {		
@@ -67,45 +90,47 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			const char *message = NULL;
 			const char *title = NULL;
 			const char *app = NULL;
+			BMessage reply(B_REPLY);
+			bool msgOkay = true;
 			
 			if (msg->FindInt8("type", &type) != B_OK) type = InfoPopper::Information;
-			if (msg->FindString("content", &message) != B_OK) {
-				printf("Error: missing content\n");
-				msg->PrintToStream();
-				return;
-			};
+			if (msg->FindString("content", &message) != B_OK) msgOkay = false;
+			if (msg->FindString("title", &title) != B_OK) msgOkay = false;
 			if (msg->FindString("app", &app) != B_OK && msg->FindString("appTitle", &app) != B_OK) {
-				printf("Error: missing app name\n");
-				msg->PrintToStream();
+				msgOkay = false;
 			};
-			if (msg->FindString("title", &title) != B_OK) {
-				printf("Error: missing title\n");
-				msg->PrintToStream();
-				return;
-			}
 			
-			const char *messageID = NULL;
-			if (msg->FindString("messageID",&messageID) == B_OK) {
-//			message ID present, remove current message if present
-				vector<InfoView*>::iterator i;
+			if (msgOkay) {
+				const char *messageID = NULL;
+				if (msg->FindString("messageID",&messageID) == B_OK) {
+//					message ID present, remove current message if present
+					vector<InfoView*>::iterator i;
 				
-				for (i = fInfoViews.begin(); i!=fInfoViews.end(); i++) {
-					if ((*i)->HasMessageID(messageID)) {
-						(*i)->RemoveSelf();
-						delete *i;
-						fInfoViews.erase(i);
-						break;
+					for (i = fInfoViews.begin(); i!=fInfoViews.end(); i++) {
+						if ((*i)->HasMessageID(messageID)) {
+							(*i)->RemoveSelf();
+							delete *i;
+							fInfoViews.erase(i);
+							break;
+						};
 					};
 				};
+			
+				InfoView *view = new InfoView(this, (InfoPopper::info_type)type, app,
+					title, message, new BMessage(*msg));
+				
+				fInfoViews.push_back(view);			
+				fBorder->AddChild(view);
+				
+				ResizeAll();
+				
+				reply.AddInt32("error", B_OK);
+			} else {
+				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
+				reply.AddInt32("error", B_ERROR);
 			};
 			
-			InfoView *view = new InfoView(this, (InfoPopper::info_type)type, app,
-				title, message, new BMessage(*msg));
-			
-			fInfoViews.push_back(view);			
-			fBorder->AddChild(view);
-			
-			ResizeAll();
+			msg->SendReply(&reply);
 		} break;
 		
 		case REMOVE_VIEW: {
@@ -133,33 +158,56 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 
 BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
 	BPropertyInfo prop_info(main_prop_list);
+	BHandler *handler = NULL;
+	
 	printf("Looking for property %s\n", prop);
 	if ( strcmp(prop,"message") == 0 ) {
 		
 		printf("Matching specifier..\n");
 		
-		if ( msg->what == B_CREATE_PROPERTY )
-		{
-			printf("Create\n");
-			msg->PopSpecifier();
-			return this;
-		} else
-		{
-			int32 i;
-			if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
-		
-			if ( i >= 0 && i < (int32)fInfoViews.size() ) {
-				printf("Found message\n");
+		switch (msg->what) {
+			case B_CREATE_PROPERTY: {
+				printf("Create\n");
 				msg->PopSpecifier();
-				return fInfoViews[i];
-			}
-		
-			printf("Index out of range: %ld\n",i);
-			msg->PrintToStream();
-			return NULL;
-		}
-	}
-	return BWindow::ResolveSpecifier(msg, index, spec, form, prop);
+				handler = this;
+			} break;
+			
+			case B_SET_PROPERTY: 
+			case B_GET_PROPERTY: {
+				int32 i;
+				if ( spec->FindInt32("index",&i) != B_OK ) i = -1;
+			
+				if ( i >= 0 && i < (int32)fInfoViews.size() ) {
+					printf("Found message\n");
+					msg->PopSpecifier();
+					
+					handler = fInfoViews[i];
+				} else {
+					printf("Index out of range: %ld\n",i);
+					msg->PrintToStream();
+					
+					handler = NULL;
+				};
+			} break;
+
+			case B_COUNT_PROPERTIES: {
+				printf("Counting\n");
+				msg->PopSpecifier();
+				handler = this;
+			} break;
+			
+			default: {
+				printf("Specifier not supported\n");
+				msg->PrintToStream();
+			};
+		};
+	};
+	
+	if (handler == NULL) {
+		handler = BWindow::ResolveSpecifier(msg, index, spec, form, prop);
+	};
+
+	return handler;
 };
 
 int16 InfoWindow::IconSize(void) {
@@ -214,7 +262,7 @@ void InfoWindow::ResizeAll(void) {
 
 void InfoWindow::PopupAnimation(float width, float height) {
 	float x,y,sx,sy;
-	float pad = 2;
+	float pad = 0;
 	BDeskbar deskbar;
 	BRect frame = deskbar.Frame();
 	
