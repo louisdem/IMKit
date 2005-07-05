@@ -375,9 +375,9 @@ void InfoView::MouseDown(BPoint point) {
 					messages.AddItem((void *)&argMsg);
 				};
 				
-				BMessage *tmp;
-				for (int32 i = 0; fDetails->FindMessage("onClickMsg", i, tmp) == B_OK; i++) {
-					messages.AddItem((void *)tmp);
+				BMessage tmp;
+				for (int32 i = 0; fDetails->FindMessage("onClickMsg", i, &tmp) == B_OK; i++) {
+					messages.AddItem((void *)&tmp);
 				};
 				
 				if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
