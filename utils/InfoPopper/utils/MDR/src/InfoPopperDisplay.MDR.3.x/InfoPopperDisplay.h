@@ -13,6 +13,8 @@
 
 #include "StringMatcher.h"
 
+class BMailFilter;
+
 class InfoPopperDisplay : public BMailFilter {
 	public:
 							InfoPopperDisplay(BMessage* settings, BMailChainRunner* runner);

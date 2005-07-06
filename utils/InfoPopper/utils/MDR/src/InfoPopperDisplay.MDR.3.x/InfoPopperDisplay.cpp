@@ -8,9 +8,16 @@
 #include <String.h>
 #include <Entry.h>
 #include <Path.h>
+#include <Query.h>
+#include <VolumeRoster.h>
+#include <Volume.h>
+
+#include <libim/InfoPopper.h>
+#include <libim/Contact.h>
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include <Message.h>
 #include <Messenger.h>
@@ -19,6 +26,8 @@
 #include <mail_util.h>
 
 #include "InfoPopperDisplay.h"
+
+#include "RegEx.h"
 
 #include "InfoPopper.h"
 
@@ -137,30 +146,98 @@ status_t InfoPopperDisplay::ProcessMailMessage
 	get_ref_for_path("/boot/beos/apps/BeMail",&iconRef);
 	
 	// figure out final name of email
-	BString dest;
-	if ( io_headers->FindString("DESTINATION") )
-	{
-		dest = io_headers->FindString("DESTIONATION");
-	} else
-	{
-		dest = fPath;
-	}
+	BString dest = "";
+	if (io_headers->FindString("DESTINATION", &dest) != B_OK) dest = fPath;
+
 	if ( dest.Length() > 0 && dest[dest.Length()-1] != '/' )
 		dest << "/";
 	dest << generateFileName(io_headers);
 	entry_ref mail_ref;
 	BEntry(dest.String()).GetRef(&mail_ref);
 	printf("email path: %s\n", dest.String());
-	
-	// send the message
+
+	bool iconAdded = false;
 	BMessage msg(InfoPopper::AddMessage);
 	msg.AddString("app", "Mail daemon");
 	msg.AddString("title", "New e-mail");
 	msg.AddString("content", text.String());
-	msg.AddRef("iconRef", &iconRef);
-	msg.AddInt32("iconType", InfoPopper::Attribute);
 	msg.AddRef("onClickFile", &mail_ref);
+
+	RegEx reg("<((?:.*?)@(?:.*?))>");
+	if (reg.Search(from, strlen(from)) == true) {
+		BString address = reg.Match(1);
+		BString addUpper = address;
+		BString addLower = address;
+		BString predicate;
+		
+		addUpper.ToUpper();
+		addLower.ToLower();
+		int32 length = address.Length();
+		
+		for (int32 i = 0; i < length; i++) {
+			if (isalpha(address[i])) {
+				predicate << "[";
+				predicate << addUpper[i];
+				predicate << addLower[i];
+				predicate << "]";
+			} else {
+				predicate << address[i];
+			};
+		};
+		
+		predicate.Prepend("((BEOS:TYPE==\"application/x-person\")&&(META:email==\"");
+		predicate.Append("\"))");
+		
+		BVolumeRoster roster;
+		BVolume vol;
+		
+		roster.Rewind();
+		while (roster.GetNextVolume(&vol) == B_OK) {
+			if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) continue;
+			
+			BQuery query;
+			query.SetPredicate(predicate.String());
+			query.SetVolume(&vol);			
+			query.Fetch();
+			
+			entry_ref ref;
+			
+			if (query.GetNextRef(&ref) == B_OK) {
+				IM::Contact contact(ref);
+
+				BMessage sizeReply;
+				int16 iconSize;
+				
+				BMessenger(InfoPopperAppSig).SendMessage(InfoPopper::GetIconSize, &sizeReply);
+				if (sizeReply.FindInt16("iconSize", &iconSize) != B_OK) iconSize = 48;
+
+				BBitmap *icon = contact.GetBuddyIcon("general", iconSize);
+				if (icon) {
+					iconAdded = true;
+					BMessage image;
+					icon->Archive(&image);
+					msg.AddMessage("icon", &image);
 	
+					delete icon;
+				};
+
+				break;
+			};
+			
+			query.Clear();
+		};
+	};
+	
+
+	if (iconAdded == false) {
+		msg.AddRef("iconRef", &iconRef);
+		msg.AddInt32("iconType", InfoPopper::Attribute);
+	} else {
+		msg.AddRef("overlayIconRef", &iconRef);
+		msg.AddInt32("overlayIconType", InfoPopper::Attribute);
+	};
+
+	// send the message	
 	BMessenger(InfoPopperAppSig).SendMessage(&msg);
 	
 	return B_OK;
