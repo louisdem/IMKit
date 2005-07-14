@@ -4,11 +4,13 @@
 */
 
 
+#include <DataIO.h>
 #include <Node.h>
 #include <String.h>
 #include <Entry.h>
 #include <Path.h>
 #include <Query.h>
+#include <TranslationUtils.h>
 #include <VolumeRoster.h>
 #include <Volume.h>
 
@@ -24,11 +26,9 @@
 
 #include <ChainRunner.h>
 #include <mail_util.h>
+#include <mail_encoding.h>
 
 #include "InfoPopperDisplay.h"
-
-#include "RegEx.h"
-
 #include "InfoPopper.h"
 
 //using namespace Zoidberg;
@@ -38,6 +38,7 @@
 
 extern void SubjectToThread (BString &string);
 extern void extract_address_name(BString &header);
+extern void extract_address(BString &header);
 extern time_t ParseDateWithTimeZone (const char *DateString);
 
 BString generateFileName( BMessage * headers )
@@ -163,68 +164,101 @@ status_t InfoPopperDisplay::ProcessMailMessage
 	msg.AddString("content", text.String());
 	msg.AddRef("onClickFile", &mail_ref);
 
-	RegEx reg("<((?:.*?)@(?:.*?))>");
-	if (reg.Search(from, strlen(from)) == true) {
-		BString address = reg.Match(1);
-		BString addUpper = address;
-		BString addLower = address;
-		BString predicate;
+	BString face;
+	if (io_headers->FindString("Face", &face) == B_OK) {
+		face.ReplaceAll("\n", "");
+		face.ReplaceAll("\r", "");
+		face.ReplaceAll(" ", "");
 		
-		addUpper.ToUpper();
-		addLower.ToLower();
-		int32 length = address.Length();
+		char decoded[(face.Length() * 3) / 4];
+		ssize_t length = decode_base64(decoded, face.String(), face.Length());
+		printf("Decoded to %i bytes maybe %i (%i) %i?\n", length, (decoded + length) - decoded,
+			sizeof(decoded), strlen(decoded));
+
+		BMallocIO buffer;
+		buffer.SetBlockSize(1000);	// Should always be under 725 bytes
+									//  but allow a bit extra. This way at most one
+									//  alloc
+		buffer.WriteAt(0, decoded, sizeof(decoded));
+		buffer.Seek(0, SEEK_SET);
 		
-		for (int32 i = 0; i < length; i++) {
-			if (isalpha(address[i])) {
-				predicate << "[";
-				predicate << addUpper[i];
-				predicate << addLower[i];
-				predicate << "]";
-			} else {
-				predicate << address[i];
-			};
+		BBitmap *icon = BTranslationUtils::GetBitmap(&buffer);
+		if (icon != NULL) {
+			iconAdded = true;
+			
+			BMessage image;
+			icon->Archive(&image);
+			msg.AddMessage("icon", &image);
+
+			delete icon;
 		};
-		
-		predicate.Prepend("((BEOS:TYPE==\"application/x-person\")&&(META:email==\"");
-		predicate.Append("\"))");
-		
-		BVolumeRoster roster;
-		BVolume vol;
-		
-		roster.Rewind();
-		while (roster.GetNextVolume(&vol) == B_OK) {
-			if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) continue;
-			
-			BQuery query;
-			query.SetPredicate(predicate.String());
-			query.SetVolume(&vol);			
-			query.Fetch();
-			
-			entry_ref ref;
-			
-			if (query.GetNextRef(&ref) == B_OK) {
-				IM::Contact contact(ref);
+	};
 
-				BMessage sizeReply;
-				int16 iconSize;
-				
-				BMessenger(InfoPopperAppSig).SendMessage(InfoPopper::GetIconSize, &sizeReply);
-				if (sizeReply.FindInt16("iconSize", &iconSize) != B_OK) iconSize = 48;
+	if (iconAdded == false) {
+		BString address = from;
+		extract_address(address);
 
-				BBitmap *icon = contact.GetBuddyIcon("general", iconSize);
-				if (icon) {
-					iconAdded = true;
-					BMessage image;
-					icon->Archive(&image);
-					msg.AddMessage("icon", &image);
-	
-					delete icon;
+		if (address.Length() > 0) {
+			BString addUpper = address;
+			BString addLower = address;
+			BString predicate;
+			
+			addUpper.ToUpper();
+			addLower.ToLower();
+			int32 length = address.Length();
+			
+			for (int32 i = 0; i < length; i++) {
+				if (isalpha(address[i])) {
+					predicate << "[";
+					predicate << addUpper[i];
+					predicate << addLower[i];
+					predicate << "]";
+				} else {
+					predicate << address[i];
 				};
-
-				break;
 			};
 			
-			query.Clear();
+			predicate.Prepend("((BEOS:TYPE==\"application/x-person\")&&(META:email==\"");
+			predicate.Append("\"))");
+			
+			BVolumeRoster roster;
+			BVolume vol;
+			
+			roster.Rewind();
+			while (roster.GetNextVolume(&vol) == B_OK) {
+				if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) continue;
+				
+				BQuery query;
+				query.SetPredicate(predicate.String());
+				query.SetVolume(&vol);			
+				query.Fetch();
+				
+				entry_ref ref;
+				
+				if (query.GetNextRef(&ref) == B_OK) {
+					IM::Contact contact(ref);
+	
+					BMessage sizeReply;
+					int16 iconSize;
+					
+					BMessenger(InfoPopperAppSig).SendMessage(InfoPopper::GetIconSize, &sizeReply);
+					if (sizeReply.FindInt16("iconSize", &iconSize) != B_OK) iconSize = 48;
+	
+					BBitmap *icon = contact.GetBuddyIcon("general", iconSize);
+					if (icon) {
+						iconAdded = true;
+						BMessage image;
+						icon->Archive(&image);
+						msg.AddMessage("icon", &image);
+		
+						delete icon;
+					};
+	
+					break;
+				};
+				
+				query.Clear();
+			};
 		};
 	};
 	
