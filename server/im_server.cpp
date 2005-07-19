@@ -796,6 +796,8 @@ Server::HandleContactUpdate( BMessage * msg )
 Contact
 Server::FindContact( const char * proto_id )
 {
+	Contact result;
+	
 	BString protoUpper(proto_id), protoLower(proto_id);
 	protoUpper.ToUpper();
 	protoLower.ToLower();
@@ -828,8 +830,6 @@ Server::FindContact( const char * proto_id )
 	char 			volName[B_FILE_NAME_LENGTH];
 	
 	vroster.Rewind();
-	
-	Contact result;
 	
 	string pred = 
 		string( 
@@ -885,48 +885,6 @@ Server::FindAllContacts( const char * proto_id )
 	}
 	
 	return results;
-/*	BVolumeRoster 	vroster;
-	BVolume			vol;
-	char 			volName[B_FILE_NAME_LENGTH];
-
-	vroster.Rewind();
-	
-	list<Contact>	results;
-	
-	string pred = 
-		string( 
-			string("IM:connections=\"*") + 
-			string(proto_id) +
-			string("*\"")
-		);
-	
-	while ( vroster.GetNextVolume(&vol) == B_OK )
-	{
-		if ((vol.InitCheck() != B_OK) || (vol.KnowsQuery() != true)) 
-			continue;
-		
-		vol.GetName(volName);
-		
-		BQuery query;
-		
-		query.SetPredicate( pred.c_str() );
-		
-		query.SetVolume(&vol);
-		
-		query.Fetch();
-		
-		entry_ref entry;
-		
-		while ( query.GetNextRef(&entry) == B_OK )
-		{
-			Contact hit;
-			hit.SetTo(entry);
-			results.push_back( hit );
-		}
-	}
-	
-	return results;
-*/
 }
 
 /**
@@ -1020,7 +978,9 @@ Server::CreateContact( const char * proto_id, const char *namebase )
 	// post request info about this contact
 	BMessage msg(MESSAGE);
 	msg.AddInt32("im_what", GET_CONTACT_INFO);
-	msg.AddRef("contact", result);
+	msg.AddString("protocol", connection_protocol(proto_id).c_str());
+	msg.AddString("id", connection_id(proto_id).c_str());
+//	msg.AddRef("contact", result);
 	
 	BMessenger(this).SendMessage(&msg);
 	
@@ -1329,13 +1289,13 @@ Server::MessageFromProtocols( BMessage * msg )
 	};
 	
 	// convert strings to utf8
-	type_code _type;
-	char * name;
-	int32 count;
 	int32 charset;
-	
 	if ( msg->FindInt32("charset",&charset) == B_OK )
 	{ // charset present, convert all strings
+		type_code _type;
+		char * name = NULL;
+		int32 count;
+		
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 		for ( int i=0; msg->GetInfo(B_STRING_TYPE, i, (const char **)&name, &_type, &count) == B_OK; i++ )
 #else
@@ -1350,7 +1310,7 @@ Server::MessageFromProtocols( BMessage * msg )
 				int32 dst_len = strlen(data)*5;
 				int32 state = 0;
 				
-				char * new_data = new char[dst_len];
+				char * new_data = (char*)calloc(dst_len+1, 1);
 				
 				if ( convert_to_utf8(
 					charset,
@@ -1364,12 +1324,12 @@ Server::MessageFromProtocols( BMessage * msg )
 					msg->ReplaceString(name,x,new_data);
 				}
 				
-				delete[] new_data;
+				free(new_data);
 			}
 		}
 	}	
 	// done converting
-	
+
 	int32 im_what;
 	
 	msg->FindInt32("im_what",&im_what);
