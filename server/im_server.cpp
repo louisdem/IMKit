@@ -798,6 +798,34 @@ Server::FindContact( const char * proto_id )
 {
 	Contact result;
 	
+	// some sanity checks here
+	if ( proto_id == NULL )
+	{
+		LOG("im_server", liHigh, "Server::FindContact() called with NULL proto_id");
+		return result;
+	}
+	// next part is a bounded strlen(), perhaps there's a 'real' one to use instead?
+	const int maxProtoIdLen = 100;
+	int dummyLen = 0;
+	for ( ; proto_id[dummyLen] > 0 && dummyLen < maxProtoIdLen; dummyLen++ )
+		;
+	if ( dummyLen >= maxProtoIdLen )
+	{
+		LOG("im_server", liHigh, "Server::FindContact() called with too long proto_id");
+		return result;
+	}
+	if ( connection_id(proto_id).size() == 0 )
+	{
+		LOG("im_server", liHigh, "Server::FindContact() called with invalid proto_id - no id");
+		return result;
+	}
+	if ( connection_protocol(proto_id).size() == 0 )
+	{
+		LOG("im_server", liHigh, "Server::FindContact() called with invalid proto_id - no protocol");
+		return result;
+	}
+	// done sanity checks
+	
 	BString protoUpper(proto_id), protoLower(proto_id);
 	protoUpper.ToUpper();
 	protoLower.ToLower();
@@ -847,7 +875,7 @@ Server::FindContact( const char * proto_id )
 		
 		BQuery query;
 
-		LOG("im_server", liHigh, "FindContact BQuery::SetPredicate(\"%s\")", pred.c_str());
+		LOG("im_server", liHigh, "FindContact BQuery::SetPredicate(\"%s\") on volume %s", pred.c_str(), volName);
 		
 		query.SetPredicate( pred.c_str() );
 		
@@ -1088,12 +1116,46 @@ Server::selectConnection( BMessage * msg, Contact & contact )
 	return B_ERROR;
 }
 
+
+/**
+	Perform a number of sanity checks on a message, returning true if it's ok
+*/
+bool
+Server::IsMessageOk( BMessage * msg )
+{
+	const char * str;
+	
+	if ( msg->FindString("protocol", &str) == B_OK )
+	{
+		if ( strlen(str) == 0 || strlen(str) > 100 )
+		{
+			LOG("im_server", liHigh, "IsMessageOk(): invalid protocol present");
+		}
+	}
+	
+	if ( msg->FindString("id", &str) == B_OK )
+	{
+		if ( strlen(str) == 0 || strlen(str) > 100 )
+		{
+			LOG("im_server", liHigh, "IsMessageOk(): invalid id present");
+		}
+	}
+	
+	return true;
+}
+
 /**
 	Forward message from client-side to protocol-side
 */
 void
 Server::MessageToProtocols( BMessage * msg )
 {
+	if ( !IsMessageOk(msg) )
+	{
+		LOG("im_server", liHigh, "Bad message in MessageToProtocols()");
+		return;
+	}
+	
 	entry_ref entry;
 	
 	if ( msg->FindRef("contact",&entry) == B_OK )
@@ -1282,11 +1344,17 @@ Server::MessageToProtocols( BMessage * msg )
 void
 Server::MessageFromProtocols( BMessage * msg )
 {
+	if ( !IsMessageOk(msg) )
+	{
+		LOG("im_server", liHigh, "Bad message in MessageFromProtocols()");
+		return;
+	}
+	
 	const char *protocol = NULL;
 	if (msg->FindString("protocol", &protocol) != B_OK) {
 		LOG("im_server", liHigh, "Got a message with no protocol!");
 		return;
-	};
+	}
 	
 	// convert strings to utf8
 	int32 charset;
@@ -1441,10 +1509,10 @@ Server::MessageFromProtocols( BMessage * msg )
 				
 				Broadcast(&update);
 			}
-		};
+		}
 		
 		return;
-	};
+	}
 	
 	if ( im_what == STATUS_CHANGED && protocol != NULL && id != NULL )
 	{ // update status list on STATUS_CHANGED

@@ -86,6 +86,7 @@ class Server : public BApplication
 		void		LoadAddonsFromDir( BDirectory* addonsDir, BDirectory* settingsDir );
 		void		UnloadAddons();
 		
+		bool	IsMessageOk( BMessage * );
 		void	Process( BMessage * );
 		void	Broadcast( BMessage * );
 		
