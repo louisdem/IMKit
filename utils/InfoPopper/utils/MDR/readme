@@ -9,5 +9,8 @@ the right dir to make it work, though. For 3.x it should go in the
 haiku/current/src/kits/mail folder. Then a make should work.
 For 2.x, I think it's supposed to be in the filter folder.
 
+If you're using R5, you'll need to fetch, compile and install pcre:
+ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-6.1.tar.gz
+
 If someone wants to test and verify these instructions, and then
 update this file, feel free to do so!
