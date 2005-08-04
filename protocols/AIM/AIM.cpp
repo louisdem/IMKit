@@ -123,7 +123,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 
 				case IM::GET_CONTACT_INFO:
 				{
-					LOG(kProtocolName, liLow, "Getting contact info");
+					LOG(kProtocolName, liLow, "Getting contact info", msg);
 					const char * id = NormalizeNick(msg->FindString("id")).String();
 					
 					BMessage *infoMsg = new BMessage(IM::MESSAGE);
