@@ -115,6 +115,13 @@ load_log_level()
 	}
 }
 
+const char * gLogLevelText[] = {
+	"debug",
+	"low",
+	"medium",
+	"high"
+};
+
 // Note: if you change something in this LOG,
 // make sure to change the LOG below as the code
 // unfortunately isn't shared. :/
@@ -126,6 +133,11 @@ void LOG(const char * module, log_importance level, const char *message, const B
 	
 	load_log_level();
 	
+	if ( level > liHigh )
+	{
+		level = liHigh;
+	}
+	
 	if ( level < g_verbosity_level )
 		return;
 	
@@ -135,7 +147,7 @@ void LOG(const char * module, log_importance level, const char *message, const B
 	time_t now = time(NULL);
 	strftime(timestr,sizeof(timestr),"%Y-%m-%d %H:%M", localtime(&now) );
 	
-	printf("%s %s: %s\n", module, timestr, buffer);
+	printf("%s %s (%s): %s\n", module, timestr, gLogLevelText[level], buffer);
 	if ( msg )
 	{
 		printf("BMessage for last message:\n");
@@ -153,6 +165,11 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 	
 	load_log_level();
 	
+	if ( level > liHigh )
+	{
+		level = liHigh;
+	}
+	
 	if ( level < g_verbosity_level )
 		return;
 	
@@ -162,7 +179,7 @@ void LOG(const char * module, log_importance level, const char *message, ...) {
 	time_t now = time(NULL);
 	strftime(timestr,sizeof(timestr),"%Y-%m-%d %H:%M", localtime(&now) );
 	
-	printf("%s %s: %s\n", module, timestr, buffer);
+	printf("%s %s (%s): %s\n", module, timestr, gLogLevelText[level], buffer);
 	
 	fflush(stdout);
 }
