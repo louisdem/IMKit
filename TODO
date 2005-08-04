@@ -11,8 +11,7 @@ ___ Things to fix
 * Strangeness with getting contact info, error in icq-addon or in im_server, or both?
 * Add Deskbar monitor for im_server, so it restores the deskbar icon if needed.
 * Don't use BAlert in Merge contacts, it doesn't play well with long filenames
-* Extract Deskbar icon from im_server, let it live it's own life
-* Contact's BNode::SetTo crashes with invalid pointer sometimes? Due to Zeta bug? Fixed?
+* Contact's BNode::SetTo crashes with invalid pointer sometimes?
 * Change 'command sends message' option to a one-of-two menu
 * Make the clients handle the new 'multiple contacts per message' thing
 * Fix im_server SVG icon setting so it doesn't have to read the icons all the time..
@@ -20,6 +19,7 @@ ___ Things to fix
 * Add to readme/documentation, german docs: http://besly.mittilgart.de
 * im_server: ContactMonitor_Modified, merging "online" > "offline". Several AIM.
 * im_server: what happens in the index test if we have a read-only BFS volume mounted?
+* im_server: remove all FindContact calls and replace with FindAllContacts
 
 ___ New features
 
