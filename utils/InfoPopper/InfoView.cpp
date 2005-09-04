@@ -18,6 +18,7 @@ property_info message_prop_list[] = {
 	{ "title", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message title"},
 	{ "apptitle", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get message's app"},
 	{ "icon", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get icon as a flattened bitmap"},
+	{ "type", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get the message type"},
 	NULL // terminate list
 };
 
@@ -109,6 +110,10 @@ void InfoView::MessageReceived(BMessage * msg) {
 				
 				if (strcmp(property, "apptitle") == 0) {
 					reply.AddString("result", fApp);
+				};
+				
+				if (strcmp(property, "type") == 0) {
+					reply.AddInt32("result", fType);
 				};
 				
 				if (strcmp(property, "icon") == 0) {
