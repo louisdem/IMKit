@@ -11,6 +11,7 @@ const char *kProtocolName = "aim";
 OSCARConnection::OSCARConnection(const char *server, uint16 port, AIMManager *man,
 	const char *name = "OSCAR Connection", conn_type type = connBOS)
 	: BLooper(name) {
+	fSockMsgr = NULL;
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
 	
@@ -463,7 +464,8 @@ void OSCARConnection::StopReceiver(void) {
 		BMessenger * old_msgr = fSockMsgr;
 		fSockMsgr = new BMessenger((BHandler *)NULL);
 		// deleting the messenger will cause the thread to exit cleanly
-		delete old_msgr;
+		if ( old_msgr != NULL )
+			delete old_msgr;
 		
 		int32 res;
 		wait_for_thread( fThread, &res);
