@@ -80,15 +80,12 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			if (sizeReply.FindInt16("iconSize", &iconSize) != B_OK) iconSize = 48;
 						
 			IM::Contact contact(&ref);
-			if (msg->FindString("protocol", &protocol) == B_OK) {
-				icon = contact.GetBuddyIcon(protocol, iconSize);
-				protoicons::iterator pIt = fProtocolIcons.find(protocol);
-				if (pIt != fProtocolIcons.end()) protoRef = pIt->second;
-				if (icon == NULL) {
-					icon = contact.GetBuddyIcon("general", iconSize);
-					if (icon == NULL) useProtoIcon = true;
-				};
+
+			if (contact.GetNickname(status, sizeof(status)) != B_OK) {
+				strcpy(status, "<unknown status>");
 			};
+//			Exit if user is blocked
+			if (strcasecmp(status, "blocked") == 0) break;
 
 			if (contact.GetName(contactname, sizeof(contactname) ) != B_OK ) {
 				strcpy(contactname, "<unknown contact>");
@@ -99,12 +96,16 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 			if (contact.GetNickname(nickname, sizeof(nickname)) != B_OK) {
 				strcpy(nickname, "<unknown nick>");
 			};
-			if (contact.GetNickname(status, sizeof(status)) != B_OK) {
-				strcpy(status, "<unknown status>");
+
+			if (msg->FindString("protocol", &protocol) == B_OK) {
+				icon = contact.GetBuddyIcon(protocol, iconSize);
+				protoicons::iterator pIt = fProtocolIcons.find(protocol);
+				if (pIt != fProtocolIcons.end()) protoRef = pIt->second;
+				if (icon == NULL) {
+					icon = contact.GetBuddyIcon("general", iconSize);
+					if (icon == NULL) useProtoIcon = true;
+				};
 			};
-			
-//			Exit if user is blocked
-			if ( strcasecmp(status, "blocked") == 0 ) break;
 			
 			InfoPopper::info_type type = InfoPopper::Information;
 						
@@ -185,6 +186,8 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 						icon->Archive(&image);
 						pop_msg.AddMessage("icon", &image);
 						
+						delete icon;
+						
 						pop_msg.AddRef("overlayIconRef", &protoRef);
 						pop_msg.AddInt32("overlayIconType", InfoPopper::Attribute);
 					} else if (useProtoIcon) {
@@ -217,6 +220,9 @@ void IMInfoApp::MessageReceived(BMessage *msg) {
 					BMessage image;
 					icon->Archive(&image);
 					pop_msg.AddMessage("icon", &image);
+					
+					delete icon;
+					
 					LOG("im_infopopper", liDebug, "Icon size: %.2f", icon->Bounds().Width());
 					
 					pop_msg.AddRef("overlayIconRef", &protoRef);
