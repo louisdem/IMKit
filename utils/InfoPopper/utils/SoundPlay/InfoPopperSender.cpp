@@ -120,8 +120,6 @@ void InfoPopperSender::MessageReceived(BMessage *msg) {
 				searchStr.Append(aBuffer, aLength);
 				free(aBuffer);
 
-				URLEncode(&searchStr);
-				
 				BEntry entry(coverPath.String());
 				if (entry.Exists() == true) {
 					entry_ref cover;
@@ -133,6 +131,8 @@ void InfoPopperSender::MessageReceived(BMessage *msg) {
 					pop.AddRef("overlayIconRef", &ref);
 					pop.AddInt32("overlayIonType", InfoPopper::Attribute);				
 				} else {
+					URLEncode(&searchStr);				
+
 					if (FetchAlbumCover(coverPath, searchStr) == 0) {
 						entry_ref cover;
 						get_ref_for_path(coverPath.String(), &cover);
@@ -203,7 +203,10 @@ const char *InfoPopperSender::MainText(void) {
 int	InfoPopperSender::FetchAlbumCover(BString albumPath, BString search) {
 	if ((albumPath.Length() <= 0) || (search.Length() <= 0) ) return -1;
 
-	BString xmlURL = "http://xml.amazon.com/onca/xml3?locale=us&t=t&dev-t=t&mode=music&sort=+pmrank&offer=All&type=lite&page=1&f=xml&ResponseGroup=Images";
+	BString xmlURL = "http://xml.amazon.com/onca/xml3?locale=us&t=t&dev-t=";
+	xmlURL << "0CRWYJS6C855FMVBEM82&";
+	xmlURL << "mode=music&sort=+pmrank&offer=All&type=lite&page=1&f=xml&";
+	xmlURL << "ResponseGroup=Images";
 	xmlURL << "&KeywordSearch=" << search;
 
 	int status = -1;
@@ -221,7 +224,6 @@ int	InfoPopperSender::FetchAlbumCover(BString albumPath, BString search) {
 			xmlXPathFreeContext(pathCtxt);
 			xmlXPathFreeObject(imageNode);
 
-			unlink(xmlPath);
 			return -1;
 		};
 
@@ -231,7 +233,6 @@ int	InfoPopperSender::FetchAlbumCover(BString albumPath, BString search) {
 			xmlXPathFreeContext(pathCtxt);
 			xmlXPathFreeObject(imageNode);
 
-			unlink(xmlPath);
 			return -1;			
 		};
 
