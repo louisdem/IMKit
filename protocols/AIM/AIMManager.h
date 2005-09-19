@@ -33,6 +33,7 @@ class OSCARHandler;
 typedef map<BString, Buddy *> buddymap;
 typedef map<uint16, OSCARConnection *> pfc_map; // Pending family / connection map
 typedef list<Flap *> flap_stack;
+typedef list<OSCARConnection *> connlist;
 
 enum {
 	AMAN_PULSE = 'ampu',
@@ -116,9 +117,8 @@ class AIMManager : public BLooper {
 	virtual status_t	HandleAuthorisation(BMessage *msg);
 			
 			buddymap	fBuddy;
-		list<OSCARConnection *>
-						fConnections;
-		flap_stack		fWaitingSupport;
+			connlist	fConnections;
+			flap_stack	fWaitingSupport;
 			pfc_map		fPendingConnections;
 
 			uint16		fSSILimits[kSSILimitCount];

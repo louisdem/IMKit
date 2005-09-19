@@ -139,27 +139,52 @@ AIMManager::~AIMManager(void) {
 //#pragma mark -
 
 status_t AIMManager::ClearConnections(void) {
-	list<OSCARConnection *>::iterator it;
-	
-	for (it = fConnections.begin(); it != fConnections.end(); it++) {
-		OSCARConnection *con = (*it);
-		if (con->Lock()) con->Quit();
-	};
-	
-	fConnections.clear();
+	printf("%i pending connections\n", fPendingConnections.size());
 
 	pfc_map::iterator pIt;
 	for (pIt = fPendingConnections.begin(); pIt != fPendingConnections.end(); pIt++) {
 		AIMReqConn *con = dynamic_cast<AIMReqConn *>(pIt->second);
-		if (con->Lock()) con->Quit();
+//		OSCARConnection *con = (pIt->second);
+		if (con == NULL) { printf("Got a null connection!\n"); continue; };
+
+		if (con->Lock()) {
+			con->Quit();
+		} else {
+			printf("Connection to %s:%i (%s) wouldn't lock!\n", con->Server(), con->Port(),
+				con->ConnName());
+		};
 	};
 	fPendingConnections.clear();
+
+
+	connlist::iterator it;
+	
+	printf("%i connections\n", fConnections.size());
+	
+	for (it = fConnections.begin(); it != fConnections.end(); it++) {
+		OSCARConnection *con = (*it);
+		if (con == NULL) {
+			printf("Got a null connection!\n");
+			continue;
+		};
+		BMessenger msgr(con);
+		msgr.SendMessage(B_QUIT_REQUESTED);
+//		if (con->Lock()) {
+//			printf("Killing connection to %s:%i (%s)\n", con->Server(), con->Port(), con->ConnName());
+//			con->Quit();
+//		} else {
+//			printf("Connection to %s:%i (%s) wouldn't lock!\n", con->Server(), con->Port(),
+//				con->ConnName());
+//		};
+		printf("?\n");
+	};	
+	fConnections.clear();
 	
 	return B_OK;
 };
 
 status_t AIMManager::ClearWaitingSupport(void) {
-	list<Flap *>::iterator it;
+	flap_stack::iterator it;
 	
 	for (it = fWaitingSupport.begin(); it != fWaitingSupport.end(); it++) {
 		Flap *f = (*it);
@@ -833,7 +858,7 @@ status_t AIMManager::Send(Flap *f) {
 		if (s != NULL) {
 			uint16 family = s->Family();
 
-			list <OSCARConnection *>::iterator i;
+			connlist::iterator i;
 			
 			for (i = fConnections.begin(); i != fConnections.end(); i++) {
 				OSCARConnection *con = (*i);
@@ -892,6 +917,9 @@ status_t AIMManager::Login(const char *server, uint16 port, const char *username
 		return B_ERROR;
 	}
 	
+	ClearConnections();
+	ClearWaitingSupport();
+	
 	if (fConnectionState == OSCAR_OFFLINE) {
 		uint8 nickLen = strlen(username);
 	
@@ -945,15 +973,30 @@ void AIMManager::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case AMAN_NEW_CAPABILITIES: {
 
+			printf("Got new caps. %i connections, %i pending\n", fConnections.size(), fPendingConnections.size());
+
 			int16 family = 0;
 			pfc_map::iterator pIt;
 			for (int32 i = 0; msg->FindInt16("family", i, &family) == B_OK; i++) {
 				pIt = fPendingConnections.find(family);
 				if (pIt != fPendingConnections.end()) {
-					fConnections.push_back(pIt->second);
+					printf("Got a new cap! Connection %p\n", pIt->second);
+					OSCARConnection *c = pIt->second;
+					
+					if (c != NULL) {
+						printf("\t%s:%i (%s) handles it\n", c->Server(), c->Port(), c->ConnName());
+					} else {
+						printf("\tConn was null :~(\n");
+					};
 					fPendingConnections.erase(pIt);
+					fConnections.push_back(c);
+				} else {
+					printf("Got an unexpected family connection... 0x%04x\n", family);
 				};
 			};
+			
+			printf("Now have %i connections, %i pending\n", fConnections.size(), fPendingConnections.size());
+			
 			flap_stack::iterator i;
 			
 //			We can cheat here. Just try resending all the items, Send() will
@@ -988,10 +1031,11 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			if (msg->FindInt16("family", &family) == B_OK) {
 				LOG(kProtocolName, liMedium, "Connecting to %s:%i for 0x%04x\n",
 					host, port, family);
-				fPendingConnections[family] = con;
 				con = new AIMReqConn(host, port, this);
+				fPendingConnections[family] = con;
 			} else {
 				con = new OSCARConnection(host, port, this);
+				fConnections.push_back(con);
 			};
 			
 			Flap *srvCookie = new Flap(OPEN_CONNECTION);
@@ -999,8 +1043,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 			srvCookie->AddTLV(new TLV(0x0006, cookie, bytes));
 
 			con->Run();
-			fConnections.push_back(con);
-			
 			con->Send(srvCookie);
 		} break;
 		
@@ -1018,15 +1060,12 @@ void AIMManager::MessageReceived(BMessage *msg) {
 					fConnections.size());
 				
 				bool hasBOS = false;
-				list<OSCARConnection *>::iterator cIt = fConnections.begin();
+				connlist::iterator cIt = fConnections.begin();
 				for (; cIt != fConnections.end(); cIt++) {
 					OSCARConnection *con = (*cIt);
 					if ((con) && (con->ConnectionType() == connBOS)) {
 						hasBOS = true;
 						break;
-					} else {
-						printf("%s:%i is %s\n", con->Server(), con->Port(),
-							con->ConnName());
 					};
 				};
 				
