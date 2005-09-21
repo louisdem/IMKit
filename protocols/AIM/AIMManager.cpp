@@ -139,44 +139,26 @@ AIMManager::~AIMManager(void) {
 //#pragma mark -
 
 status_t AIMManager::ClearConnections(void) {
-	printf("%i pending connections\n", fPendingConnections.size());
+	LOG(kProtocolName, liLow, "%i pending connections to close",
+		fPendingConnections.size());
 
 	pfc_map::iterator pIt;
 	for (pIt = fPendingConnections.begin(); pIt != fPendingConnections.end(); pIt++) {
 		AIMReqConn *con = dynamic_cast<AIMReqConn *>(pIt->second);
-//		OSCARConnection *con = (pIt->second);
-		if (con == NULL) { printf("Got a null connection!\n"); continue; };
-
-		if (con->Lock()) {
-			con->Quit();
-		} else {
-			printf("Connection to %s:%i (%s) wouldn't lock!\n", con->Server(), con->Port(),
-				con->ConnName());
-		};
+		if (con == NULL) continue;
+		BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 	};
 	fPendingConnections.clear();
 
 
+	LOG(kProtocolName, liLow, "%i used connections to close", fConnections.size());
+
 	connlist::iterator it;
-	
-	printf("%i connections\n", fConnections.size());
-	
 	for (it = fConnections.begin(); it != fConnections.end(); it++) {
 		OSCARConnection *con = (*it);
-		if (con == NULL) {
-			printf("Got a null connection!\n");
-			continue;
-		};
-		BMessenger msgr(con);
-		msgr.SendMessage(B_QUIT_REQUESTED);
-//		if (con->Lock()) {
-//			printf("Killing connection to %s:%i (%s)\n", con->Server(), con->Port(), con->ConnName());
-//			con->Quit();
-//		} else {
-//			printf("Connection to %s:%i (%s) wouldn't lock!\n", con->Server(), con->Port(),
-//				con->ConnName());
-//		};
-		printf("?\n");
+		if (con == NULL) continue;
+
+		BMessenger(con).SendMessage(B_QUIT_REQUESTED);
 	};	
 	fConnections.clear();
 	
@@ -973,34 +955,34 @@ void AIMManager::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case AMAN_NEW_CAPABILITIES: {
 
-			printf("Got new caps. %i connections, %i pending\n", fConnections.size(), fPendingConnections.size());
+			LOG(kProtocolName, liLow, "Got a possible new capability %i connections"
+				", %i pending", fConnections.size(), fPendingConnections.size());
 
 			int16 family = 0;
 			pfc_map::iterator pIt;
 			for (int32 i = 0; msg->FindInt16("family", i, &family) == B_OK; i++) {
 				pIt = fPendingConnections.find(family);
 				if (pIt != fPendingConnections.end()) {
-					printf("Got a new cap! Connection %p\n", pIt->second);
-					OSCARConnection *c = pIt->second;
-					
-					if (c != NULL) {
-						printf("\t%s:%i (%s) handles it\n", c->Server(), c->Port(), c->ConnName());
-					} else {
-						printf("\tConn was null :~(\n");
-					};
 					fPendingConnections.erase(pIt);
-					fConnections.push_back(c);
+					OSCARConnection *c = pIt->second;
+					if (c != NULL) {
+						LOG(kProtocolName, liLow, "%s:%i (%s) handles a new "
+							"capability 0x%04x", c->Server(), c->Port(),
+							c->ConnName(), family);
+						fConnections.push_back(c);
+					} else {
+						LOG(kProtocolName, liDebug, "Connection to support 0x%04x "
+							"has gone null on our ass", family);
+					};
 				} else {
-					printf("Got an unexpected family connection... 0x%04x\n", family);
+					LOG(kProtocolName, liMedium, "An unexpected connection came in "
+						"for family 0x%04x", family);
 				};
 			};
-			
-			printf("Now have %i connections, %i pending\n", fConnections.size(), fPendingConnections.size());
-			
-			flap_stack::iterator i;
-			
+					
 //			We can cheat here. Just try resending all the items, Send() will
 //			take care of finding a connection for it
+			flap_stack::iterator i;
 			for (i = fWaitingSupport.begin(); i != fWaitingSupport.end(); i++) {
 				Flap *f = (*i);
 				if (f) Send(f);
@@ -1010,8 +992,6 @@ void AIMManager::MessageReceived(BMessage *msg) {
 		} break;
 	
 		case AMAN_STATUS_CHANGED: {
-			msg->PrintToStream();
-		
 			uint8 status = msg->FindInt8("status");
 			fHandler->StatusChanged(fOurNick, (online_types)status);
 			fConnectionState = status;

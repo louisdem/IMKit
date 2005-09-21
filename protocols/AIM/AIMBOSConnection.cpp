@@ -131,8 +131,6 @@ status_t AIMBOSConnection::HandleServiceControl(BMessage *msg) {
 			f->AddInt16(0x0004);						
 			Send(f);
 			
-			printf("Current state is: %i\n", State());
-			
 			if (State() != OSCAR_CONNECTING) return B_OK;
 			
 			fManager->Progress("AIM Login", "AIM: Got rate limits", 0.6);
