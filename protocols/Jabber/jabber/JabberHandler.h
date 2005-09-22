@@ -12,6 +12,7 @@ using std::list;
 #include "JabberPresence.h"
 #include "JabberRegistration.h"
 #include "ObjectList.h"
+#include "JabberPlug.h"
 
 #include "xmltok.h"
 #include "expat.h"
@@ -20,13 +21,13 @@ using std::list;
 class JabberHandler 
 {
 public:
-								JabberHandler(const BString & name);
+								JabberHandler(const BString & name, JabberPlug*);
 	virtual 					~JabberHandler();
 	void						Dispose();			
 	void 						LogOn();
 	void 						LogOff();
 	
-	void 						Register();
+	//void 						Register();
 	void 						Register(JabberRegistration * registration);
 	void 						Register(JabberAgent * agent);
 	
@@ -46,6 +47,8 @@ public:
 	bool						IsAuthorized();
 	void 						RemoveContact(const JabberContact * contact);
 	
+	int32 						ReceivedData(const char *,int32);
+	
 protected: 
 	typedef BObjectList<JabberElement> ElementList;
 	typedef list<BString>		StrList;
@@ -63,6 +66,10 @@ protected:
 	void 						AddContact(const BString & name, const BString & jid, const BString & group);
 	void 						AcceptSubscription(const BString & jid);
 	void 						UpdateRoster(JabberPresence * presence);
+	
+	
+	
+	
 	// The JabberHandler takes ownership of the contact
 	void 						UpdateRoster(JabberContact * contact);
 	// by xeD
@@ -101,14 +108,12 @@ private:
 	AgentList *					fAgents;
 
 	int32 						fSocket;
+	JabberPlug*					fPlug;
 	
 	XML_Parser 					fParser;
 	bool 						fAuthorized;
 	
-	volatile thread_id 			fReceiverThread;
-#ifdef NETSERVER_BUILD
-	BLocker * 					fEndpointLock;
-#endif				
+protected:
 
 	void 						Send(const BString & xml);
 	void 						Authorize();
@@ -118,15 +123,16 @@ private:
 	void 						RequestRoster();
 	void 						RequestAgents();
 	
-	static int32 				ReceiveData(void *);
 	
+	
+		
 	JabberMessage* 				BuildMessage();
 	JabberPresence* 				BuildPresence();
 	RosterList *				BuildRoster();
 	AgentList * 				BuildAgents();
 	JabberRegistration * 		BuildRegistration();
 			
-	int32 						GetConnection();
+	//int32 						GetConnection();
 	const JabberAgent * 		IsAgent(const BString & jid);
 	const char * 				HasAttribute(const char * name, const char ** attributes,int32 count);
 	const char * 				HasAttribute(const char * name, const char ** attributes);

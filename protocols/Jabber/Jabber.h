@@ -68,6 +68,12 @@ class Jabber : public IM::Protocol, public JabberManager, public JabberHandler
 		
 		typedef list<BString>	StrList; // new buddy added when off-line.
 		StrList*			fLaterBuddyList;
+		
+		//special client
+		//StrList				fSpecialUID;
+		BMessage				fSpecialUID;
+		
+		
 		//temp?
 		bool 	fAuth;
 		bool 	fRostered;

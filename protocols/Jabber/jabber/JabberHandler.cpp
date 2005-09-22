@@ -2,17 +2,7 @@
 #include "SHA1.h"
 #include "States.h"
 
-#ifdef NETSERVER_BUILD 
-#	include <netdb.h> 
-#	include <sys/socket.h> 
-#	include <Locker.h>
-#endif 
 
-#ifdef BONE_BUILD 
-#  include <arpa/inet.h>
-#  include <sys/socket.h>
-#  include <netdb.h>
-#endif 
 
 #include <unistd.h>
 #include <List.h>
@@ -21,7 +11,7 @@
 
 
 
-JabberHandler::JabberHandler(const BString & name)  
+JabberHandler::JabberHandler(const BString & name, JabberPlug* plug)  
 {
 	fHost = fUsername = fJid = fPassword = fResource = "";
 	fPort = fPriority = 0;
@@ -33,21 +23,21 @@ JabberHandler::JabberHandler(const BString & name)
 	
 	fSocket = -1;
 	fAuthorized = false;
-	fReceiverThread = -1;
+	
+	fPlug = plug;
+	
 	fParser = XML_ParserCreate(NULL);
 	XML_SetUserData(fParser, this);
 	XML_SetElementHandler(fParser, StartElement, EndElement);
 	XML_SetCharacterDataHandler(fParser, Characters);
-#ifdef NETSERVER_BUILD
-	fEndpointLock = new BLocker();
-#endif
+
 
 }
 
 void
 JabberHandler::Dispose() 
 {
-	if(fReceiverThread)	kill_thread(fReceiverThread);
+	
 	if(fParser) 			XML_ParserFree(fParser);
 	if(fElementStack)	delete fElementStack;
 	if(fNsStack) 		delete fNsStack;
@@ -59,7 +49,7 @@ JabberHandler::Dispose()
 	fNsStack=NULL;
 	fElementStack=NULL;
 	fParser=NULL;
-	fReceiverThread=0;
+	
 
 	
 }
@@ -213,7 +203,7 @@ JabberHandler::SetStatus(int32 status, const BString & message)
 	switch (status) 
 	{
 		case S_ONLINE:
-			xml << " type='available'><status>Available</status>";
+			xml << ">";
 			break;
 		case S_OFFLINE:
 			xml << " type='unavailable'>";
@@ -277,7 +267,7 @@ JabberHandler::LogOn()
 		Authorize();
 	}
 }
-
+/*
 void
 JabberHandler::Register() 
 {
@@ -293,7 +283,7 @@ JabberHandler::Register()
     	Send(xml);
 	}
 }
-
+*/
 void
 JabberHandler::Register(JabberAgent * agent)
 {
@@ -330,110 +320,32 @@ JabberHandler::Register(JabberRegistration * registration)
 }
 
 int32
-JabberHandler::ReceiveData(void * pHandler) 
-{
-	char data[1024];
-	int length;
-	JabberHandler * handler = reinterpret_cast<JabberHandler * >(pHandler);
+JabberHandler::ReceivedData(const char * data,int32 length)  {
 	
-	while (true) 
-	{
-#ifdef NETSERVER_BUILD 
-		handler->fEndpointLock->Lock(); 
-#endif
-		if ((length = (int)recv(handler->fSocket, data, 1023, 0)) > 0) 
-		{
-#ifdef NETSERVER_BUILD 
-			handler->fEndpointLock->Unlock(); 
-#endif
-			data[length] = 0;
-#ifdef STDOUT
-			printf("\n<< %s\n", data);
-#endif
-			if (!XML_Parse(handler->fParser, data, length, 0))
-				printf("parse failed\n");
-		} 
-		else 
-		{
-#ifdef NETSERVER_BUILD 
-			handler->fEndpointLock->Unlock(); 
-#endif
-			if(handler->IsAuthorized())
-			handler->Disconnected("Disconnected when receiving");
-			break;
-		}
+	if(length > 0){
+		
+		if (!XML_Parse(fParser, data, length, 0))
+			printf("parse failed\n");
 	}
-
+	else
+	
+	if(IsAuthorized())
+			Disconnected("Disconnected when receiving");
+			
+	
 	return 0;
 }
 
-int32 
-JabberHandler::GetConnection() 
-{
-	struct sockaddr_in remoteAddr;
-	int32 serverSock (-1);
-    remoteAddr.sin_family = AF_INET;
-	
-	if(fUsername == "" || fHost == "" || fPassword == "" || fPort <= 0)
-		return 0;
-		
-#ifdef BONE_BUILD
-    if (inet_aton(fHost.String(), &remoteAddr.sin_addr) == 0)
-#elif NETSERVER_BUILD 
-    if ((int)(remoteAddr.sin_addr.s_addr = inet_addr (fHost.String())) <= 0) 
-#endif
-	{
-       	struct hostent * remoteInet(gethostbyname(fHost.String()));
-       	if (remoteInet)
-       		remoteAddr.sin_addr = *((in_addr *)remoteInet->h_addr_list[0]);
-       	else 
-       	{
-			printf("failed (remoteInet) [%s]\n",fHost.String());
-			return 0;
-       	}
-    }
-
-    remoteAddr.sin_port = htons(fPort);
-    
-    if ((serverSock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    {
-    	printf("failed to create socket\n");
-    	return 0;
-    }
-    
-    if (connect(serverSock, (struct sockaddr *)&remoteAddr, sizeof(remoteAddr)) >= 0) {
-	    return serverSock;
-    } 
-    else 
-    {
-    	printf("failed to connect\n");
-    	Disconnected("Failed to connect to host.");
-    	return 0;
-    }
+/*int32 
+JabberHandler::GetConnection() { 
+	return fPlug->GetConnection(); 
 }
-
+*/
 void
 JabberHandler::Send(const BString & xml) 
 {
-	if (fSocket) 
-	{
-#ifdef NETSERVER_BUILD 
-		fEndpointLock->Lock(); 
-#endif	
-#ifdef STDOUT
-		printf("\n>> %s\n", xml.String());
-#endif
-		if(send(fSocket, xml.String(), xml.Length(), 0) == -1)
+	if(fPlug->Send(xml) < 0 )
 			Disconnected("Could not send");
-#ifdef NETSERVER_BUILD 
-		fEndpointLock->Unlock(); 
-#endif
-	} 
-	else
-	{
-		printf("Socket not initialized\n");
-		Disconnected("Socket not initialized.");
-	}
 }
 
 void
@@ -465,19 +377,24 @@ bool
 JabberHandler::BeginSession() 
 {
 	BString xml;
-	fSocket = GetConnection();
+	
+	if(fUsername == "" || fHost == "" || fPassword == "" || fPort <= 0) return false;
+	
+	fSocket = fPlug->StartConnection(fHost,fPort,this);
+	
 	if (fSocket >= 0) 
 	{
-		fReceiverThread = spawn_thread (ReceiveData, "receiver", B_LOW_PRIORITY, this); 
-		if (fReceiverThread != B_ERROR) 
-	    	resume_thread(fReceiverThread); 
-		else
-			return false;
-	
 		xml << "<stream:stream to=\'" << fHost << "\' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n";
 		Send(xml);
 		return true;
 	}
+	else
+	{
+    	printf("failed to connect\n");
+    	Disconnected("Failed to connect to host.");
+    	return false;
+    }
+    
 	return false;
 }
 
@@ -489,11 +406,7 @@ JabberHandler::EndSession()
 		BString xml;
 		xml << "</stream:stream>\n";
 		Send(xml);
-#ifdef BONE_BUILD 
-		close(fSocket);
-#elif NETSERVER_BUILD 
-		closesocket(fSocket); 
-#endif
+
 		fSocket = -1;
 		XML_ParserFree(fParser);
 		fParser = XML_ParserCreate(NULL);
@@ -514,7 +427,7 @@ JabberHandler::StartElement(void * pUserData, const char * pName, const char ** 
 	
 	// Authorize in the beginning of the stream
 	if(name.ICompare("stream:stream") == 0) {
-		handler->Authorize();
+		//handler->Authorize();
 		return;
 	}
 	if (name.ICompare("iq") == 0) 

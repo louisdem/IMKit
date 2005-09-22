@@ -40,7 +40,7 @@ TYPE= SHARED
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= Jabber.cpp jabber/JabberHandler.cpp JabberAgent.cpp JabberContact.cpp JabberElement.cpp JabberMessage.cpp JabberPresence.cpp JabberRegistration.cpp expat/xmlparse.c xmlrole.c xmltok.c
+SRCS= Jabber.cpp jabber/JabberHandler.cpp JabberAgent.cpp JabberContact.cpp JabberElement.cpp JabberMessage.cpp JabberPresence.cpp JabberRegistration.cpp JabberSocketPlug.cpp expat/xmlparse.c xmlrole.c xmltok.c
 
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -61,7 +61,7 @@ RSRCS= Jabber.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im stdc++.r4 _APP_ 
+LIBS= be im stdc++.r4 _APP_ ssl crypto
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -152,7 +152,7 @@ endif
 ifeq ($(shell ls 2>/dev/null -1 /boot/develop/headers/be/bone/bone_api.h), /boot/develop/headers/be/bone/bone_api.h)
 	SYSTEM_INCLUDE_PATHS += /boot/develop/headers/be/bone
 	LIBS += socket bind
-	DEFINES += BONE_BUILD
+	DEFINES += BONE_BUILD STDOUT
 else
 	DEFINES += NETSERVER_BUILD	
 	LIBS += net

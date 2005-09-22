@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <Constants.h>
 #include <Helpers.h>
+#include <JabberSocketPlug.h>
 
 #include "States.h"
 #include "string.h"
@@ -20,7 +21,7 @@ extern "C" IM::Protocol * load_protocol()
 
 Jabber::Jabber()
 :	IM::Protocol( IM::Protocol::MESSAGES | IM::Protocol::SERVER_BUDDY_LIST | IM::Protocol::OFFLINE_MESSAGES),
-	JabberHandler("jabberHandler"),
+	JabberHandler("jabberHandler",new JabberSocketPlug()),
 	fUsername(""),
 	fServer(""),
 	fPassword("")
