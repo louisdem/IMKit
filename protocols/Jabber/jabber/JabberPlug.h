@@ -13,7 +13,7 @@
 class JabberPlug {
 
 	public:
-		
+		virtual ~JabberPlug() {};
 	//private:
 		
 		virtual	   int		StartConnection(BString fHost, int32 fPort,void*) = 0;//if >= 0 it's ok.

@@ -14,7 +14,7 @@ class JabberSocketPlug : public JabberPlug {
 
 	public:
 			JabberSocketPlug();
-		   ~JabberSocketPlug();
+		    virtual ~JabberSocketPlug();
 	//private:
 		
 			   int		StartConnection(BString fHost, int32 fPort,void* cook);//if >= 0 it's ok.

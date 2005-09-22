@@ -26,6 +26,9 @@ JabberSocketPlug::JabberSocketPlug(){
 	#endif
 }
 
+JabberSocketPlug::~JabberSocketPlug(){
+}
+
 int
 JabberSocketPlug::StartConnection(BString fHost, int32 fPort,void* cookie){
 	
@@ -173,7 +176,8 @@ JabberSocketPlug::StopConnection(){
 	#elif NETSERVER_BUILD 
 		closesocket(fSocket); 
 	#endif
-
+	
+	return 0;
 }
 
 
