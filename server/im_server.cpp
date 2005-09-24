@@ -174,7 +174,7 @@ Server::~Server()
 {
 	LOG("im_server", liDebug, "~Server start");
 	
-	// broadcast STATUS_SET (offline) for all !offlin protocols
+	// broadcast STATUS_SET (offline) for all !offline protocols
 	map<string,Protocol*>::iterator p;
 	
 	for ( p = fProtocols.begin(); p != fProtocols.end(); p++ )
@@ -199,18 +199,6 @@ Server::~Server()
 	
 	SetAllOffline();
 	
-	LOG("im_server", liDebug, "%ld windows", CountWindows());
-	
-	for ( int i=0; i<CountWindows(); i++ ) {
-		LOG("im_server", liDebug, "Window %ld (%p) [%s]", i, WindowAt(i), WindowAt(i)->Title() );
-		BWindow * win = WindowAt(i);
-		win->Show();
-		win->Lock();
-		win->Quit();
-	}
-	
-//	BDeskbar db;
-//	db.RemoveItem( DESKBAR_ICON_NAME );
 	LOG("im_server", liDebug, "~Server end");
 }
 
@@ -220,7 +208,12 @@ bool
 Server::QuitRequested()
 {
 	fIsQuiting = true;
-	
+
+	while (CountWindows() > 0) {
+		BMessenger msgr(WindowAt(0));
+		if (msgr.IsValid()) msgr.SendMessage(B_QUIT_REQUESTED);
+	};
+
 	return true;
 }
 
@@ -575,9 +568,35 @@ Server::UnloadAddons()
 	for ( i=fAddOnInfo.begin(); i != fAddOnInfo.end(); i++ )
 	{
 		i->first->Shutdown();
-		
+	}
+
+	team_info info;
+	int32 cookie = 0;
+	
+	int32 protoCount = fProtocols.size();
+
+	while (get_next_team_info(&cookie, &info) == B_OK)
+	{
+		if (strstr(info.args, "im_server"))
+			break;
+	}
+	
+	// this kind of assumes each protocol always has
+	// at least one thread loaded, which may be incorrect
+	// in any case, we give the protocol add-ons some time
+	// to shut down all their ancilliary threads before
+	// unloading the add-ons themselves.
+	while (info.thread_count > (protoCount + 1))
+	{
+		get_team_info(info.team, &info);
+		snooze(20000);
+	}
+
+	for ( i=fAddOnInfo.begin(); i != fAddOnInfo.end(); i++ )
+	{
 		unload_add_on(i->second.image);
 	}
+
 	
 	fAddOnInfo.clear();
 	fProtocols.clear();
@@ -1029,14 +1048,19 @@ Server::selectConnection( BMessage * msg, Contact & contact )
 	
 	const char * protocol = msg->FindString("protocol");
 	const char * id = msg->FindString("id");
+
+	printf("Select connection: "); msg->PrintToStream();
 	
 	// first of all, check if source of last message is still online
 	// if it is, we use it.
 	
-	if ( fPreferredConnection[contact].length() > 0 )
-	{
+	printf("Length: %i\n", fPreferredConnection[contact].length());
+	
+	if ((fPreferredConnection[contact].length() > 0) &&
+		(fPreferredConnection[contact].length() < 100)) {
 		strncpy(connection, fPreferredConnection[contact].c_str(), sizeof(connection));
 		connection[sizeof(connection)-1] = 0;
+		printf("Copied %s into connection\n", fPreferredConnection[contact].c_str());
 		
 		if ( fStatus[connection].length() > 0 && fStatus[connection] != OFFLINE_TEXT )
 		{
