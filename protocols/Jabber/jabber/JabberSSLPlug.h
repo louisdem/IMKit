@@ -19,7 +19,7 @@ class JabberSSLPlug : public JabberPlug {
 
 	public:
 			JabberSSLPlug(BString forceserver=NULL,int32 port=0);
-		   ~JabberSSLPlug();
+		   virtual ~JabberSSLPlug();
 	//private:
 		
 			   int		StartConnection(BString fHost, int32 fPort,void* cook);//if >= 0 it's ok.

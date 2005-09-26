@@ -15,6 +15,10 @@ JabberSSLPlug::JabberSSLPlug(BString forceserver=NULL,int32 port=0){
 
 }
 
+JabberSSLPlug::~JabberSSLPlug()
+{
+}
+
 int
 JabberSSLPlug::StartConnection(BString fServer, int32 fPort,void* cookie){
 	
