@@ -82,6 +82,9 @@ const char *Command::Param(int32 index, bool decode = false) {
 		};
 	};
 	
+	// FIXME: This should be in thread-local-storage
+	// Otherwise we'll have crashes when this is called
+	// from several connections at once. Race conditions suck.
 	static char * param_string = NULL;
 	
 	if ( param_string )
