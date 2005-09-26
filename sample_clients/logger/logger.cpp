@@ -46,7 +46,7 @@ LoggerApp::LoggerApp()
 	appsig.AddString("name", "app_sig");
 	appsig.AddString("description", "Application signature");
 	appsig.AddInt32("type", B_STRING_TYPE);
-	appsig.AddBool("default", "application/x-vnd.m_eiman.im_logger");
+	appsig.AddString("default", "application/x-vnd.m_eiman.im_logger");
 	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);

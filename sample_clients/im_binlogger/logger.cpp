@@ -31,7 +31,7 @@ LoggerApp::LoggerApp()
 	appsig.AddString("name", "app_sig");
 	appsig.AddString("description", "Application signature");
 	appsig.AddInt32("type", B_STRING_TYPE);
-	appsig.AddBool("default", "application/x-vnd.BeClan.im_binlogger");
+	appsig.AddString("default", "application/x-vnd.BeClan.im_binlogger");
 	
 	BMessage tmplate(IM::SETTINGS_TEMPLATE);
 	tmplate.AddMessage("setting", &autostart);

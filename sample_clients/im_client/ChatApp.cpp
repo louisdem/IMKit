@@ -49,7 +49,7 @@ ChatApp::ChatApp()
 	appsig.AddString("name", "app_sig");
 	appsig.AddString("description", "Application signature");
 	appsig.AddInt32("type", B_STRING_TYPE);
-	appsig.AddBool("default", "application/x-vnd.m_eiman.sample_im_client");
+	appsig.AddString("default", "application/x-vnd.m_eiman.sample_im_client");
 	
 	BMessage iconSize;
 	iconSize.AddString("name", "icon_size");

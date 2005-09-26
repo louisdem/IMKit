@@ -60,7 +60,7 @@ ChatApp::ChatApp()
 	appsig.AddString("name", "app_sig");
 	appsig.AddString("description", "Application signature");
 	appsig.AddInt32("type", B_STRING_TYPE);
-	appsig.AddBool("default", SIGN);
+	appsig.AddString("default", SIGN);
 	
 	BMessage iconSize;
 	iconSize.AddString("name", "icon_size");
