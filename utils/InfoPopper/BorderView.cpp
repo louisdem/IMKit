@@ -50,7 +50,7 @@ BorderView::Draw( BRect rect )
 	font_height fh;
 	font.GetHeight( &fh );
 		
-	float line_height = fh.ascent + fh.descent + fh.leading;
+//	float line_height = fh.ascent + fh.descent + fh.leading;
 	
 	float text_pos = fh.ascent;
 	

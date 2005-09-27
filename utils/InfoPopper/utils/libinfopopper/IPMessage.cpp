@@ -82,4 +82,5 @@ void IPMessage::PrintToStream(FILE *out = stdout) {
 	fprintf(out, "\tApplication: %s\n", fApp.String());
 	fprintf(out, "\tTitle: %s\n", fTitle.String());
 	fprintf(out, "\tContent: %s\n", fContent.String());
+	fprintf(out, "\tProgress: %.2f\n", fProgress);
 };

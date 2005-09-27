@@ -39,6 +39,7 @@ status_t IPConnection::Send(IPMessage *message) {
 	send.AddString("app", message->Application());
 	send.AddString("title", message->Title());
 	send.AddString("content", message->Content());
+	send.AddFloat("progress", message->Progress());
 	
 	return fIPMsgr->SendMessage(&send);
 };
@@ -103,11 +104,22 @@ IPMessage *IPConnection::MessageAt(int32 index) {
 	BString app("");
 	if (reply.FindString("result", &app) != B_OK) return NULL;
 
+	BMessage progressReq(B_GET_PROPERTY);
+	progressReq.AddSpecifier("progress");
+	progressReq.AddSpecifier("message", index);
+	
+	if (fMsgMsgr->SendMessage(&progressReq, &reply) != B_OK) return NULL;
+	if ((reply.FindInt32("error", &error) != B_OK) || (error != B_OK)) return NULL;
+
+	float progress = 0.0f;
+	if (reply.FindFloat("result", &progress) != B_OK) return NULL;
+
 	IPMessage *message = new IPMessage((InfoPopper::info_type)type);
 	message->Application(app.String());
 	message->Title(title.String());
 	message->Content(content.String());
-
+	message->Progress(progress);
+	
 	return message;
 };
 

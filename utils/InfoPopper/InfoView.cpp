@@ -17,8 +17,9 @@ property_info message_prop_list[] = {
 	{ "content", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message contents"},
 	{ "title", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message title"},
 	{ "apptitle", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get message's app"},
-	{ "icon", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get icon as a flattened bitmap"},
+	{ "icon", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get icon as an archived bitmap"},
 	{ "type", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get the message type"},
+	{ "progress", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get the progress (0.0-1.0)"},
 	NULL // terminate list
 };
 
@@ -116,15 +117,22 @@ void InfoView::MessageReceived(BMessage * msg) {
 					reply.AddInt32("result", fType);
 				};
 				
+				if (strcmp(property, "progress") == 0) {
+					reply.AddFloat("result", fProgress);
+				};
+				
 				if (strcmp(property, "icon") == 0) {
-/*					if (fBitmap) {
-						int32 bitmap_size = fBitmap->FlattenedSize();
-						char * bitmap_data = malloc( bitmap_size );
-						if (fBitmap->Flatten(bitmap_data, bitmap_size) == B_OK) {
-							reply.AddData("result", bitmap_data, bitmap_size);
+					if (fBitmap) {
+						BMessage archive;
+//						int32 bitmap_size = fBitmap->FlattenedSize();
+//						char * bitmap_data = malloc( bitmap_size );
+//						if (fBitmap->Flatten(bitmap_data, bitmap_size) == B_OK) {
+						if ( fBitmap->Archive(&archive) == B_OK ) {
+//							reply.AddData("result", B_RAW_TYPE, bitmap_data, bitmap_size);
+							reply.AddMessage("result", &archive);
 						};
 					}
-*/				};
+				};
 				reply.AddInt32("error", B_OK);
 			} else {
 				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
