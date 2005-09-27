@@ -5,6 +5,8 @@
 #define LOG(X) printf X;
 #define STDOUT
 
+#define msnmsgPing 'ping'
+
 JabberSSLPlug::JabberSSLPlug(BString forceserver=NULL,int32 port=0){
 
 	bio = NULL;
@@ -13,12 +15,32 @@ JabberSSLPlug::JabberSSLPlug(BString forceserver=NULL,int32 port=0){
 	ffServer = forceserver;
 	ffPort = port;
 
+	Run();
+	
+	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
+		new BMessage(msnmsgPing), 60000000, -1);
+		
 }
 
-JabberSSLPlug::~JabberSSLPlug()
-{
+
+JabberSSLPlug::~JabberSSLPlug(){
+
+		if ( fKeepAliveRunner )
+			delete fKeepAliveRunner;
+		
 }
 
+void
+JabberSSLPlug::MessageReceived(BMessage* msg){
+
+		if(msg->what == msnmsgPing){
+			printf("\nPING!\n");
+			Send(" ");
+		}
+		else
+			BLooper::MessageReceived(msg);
+
+}
 int
 JabberSSLPlug::StartConnection(BString fServer, int32 fPort,void* cookie){
 	
@@ -106,12 +128,21 @@ JabberSSLPlug::ReceiveData(void * pHandler){
 		
 		else {
 		
-			if(!BIO_should_retry(plug->bio))			
+			if(!BIO_should_retry(plug->bio)) {			
+				
 				//uhm really and error!
+				#ifdef STDOUT
+					//int ret = SSL_get_error(plug->bio);
+					printf("\nSSLPlug<< not should retry! err ");
+					ERR_print_errors(plug->bio);
+				#endif	
 				return 0;			
+			}
 			else 
-				break;
-		
+			{
+				BString space(" ");
+				plug->Send(space); 
+			}
 		}
 			
 		plug->ReceivedData(data,length);
@@ -129,8 +160,8 @@ JabberSSLPlug::ReceivedData(const char* data,int32 len){
 
 int
 JabberSSLPlug::Send(const BString & xml){
+		
 		#ifdef STDOUT
-	
 			printf("\nSSLPlug>> %s\n", xml.String());
 		#endif
 		

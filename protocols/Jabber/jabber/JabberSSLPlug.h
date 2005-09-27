@@ -15,7 +15,10 @@
 
 #include <OS.h>
 
-class JabberSSLPlug : public JabberPlug {
+#include <Looper.h>
+#include <MessageRunner.h>
+
+class JabberSSLPlug : public JabberPlug, public BLooper {
 
 	public:
 			JabberSSLPlug(BString forceserver=NULL,int32 port=0);
@@ -28,6 +31,8 @@ class JabberSSLPlug : public JabberPlug {
 			   int		StopConnection();	
 	
 			   void		ReceivedData(const char* data,int32);
+			   
+			   void		MessageReceived(BMessage* );
 	private:
 	
 	
@@ -39,7 +44,8 @@ class JabberSSLPlug : public JabberPlug {
 		
 		volatile thread_id 			fReceiverThread;
 		void*						fCookie; //FIX!
-							
+		
+		BMessageRunner*				fKeepAliveRunner;					
 };
 
 #endif
