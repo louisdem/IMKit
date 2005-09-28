@@ -1,6 +1,7 @@
 #include "Command.h"
 
 #include <stdio.h>
+#include <TLS.h>
 
 Command::Command(const char *type)
 	: fTrID(-1),
@@ -82,10 +83,23 @@ const char *Command::Param(int32 index, bool decode = false) {
 		};
 	};
 	
+	static int32 tlsString = tls_allocate();
+	
+	char * param_string = (char*)tls_get(tlsString);
+	
+	if ( param_string )
+		free(param_string);
+		
+	param_string = strdup(param.String());
+	
+	tls_set(tlsString, (void*)param_string);
+	
+	return param_string;
+
 	// FIXME: This should be in thread-local-storage
 	// Otherwise we'll have crashes when this is called
 	// from several connections at once. Race conditions suck.
-	static char * param_string = NULL;
+/*	static char * param_string = NULL;
 	
 	if ( param_string )
 		free( param_string );
@@ -93,6 +107,7 @@ const char *Command::Param(int32 index, bool decode = false) {
 	param_string = strdup(param.String());
 	
 	return param_string;
+*/
 };
 
 status_t Command::AddPayload(const char *payload, int32 length = -1, bool /*encode = true*/) {
