@@ -96,7 +96,9 @@ int main( int numarg, const char ** argv )
 		
 		curr++;
 	}
-
+	
+	// rotate log file
+	rename("/boot/home/im_kit.log", "/boot/home/im_kit.log.0");
 	
 	IM::Server server;
 }
