@@ -788,8 +788,8 @@ ChatWindow::MessageReceived( BMessage * msg )
 		{
 			BMessage open_msg(B_REFS_RECEIVED);
 			open_msg.AddRef("refs", &fEntry);
-			
-			be_roster->Launch( "application/x-vnd.Be-MAIL", &open_msg );
+			// "application/x-vnd.Be-MAIL"
+			be_roster->Launch("text/x-email", &open_msg );
 		}	break;
 		
 		case BLOCK:
