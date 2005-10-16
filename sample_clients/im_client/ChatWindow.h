@@ -106,6 +106,9 @@ class ChatWindow : public BWindow {
 							AUTH,
 							VIEW_LOG,
 							VIEW_WEBPAGE,
+							NEXT_WIN,
+							PREV_WIN,
+							
 						
 							CLEAR_TYPING	= 1000,
 							PROTOCOL_SELECTED,

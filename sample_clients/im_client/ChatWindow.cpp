@@ -9,6 +9,7 @@
 #include <Path.h>
 #include <MenuBar.h>
 #include <MessageRunner.h>
+#include <vector>
 
 #include "BubbleHelper.h"
 
@@ -94,6 +95,9 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fSendButton(NULL),
 	fProtocolHack(NULL)
 {
+
+	AddShortcut(B_LEFT_ARROW, B_SHIFT_KEY, new BMessage(PREV_WIN));
+	AddShortcut(B_RIGHT_ARROW, B_SHIFT_KEY, new BMessage(NEXT_WIN));
 
 	bool command, sendButton;
 	int32 iconBarSize;
@@ -560,6 +564,31 @@ ChatWindow::MessageReceived( BMessage * msg )
 {
 	switch ( msg->what )
 	{
+		case PREV_WIN: 
+		case NEXT_WIN: {
+			int32 add = 1;
+			int32 windows = be_app->CountWindows();
+			int32 next = -10;
+			vector<BWindow *> chatWindows;
+			
+			if (msg->what == PREV_WIN) add = -1;
+			
+			for (int32 i = 0; i < windows; i++) {
+				BWindow *window = be_app->WindowAt(i);
+				if (dynamic_cast<ChatWindow *>(window) != NULL) {
+					chatWindows.push_back(window);
+				};
+				if (window == this) next = (chatWindows.size() - 1) + add;
+			};
+			
+			if (next < -1) return;			
+			if (next < 0) next = chatWindows.size() - 1;
+			if (next > (chatWindows.size() - 1)) next = 0;
+			
+			BWindow *window = chatWindows[next];
+			if (window) window->Activate(true);
+		};
+	
 		case IM::SETTINGS_UPDATED: {
 			if (msg->FindString("people_handler", &fPeopleHandler) != B_OK) {
 				fPeopleHandler = kDefaultPeopleHandler;
