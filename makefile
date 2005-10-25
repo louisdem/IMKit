@@ -66,7 +66,7 @@ common:
 	
 	# add attributes to application/x-person
 	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:connections" --public-name "IM Connections" --type string --width 80 --viewable --public
-	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public
+	-$(BUILD)/utils/mimetype_attribute --mime application/x-person --internal-name "IM:status" --public-name "IM Status" --type string --width 80 --viewable --public --not-editable
 	ln -sf "/boot/home/config/lib/libim.so" "/boot/develop/lib/x86/libim.so"
 
 	-if [ ! -d "$(COMMON_SERVERS)" ]; then \
