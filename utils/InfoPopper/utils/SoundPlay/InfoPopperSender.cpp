@@ -104,20 +104,26 @@ void InfoPopperSender::MessageReceived(BMessage *msg) {
 						
 				BString searchStr;
 				BString coverPath = fAlbumPath;
-				int32 aLength = -1;
 				BPath rPath(&ref);
+
+				int32 aLength = -1;
 				char *aBuffer = ReadAttribute(rPath.Path(), "Audio:Artist", &aLength);
-				coverPath.Append(aBuffer, aLength);
-				
+				coverPath.Append(aBuffer, aLength);							
 				searchStr.Append(aBuffer, aLength);
+
 				if (searchStr.Length() > 0) searchStr << " ";
 				free(aBuffer);
-	
+		
 				coverPath.Append("_");
 				aBuffer = ReadAttribute(rPath.Path(), "Audio:Album", &aLength);
+
 				coverPath.Append(aBuffer, aLength);
-				
 				searchStr.Append(aBuffer, aLength);
+
+				searchStr.ReplaceAll(":", "");
+				coverPath.ReplaceAll(":", "");
+				
+
 				free(aBuffer);
 
 				BEntry entry(coverPath.String());
