@@ -17,22 +17,18 @@ extern "C" IM::Protocol * load_protocol()
 }
 
 
-
-
 GoogleTalk::GoogleTalk()
 :	IM::Protocol( IM::Protocol::MESSAGES | IM::Protocol::SERVER_BUDDY_LIST | IM::Protocol::OFFLINE_MESSAGES),
-	JabberHandler("jabberHandler",new JabberSSLPlug("talk.google.com",5223)),
+	JabberHandler("jabberHandler", fPlug = new JabberSSLPlug("talk.google.com",5223) ),
 	fUsername(""),
 	fServer("gmail.com"),
 	fPassword("")
 {
-		
+
 }
 
-GoogleTalk::~GoogleTalk()
-{
-	fLaterBuddyList->clear();
-	delete fLaterBuddyList;
+GoogleTalk::~GoogleTalk(){
+	Shutdown();
 }
 
 status_t
@@ -52,6 +48,18 @@ GoogleTalk::Init( BMessenger msgr )
 status_t
 GoogleTalk::Shutdown()
 {
+
+	LogOff();
+	fLaterBuddyList->clear();
+	delete fLaterBuddyList;
+	
+	
+	thread_id plug = fPlug->Thread();
+	BMessenger(fPlug).SendMessage( B_QUIT_REQUESTED );
+	fPlug = NULL;
+	int32 res=0;
+	wait_for_thread( plug, &res );
+	
 	return B_OK;
 }
 
@@ -546,6 +554,9 @@ GoogleTalk::BuddyStatusChanged( JabberPresence* jp )
 	msg.AddString("protocol", kProtocolName);
 	msg.AddString("id", jp->GetJid());
 	
+//	if(jp->GetShow().ICompare("unavailable"))
+		
+	
 	AddStatusString(jp,&msg);
 	
 	fServerMsgr.SendMessage( &msg );
@@ -554,6 +565,7 @@ GoogleTalk::BuddyStatusChanged( JabberPresence* jp )
 void
 GoogleTalk::AddStatusString(JabberPresence* jp ,BMessage* msg)
 {	
+	
 	int32 show=jp->GetShow();
 	switch(show) 
 	{
@@ -576,7 +588,14 @@ GoogleTalk::AddStatusString(JabberPresence* jp ,BMessage* msg)
 			msg->AddString("status", ONLINE_TEXT);
 			break;
 		default:
+		{
+			BString test("StatusString");
+			test << " [" << jp->GetShow() << "]";
+			//debugger(test.String());
+			printf("SSLPlug %s",test.String());
 			msg->AddString("status", OFFLINE_TEXT);
+		}
+		break;
 	}
 }
 void

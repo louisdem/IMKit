@@ -12,12 +12,13 @@
 using std::list;
 
 class GoogleTalkConnection;
+class JabberSSLPlug;
 
 class GoogleTalk : public IM::Protocol, public JabberManager, public JabberHandler
 {
 	public:
 		GoogleTalk();
-		virtual ~GoogleTalk();
+		~GoogleTalk();
 		
 		// IM::Protocol part begins here
 		// messenger to im_server
@@ -61,6 +62,7 @@ class GoogleTalk : public IM::Protocol, public JabberManager, public JabberHandl
 
 				
 	private:
+		JabberSSLPlug*	fPlug;
 		BMessenger	fServerMsgr;
 		BString		fUsername;
 		BString		fServer;
