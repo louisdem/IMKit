@@ -18,11 +18,12 @@
 #include <Looper.h>
 #include <MessageRunner.h>
 
-class JabberSSLPlug : public JabberPlug, public BLooper {
+// public JabberPlug
+class JabberSSLPlug : public BLooper, public JabberPlug {
 
 	public:
 			JabberSSLPlug(BString forceserver=NULL,int32 port=0);
-		   virtual ~JabberSSLPlug();
+		   ~JabberSSLPlug();
 	//private:
 		
 			   int		StartConnection(BString fHost, int32 fPort,void* cook);//if >= 0 it's ok.

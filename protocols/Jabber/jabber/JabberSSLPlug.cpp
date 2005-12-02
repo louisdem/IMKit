@@ -25,9 +25,9 @@ JabberSSLPlug::JabberSSLPlug(BString forceserver=NULL,int32 port=0){
 
 JabberSSLPlug::~JabberSSLPlug(){
 
-		if ( fKeepAliveRunner )
+		if ( fKeepAliveRunner)
 			delete fKeepAliveRunner;
-		
+		if(bio != NULL & ctx !=NULL) StopConnection();
 }
 
 void
