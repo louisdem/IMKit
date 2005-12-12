@@ -4,6 +4,10 @@ Now uses libbsvg by Michael Lotz, a really nice SVG rendering lib written
 in good ol' BeOS drawing primitives. It uses a "use if you want, but please
 give proper credit".
 
+note: 
+  *running `make` from imkit/ will ensure libbsvg.so is installed.
+  *`make install` or `make symlinks` will expand smileys.zip  
+
 To build this now you'll need to copy lib/libbsvg.so to ~/config/lib and
 make a link from there to /boot/develop/lib/x86 or gcc won't find it.
 

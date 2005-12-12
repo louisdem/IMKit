@@ -2,7 +2,9 @@ Compiling the code
 
 First of all, a few notes: 
 
-  * Consult the BuildNotes.txt in src/protocols/ICQ , MSN, and Yahoo
+  * Consult the BuildNotes.txt in src/protocols/GoogleTalk, ICQ , MSN, and Yahoo.
+
+  * Consult the BuildNotes.txt in src/sample_clients/im_emoclient/
 
   * Running "make" will create a dir src/build where binaries are placed. Just so
     you know where to look for it.

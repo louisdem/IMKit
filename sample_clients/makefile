@@ -1,13 +1,13 @@
 # makefile for all sample code
 
 SUBDIRS = \
-	im_emoclient\
 	im_client \
 	logger \
 	tracker_addons \
 	im_infopopper \
 	im_binlogger \
-	im_binlog_viewer
+	im_binlog_viewer \
+	im_emoclient
 
 default .DEFAULT :
 	-@for f in $(SUBDIRS) ; do \

@@ -39,4 +39,4 @@ sigc++config.h: No such file or directory"
 then open up /boot/home/config/lib/sigc++-1.0/include.
 
 Do you see sigc++config.h? If so, move it to
-/boot/home/config/lib/sigc++-1.0/sigc++config.h
+/boot/home/config/include/sigc++-1.0/sigc++config.h

@@ -16,6 +16,31 @@ IMKIT_HEADERS=$(addprefix /boot/home/config/include/, $(wildcard libim/*.h))
 .PHONY: default clean install dist common
 
 default .DEFAULT : /boot/home/config/include/libim $(IMKIT_HEADERS)
+	# ensure libsigc++ was properly installed
+	-if test ! -e ~/config/include/sigc++-1.0/sigc++config.h && test -e ~/config/lib/sigc++-1.0/include/sigc++config.h; then \
+		ln -s ~/config/lib/sigc++-1.0/include/sigc++config.h ~/config/include/sigc++-1.0/sigc++config.h; \
+	fi
+
+	#ensure OpenSSL has symlinks at necessary places
+	-if test ! -e ~/config/lib/libssl.so && test -e ~/config/lib/libssl.so.0.9.7; then \
+		ln -s ~/config/lib/libssl.so.0.9.7 ~/config/lib/libssl.so; \
+		ln -s ~/config/lib/libcrypto.so.0.9.7 ~/config/lib/libcrypto.so; \
+	fi
+	-if test ! -e /boot/develop/lib/x86/libssl.so && test -e ~/config/lib/libssl.so; then \
+		ln -s ~/config/lib/libssl.so /boot/develop/lib/x86/libssl.so; \
+		ln -s ~/config/lib/libcrypto.so /boot/develop/lib/x86/libcrypto.so; \
+	fi
+	-if test ! -e /boot/develop/headers/openssl && test -e ~/config/include/openssl; then \
+		ln -s ~/config/include/openssl/ /boot/develop/headers/openssl; \
+	fi
+
+	# ensure libbsvg.so is where im_emoclient needs it.
+	-if test ! -e ~/config/lib/libbsvg.so; then \
+		cp $(shell pwd)/sample_clients/im_emoclient/lib/libbsvg.so ~/config/lib; \
+	fi
+	-if test ! -e /boot/develop/lib/x86/libbsvg.so; then \
+		ln -s ~/config/lib/libbsvg.so /boot/develop/lib/x86/libbsvg.so; \
+	fi
 	-@for f in $(SUBDIRS) ; do \
 		$(MAKE) -C $$f -f makefile $@ || exit -1; \
 	done
@@ -82,6 +107,9 @@ $(ICONDIR): server/Icons.zip
 	-mkdir -p "$(ICONDIR)" 2>/dev/null
 	-unzip -o server/Icons.zip -d "$(ICONDIR)"
 	touch "$(ICONDIR)"
+	# Unpack im_emoclient icons.
+	-mkdir -p  ~/config/settings/im_kit
+	-unzip -o "$(shell pwd)/sample_clients/im_emoclient/smileys.zip" -d ~/config/settings/im_kit
 
 dist: all
 	mkdir -p "$(DIST)"
