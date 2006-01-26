@@ -18,6 +18,7 @@ OSCARConnection::OSCARConnection(const char *server, uint16 port, AIMManager *ma
 	fConnType = type;
 	fServer = server;
 	fPort = port;
+	fThread = B_ERROR;
 	
 	fRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_PULSE), 250000, -1);	
@@ -35,8 +36,6 @@ OSCARConnection::~OSCARConnection(void) {
 	snooze(1000);
 	
 	StopReceiver();
-	
-	if (fThread > 0) kill_thread(fThread);
 	
 	ClearQueue();
 };
@@ -451,27 +450,38 @@ void OSCARConnection::StartReceiver(void) {
 void OSCARConnection::StopReceiver(void) {
 	if ( fSock > B_ERROR )
 	{
+		shutdown(fSock, 2);
 		#ifdef closesocket
 		closesocket( fSock );
 		#else
 		close( fSock );
 		#endif
-	
+		
 //		fSock = B_ERROR;
 	}
 	
+	BMessenger * old_msgr = NULL;
 	if (fSockMsgr) {
-		BMessenger * old_msgr = fSockMsgr;
+		old_msgr = fSockMsgr;
 		fSockMsgr = new BMessenger((BHandler *)NULL);
 		// deleting the messenger will cause the thread to exit cleanly
-		if ( old_msgr != NULL )
-			delete old_msgr;
-		
-		int32 res;
-		wait_for_thread( fThread, &res);
-		fThread = 0;
 	}
-};
+	
+	if ( fThread > B_ERROR )
+	{
+		int32 res;
+		if ( wait_for_thread( fThread, &res) != B_OK )
+		{
+			LOG(ConnName(), liHigh, "Error waiting for thread!");
+		}
+		fThread = B_ERROR;
+	}
+	
+	if ( old_msgr != NULL )
+	{
+		delete old_msgr;
+	}
+}
 
 int32 OSCARConnection::Receiver(void *con) {
 	OSCARConnection *connection = reinterpret_cast<OSCARConnection *>(con);
@@ -480,7 +490,6 @@ int32 OSCARConnection::Receiver(void *con) {
 	const uint32 kSleep = 2000000;
 	const char *kHost = connection->Server();
 	const uint16 kPort = connection->Port();
-	const BMessenger *kMsgr = connection->fSockMsgr;
 	const char *kConnName = connection->ConnName();
 	
 	int32 socket = 0;
@@ -519,7 +528,7 @@ int32 OSCARConnection::Receiver(void *con) {
 	uint16 flapLen = 0;
 	uchar flapHeader[kFLAPHeaderLen];
 	
-	while (kMsgr->IsValid() == true) {
+	while (connection->fSockMsgr->IsValid() == true) {
 		bytes = 0;
 		processed = 0;
 						
@@ -529,7 +538,7 @@ int32 OSCARConnection::Receiver(void *con) {
 			
 			FD_SET(socket, &read);
 			FD_SET(socket, &error);
-
+			
 			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
 				if (FD_ISSET(socket, &error)) {
 					LOG(kConnName, liLow, "%s:%i: Got socket error", kHost, kPort);
@@ -545,15 +554,18 @@ int32 OSCARConnection::Receiver(void *con) {
 							snooze(kSleep);
 							continue;
 						} else {
-							if (kMsgr->IsValid() == false) return B_OK;
-
+							if (connection->fSockMsgr->IsValid() == false)
+							{ // shutting down
+								return B_OK;
+							}
+							
 							LOG(kConnName, liLow, "%s:%i: Socket got less than 0",
 								kHost, kPort);
 							perror("SOCKET ERROR");
-
+							
 							BMessage msg(AMAN_CLOSED_CONNECTION);
 							msg.AddPointer("connection", con);
-			
+							
 							connection->fManMsgr.SendMessage(&msg);
 							connection->SetState(OSCAR_OFFLINE);
 							
@@ -563,7 +575,7 @@ int32 OSCARConnection::Receiver(void *con) {
 				};
 			};
 		};
-
+		
 		PrintHex(flapHeader, kFLAPHeaderLen);
 		uint8 channel = 0;
 		uint16 seqNum = 0;
@@ -575,7 +587,7 @@ int32 OSCARConnection::Receiver(void *con) {
 				" - discarding!", kHost, kPort);
 			continue;
 		};
-	
+		
 		channel = flapHeader[1];
 		seqNum = (flapHeader[2] << 8) + flapHeader[3];
 		flapLen = (flapHeader[4] << 8) + flapHeader[5];
@@ -591,7 +603,7 @@ int32 OSCARConnection::Receiver(void *con) {
 			
 			FD_SET(socket, &read);
 			FD_SET(socket, &error);
-
+			
 			if (select(socket + 1, &read, NULL, &error, NULL) > 0) {
 				if (FD_ISSET(socket, &read)) {
 					if ((bytes = recv(socket, (void *)(flapContents + processed),
@@ -603,15 +615,15 @@ int32 OSCARConnection::Receiver(void *con) {
 							continue;
 						} else {
 							free(flapContents);
-							if (kMsgr->IsValid() == false) return B_OK;
-						
+							if (connection->fSockMsgr->IsValid() == false) return B_OK;
+							
 							LOG(kConnName, liLow, "%s:%i. Got socket error:",
 								connection->Server(), connection->Port());
 							perror("SOCKET ERROR");
-
+							
 							BMessage msg(AMAN_CLOSED_CONNECTION);
 							msg.AddPointer("connection", con);
-			
+							
 							connection->fManMsgr.SendMessage(&msg);
 							connection->SetState(OSCAR_OFFLINE);
 							
@@ -643,17 +655,17 @@ int32 OSCARConnection::Receiver(void *con) {
 				continue;
 			};
 		}
-
+		
 		dataReady.AddInt8("channel", channel);
 		dataReady.AddInt16("seqNum", seqNum);
 		dataReady.AddInt16("flapLen", flapLen);
 		dataReady.AddData("data", B_RAW_TYPE, flapContents, flapLen);
-
-		kMsgr->SendMessage(&dataReady);
-
+		
+		connection->fSockMsgr->SendMessage(&dataReady);
+		
 		free(flapContents);
 	}
-
+	
 //	delete msgr;
 	LOG(kProtocolName, liDebug, "Receiver thread exiting");
 	
