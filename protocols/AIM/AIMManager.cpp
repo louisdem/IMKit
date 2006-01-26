@@ -419,7 +419,11 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 								
 								LOG(kProtocolName, liHigh, "AIMManager: Got message from %s: \"%s\"",
 									nick, msg);
-				
+									
+								// We just got a message from the user, they must
+								// be online (This allows us to reply)
+								
+								fHandler->StatusChanged(nick, OSCAR_ONLINE);
 								fHandler->MessageFromUser(nick, msg);
 								
 								free(msg);
