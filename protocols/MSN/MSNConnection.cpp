@@ -510,13 +510,12 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	char     buffer [1024*1024];
 	SSL_METHOD *meth;
 
-	SSLeay_add_ssl_algorithms();
-	meth = SSLv2_client_method();
 	SSL_load_error_strings();
+	SSLeay_add_ssl_algorithms();
+	meth = SSLv23_client_method();
 	ctx = SSL_CTX_new (meth);                        CHK_NULL(ctx);
+	SSL_CTX_set_options(ctx, SSL_OP_ALL);
 
-//	CHK_SSL(err);
-  
 	/* ----------------------------------------------- */
 	/* Create a socket and connect to server using normal socket calls. */
 	
@@ -544,12 +543,18 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	ssl = SSL_new (ctx);                         CHK_NULL(ssl);    
 	SSL_set_fd (ssl, sd);
 	err = SSL_connect (ssl);                     CHK_SSL(err);
+    SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
     
 	/* --------------------------------------------------- */
 	/* DATA EXCHANGE - Send a message and receive a reply. */
 
 	err = SSL_write (ssl, send->Flatten(), send->Length());  CHK_SSL(err);
-
+	
+	if ( err <= 0 )
+	{
+		LOG(kProtocolName, liDebug, "C %lX: SSL Error writing. Err: %ld", this, SSL_get_error(ssl, err));
+	}
+	
 	int received = 0;
 	while ( err > 0 )
 	{
@@ -956,7 +961,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 
 	int32 recvdBytes = SSLSend(login_host, send, &recv);
 
-	LOG(kProtocolName, liHigh, "C %lX: got %i bytes` from SSL connection to %s",
+	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
 		this, recvdBytes, login_host);
 
 	if (recvdBytes < 0) {
