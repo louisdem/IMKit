@@ -541,10 +541,17 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 	/* Now we have TCP conncetion. Start SSL negotiation. */
   
 	ssl = SSL_new (ctx);                         CHK_NULL(ssl);    
-	SSL_set_fd (ssl, sd);
-	err = SSL_connect (ssl);                     CHK_SSL(err);
+	if ( !SSL_set_fd (ssl, sd) )
+	{
+		LOG(kProtocolName, liDebug, "C %lX: SSL Error setting fd", this);
+		return -1;
+	}
+	
     SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
     
+	SSL_set_connect_state(ssl);
+	
+	err = SSL_connect (ssl);                     CHK_SSL(err);
 	/* --------------------------------------------------- */
 	/* DATA EXCHANGE - Send a message and receive a reply. */
 
@@ -561,7 +568,9 @@ status_t MSNConnection::SSLSend(const char *host, HTTPFormatter *send,
 		err = SSL_read (ssl, &buffer[received], sizeof(buffer) - 1 - received);
 		CHK_SSL(err);
 		if ( err > 0 )
+		{
 			received += err;
+		}
 	}
 	buffer[received] = '\0';
 	*recv = new HTTPFormatter(buffer, received);
@@ -957,8 +966,9 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	const char *login_host = "nexus.passport-int.com";
 	
 	send = new HTTPFormatter(login_host, "/rdr/pprdr.asp");
+	send->AddHeader("Connection", "close");
 	recv = NULL;
-
+	
 	int32 recvdBytes = SSLSend(login_host, send, &recv);
 
 	LOG(kProtocolName, liHigh, "C %lX: got %i bytes from SSL connection to %s",
