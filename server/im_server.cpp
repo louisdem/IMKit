@@ -417,7 +417,7 @@ Server::LoadAddons()
 		(rc_sys=path.Append("im_kit/protocols")) != B_OK ||
 		(rc_sys=addonsDir.SetTo(path.Path())) != B_OK)
 	{ // we couldn't access the addons directory for the protocols!
-		LOG("im_server", liHigh, "cannot access user protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc_sys, strerror(rc_sys));
+		LOG("im_server", liHigh, "cannot access system protocol addon directory: %s, error 0x%lx (%s)!", path.Path(), rc_sys, strerror(rc_sys));
 	}
 	else
 		LoadAddonsFromDir( &addonsDir, &settingsDir );
