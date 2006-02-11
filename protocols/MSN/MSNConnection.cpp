@@ -174,6 +174,8 @@ int32 MSNConnection::ConnectTo(const char *hostname, uint16 port) {
 	remoteAddr.sin_family = AF_INET;
 
 //	XXX - BONE Specific
+//	net_server equiviliant would be;
+//	if ((int)(remoteAddr.sin_addr.s_addr = inet_addr(hostname)) <= 0) {
 	if (inet_aton(hostname, &remoteAddr.sin_addr) == 0) {
 		struct hostent *he = gethostbyname(hostname);
 		if (he) {
