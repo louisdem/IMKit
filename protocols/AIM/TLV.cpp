@@ -37,6 +37,7 @@ TLV::TLV(const uchar *buffer, int16 bufferLen) {
 	fFlatten = NULL;
 	fType = (buffer[0] << 8) + buffer[1];
 	fLength = (buffer[2] << 8) + buffer[3];
+	fDirty = true;
 
 	if (fLength > 0) {
 		fValue = (char *)calloc(fLength, sizeof(char));
