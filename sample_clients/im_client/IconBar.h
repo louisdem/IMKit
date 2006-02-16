@@ -18,7 +18,6 @@ class IconBar : public BView {
 		
 				void	PositionViews();
 	private:
-				void	DrawSplitter(float x);
 				BList	fViews;
 };
 

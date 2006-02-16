@@ -63,41 +63,43 @@ class RunView;
 class Theme;
 
 class StatusBar;
+class IconView;
 
 extern const int32 kTypingSendRate;
 
 class ChatWindow : public BWindow {
 	public:
 							ChatWindow(entry_ref &);
-							~ChatWindow();
+							~ChatWindow(void);
 
-					void	MessageReceived(BMessage *msg);
-					bool 	QuitRequested();
+		// Hooks
+		void				MessageReceived(BMessage *msg);
+		bool			 	QuitRequested(void);	
+		virtual void 		FrameResized(float, float);
+		virtual void	 	WindowActivated(bool);
 		
-			virtual void 	FrameResized( float, float );
-			virtual void 	WindowActivated( bool );
+		//Public functions
+		bool 				handlesRef( entry_ref & );
+		void 				reloadContact();
+		void 				startNotify();
+		void 				stopNotify();
 		
-					bool 	handlesRef( entry_ref & );
-					void 	reloadContact();
-					void 	startNotify();
-					void 	stopNotify();
-		
-				status_t 	SaveSettings(void);
-				status_t 	LoadSettings(void);
+		status_t 			SaveSettings(void);
+		status_t 			LoadSettings(void);
 		
 	private:
-					void	BuildProtocolMenu(void);
-					void	startTypingTimer(void);
-					void	stopTypingTimer(void);
-					void	startSelfTypingTimer(void);
-					void	stopSelfTypingTimer(void);
-					void	RebuildDisplay(void);
-					
-				BBitmap		*IconForHandler(const char *type, int32 size);
-				ImageButton	*MakeButton(BBitmap *icon, const char *help,
+		void				BuildProtocolMenu(void);
+		void				startTypingTimer(void);
+		void				stopTypingTimer(void);
+		void				startSelfTypingTimer(void);
+		void				stopSelfTypingTimer(void);
+		void				RebuildDisplay(void);
+		
+		BBitmap				*IconForHandler(const char *type, int32 size);
+		ImageButton			*MakeButton(BBitmap *icon, const char *help,
 								BMessage *msg, BRect rect);
 		
-					enum { 
+		enum { 
 							SEND_MESSAGE	= 1,
 						
 							SHOW_INFO		= 100,
@@ -113,39 +115,41 @@ class ChatWindow : public BWindow {
 							CLEAR_TYPING	= 1000,
 							PROTOCOL_SELECTED,
 							PROTOCOL_SELECTED2
-					 };
+		 };
 		
-				entry_ref	fEntry;
-					char	fName[512];
+		entry_ref			fEntry;
+		char				fName[512];
+			
+		BTextView			*fInput;
+		RunView				*fText;
+		ResizeView			*fResize;
 					
-				BTextView	*fInput;
-				RunView		*fText;
-				ResizeView	*fResize;
-					
-			BScrollView		*fInputScroll;
-			BScrollView		*fTextScroll;
-					
-			InputFilter		*fFilter;
-			IM::Manager		*fMan;
-					bool	fChangedNotActivated;
-					char	fTitleCache[512];
-					
-				BMessage	fWindowSettings;
-					Theme	*fTheme;
-					
-					float	fFontHeight;
-				IconBar		*fDock;
-					
-				BMenuField	*fProtocolMenu;
-				StatusBar	*fStatusBar;
-			BStringView		*fInfoView;
-				BButton		*fSendButton;
+		BScrollView			*fInputScroll;
+		BScrollView			*fTextScroll;
 				
-			BString			fPeopleHandler;
+		InputFilter			*fFilter;
+		IM::Manager			*fMan;
+		bool				fChangedNotActivated;
+		char				fTitleCache[512];
 					
-			BMessageRunner	*fTypingTimerSelf;
-			BMessageRunner	*fTypingTimer;
-			BMessageRunner	*fProtocolHack; // used to circumvent a BMenuField bug. m_eiman knows.
+		BMessage			fWindowSettings;
+		Theme				*fTheme;
+					
+		float				fFontHeight;
+		IconBar				*fDock;
+					
+		BMenuField			*fProtocolMenu;
+		StatusBar			*fStatusBar;
+		BButton				*fSendButton;
+			
+		BString				fPeopleHandler;
+		
+		BMessageRunner		*fTypingTimerSelf;
+		BMessageRunner		*fTypingTimer;
+		BMessageRunner		*fProtocolHack; // used to circumvent a BMenuField bug. m_eiman knows.
+		
+		bool				fUserIsTyping;
+		IconView			*fTypingView;
 };
 
 #endif

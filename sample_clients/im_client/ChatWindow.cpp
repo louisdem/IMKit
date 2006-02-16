@@ -1,6 +1,7 @@
 #include "ChatWindow.h"
 
 #include "../../common/IMKitUtilities.h"
+#include "../../common/IconView.h"
 
 #include <libim/Contact.h>
 #include <libim/Constants.h>
@@ -272,7 +273,6 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	
 	BRect statusRect = Bounds();
 	statusRect.top = inputRect.bottom + kPadding;
-	
 	fStatusBar = new StatusBar(statusRect);
 	
 	AddChild(fStatusBar);
@@ -285,31 +285,21 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fStatusBar->SetLowColor(245, 245, 245, 0);
 	fStatusBar->SetHighColor(0, 0, 0, 0);
 #endif
-	
+		
 	BPopUpMenu *pop = new BPopUpMenu("Protocols", true, true);
 	fProtocolMenu = new BMenuField(
 		BRect(kPadding, kPadding, Bounds().bottom - kPadding, 100),
 		"Field", NULL, pop);
 	fStatusBar->AddItem(fProtocolMenu);
-	
-	// fInfoView must be the LAST thing added to fStatusBar, otherwise the
-	// resizing of it will be all bonkers.
-	fInfoView = new BStringView(BRect(fProtocolMenu->Frame().right+5, 2,
-		fStatusBar->Bounds().right - kPadding,
-		fStatusBar->Bounds().bottom - kPadding), "infoView",
-		"", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM, B_WILL_DRAW);
-	fStatusBar->AddItem(fInfoView);
-#if B_BEOS_VERSION > B_BEOS_VERSION_5
-	fInfoView->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
-	fInfoView->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
-	fInfoView->SetHighUIColor(B_UI_PANEL_TEXT_COLOR);
-#else
-	fInfoView->SetViewColor(245, 245, 245, 0);
-	fInfoView->SetLowColor(245, 245, 245, 0);
-	fInfoView->SetHighColor(0, 0, 0, 0);
-#endif
-	
-	// need to build the menu here since it fiddles with fInfoView
+
+	entry_ref ref;
+	get_ref_for_path("/boot/preferences/Keyboard", &ref);
+	fTypingView = new IconView(ref, fStatusBar->Frame().Height(), true);
+	fTypingView->EnableDrawing(false);
+
+	fStatusBar->AddItem(fTypingView);
+	fStatusBar->PositionViews();
+
 	BuildProtocolMenu();
 	BMenuItem *first = pop->ItemAt(0);
 	if (first) first->SetMarked(true);
@@ -369,10 +359,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 
 	fText = ((ChatApp *)be_app)->GetRunView(id);
 	if (fText == NULL) {
-		fText = new RunView(
-			textRect, "text", fTheme,
-			B_FOLLOW_ALL, B_WILL_DRAW
-		);
+		fText = new RunView(textRect, "text", fTheme, B_FOLLOW_ALL, B_WILL_DRAW);
 	};
 	
 	fText->SetTimeStampFormat(NULL);
@@ -405,7 +392,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fFilter = new InputFilter(fInput, new BMessage(SEND_MESSAGE), command, fText,
 		kTypingSendRate);
 	fInput->AddFilter((BMessageFilter *)fFilter);
-	
+		
 	// monitor node so we get updates to status etc
 	BEntry entry(&ref);
 	node_ref node;
@@ -989,14 +976,10 @@ ChatWindow::MessageReceived( BMessage * msg )
 			fProtocolHack = new BMessageRunner( BMessenger(this), &protoHack, 1000, 1 );
 		}	break;
 		
-		case PROTOCOL_SELECTED2:
+		case PROTOCOL_SELECTED2: {
 			// do what should be done on protocol change
 			fStatusBar->PositionViews();
-			fInfoView->ResizeTo(
-				fStatusBar->Bounds().Width() - fInfoView->Frame().left,
-				fInfoView->Bounds().Height()
-			);
-			break;
+		} break;
 		
 		default:
 			BWindow::MessageReceived(msg);
@@ -1162,9 +1145,6 @@ void ChatWindow::BuildProtocolMenu(void) {
 	//menu->SetFont(be_plain_font);
 	
 	fStatusBar->PositionViews();
-
-	fInfoView->ResizeTo(fStatusBar->Bounds().Width() - fInfoView->Frame().left,
-		fInfoView->Bounds().Height());
 };
 
 void ChatWindow::startTypingTimer(void) {
@@ -1176,19 +1156,19 @@ void ChatWindow::startTypingTimer(void) {
 		
 	if (fTypingTimer->InitCheck() != B_OK)
 		LOG("im_client", liHigh, "InitCheck fail on typing timer");
-	
-	fInfoView->SetText(_T("User is typing.."));
+
+	fTypingView->EnableDrawing(true);
+	fTypingView->Invalidate();
 };
 
 void
 ChatWindow::stopTypingTimer(void)
 {
-	fInfoView->SetText("");
-	
-	if ( fTypingTimer )
-		delete fTypingTimer;
-	
+	if (fTypingTimer) delete fTypingTimer;
 	fTypingTimer = NULL;
+
+	fTypingView->EnableDrawing(false);
+	fTypingView->Invalidate();	
 }
 
 void ChatWindow::startSelfTypingTimer(void) {

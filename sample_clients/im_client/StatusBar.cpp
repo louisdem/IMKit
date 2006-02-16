@@ -33,7 +33,8 @@ void StatusBar::Draw(BRect update) {
 	SetHighColor(255, 255, 255, 255);
 	StrokeLine(BPoint(update.left, Bounds().top + 1),
 		BPoint(update.right, Bounds().top + 1));
-	
+
+#if 0
 //	float width (5.0);
 	font_height fh;
 	
@@ -50,11 +51,15 @@ void StatusBar::Draw(BRect update) {
 	    
 	    BView *view = ViewAt(i);
 	    if (view) {
-			float w, h;
-			view->GetPreferredSize(&w, &h);
+//			float w, h;
+//			view->GetPreferredSize(&w, &h);
+//			width = w;
+			float w = view->Bounds().Width();
+			printf("Width: %.2f\n", w);
 			width = w;
 	    }
 	};*/
+#endif
 	for ( int32 i=0; i<fViews.CountItems()-1; i++ ) {
 		DrawSplitter( ViewAt(i)->Frame().right + 3 );
 	}
@@ -65,13 +70,13 @@ void StatusBar::DrawSplitter(float x) {
 
 	PushState();
 
-	SetDrawingMode(B_OP_COPY);
-  
-	SetHighColor(131, 131, 131, 255);
-	StrokeLine(BPoint(x, bounds.top + 2.0), BPoint(x, bounds.bottom));
-
-	SetHighColor(255, 255, 255, 255);
-	StrokeLine(BPoint(x + 1, bounds.top + 2.0), BPoint(x + 1, bounds.bottom));
+		SetDrawingMode(B_OP_COPY);
+	  
+		SetHighColor(131, 131, 131, 255);
+		StrokeLine(BPoint(x, bounds.top + 2.0), BPoint(x, bounds.bottom));
+	
+		SetHighColor(255, 255, 255, 255);
+		StrokeLine(BPoint(x + 1, bounds.top + 2.0), BPoint(x + 1, bounds.bottom));
 
 	PopState();
 };
