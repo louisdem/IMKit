@@ -223,6 +223,10 @@ float InfoWindow::ViewWidth(void) {
 	return fWidth;
 };
 
+BPath InfoWindow::SettingsPath(void) {
+	return fSettingsPath;
+};
+
 //#pragma mark -
 
 void InfoWindow::ResizeAll(void) {
@@ -340,10 +344,8 @@ void InfoWindow::WriteDefaultSettings(BNode *node, bool writeWidth = true,
 	};
 };
 
-void InfoWindow::LoadSettings( bool start_monitor )
-{
-	BPath path;
-	if (find_directory(B_USER_SETTINGS_DIRECTORY, &path, true, NULL) != B_OK) {
+void InfoWindow::LoadSettings(bool start_monitor) {
+	if (find_directory(B_USER_SETTINGS_DIRECTORY, &fSettingsPath, true, NULL) != B_OK) {
 		BAlert *alert = new BAlert("InfoPopper", "Couldn't find the settings "
 			" directory. This is very bad.", "Carp!");
 		alert->Go();
@@ -355,8 +357,11 @@ void InfoWindow::LoadSettings( bool start_monitor )
 	fIconSize = kDefaultIconSize;
 	fDisplayTime = kDefaultDisplayTime;
 	fLayout = (infoview_layout)kDefaultLayout;
-		
-	path.Append("BeClan/InfoPopper/settings");
+	
+	fSettingsPath.Append("BeClan/InfoPopper/");
+	BPath path(fSettingsPath);
+	path.Append("settings");
+	
 	BNode node(path.Path());
 	if (node.InitCheck() == B_OK) {
 		bool writeWidth = false;
@@ -392,13 +397,11 @@ void InfoWindow::LoadSettings( bool start_monitor )
 		
 	} else {
 //		Lets just assume it's because the file doesn't exist.
-		BPath parPath;
-		path.GetParent(&parPath);
-		create_directory(parPath.Path(), 0777);
+		create_directory(fSettingsPath.Path(), 0777);
 		
 		BFile file(path.Path(), B_READ_WRITE | B_CREATE_FILE);
 		
-		node.SetTo( path.Path() ); // so we can monitor changes on this new file
+		node.SetTo(path.Path()); // so we can monitor changes on this new file
 		
 		WriteDefaultSettings(reinterpret_cast<BNode *>(&file));
 		

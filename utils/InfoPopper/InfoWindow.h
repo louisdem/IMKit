@@ -22,38 +22,42 @@
 
 // -------------- INFO WINDOW -----------------
 
-class InfoWindow : public BWindow
-{
+class InfoWindow : public BWindow {
 	public:
 		enum {
 			ResizeToFit = 'IWrf'
 		};
 		
-		InfoWindow();
-		~InfoWindow();
+							InfoWindow(void);
+							~InfoWindow(void);
+
+		// Hook functions		
+		bool				QuitRequested(void);
+		void				MessageReceived(BMessage * );
+		void 				WorkspaceActivated(int32, bool);
+		BHandler 			*ResolveSpecifier(BMessage *, int32, BMessage *,
+								int32, const char *);
 		
-		bool	QuitRequested();
-		void	MessageReceived( BMessage * );
-		void 	WorkspaceActivated( int32, bool );
-		
-		BHandler * ResolveSpecifier(BMessage *, int32 , BMessage *, int32, const char *);
-		
-		int16	IconSize(void);
-		int32	DisplayTime(void);
-		infoview_layout Layout(void);
-		float	ViewWidth(void);
+		// Public functions
+		int16				IconSize(void);
+		int32				DisplayTime(void);
+		infoview_layout 	Layout(void);
+		float				ViewWidth(void);
+		BPath				SettingsPath(void);
 		
 	private:
-		void	ResizeAll();
-		void	PopupAnimation(float, float);
-		void	WriteDefaultSettings(BNode *node, bool writeWidth = true,
-					bool writeIcon = true, bool writeTimeout = true,
-					bool writeLayout = true);
-		void	LoadSettings( bool start_monitor = false );
+		void				ResizeAll(void);
+		void				PopupAnimation(float, float);
+		void				WriteDefaultSettings(BNode *node,
+								bool writeWidth = true, bool writeIcon = true,
+								bool writeTimeout = true, bool writeLayout = true);
+		void				LoadSettings(bool start_monitor = false);
 		
 		vector<InfoView*>	fInfoViews;
 		deskbar_location	fDeskbarLocation;
-		BorderView			* fBorder;
+		BorderView			*fBorder;
+
+		BPath				fSettingsPath;
 
 		BString				fStatusText;
 		BString				fMessageText;

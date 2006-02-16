@@ -32,11 +32,42 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 	fType(type),
 	fRunner(NULL),
 	fDetails(details),
-	fBitmap(NULL)
-	{
+	fBitmap(NULL) {
 	
-	fBitmap = ExtractIcon("icon", fDetails, fParent->IconSize());
-	fOverlayBitmap = ExtractIcon("overlayIcon", fDetails, fParent->IconSize() / 4);
+	int16 iconSize = fParent->IconSize();
+	
+	fBitmap = ExtractIcon("icon", fDetails, iconSize);
+	fOverlayBitmap = ExtractIcon("overlayIcon", fDetails, iconSize / 4);
+	
+	if (fBitmap == NULL) {
+		app_info info;
+		BPath path;
+		BMessenger msgr = details->ReturnAddress();
+
+		if (msgr.IsValid() == true) {
+			be_roster->GetRunningAppInfo(msgr.Team(), &info);
+		} else {
+			be_roster->GetAppInfo("application/x-vnd.Be-SHEL", &info);
+		};
+
+		path.SetTo(&info.ref);
+		fBitmap = ReadNodeIcon(path.Path(), iconSize);
+	};
+	
+	if (fOverlayBitmap == NULL) {
+		BPath basepath = BPath(fParent->SettingsPath());
+		basepath.Append("icons");
+
+		switch (type) {
+			case Information: basepath.Append("Information"); break;
+			case Important: basepath.Append("Important"); break;
+			case Error: basepath.Append("Error"); break;
+			case Progress: basepath.Append("Progress"); break;
+			default: basepath.Append("Information"); 
+		};
+				
+		fOverlayBitmap = ReadNodeIcon(basepath.Path(), iconSize / 4);
+	};
 	
 	const char * messageID = NULL;
 	if (fDetails->FindString("messageID", &messageID) != B_OK) {
@@ -649,6 +680,6 @@ BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
 			};
 		};
 	};
-	
+
 	return icon;
 };
