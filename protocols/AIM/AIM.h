@@ -45,7 +45,8 @@ class AIMProtocol : public IM::Protocol, public OSCARHandler
 			
 			
 			status_t	StatusChanged(const char *nick, online_types status);
-			status_t	MessageFromUser(const char *nick, const char *msg);
+			status_t	MessageFromUser(const char *nick, const char *msg,
+							bool autoReply = false);
 			status_t	UserIsTyping(const char *nick, typing_notification type);
 			status_t 	SSIBuddies(list<BString> buddies);
 			status_t	BuddyIconFromUser(const char *nick, const uchar *icon,

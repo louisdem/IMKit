@@ -307,8 +307,8 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 	
 	switch (subtype) {
 		case ERROR: {
-			LOG(kProtocolName, liHigh, "GOT SERVER ERROR 0x%x "
-				"0x%x", data[++offset], data[++offset]);
+			LOG(kProtocolName, liHigh, "GOT SERVER ERROR 0x%x 0x%x", data[++offset],
+				data[++offset]);
 		} break;
 		
 		case MESSAGE_FROM_SERVER: {
@@ -327,151 +327,51 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 			uint16 warning = (data[++offset] << 8) + data[++offset];
 			uint16 TLVs = (data[++offset] << 8) + data[++offset];
 
-			LOG(kProtocolName, liLow, "AIMManager: %i TLVs in message", TLVs);
+			LOG(kProtocolName, liDebug, "AIMManager: %i TLVs in message", TLVs);
 
+			offset += 1;
+
+			// We don't use these TLVs, so just skip through them.
 			for (uint16 i = 0; i < TLVs; i++) {
-				uint16 type = 0;
-				uint16 length = 0;
-				char *value = NULL;
-				
-				type = (data[++offset] << 8) + data[++offset];
-				length = (data[++offset] << 8) + data[++offset];
-
-//				XXX - We don't use these, so skip through them
-//				value = (char *)calloc(length + 1, sizeof(char));
-//				memcpy(value, (void *)(data + offset), length);
-//				value[length] = '\0';
-//				free(value);
-				offset += length;
+				TLV tlv(data + offset, bytes - offset);
+				offset += tlv.FlattenedSize();
 			};
-
+			
 //			We only support plain text channels currently									
 			switch (channel) {
 				case PLAIN_TEXT: {
-					uint16 msgkind = (data[++offset] << 8) + data[++offset];
-					if (msgkind == 0x04) offset += 4;
-					uint32 contentLen = offset + (data[offset+1] << 8) + data[offset+2];
-					offset += 2;
-					LOG(kProtocolName, liLow, "AIMManager: PLAIN_TEXT "
-						"message, content length: %i (0x%0.4X)", contentLen-offset, contentLen-offset);
+					int16 msgLen = 0;
+					char *message = NULL;
+					bool autoReply = false;
 					
-					if (contentLen - offset == -1) {
-						// Protocol changed for some clients ~ 2006-02
-
-						LOG(kProtocolName, liLow, "AIMManager: Got 200602 style "
-							"message");
-						PrintHex((uchar *)data, bytes);
-						offset += 2;
-						while (offset < bytes) {
-							TLV tlv(data + offset, bytes - offset);
-
-							LOG(kProtocolName, liDebug, "AIMManager: TLV 0x%04x (%i)",
-								tlv.Type(), tlv.Length());
-							PrintHex((uchar *)tlv.Value(), tlv.Length());							
-
-							// Ignore TLVs that aren't 0x0002
-							if (tlv.Type() == 0x0002) {
-								// There seems to be 15 bytes of crud at the start
-								char *msg = (char *)calloc(tlv.Length() - 14, sizeof(char));
-								memcpy(msg, tlv.Value() + 15, tlv.Length() - 15);
-								
-								parse_html(msg);
-
-								fHandler->StatusChanged(nick, OSCAR_ONLINE);
-								fHandler->MessageFromUser(nick, msg);
-
-								free(msg);
-								
-								break;
-							};
+					while (offset < bytes) {
+						TLV tlv(data + offset, bytes - offset);
+						switch (tlv.Type()) {
+							case 0x0002: {	// The message holding TLV
+								message = ParseMessage(&tlv);
+								offset += tlv.FlattenedSize();
+							} break;
 							
-							offset += tlv.FlattenedSize();
-						};						
-					} else {
-						// Use prior method of parsing (Hey, it works)
-						while ( offset < contentLen ) {
-							uint32 tlvlen = 0;
-							uint16 msgtype = (data[++offset] << 8) + data[++offset];
-							switch (msgtype) {
-								case 0x0501: {	// Client Features, ignore
-									tlvlen = (data[++offset] << 8) + data[++offset];
-									//if ( tlvlen == 1 )
-									//	tlvlen = 0;
-									LOG(kProtocolName, liDebug, "Ignoring Client Features, %ld bytes", tlvlen);
-								} break;
-								case 0x0101: { // Message Len
-									tlvlen = (data[++offset] << 8) + data[++offset];
-									
-									if ( tlvlen == 0 )
-									{ // old-style message?
-										tlvlen = (data[offset] << 8) + data[offset+1];
-										offset++;
-										LOG(kProtocolName, liDebug, "Zero sized message "
-											", new size: %ld", tlvlen);
-									}
-									
-									char *msg;
-									if (msgkind == 0x04) {
-										msg = (char *)calloc(tlvlen + 14, sizeof(char));
-										strcpy(msg,"(Auto-response) ");
-										strncpy(&msg[16], (char *)(data + offset + 5), tlvlen - 4);
-										msg[tlvlen + 13] = '\0';
-									} else {
-										uint16 charset = (data[offset+1] << 8) + data[offset+2];
-										
-										if ( charset == 0x0002)
-										{
-											// utf16 message
-											char * utf16_msg = (char *)calloc(tlvlen - 2, sizeof(char));
-											memcpy(utf16_msg, (void *)(data + offset + 5), tlvlen - 4);
-											
-											int32 utf16_size = tlvlen - 3;
-											int32 utf8_size = (tlvlen - 3) * 2;
-											int32 state = 0;
-											msg = (char*)calloc(utf8_size, sizeof(char));
-											
-											convert_to_utf8(
-												B_UNICODE_CONVERSION,
-												utf16_msg,
-												&utf16_size,
-												msg,
-												&utf8_size,
-												&state
-											);
-											
-											msg[utf8_size] = '\0';
-											
-											free( utf16_msg );
-											
-											LOG(kProtocolName, liDebug, "Got UTF-16 message, converted to UTF-8");
-										} else {
-											// non-utf16 message
-											msg = (char *)calloc(tlvlen - 2, sizeof(char));
-											memcpy(msg, (void *)(data + offset + 5), tlvlen - 4);
-											msg[tlvlen - 3] = '\0';
-										}
-									}
-									
-									parse_html( msg );
-									
-									LOG(kProtocolName, liHigh, "AIMManager: Got message from %s: \"%s\"",
-										nick, msg);
-										
-									// We just got a message from the user, they must
-									// be online (This allows us to reply)
-									
-									fHandler->StatusChanged(nick, OSCAR_ONLINE);
-									fHandler->MessageFromUser(nick, msg);
-									
-									free(msg);
-								} break;
-								
-								default:
-									LOG(kProtocolName, liDebug, "Unknown msgtype: %.04x", msgtype);
-							}
-							offset += tlvlen;
-							//i += 4 + tlvlen;
+							case 0x0004: {
+								autoReply = true;
+								offset += tlv.FlattenedSize();
+							} break;
+							
+							default: {
+								offset += tlv.FlattenedSize();
+							};
 						};
+					};
+
+					if (message) {
+						parse_html(message);
+												
+						// We just got a message from the user, they must
+						// be online (This allows us to reply)
+						fHandler->StatusChanged(nick, OSCAR_ONLINE);
+						fHandler->MessageFromUser(nick, message, autoReply);
+	
+						free(message);
 					};
 				} break;
 			} // end switch(channel)
@@ -490,8 +390,8 @@ status_t AIMManager::HandleICBM(BMessage *msg) {
 			offset += nickLen;
 			uint16 typingType = (data[++offset] << 8) + data[++offset];
 			
-			LOG(kProtocolName, liLow, "Got typing notification "
-				"(0x%04x) for \"%s\"", typingType, nick);
+			LOG(kProtocolName, liLow, "Got typing notification (0x%04x) for "
+				"\"%s\"", typingType, nick);
 				
 			fHandler->UserIsTyping(nick, (typing_notification)typingType);
 			free(nick);
@@ -1269,8 +1169,7 @@ void AIMManager::MessageReceived(BMessage *msg) {
 	};
 };
 
-//#pragma mark -
-// -- Interface
+//#pragma mark Interface
 
 status_t AIMManager::MessageUser(const char *screenname, const char *message) {
 	LOG(kProtocolName, liLow, "AIMManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
@@ -1575,3 +1474,62 @@ status_t AIMManager::SetIcon(const char *icon, int16 size) {
 	
 	return B_OK;
 };
+
+char *AIMManager::ParseMessage(TLV *parent) {
+	int16 offset = 0;
+	char *buffer = (char *)parent->Value();
+	int16 bytes = parent->Length();
+	char *message = NULL;
+	int16 length = 0;
+	 
+	while (offset < bytes) {
+		TLV tlv((uchar *)buffer + offset, bytes - offset);
+
+		switch (tlv.Type()) {
+			case 0x0101: {	// Message length, encoding and contents
+				int16 subOffset = 0;
+				char *value = (char *)tlv.Value();
+				length = tlv.Length() - (sizeof(int16) * 2);
+				// The charset and subset are part of the TLV				
+				int16 charSet = (value[subOffset] << 8) + value[++subOffset];
+				int16 charSubSet = (value[++subOffset] << 8) + value[++subOffset];
+				subOffset += 1;
+
+				message = (char *)calloc(length + 1, sizeof(char));
+				memcpy(message, (char *)(value + subOffset), length);
+				message[length] = '\0';
+
+				// UTF-16 message
+				if (charSet == 0x0002) {
+					LOG(kProtocolName, liLow, "Got a UTF-16 encoded message");
+					PrintHex((uchar *)message, length);
+					char *msg16 = (char *)calloc(length, sizeof(char));
+					int32 state = 0;
+					int32 utf8Size = length * 2;
+					int32 ut16Size = length;
+					memcpy(msg16, message, length);
+					message = (char *)realloc(message, utf8Size * sizeof(char));
+					
+					convert_to_utf8(B_UNICODE_CONVERSION, msg16, &ut16Size, message,
+						&utf8Size, &state);
+					message[utf8Size] = '\0';
+					length = utf8Size;
+
+					free(msg16);
+					
+					LOG(kProtocolName, liLow, "Converted message: \"%s\"",
+						message);
+				};
+				
+				return message;
+			} break;
+		
+			default: {
+				offset += tlv.FlattenedSize();
+			};
+		};
+	};
+	
+	return message;
+};
+

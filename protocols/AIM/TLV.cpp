@@ -6,9 +6,12 @@
 
 const uint8 kTLVOverhead = 4;
 
-TLV::TLV(void) {
-	fValue = NULL;
-	fFlatten = NULL;
+extern void PrintHex(const unsigned char* buf, size_t size, bool override = false);
+
+TLV::TLV(void)
+	: fValue(NULL),
+	fFlatten(NULL),
+	fDirty(true) {
 };
 
 TLV::TLV(uint16 type) {
@@ -25,8 +28,8 @@ TLV::TLV(uint16 type, const char *value, uint16 length) {
 	fFlatten = NULL;
 	fLength = length;
 	fValue = NULL;
-	if ( length > 0 )
-	{
+
+	if (length > 0) {
 		fValue = (char *)realloc(fValue, length * sizeof(char));
 		memcpy(fValue, value, length);
 	}
@@ -46,8 +49,9 @@ TLV::TLV(const uchar *buffer, int16 bufferLen) {
 };
 
 TLV::~TLV(void) {
-	if (fValue) free(fValue);
-	if (fFlatten) free(fFlatten);
+	free(fValue);
+	free(fFlatten);
+	
 	if (fTLVs.size() > 0) {
 		list <TLV *>::iterator i;
 		
@@ -141,7 +145,7 @@ uint16 TLV::FlattenedSize(void) {
 			fFlattenedSize = fLength + kTLVOverhead;
 		};
 	};
-			
+	
 	return fFlattenedSize;
 };
 
