@@ -5,6 +5,8 @@
 #include <Path.h>
 #include <NodeInfo.h>
 #include <Application.h>
+#include <Screen.h>
+#include <ScrollView.h>
 
 #include "PeopleWindow.h"
 
@@ -16,8 +18,10 @@ PeopleWindow::PeopleWindow(entry_ref *ref) : BWindow(BRect(300,400,500,520),(ref
 	rect.bottom++; rect.right++;
 	
 	BBox *gray = new BBox(rect,"person",B_FOLLOW_ALL_SIDES);
+	fTopView = gray;
 	
-	BMimeType people_type("application/x-person");
+	//BMimeType people_type("application/x-person");
+	BMimeType people_type("application/x-vnd.Be-user");
 	BMessage attributes;
 	people_type.GetAttrInfo(&attributes);
 	const char *attr_name, *human;
@@ -41,7 +45,20 @@ PeopleWindow::PeopleWindow(entry_ref *ref) : BWindow(BRect(300,400,500,520),(ref
 	}
 	gray->ResizeTo(gray->Bounds().Width(),rect.bottom - 10);
 	ResizeTo(gray->Bounds().Width(),gray->Bounds().Height());
-	AddChild(gray);
+	//AddChild(gray);
+	BScrollView *scrollview;
+	scrollview = new BScrollView("scrollv", gray, B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true, B_NO_BORDER);
+	//scrollview->AddChild(gray);
+	BScreen bs;
+	scrollview->ResizeTo(MIN(bs.Frame().Width()*0.8, scrollview->Bounds().Width()), MIN(bs.Frame().Height()*0.8, scrollview->Bounds().Height()*0.8));
+	ResizeTo(scrollview->Bounds().Width(), scrollview->Bounds().Height());
+	AddChild(scrollview);
+	gray->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	gray->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	for (int32 i = 0; fTopView->ChildAt(i); i++) {
+		fTopView->ChildAt(i)->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+		fTopView->ChildAt(i)->SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	}
 }
 
 bool PeopleWindow::QuitRequested() {
@@ -50,7 +67,7 @@ bool PeopleWindow::QuitRequested() {
 	
 	if (node.InitCheck() != B_OK) {
 		BPath path("/boot/home/people");
-		const char *leaf = ((BTextControl *)(ChildAt(0)->FindView("META:name")))->Text();
+		const char *leaf = ((BTextControl *)(fTopView->FindView("META:name")))->Text();
 		path.Append(leaf);
 		if (leaf[0] == 0) {
 			if (be_app->CountWindows() == 1 /* us */)
@@ -62,7 +79,7 @@ bool PeopleWindow::QuitRequested() {
 		BNodeInfo(&node).SetType("application/x-person");
 	}
 	
-	for (int32 i = 0; (next = (BTextControl *)(ChildAt(0)->ChildAt(i))) != NULL; i++) {
+	for (int32 i = 0; (next = (BTextControl *)(fTopView->ChildAt(i))) != NULL; i++) {
 		text = next->Text();
 		node.WriteAttrString(next->Name(),&text);
 	}

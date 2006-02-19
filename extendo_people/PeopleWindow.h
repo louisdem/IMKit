@@ -4,6 +4,8 @@
 #include <Window.h>
 #include <Node.h>
 
+class BView;
+
 class PeopleWindow : public BWindow {
 	public:
 		PeopleWindow(entry_ref *);
@@ -12,6 +14,7 @@ class PeopleWindow : public BWindow {
 		
 	private:
 		BNode node;
+		BView *fTopView;
 };
 
 #endif // ZOIDBERG_PEOPLE_WINDOW_H

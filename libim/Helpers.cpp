@@ -70,8 +70,7 @@ check_for_tty()
 		path.Append("im_kit.log");
 		
 		close(STDOUT_FILENO);
-		open( path.Path(), O_WRONLY|O_CREAT|O_APPEND|O_TEXT);
-		chmod( path.Path(), 0x600 );
+		open( path.Path(), O_WRONLY|O_CREAT|O_APPEND|O_TEXT, 0600);
 	}
 }
 

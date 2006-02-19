@@ -568,10 +568,10 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 			ConvertToScreen(&p);
 			BRect r(p, p);
 			r.InsetBySelf(-2, -2);
-		
+			
 			fMenu->Go(p, true, true, r, true);
 			
-			delete fMenu;
+			fMenu->SetAsyncAutoDestruct(true); // delete fMenu;
 			
 			return;
 		}
@@ -671,7 +671,7 @@ void IM_DeskbarIcon::MouseDown(BPoint p) {
 		
 		fMenu->Go(p, true, true, r, true);
 		
-		delete fMenu;
+		fMenu->SetAsyncAutoDestruct(true); // delete fMenu;
 		
 		return;
 	};

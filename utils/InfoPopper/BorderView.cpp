@@ -91,10 +91,12 @@ BorderView::GetPreferredSize( float * w, float * h )
 	*w = 2 * BORDER_W + StringWidth( fTitle.String() );
 	
 	*h = 2 * BORDER_W + line_height + 3;
+	*w = *h = 0;
 }
 
 float
 BorderView::BorderSize()
 {
+return 0;
 	return BORDER_W;
 }

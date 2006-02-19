@@ -3,6 +3,7 @@
 #include <NodeMonitor.h>
 #include <algorithm>
 #include <stdio.h>
+#include <Debug.h>
 
 property_info main_prop_list[] = {
 	{ "message", {B_GET_PROPERTY, 0},{B_INDEX_SPECIFIER, 0}, "get a message"},
@@ -21,6 +22,10 @@ const char *kIconName = "iconSize";
 const char *kTimeoutName = "displayTime";
 const char *kLayoutName = "titlePosition";
 
+/* undocumented */
+#define B_THIN_BORDER_WINDOW_LOOK ((window_look)2)
+#define B_LEFT_TAB_WINDOW_LOOK ((window_look)25) /* only in R5 */
+
 InfoWindow::InfoWindow()
 :	BWindow(BRect(10,10,20,20), "InfoWindow", B_BORDERED_WINDOW,
 	B_AVOID_FRONT|B_AVOID_FOCUS) {
@@ -28,6 +33,11 @@ InfoWindow::InfoWindow()
 	SetWorkspaces( 0xffffffff );
 	
 	fBorder = new BorderView(Bounds(), "InfoPopper");
+	//fBorder = new BView(Bounds(), "InfoPopper");
+	SetTitle("InfoPopper");
+	//SetLook(B_FLOATING_WINDOW_LOOK);
+	SetLook(B_THIN_BORDER_WINDOW_LOOK);
+	SetFlags(Flags() /*| B_NOT_MOVABLE*/ | B_NOT_CLOSABLE | B_NOT_ZOOMABLE | B_NOT_MINIMIZABLE | B_NOT_RESIZABLE );
 	
 	AddChild( fBorder );
 	
@@ -247,11 +257,11 @@ void InfoWindow::ResizeAll(void) {
 		(*i)->MoveTo(fBorder->BorderSize(), curry);
 		(*i)->GetPreferredSize(&pw,&ph);
 		
-		curry += (*i)->Bounds().Height()+1;
-		
 		if (pw > maxw) maxw = pw;
 		
 		(*i)->ResizeTo(fBorder->Bounds().Width() - fBorder->BorderSize() * 2, ph);
+		
+		curry += (*i)->Bounds().Height()+1;
 	};
 	
 	//ResizeTo(maxw + fBorder->BorderSize() * 2, curry - 1 + fBorder->BorderSize());
@@ -318,6 +328,7 @@ void InfoWindow::PopupAnimation(float width, float height) {
 	if (IsHidden() && fInfoViews.size() != 0) {
 		Show();
 	};
+	//Activate();// it hides floaters from apps :-(
 };
 
 void InfoWindow::WriteDefaultSettings(BNode *node, bool writeWidth = true,

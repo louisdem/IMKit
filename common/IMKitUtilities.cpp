@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include <stdio.h>
+#include <NodeInfo.h>
 
 const int32 kSmallIcon = 16;
 const int32 kLargeIcon = 32;
@@ -19,29 +20,46 @@ BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
 	
 	BBitmap *ret = NULL;
 
-#if B_BEOS_VERSION > B_BEOS_VERSION_5
- #if B_BEOS_VERSION > B_BEOS_VERSION_DANO
-  #ifndef B_ZETA_VERSION
-    // Zeta RC2 or early code.
+#if defined(B_BEOS_VERSION_DANO) && (B_BEOS_VERSION > B_BEOS_VERSION_DANO)
+ #ifndef B_ZETA_VERSION
+	// Zeta RC2 or early code.
 	BEntry entry(name, followSymlink);
-    entry_ref ref;
+	entry_ref ref;
 	BPath path;
 	
 	entry.GetRef(&ref);
 	BNode node(BPath(&ref).Path());
 
 	ret = GetTrackerIcon(node, size, NULL);
-  #else
-   // Zeta RC3 or later.
+ #else
+	// Zeta RC3 or later.
 	BEntry entry(name, followSymlink);
-    entry_ref ref;
+	entry_ref ref;
 	BPath path;
 	
 	entry.GetRef(&ref);
 
-   ret = new BBitmap(GetTrackerIcon(entry, size));
-  #endif
- #else
+	ret = new BBitmap(GetTrackerIcon(entry, size));
+ #endif
+#else
+	BEntry entry(name, followSymlink);
+	entry_ref ref;
+	BPath path;
+	
+	entry.GetRef(&ref);
+	BNode node(BPath(&ref).Path());
+
+	ret = new BBitmap(BRect(0,0,size-1,size-1), B_CMAP8);
+	if (BNodeInfo::GetTrackerIcon((const entry_ref *)&ref, ret, (icon_size)size) < B_OK) {
+		delete ret;
+		ret = NULL;
+	}
+#endif
+
+
+/*
+#if 0
+#if 0
   // Dano code.
    if (size == kSmallIcon) {
 		ret = GetBitmapFromAttribute(name, BEOS_SMALL_ICON_ATTRIBUTE, 
@@ -65,7 +83,7 @@ BBitmap *ReadNodeIcon(const char *name, int32 size = kSmallIcon,
 			followSymlink);
 	};
  #endif
-	
+*/	
 	return ret;
 
 };
