@@ -1,4 +1,6 @@
 # Zeta locale file for im_client [jaJP]
+# Translation by Jorge Mare (a.k.a. Koki)
+# Last revised 2/15/06
 
 # ChatApp.cpp
 "Really quit?"		"終了しますか？"
@@ -14,20 +16,24 @@
 "Send"	"送信"
 "* You "		"* You "
 "You say: "	"You say: "
-"Error: im_server not running, can't send message\n"	"エラー: IM サーバが起動してないので、メッセージが送れません\n"
-"Unknown name"		"名前不明"
-"no nick"		"ハンドル名無し"
-"Unknown status"		"接続状態不明"
+"Error: im_server not running, can't send message\n"	"エラー: IM サーバが起動されていないため、メッセージを送信できません。\n"
+"Unknown name"		"名前が不明"
+"no nick"		"ニックが不明"
+"Unknown status"		"接続状態が不明"
 "Any Protocol"		"全プロトコル"
 "Available"		"オンライン"
-"Away"		"不在"
+"Away"		"離席中"
 "Offline"		"オフライン"
-"User is typing.."		"相手がメッセージ入力中..."
+"User is typing.."		"相手がメッセージを入力中..."
 
 # RunView.cpp
-"Lookup (Dictionary)"		"辞書で検索 (Dictionary)"
-"Lookup (Google)"		"ウエブで検索 (Google)"
-"Lookup (Acronym Finder)"	"頭字語辞書で検索 (Acronym Finder)"
+"Lookup (Dictionary)"		"オンライン辞典で検索"
+"Lookup (Google)"		"Google で検索"
+"Lookup (Acronym Finder)"	acronymfinder.com で略語を検索"
+
 "Copy"	"コピー"
-"Select All"	"すべて選択"
-"Clear"	"切り取り"
+"Select All"	"全て選択"
+"Clear"	"クリア"
+
+# Missing keys?
+"View contact's web page"		"相手のホームページをブラウザで表示"
