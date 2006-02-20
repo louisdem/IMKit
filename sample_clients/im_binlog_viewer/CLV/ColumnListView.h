@@ -79,6 +79,8 @@ class BField {
 public:
 						BField();
 	virtual				~BField();
+	
+	BRow				*parent;
 };
 
 // A single line in the list.  Each line contains a BField object
@@ -96,6 +98,7 @@ public:
 	const	BField*		GetField(int32 logicalFieldIndex) const;
 			void		SetField(BField* field, int32 logicalFieldIndex);
 
+			void		Height(float height);
 			float 		Height() const;
 			bool 		IsExpanded() const;
 

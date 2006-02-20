@@ -19,10 +19,12 @@
 
 #include <libim/Constants.h>
 #include <libim/Contact.h>
+#include <libim/Manager.h>
 
 #include <map>
 
 typedef map<BString, BBitmap *> iconmap;
+typedef map<time_t, BMessage *> msgmap;
 
 class LogWin : public BWindow {
 	public:
@@ -33,17 +35,25 @@ class LogWin : public BWindow {
 			coContents = 3,
 			coType = 4
 		};
+		
+		enum {
+			lwMsgViewMsg = 'lw01'
+		};
 	
 						LogWin(entry_ref contact, BRect size);
 						~LogWin(void);
 
 			void 		MessageReceived(BMessage *msg);
 			bool 		QuitRequested(void);
+			
+			bool		HandlesRef(entry_ref ref);
 
 	private:
 		static int32	GenerateContents(void *arg);
 
 			entry_ref	fEntryRef;
+
+			msgmap		fMessages;
 
 		BView			*fView;
 		BColumnListView	*fCLV;
@@ -60,6 +70,8 @@ class LogWin : public BWindow {
 		IM::Contact		fContact;
 		BString			fNick;
 		BString			fName;
+		
+		IM::Manager		*fMan;
 };
 
 #endif

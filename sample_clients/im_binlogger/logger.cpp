@@ -18,6 +18,9 @@ LoggerApp::LoggerApp()
 :	BApplication("application/x-vnd.BeClan.im_binlogger") {
 	fMan = new IM::Manager(this);
 	
+	srand(system_time());
+
+	
 	fMan->StartListening();
 
 	// Save settings template
@@ -90,11 +93,15 @@ LoggerApp::MessageReceived(BMessage * msg) {
 			free(attr);
 
 			if (userLogDir.Length() == 0) {
+				char connection[512];							
 				bool canExit = false;
 				BString val = "";
 
+				c.ConnectionAt(0, connection);
+
 				while (canExit == false) {
 					val = "";
+					val << connection << "_";
 					val << (uint32)localtime(&now) << "_";
 					val << (rand() % 32413421);
 

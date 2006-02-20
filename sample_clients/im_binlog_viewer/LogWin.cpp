@@ -40,7 +40,7 @@ LogWin::LogWin(entry_ref contact, BRect size)
 	fView->AddChild(fCLV);
 
 	fDate = new BDateColumn(_T("Date"),
-		be_plain_font->StringWidth("Xxx, Xxx 00 0000, 00:00 AM") + kPadding,
+		be_plain_font->StringWidth("XXX, XXX 00 0000, 00:00 AM") + kPadding,
 		be_plain_font->StringWidth("00/00/00") + kPadding,
 		be_plain_font->StringWidth("Xxxxxxx, Xxxxxxxx XX XXXX, XX:XX:XX XX") + kPadding,
 		B_ALIGN_RIGHT);
@@ -70,7 +70,9 @@ LogWin::LogWin(entry_ref contact, BRect size)
 	fCLV->AddColumn(fType, coType); 
 
 	fCLV->SetSortingEnabled(true);
-	fCLV->SetSortColumn(fDate, true, true);
+	fCLV->SetSortColumn(fDate, true, false);
+	
+	fCLV->SetInvocationMessage(new BMessage(lwMsgViewMsg));
 	
 	BPath iconDir;
 	find_directory(B_USER_ADDONS_DIRECTORY, &iconDir, true);
@@ -117,14 +119,32 @@ LogWin::LogWin(entry_ref contact, BRect size)
 	if (fThreadID > B_ERROR) resume_thread(fThreadID);
 	
 	Show();
+	
+	fMan = new IM::Manager(BMessenger(this));
 };
 
 LogWin::~LogWin(void) {
 };
 
+bool LogWin::HandlesRef(entry_ref ref) {
+	return (fEntryRef == ref);
+};
+
 void LogWin::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case IM::MESSAGE: {
+			static int32 j;
+			entry_ref contact;
+			if (msg->FindRef("contact",&contact) != B_OK) {
+				printf("Couldn't extract ze contact! Mein lieben!\n");
+				return;
+			};
+			if (contact != fEntryRef) {
+				printf("Contact not ours! Mein lieben! %s vs %s\n", contact.name, fEntryRef.name);
+				msg->PrintToStream();
+//				return;
+			};
+
 			int32 im_what = msg->FindInt32("im_what");
 			const char *protocol;
 			msg->FindString("protocol", &protocol);
@@ -133,6 +153,8 @@ void LogWin::MessageReceived(BMessage *msg) {
 			BRow *row = new BRow();
 			time_t t = 0;
 			msg->FindInt32("time_t", (int32 *)&t);
+			
+			fMessages[t] = new BMessage(*msg);
 			
 			row->SetField(new BDateField(&t), coDate);
 			row->SetField(new BBitmapField(i->second), coProtocol);
@@ -168,9 +190,21 @@ void LogWin::MessageReceived(BMessage *msg) {
 					};
 					row->SetField(new BStringField("STATUS"), coType);
 				} break;
+				default: {
+					printf("we were discarded :~(\n");
+					msg->PrintToStream();
+				};
 			};
 			
 			fCLV->AddRow(row);					
+		} break;
+		
+		case lwMsgViewMsg: {
+			printf("All I can dooooooo\n");
+			msg->PrintToStream();
+			BRow *row = fCLV->FocusRow();
+			printf("Focus Row: %p\n", row);
+			
 		} break;
 
 		default:
@@ -211,7 +245,5 @@ int32 LogWin::GenerateContents(void *arg) {
 			};
 		};
 	};
-	
-	
 };
 

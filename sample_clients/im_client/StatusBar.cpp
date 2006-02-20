@@ -87,7 +87,7 @@ void StatusBar::PositionViews() {
 	for ( int32 i=0; i<fViews.CountItems(); i++ ) {
 		BView * view = ViewAt(i);
 		
-		view->MoveTo( currw, view->Frame().top );
+		view->MoveTo(currw, view->Frame().top );
 		view->Invalidate();
 		
 		currw = view->Frame().right + 6;

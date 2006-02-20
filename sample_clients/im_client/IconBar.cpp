@@ -1,29 +1,147 @@
 #include "IconBar.h"
 
-IconBar::IconBar(BRect rect)
-	: BView(rect, "statusbar", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_WILL_DRAW) {
+#include <Directory.h>
+#include <Entry.h>
+#include <Node.h>
+#include <Path.h>
+#include <Roster.h>
+
+#include "BubbleHelper.h"
+#include "ImageButton.h"
+#include "IMKitUtilities.h"
+
+#include <stdio.h>
+
+//#pragma mark Constants
+
+const int32 kClickMsg = 'ib01';
+
+//#pragma mark Constructor
+
+IconBar::IconBar(BRect rect, const char *path, BubbleHelper *helper, int16 padding,
+	entry_ref ref)
+	: BView(rect, "IconBar", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_WILL_DRAW),
+	fContactRef(ref),
+	fAppPath(path),
+	fPadding(padding),
+	fBubbles(helper) {
 	
-	SetViewColor (ui_color (B_PANEL_BACKGROUND_COLOR));
- 	SetLowColor (216, 216, 216, 255);
- 	SetHighColor (0, 0, 0, 255);
+//	SetViewColor (ui_color (B_PANEL_BACKGROUND_COLOR));
+// 	SetLowColor (216, 216, 216, 255);
+// 	SetHighColor (0, 0, 0, 255);
+//
+//	BDirectory dir(path);
+// 	entry_ref ref;
+//	int16 iconSize = (int16)(rect.Height() - (padding * 2));
+// 	BRect iconRect = rect;
+// 	
+//	iconRect.bottom -= padding;
+//	iconRect.top += padding;
+// 	iconRect.right = iconSize;
+// 	iconRect.left += padding;
+// 	
+// 	iconSize -= padding * 2;
+//	
+// 	while (dir.GetNextRef(&ref) == B_OK) {
+// 		BPath path(&ref);
+// 		BNode node(&ref);
+// 		BBitmap *icon = ReadNodeIcon(path.Path(), iconSize, true);
+//
+//		int32 length = -1;
+//		char *desc = ReadAttribute(node, "im_client:description", &length);
+//		if ((length < 1) || (desc == NULL)) desc = strdup(ref.name);
+//		
+//		BMessage *msg = new BMessage(kClickMsg);
+//		msg->AddRef("app_ref", &ref);
+//				
+// 		ImageButton *button = new ImageButton(iconRect, ref.name, msg,
+// 			B_FOLLOW_NONE, B_WILL_DRAW, icon, NULL);
+// 		helper->SetHelp(button, desc);
+// 		AddChild(button);
+// 		
+// 		button->SetTarget(this);
+// 		
+// 		fButtons.push_back(button);
+// 		
+// 		free(desc);
+//
+// 		
+// 		iconRect.OffsetBy(iconRect.Width() + padding, 0);
+// 	};
 };
 
 IconBar::~IconBar() {
+	int32 buttons = fButtons.size();
+	for (int32 i = 0; i < buttons; i++) {
+		ImageButton *button = fButtons[i];
+		button->RemoveSelf();
+		delete button;
+	};
+};
+
+//#pragma mark Hooks
+
+void IconBar::AttachedToWindow(void) {
+	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+ 	SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+ 	SetHighColor(0, 0, 0, 255);
+
+	BDirectory dir(fAppPath.String());
+ 	entry_ref ref;
+ 	BRect iconRect = Bounds();
+
+	fIconSize = (int16)(iconRect.Height() - (fPadding * 2));
+ 	
+	iconRect.bottom -= fPadding;
+	iconRect.top += fPadding;
+ 	iconRect.right = fIconSize;
+ 	iconRect.left += fPadding;
+ 	
+ 	fIconSize -= fPadding * 4;
+	
+ 	while (dir.GetNextRef(&ref) == B_OK) {
+ 		BPath path(&ref);
+ 		BNode node(&ref);
+ 		BBitmap *icon = ReadNodeIcon(path.Path(), fIconSize, true);
+
+		int32 length = -1;
+		char *desc = ReadAttribute(node, "im_client:description", &length);
+		if ((length < 1) || (desc == NULL)) desc = strdup(ref.name);
+		
+		BMessage *msg = new BMessage(kClickMsg);
+		msg->AddRef("app_ref", &ref);
+				
+ 		ImageButton *button = new ImageButton(iconRect, ref.name, msg,
+ 			B_FOLLOW_NONE, B_WILL_DRAW, icon, NULL);
+ 		fBubbles->SetHelp(button, desc);
+ 		AddChild(button);
+ 		
+ 		button->SetTarget(this);
+ 		
+ 		fButtons.push_back(button);
+ 		
+ 		free(desc);
+
+ 		
+ 		iconRect.OffsetBy(iconRect.Width() + fPadding, 0);
+ 	};
 };
 
 void IconBar::MessageReceived(BMessage *msg) {
-	BView::MessageReceived(msg);
-};
-
-int32 IconBar::AddItem(BView *view) {
-	fViews.AddItem(view);
-	AddChild(view);
-	PositionViews();
-	return fViews.CountItems();
-};
-
-BView *IconBar::ViewAt(int32 index) {
-	return (BView *)fViews.ItemAt(index);
+	switch (msg->what) {
+		case kClickMsg: {
+			entry_ref appRef;
+			if (msg->FindRef("app_ref", &appRef) != B_OK) return;
+			
+			BMessage click(B_REFS_RECEIVED);
+			click.AddRef("refs", &fContactRef);
+			
+			be_roster->Launch(&appRef, &click);
+		} break;
+		default: {
+			BView::MessageReceived(msg);
+		};
+	};
 };
 
 void IconBar::Draw(BRect update) {
@@ -44,17 +162,3 @@ void IconBar::Draw(BRect update) {
 	SetHighColor(0, 0, 0, 255);
 }
 
-void IconBar::PositionViews() {
-	float currw = 2;
-	
-	for ( int32 i=0; i<fViews.CountItems(); i++ ) {
-		BView * view = ViewAt(i);
-		
-		view->MoveTo( currw, 3 );
-		view->Invalidate();
-		
-		currw = view->Frame().right + 4;
-	}
-	
-	Invalidate();
-}

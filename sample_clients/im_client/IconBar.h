@@ -1,24 +1,36 @@
 #ifndef ICONBAR_H
 #define ICONBAR_H
 
-#include <List.h>
+#include <Entry.h>
 #include <View.h>
+
+#include <vector>
+
+class BDirectory;
+class BubbleHelper;
+class ImageButton;
+
+typedef vector<ImageButton *> button_t;
 
 class IconBar : public BView {
 	public:
-						IconBar(BRect rect);
-		virtual			~IconBar();
-		
-		virtual void 	MessageReceived(BMessage *msg);
+							IconBar(BRect rect, const char *path,
+								BubbleHelper *help, int16 padding, entry_ref ref);
+							~IconBar(void);
 
-				int32	AddItem(BView *view);
-				BView	*ViewAt(int32 index);
-			
-		virtual void	Draw(BRect rect);
-		
-				void	PositionViews();
+
+		// Hooks		
+		void				AttachedToWindow(void);
+		void 				MessageReceived(BMessage *msg);
+		virtual void		Draw(BRect rect);
+
 	private:
-				BList	fViews;
+		button_t			fButtons;
+		BubbleHelper		*fBubbles;
+		entry_ref			fContactRef;
+		BString				fAppPath;
+		int16				fPadding;
+		int16				fIconSize;
 };
 
 #endif

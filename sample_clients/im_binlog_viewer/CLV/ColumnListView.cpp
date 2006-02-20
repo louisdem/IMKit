@@ -463,9 +463,15 @@ void BRow::SetField(BField *field, int32 logicalFieldIndex)
 		fList->GetRowRect(this, &inv);
 		fList->Invalidate(inv);
 	}
-	
+
+	field->parent = this;
+
 	fFields.AddItem(field, logicalFieldIndex);
 }
+
+void BRow::Height(float height) {
+	fHeight = height;
+};
 
 float BRow::Height() const
 {

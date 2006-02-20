@@ -183,18 +183,80 @@ BStringColumn::BStringColumn(const char* title, float width, float minWidth,
 
 void BStringColumn::DrawField(BField* _field, BRect rect, BView* parent)
 {
+//	float			width = rect.Width() - (2 * kTEXT_MARGIN);
+//	BStringField*	field = static_cast<BStringField*>(_field);
+//
+//	if (width != field->Width())
+//	{
+//		BString		out_string(field->String());
+//
+//		parent->TruncateString(&out_string, fTruncate, width + 2);
+//		field->SetClippedString(out_string.String());
+//		field->SetWidth(width);
+//	}
+//	DrawString(field->ClippedString(), parent, rect);
+
 	float			width = rect.Width() - (2 * kTEXT_MARGIN);
 	BStringField*	field = static_cast<BStringField*>(_field);
+	BFont font;
+	parent->GetFont(&font);
+	font_height fh;
+	font.GetHeight(&fh);
+	float height = fh.ascent + fh.descent + fh.leading + fh.ascent;
 
-	if (width != field->Width())
-	{
-		BString		out_string(field->String());
+	int32 upTo = 0;
+	int32 at = 0;
+	int32 count = 0;
+//
+//	if (width != field->Width())
+//	{
+//		BString		out_string(field->String());
+//
+//		parent->TruncateString(&out_string, fTruncate, width + 2);
+//		field->SetClippedString(out_string.String());
+//		field->SetWidth(width);
+//	}
+//	
+	BString str = field->ClippedString();
+	str << "\n";
+	printf("Working on \"%s\"\n", str.String());
+	
+	while ((at = str.FindFirst("\n", upTo)) != B_ERROR) {
+		BString newStr;
+		str.CopyInto(newStr, upTo, at - upTo);
+		upTo = at + 1;
 
-		parent->TruncateString(&out_string, fTruncate, width + 2);
-		field->SetClippedString(out_string.String());
-		field->SetWidth(width);
-	}
-	DrawString(field->ClippedString(), parent, rect);
+		BRect draw = rect;
+		draw.bottom = draw.top + ((count + 1) * height);
+		count++;
+		DrawString(newStr.String(), parent, draw);
+		printf("Str: %s\n", newStr.String());
+		draw.PrintToStream();
+	};
+	
+	printf("%i / %i\n", upTo, at);
+	if (count > 0) {
+		float newHeight = count * height;
+		BRow *parent = field->parent;
+		printf("Parent: %p\n", parent);
+		if ((parent) && (newHeight > parent->Height())) {
+			printf("Needs resizing!\n");
+			parent->Height(newHeight);
+		};
+	} else {
+		DrawString(field->ClippedString(), parent, rect);
+	};
+	
+//	if (width != field->Width())
+//	{
+//		BString		out_string(field->String());
+//
+//		parent->TruncateString(&out_string, fTruncate, width + 2);
+//		field->SetClippedString(out_string.String());
+//		field->SetWidth(width);
+//	}
+//	DrawString(field->ClippedString(), parent, rect);
+
 }
 
 

@@ -160,14 +160,19 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	// set size and position
 	MoveTo(windowRect.left, windowRect.top);
 	ResizeTo(windowRect.Width(), windowRect.Height());
-	
+
+
+	BPath settings;
+	find_directory(B_USER_SETTINGS_DIRECTORY, &settings, true);
+	settings.Append("im_kit/im_client/toolbar");
+
 	// create views
 	BRect textRect = Bounds();
 	BRect inputRect = Bounds();
 	BRect dockRect = Bounds();
 
 	dockRect.bottom = iconBarSize + kDockPadding;
-	fDock = new IconBar(dockRect);
+	fDock = new IconBar(dockRect, settings.Path(), &gBubbles, kPadding, ref);
 #if B_BEOS_VERSION > B_BEOS_VERSION_5
 	fDock->SetViewUIColor(B_UI_PANEL_BACKGROUND_COLOR);
 	fDock->SetLowUIColor(B_UI_PANEL_BACKGROUND_COLOR);
@@ -178,7 +183,8 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fDock->SetHighColor(0, 0, 0, 0);
 #endif
 	AddChild(fDock);
-	
+
+#if 0	
 	// add buttons
 	ImageButton * btn;
 	BBitmap * icon;
@@ -215,7 +221,7 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	icon = IconForHandler("text/html", iconBarSize);
 	btn = MakeButton(icon, "View contact's web page", new BMessage(VIEW_WEBPAGE), buttonRect);
 	fDock->AddItem(btn);
-
+#endif
 	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
 	textRect.bottom = inputDivider.y;
@@ -258,17 +264,15 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fInput->SetStylable(false);
 	fInput->MakeSelectable(true);
 	
-	if ( sendButton ) {
+	if (sendButton) {
 		BRect sendRect = fInputScroll->Frame();
 		sendRect.left = sendRect.right+1;
 		sendRect.right = Bounds().right;
 		
-		fSendButton = new BButton(
-			sendRect, "sendButton", _T("Send"), new BMessage(SEND_MESSAGE),
-			B_FOLLOW_RIGHT|B_FOLLOW_BOTTOM
-		);
+		fSendButton = new BButton(sendRect, "sendButton", _T("Send"),
+			new BMessage(SEND_MESSAGE), B_FOLLOW_RIGHT | B_FOLLOW_BOTTOM);
 	
-		AddChild( fSendButton );
+		AddChild(fSendButton);
 	}
 	
 	BRect statusRect = Bounds();
@@ -294,11 +298,12 @@ ChatWindow::ChatWindow(entry_ref & ref)
 
 	entry_ref ref;
 	get_ref_for_path("/boot/preferences/Keyboard", &ref);
-	fTypingView = new IconView(ref, fStatusBar->Frame().Height(), true);
+	fTypingView = new IconView(ref, fStatusBar->Frame().Height() - kPadding, true);
 	fTypingView->EnableDrawing(false);
 
 	fStatusBar->AddItem(fTypingView);
 	fStatusBar->PositionViews();
+	fTypingView->MoveBy(0, kPadding);
 
 	BuildProtocolMenu();
 	BMenuItem *first = pop->ItemAt(0);
@@ -762,15 +767,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 				fText->ScrollToSelection();
 			};
 		}	break;
-		
-		case SHOW_INFO:
-		{
-			BMessage open_msg(B_REFS_RECEIVED);
-			open_msg.AddRef("refs", &fEntry);
 			
-			be_roster->Launch(fPeopleHandler.String(), &open_msg);
-		}	break;
-		
 		case VIEW_LOG: {
 			BMessage open(B_REFS_RECEIVED);
 			open.AddRef("refs", &fEntry);
