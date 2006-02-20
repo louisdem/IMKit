@@ -93,6 +93,8 @@ void IconMenuItem::DrawContent() {
 	BMenu		*parent = Menu();
 	BPoint		loc = parent->PenLocation();
 	
+	parent->PushState();
+	
 	parent->SetDrawingMode(B_OP_ALPHA);
 	
 	b.OffsetBy(0, kEdgePadding);
@@ -107,4 +109,6 @@ void IconMenuItem::DrawContent() {
 		loc.y + fFontHeight.ascent + kEdgePadding);
 	parent->SetDrawingMode( B_OP_OVER );
 	parent->DrawString(fLabel.String());
+
+	parent->PopState();
 };

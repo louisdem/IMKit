@@ -30,17 +30,22 @@ IconView::~IconView(void) {
 //#pragma mark Hooks
 
 void IconView::Draw(BRect frame) {
-	if ((fEnabled) && (fBitmap)) {
-		PushState();
+	PushState();
+
+		SetHighColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+		FillRect(Bounds());
+
+		if ((fEnabled) && (fBitmap)) {
 			SetDrawingMode(B_OP_ALPHA);
 			DrawBitmap(fBitmap);			
-		PopState();
-	};
+		};
+
+	PopState();
 };
 
 void IconView::AttachedToWindow(void) {
 	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
-	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
  	SetHighColor(0, 0, 0, 255);
 };
 

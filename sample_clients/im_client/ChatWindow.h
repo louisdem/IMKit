@@ -102,12 +102,6 @@ class ChatWindow : public BWindow {
 		enum { 
 							SEND_MESSAGE	= 1,
 						
-							SHOW_INFO		= 100,
-							BLOCK,
-							EMAIL,
-							AUTH,
-							VIEW_LOG,
-							VIEW_WEBPAGE,
 							NEXT_WIN,
 							PREV_WIN,
 							

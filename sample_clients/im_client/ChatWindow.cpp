@@ -184,44 +184,6 @@ ChatWindow::ChatWindow(entry_ref & ref)
 #endif
 	AddChild(fDock);
 
-#if 0	
-	// add buttons
-	ImageButton * btn;
-	BBitmap * icon;
-//	long err = 0;
-	BPath iconDir;
-	BPath iconPath;
-	BRect buttonRect(0,0,iconBarSize+8,iconBarSize+8);
-	find_directory(B_USER_SETTINGS_DIRECTORY, &iconDir, true);
-	iconDir.Append("im_kit/icons");
-	
-//	People Button
-	icon = IconForHandler(fPeopleHandler.String(), iconBarSize);
-	btn = MakeButton(icon, "Show contact in People", new BMessage(SHOW_INFO), buttonRect);
-	fDock->AddItem(btn);
-		
-//	Email button
-	icon = IconForHandler("text/x-email", iconBarSize);
-	btn = MakeButton(icon, "Send email to contact", new BMessage(EMAIL), buttonRect);
-	fDock->AddItem(btn);
-	
-//	Block Button
-	iconPath = iconDir;
-	iconPath.Append("Block");
-	icon = ReadNodeIcon(iconPath.Path(), iconBarSize, true);
-	btn = MakeButton(icon, "Block messages from contact", new BMessage(BLOCK), buttonRect);
-	fDock->AddItem(btn);
-
-//	Log Button
-	icon = IconForHandler("application/x-vnd.BeClan.im_binlog_viewer", iconBarSize);
-	btn = MakeButton(icon, "View chat history for contact", new BMessage(VIEW_LOG), buttonRect);
-	fDock->AddItem(btn);
-	
-//	Webpage Button
-	icon = IconForHandler("text/html", iconBarSize);
-	btn = MakeButton(icon, "View contact's web page", new BMessage(VIEW_WEBPAGE), buttonRect);
-	fDock->AddItem(btn);
-#endif
 	textRect.top = fDock->Bounds().bottom+1;
 	textRect.InsetBy(2,2);
 	textRect.bottom = inputDivider.y;
@@ -626,9 +588,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			
 			if ( msg->FindInt32("im_what",&im_what) != B_OK )
 				im_what = IM::ERROR;
-			
-//			int32 old_sel_start, old_sel_end;
-			
+						
 			char timestr[10];
 			time_t now = time(NULL);
 			strftime(timestr, sizeof(timestr),"[%H:%M]: ", localtime(&now) );
@@ -637,7 +597,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 			{
 				case IM::STATUS_CHANGED:
 				{
-					// This means we're rebuilding menus we don't rally need to rebuild..
+					// This means we're rebuilding menus we don't really need to rebuild..
 					BuildProtocolMenu();
 				}	break;
 				
@@ -767,80 +727,6 @@ ChatWindow::MessageReceived( BMessage * msg )
 				fText->ScrollToSelection();
 			};
 		}	break;
-			
-		case VIEW_LOG: {
-			BMessage open(B_REFS_RECEIVED);
-			open.AddRef("refs", &fEntry);
-			be_roster->Launch("application/x-vnd.BeClan.im_binlog_viewer", &open);
-		} break;
-		
-		case VIEW_WEBPAGE: {
-			entry_ref htmlRef;
-			be_roster->FindApp("application/x-vnd.Be.URL.http", &htmlRef);
-			BPath htmlPath(&htmlRef);
-
-			BMessage argv(B_ARGV_RECEIVED);
-			argv.AddString("argv", htmlPath.Path());
-
-			int32 length = -1;
-			char *url = ReadAttribute(BNode(&fEntry), "META:url", &length);
-			if ((url != NULL) && (length > 1)) {
-				url = (char *)realloc(url, (length + 1) * sizeof(char));
-				url[length] = '\0';
-				
-				argv.AddString("argv", url);	
-				argv.AddInt32("argc", 2);
-	
-				be_roster->Launch(&htmlRef, &argv);
-			} else {
-				LOG("im_client", liMedium, "Contact had no homepage");
-			};
-			
-			if (url) free(url);
-		} break;
-		
-		case EMAIL:
-		{
-			BMessage open_msg(B_REFS_RECEIVED);
-			open_msg.AddRef("refs", &fEntry);
-			
-			be_roster->Launch( "application/x-vnd.Be-MAIL", &open_msg );
-		}	break;
-		
-		case BLOCK:
-		{
-			IM::Contact contact(fEntry);
-			
-			char status[256];
-			
-			if ( contact.GetStatus( status, sizeof(status) ) != B_OK )
-				status[0] = 0;
-			
-			if ( strcmp(status, BLOCKED_TEXT) == 0 )
-			{ // already blocked, unblocked
-				contact.SetStatus(OFFLINE_TEXT);
-				
-				BMessage update_msg(IM::UPDATE_CONTACT_STATUS);
-				update_msg.AddRef("contact", &fEntry);
-				
-				fMan->SendMessage( &update_msg );
-			} else
-			{
-				if ( contact.SetStatus(BLOCKED_TEXT) != B_OK )
-				{
-					LOG("im_client", liHigh, "Block: Error setting contact status");
-				}
-			}
-		}	break;
-		
-		case AUTH:
-		{
-			BMessage auth_msg(IM::MESSAGE);
-			auth_msg.AddInt32("im_what", IM::REQUEST_AUTH);
-			auth_msg.AddRef("contact", &fEntry);
-			
-			fMan->SendMessage( &auth_msg );
-		}	break;
 		
 		case B_NODE_MONITOR:
 		{
@@ -925,14 +811,11 @@ ChatWindow::MessageReceived( BMessage * msg )
 			int32 end = 0;
 			
 			fInput->GetSelection(&start, &end);
-			
-			//printf("%ld - > %ld\n", start, end);
 		} break;
 		
 		case B_SIMPLE_DATA: {
 			entry_ref ref;
 			BNode node;
-//			attr_info info;
 			
 			for (int i = 0; msg->FindRef("refs", i, &ref) == B_OK; i++) {
 				node = BNode(&ref);
