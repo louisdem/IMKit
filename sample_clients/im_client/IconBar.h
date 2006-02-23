@@ -3,7 +3,7 @@
 
 #include <Entry.h>
 #include <View.h>
-
+#include <String.h>
 #include <vector>
 
 class BDirectory;
