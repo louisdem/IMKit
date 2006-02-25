@@ -258,9 +258,9 @@ ChatWindow::ChatWindow(entry_ref & ref)
 		"Field", NULL, pop);
 	fStatusBar->AddItem(fProtocolMenu);
 
-	entry_ref ref;
-	get_ref_for_path("/boot/preferences/Keyboard", &ref);
-	fTypingView = new IconView(ref, fStatusBar->Frame().Height() - kPadding, true);
+	entry_ref keyRef;
+	get_ref_for_path("/boot/preferences/Keyboard", &keyRef);
+	fTypingView = new IconView(keyRef, fStatusBar->Frame().Height() - kPadding, true);
 	fTypingView->EnableDrawing(false);
 
 	fStatusBar->AddItem(fTypingView);
