@@ -18,6 +18,10 @@ property_info message_prop_list[] = {
 	{ "title", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message title"},
 	{ "apptitle", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get message's app"},
 	{ "icon", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get icon as an archived bitmap"},
+	{ "iconRef", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get / set icon entry_ref"},
+	{ "iconType", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get  icon type (Attribute / Contents)"},
+	{ "overlayIconRef", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get / set overlay icon entry_ref"},
+	{ "overlayIconType", {B_GET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get overlay icon type (Attribute / Contents)" },
 	{ "type", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get the message type"},
 	{ "progress", {B_GET_PROPERTY, B_SET_PROPERTY, 0}, {B_DIRECT_SPECIFIER, 0}, "get the progress (0.0-1.0)"},
 	NULL // terminate list
@@ -51,6 +55,10 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 		};
 
 		path.SetTo(&info.ref);
+		
+		fDetails->AddRef("iconRef", &info.ref);
+		fDetails->AddInt32("iconType", Attribute);
+		
 		fBitmap = ReadNodeIcon(path.Path(), iconSize);
 	};
 	
@@ -66,6 +74,11 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 			default: basepath.Append("Information"); 
 		};
 				
+		entry_ref overlayRef;
+		get_ref_for_path(basepath.Path(), &overlayRef);
+		fDetails->AddRef("overlayIconRef", &overlayRef);
+		fDetails->AddInt32("overlayIconType", Attribute);
+
 		fOverlayBitmap = ReadNodeIcon(basepath.Path(), iconSize / 4);
 	};
 	
@@ -132,6 +145,7 @@ void InfoView::MessageReceived(BMessage * msg) {
 			if (specifier.FindString("property", &property) != B_OK) msgOkay = false;
 
 			if (msgOkay) {
+			printf("Looking for %s\n", property);
 				if (strcmp(property, "content") == 0) {
 					reply.AddString("result", fText);
 				};
@@ -152,6 +166,42 @@ void InfoView::MessageReceived(BMessage * msg) {
 					reply.AddFloat("result", fProgress);
 				};
 				
+				if (strcmp(property, "iconRef") == 0) {
+					entry_ref ref;
+					if (fDetails->FindRef("iconRef", &ref) == B_OK) {
+						reply.AddRef("result", &ref);
+					} else {
+						reply.AddInt32("error", B_ERROR);
+					};
+				};
+				
+				if (strcmp(property, "iconType") == 0) {
+					int32 type = B_ERROR;
+					if (fDetails->FindInt32("iconType", &type) == B_OK) {
+						reply.AddInt32("result", type);
+					} else {
+						reply.AddInt32("error", B_ERROR);
+					};
+				};
+				
+				if (strcmp(property, "overlayIconRef") == 0) {
+					entry_ref ref;
+					if (fDetails->FindRef("overlayIconRef", &ref) == B_OK) {
+						reply.AddRef("result", &ref);
+					} else {
+						reply.AddInt32("error", B_ERROR);
+					};
+				};
+	
+				if (strcmp(property, "overlayIconType") == 0) {
+					int32 type = B_ERROR;
+					if (fDetails->FindInt32("overlayIconType", &type) == B_OK) {
+						reply.AddInt32("result", type);
+					} else {
+						reply.AddInt32("error", B_ERROR);
+					};
+				};
+							
 				if (strcmp(property, "icon") == 0) {
 					if (fBitmap) {
 						BMessage archive;
@@ -181,7 +231,7 @@ void InfoView::MessageReceived(BMessage * msg) {
 			
 			if (msg->FindMessage("specifiers", 0, &specifier) != B_OK) msgOkay = false;
 			if (specifier.FindString("property", &property) != B_OK) msgOkay = false;
-			
+		
 			if (msgOkay) {
 				BString app(fApp), title(fTitle), text(fText);
 				
@@ -200,7 +250,28 @@ void InfoView::MessageReceived(BMessage * msg) {
 				if (strcmp(property, "icon") == 0) {
 					
 				};
-
+				
+				if (strcmp(property, "iconRef") == 0) {
+					entry_ref ref;
+					if (msg->FindRef("data", &ref) == B_OK) {
+						BPath path(&ref);
+						BBitmap *temp = ReadNodeIcon(path.Path(), fParent->IconSize());
+						delete fBitmap;
+						fBitmap = rescale_bitmap(temp, fParent->IconSize());
+						delete temp;
+					};
+				};
+				
+				if (strcmp(property, "overlayIconRef") == 0) {
+					entry_ref ref;
+					if (msg->FindRef("data", &ref) == B_OK) {
+						BPath path(&ref);
+						BBitmap *temp = ReadNodeIcon(path.Path(), fParent->IconSize() / 4);
+						delete fBitmap;
+						fBitmap = rescale_bitmap(temp, fParent->IconSize() / 4);
+						delete temp;
+					};
+				};
 	
 				SetText( 
 					app.Length() > 0 ? app.String() : NULL, 

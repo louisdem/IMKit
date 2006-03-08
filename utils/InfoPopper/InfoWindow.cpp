@@ -33,7 +33,7 @@ InfoWindow::InfoWindow()
 	SetWorkspaces( 0xffffffff );
 	
 	fBorder = new BorderView(Bounds(), "InfoPopper");
-	//fBorder = new BView(Bounds(), "InfoPopper");
+
 	SetTitle("InfoPopper");
 	//SetLook(B_FLOATING_WINDOW_LOOK);
 	SetLook(B_THIN_BORDER_WINDOW_LOOK);
@@ -168,7 +168,6 @@ BHandler * InfoWindow::ResolveSpecifier(BMessage *msg, int32 index, BMessage *sp
 	BPropertyInfo prop_info(main_prop_list);
 	BHandler *handler = NULL;
 	
-	printf("Looking for property %s\n", prop);
 	if ( strcmp(prop,"message") == 0 ) {
 		
 		printf("Matching specifier..\n");
