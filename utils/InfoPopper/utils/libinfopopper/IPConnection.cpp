@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//#pragma mark Constants
+const char *kIPWindowName = "InfoPopper";
+
 //#pragma mark Constructors
 
 IPConnection::IPConnection(void)
@@ -40,6 +43,24 @@ status_t IPConnection::Send(IPMessage *message) {
 	send.AddString("title", message->Title());
 	send.AddString("content", message->Content());
 	send.AddFloat("progress", message->Progress());
+	
+	entry_ref icon = message->MainIcon();
+	BEntry entry(&icon);
+
+	if (entry.Exists()) {
+		send.AddRef("iconRef", &icon);
+		send.AddInt32("iconType", message->MainIconType());
+	};
+
+	icon = message->OverlayIcon();
+	entry.SetTo(&icon);
+	
+	if (entry.Exists()) {
+		send.AddRef("overlayIconRef", &icon);
+		send.AddInt32("overlayIconType", message->OverlayIconType());
+	};
+	
+	send.PrintToStream();
 	
 	return fIPMsgr->SendMessage(&send);
 };
@@ -113,12 +134,49 @@ IPMessage *IPConnection::MessageAt(int32 index) {
 
 	float progress = 0.0f;
 	if (reply.FindFloat("result", &progress) != B_OK) return NULL;
+	
+	entry_ref iconRef;
+	entry_ref overlayRef;
+	int32 iconType;
+	int32 overlayType;
+
+	BMessage iconReq(B_GET_PROPERTY);
+	iconReq.AddSpecifier("iconRef");
+	iconReq.AddSpecifier("message", index);
+	
+	if (fMsgMsgr->SendMessage(&iconReq, &reply) != B_OK) return NULL;
+	reply.FindRef("result", &iconRef);
+
+	BMessage iconTypeReq(B_GET_PROPERTY);
+	iconTypeReq.AddSpecifier("iconType");
+	iconTypeReq.AddSpecifier("message", index);
+	
+	if (fMsgMsgr->SendMessage(&iconTypeReq, &reply) != B_OK) return NULL;
+	reply.FindInt32("result", &iconType);
+
+	BMessage overIconReq(B_GET_PROPERTY);
+	overIconReq.AddSpecifier("overlayIconRef");
+	overIconReq.AddSpecifier("message", index);
+	
+	if (fMsgMsgr->SendMessage(&overIconReq, &reply) != B_OK) return NULL;
+	reply.FindRef("result", &overlayRef);
+
+	BMessage overTypeReq(B_GET_PROPERTY);
+	overTypeReq.AddSpecifier("overlayIconType");
+	overTypeReq.AddSpecifier("message", index);
+	
+	if (fMsgMsgr->SendMessage(&overTypeReq, &reply) != B_OK) return NULL;
+	reply.FindInt32("result", &overlayType);
 
 	IPMessage *message = new IPMessage((InfoPopper::info_type)type);
 	message->Application(app.String());
 	message->Title(title.String());
 	message->Content(content.String());
 	message->Progress(progress);
+	message->MainIcon(iconRef);
+	message->MainIconType(iconType);
+	message->OverlayIcon(overlayRef);
+	message->OverlayIconType(overlayType);
 	
 	return message;
 };
@@ -134,7 +192,7 @@ status_t IPConnection::FetchMessageMessenger(void) {
 		fMsgMsgr = new BMessenger();
 		
 		fetch.AddSpecifier("Messenger");
-		fetch.AddSpecifier("Window", "InfoWindow");
+		fetch.AddSpecifier("Window", kIPWindowName);
 		
 		if (fIPMsgr->SendMessage(&fetch, &reply) == B_OK) {
 			result = reply.FindMessenger("result", fMsgMsgr);

@@ -66,6 +66,38 @@ float IPMessage::Progress(void) {
 	return fProgress;
 };
 
+void IPMessage::MainIcon(entry_ref ref) {
+	fMainIcon = ref;
+};
+
+entry_ref IPMessage::MainIcon(void) {
+	return fMainIcon;
+};
+
+void IPMessage::MainIconType(int32 type) {
+	fMainIconType = type;
+};
+
+int32 IPMessage::MainIconType(void) {
+	return fMainIconType;
+};
+		
+void IPMessage::OverlayIcon(entry_ref ref) {
+	fOverlayIcon = ref;
+};
+
+entry_ref IPMessage::OverlayIcon(void) {
+	return fOverlayIcon;
+};
+
+void IPMessage::OverlayIconType(int32 type) {
+	fOverlayIconType = type;
+};
+
+int32 IPMessage::OverlayIconType(void) {
+	return fOverlayIconType;
+};
+
 void IPMessage::PrintToStream(FILE *out = stdout) {
 	const char *id = "(Message ID)";
 	const char *type = NULL;
@@ -83,4 +115,7 @@ void IPMessage::PrintToStream(FILE *out = stdout) {
 	fprintf(out, "\tTitle: %s\n", fTitle.String());
 	fprintf(out, "\tContent: %s\n", fContent.String());
 	fprintf(out, "\tProgress: %.2f\n", fProgress);
+	fprintf(out, "\tMain Icon: %s\n", BEntry(&fMainIcon).Exists() ? fMainIcon.name : "not set");
+	fprintf(out, "\tOverlay Icon: %s\n", BEntry(&fOverlayIcon).Exists() ? fOverlayIcon.name : "not set");
+
 };

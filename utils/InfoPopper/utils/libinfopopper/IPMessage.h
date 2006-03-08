@@ -2,6 +2,7 @@
 #define IPMESSAGE_H
 
 #include <stdio.h>
+#include <Entry.h>
 #include <String.h>
 #include <libim/InfoPopper.h>
 
@@ -30,6 +31,16 @@ class IPMessage {
 		void					Progress(float progress);
 		float					Progress(void);
 		
+		void					MainIcon(entry_ref ref);
+		entry_ref				MainIcon(void);
+		void					MainIconType(int32 type);
+		int32					MainIconType(void);
+		
+		void					OverlayIcon(entry_ref ref);
+		entry_ref				OverlayIcon(void);
+		void					OverlayIconType(int32 type);
+		int32					OverlayIconType(void);
+		
 		void					PrintToStream(FILE *out = stdout);
 
 	private:
@@ -39,6 +50,10 @@ class IPMessage {
 		BString					fContent;
 		BString					fMessageID;
 		float					fProgress;
+		entry_ref				fMainIcon;
+		int32					fMainIconType;
+		entry_ref				fOverlayIcon;
+		int32					fOverlayIconType;
 };
 
 #endif
