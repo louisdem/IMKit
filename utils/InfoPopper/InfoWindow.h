@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <vector>
+#include <map>
 
 #include "InfoView.h"
 #include "BorderView.h"
@@ -19,6 +20,15 @@
 
 #include <PropertyInfo.h>
 
+class AppGroupView;
+
+typedef map<BString, AppGroupView *> appview_t;
+
+extern const float kEdgePadding;
+extern const float kSmallPadding;
+extern const float kCloseSize;
+extern const float kExpandSize;
+extern const float kPenSize;
 
 // -------------- INFO WINDOW -----------------
 
@@ -44,9 +54,10 @@ class InfoWindow : public BWindow {
 		infoview_layout 	Layout(void);
 		float				ViewWidth(void);
 		BPath				SettingsPath(void);
+
+		void				ResizeAll(void);
 		
 	private:
-		void				ResizeAll(void);
 		void				PopupAnimation(float, float);
 		void				WriteDefaultSettings(BNode *node,
 								bool writeWidth = true, bool writeIcon = true,
@@ -56,6 +67,8 @@ class InfoWindow : public BWindow {
 		vector<InfoView*>	fInfoViews;
 		deskbar_location	fDeskbarLocation;
 		BorderView			*fBorder;
+		
+		appview_t			fAppViews;
 
 		BPath				fSettingsPath;
 

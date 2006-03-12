@@ -39,33 +39,34 @@ typedef list<lineinfo *> vline;
 
 using namespace InfoPopper;
 
-class InfoView : public BView
-{
+class InfoView : public BView {
 	public:				
-		InfoView(InfoWindow *win, info_type type, const char *app, const char *title, 
-			const char *text, BMessage *details);
-		~InfoView();
+							InfoView(InfoWindow *win, info_type type,
+								const char *app, const char *title, 
+								const char *text, BMessage *details);
+							~InfoView(void);
 		
-		void AttachedToWindow();
-		void MessageReceived( BMessage * );
-		
-		void GetPreferredSize( float *, float * );
-		
-		void Draw( BRect );
+		// Hooks
+		void 				AttachedToWindow(void);
+		void 				MessageReceived(BMessage *msg);
+		void 				GetPreferredSize(float *width, float *height);
+		void				Draw(BRect bounds);
+		void				MouseDown(BPoint point);
+		void				FrameResized(float width, float height);
+		// Scripting Hooks	
+		BHandler			*ResolveSpecifier(BMessage *msg, int32 index,
+								BMessage *spec, int32 form, const char *prop);
+		status_t			GetSupportedSuites(BMessage *msg);
+
 		
 		/**
 			Set the text to be displayed. Called by the constructor.
 		*/
-		void SetText(const char *app, const char *title, const char *text, float newMaxWidth=-1);
-		
-		bool HasMessageID( const char * );
+		void 				SetText(const char *app, const char *title,
+								const char *text, float newMaxWidth = -1);
+		bool				HasMessageID(const char *id);
+		void				SetPosition(bool first, bool last);
 
-		void MouseDown(BPoint point);
-		
-		void FrameResized(float,float);
-		
-		BHandler * ResolveSpecifier(BMessage *, int32 , BMessage *, int32, const char *);
-		status_t GetSupportedSuites(BMessage*);
 		
 	private:
 		BBitmap			*ExtractIcon(const char *prefix, BMessage *msg, int16 size);
@@ -87,6 +88,9 @@ class InfoView : public BView
 		BString			fText;
 		
 		float			fHeight;
+		
+		bool			fIsFirst;
+		bool			fIsLast;
 };
 
 #endif

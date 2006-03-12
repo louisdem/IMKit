@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <PropertyInfo.h>
 #include <Font.h>
+#include <Region.h>
 
-const float kEdgePadding = 2.0f;
-const float kCloseWidth = 10.0f;
+//#pragma mark Constants
 
 property_info message_prop_list[] = {
 	{ "content", {B_GET_PROPERTY, B_SET_PROPERTY, 0},{B_DIRECT_SPECIFIER, 0}, "get message contents"},
@@ -27,6 +27,8 @@ property_info message_prop_list[] = {
 	NULL // terminate list
 };
 
+//#pragma mark Constructor
+
 InfoView::InfoView(InfoWindow *win, info_type type,
 	const char *app, const char *title, const char * text, BMessage *details)
 
@@ -36,7 +38,9 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 	fType(type),
 	fRunner(NULL),
 	fDetails(details),
-	fBitmap(NULL) {
+	fBitmap(NULL),
+	fIsFirst(false),
+	fIsLast(false) {
 	
 	int16 iconSize = fParent->IconSize();
 	
@@ -95,16 +99,20 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 	
 	switch (type) {
 		case InfoPopper::Information: {
-			SetViewColor(218,218,218);
+			SetViewColor(218, 218, 218);
+			SetLowColor(218, 218, 218);
 		} break;
 		case InfoPopper::Important: {
-			SetViewColor(255,255,255);
+			SetViewColor(255, 255, 255);
+			SetLowColor(255, 255, 255);
 		} break;
 		case InfoPopper::Error: {
-			SetViewColor(255,0,0);
+			SetViewColor(255, 0, 0);
+			SetLowColor(255, 0, 0);
 		} break;
 		case InfoPopper::Progress: {
-			SetViewColor(218,218,218);
+			SetViewColor(218, 218, 218);
+			SetLowColor(218, 218, 218);
 		} break;
 	}
 }
@@ -118,8 +126,9 @@ InfoView::~InfoView(void) {
 	for (lIt = fLines.begin(); lIt != fLines.end(); lIt++) delete (*lIt);
 }
 
-void
-InfoView::AttachedToWindow() {
+//#pragma mark Hooks
+
+void InfoView::AttachedToWindow(void) {
 	BMessage msg(REMOVE_VIEW);
 	msg.AddPointer("view", this);
 	int32 timeout = -1;
@@ -129,9 +138,8 @@ InfoView::AttachedToWindow() {
 	bigtime_t delay = timeout*1000*1000;
 	
 	if ( delay > 0 )
-		fRunner = new BMessageRunner( BMessenger(Window()), &msg, delay, 1 );
-		
-}
+		fRunner = new BMessageRunner( BMessenger(Parent()), &msg, delay, 1 );		
+};
 
 void InfoView::MessageReceived(BMessage * msg) {
 	switch (msg->what) {
@@ -302,19 +310,20 @@ void InfoView::MessageReceived(BMessage * msg) {
 };
 
 void InfoView::GetPreferredSize(float *w, float *h) {
-	*w = fParent->ViewWidth();
+	// Parent width, minus the edge padding, minus the pensize
+	*w = fParent->ViewWidth() - (kEdgePadding * 2) - (kPenSize * 2);
 	*h = fHeight;
 	
 	if (fType == InfoPopper::Progress) {
 		font_height fh;
 		be_plain_font->GetHeight(&fh);
 		float fontHeight = fh.ascent + fh.descent + fh.leading;
-		*h += 10 + (kEdgePadding * 1) + fontHeight;
+		*h += (kEdgePadding * 2) + (kEdgePadding * 1) + fontHeight;
 	};
 };
 
 void InfoView::Draw(BRect /*drawBounds*/) {
-//	BRect bound = Bounds();
+	BRect bound = Bounds();
 	BRect progRect;
 	
 	// draw progress background
@@ -326,7 +335,7 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 		be_plain_font->GetHeight(&fh);
 		float fontHeight = fh.ascent + fh.descent + fh.leading;
 
-		progRect = Bounds();
+		progRect = bound;
 		progRect.InsetBy(kEdgePadding, kEdgePadding);
 		progRect.top = progRect.bottom - (kEdgePadding * 2) - fontHeight;
 		
@@ -353,23 +362,23 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 		PopState();
 	};
 		
-	SetDrawingMode( B_OP_ALPHA );
+	SetDrawingMode(B_OP_ALPHA);
 	
 	// draw icon
 	BPoint iconPoint(0, 0);
 	if (fBitmap) {
-		lineinfo * appLine = fLines.back();
+		lineinfo *appLine = fLines.back();
 		font_height fh;
-		appLine->font.GetHeight( &fh );
+		appLine->font.GetHeight(&fh);
 		
 		float title_bottom = appLine->location.y + fh.descent;
 		
 		float ix = kEdgePadding;
 		float iy = 0;
 		if (fParent->Layout() == TitleAboveIcon) {
-			iy = title_bottom + kEdgePadding + (Bounds().Height() - title_bottom - kEdgePadding*2 - fBitmap->Bounds().Height()) / 2;
+			iy = title_bottom + kEdgePadding + (bound.Height() - title_bottom - kEdgePadding*2 - fBitmap->Bounds().Height()) / 2;
 		} else {
-			iy = (Bounds().Height() - fBitmap->Bounds().Height()) / 2.0;
+			iy = (bound.Height() - fBitmap->Bounds().Height()) / 2.0;
 		};
 		
 		if (fType == InfoPopper::Progress) {
@@ -405,30 +414,25 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 		DrawString(l->text.String(), l->text.Length(), l->location);
 	};
 	
-	// draw 'close rect'
-	BRect closeRect = Bounds().InsetByCopy(2,2);
-	closeRect.left = closeRect.right - kCloseWidth;
-	closeRect.bottom = closeRect.top + kCloseWidth;
-	closeRect.left--;
+	rgb_color detailCol = ui_color(B_CONTROL_BORDER_COLOR);
+	detailCol = tint_color(detailCol, B_LIGHTEN_2_TINT);
 
-	// TODO: change this to something ui_color() dependant
-	SetHighColor(218, 218, 218);
-	FillRect(closeRect);
+	// Draw the close widget
+	BRect closeRect = bound;
+	closeRect.InsetBy(kEdgePadding, kEdgePadding);
+	closeRect.left = closeRect.right - kCloseSize;
+	closeRect.bottom = closeRect.top + kCloseSize;
 	
-	SetHighColor(0, 0, 0);
-	StrokeRect(closeRect);
-	
-	BRect crossRect;
-	float midY = (closeRect.bottom - closeRect.top) / 2;
-	float midX = (closeRect.right - closeRect.left) / 2;
-	crossRect.left = closeRect.left + midX - kEdgePadding;
-	crossRect.right = closeRect.left + midX + kEdgePadding;
-	crossRect.top = closeRect.top + midY - kEdgePadding;
-	crossRect.bottom = closeRect.top + midY + kEdgePadding;
+	PushState();
+		SetHighColor(detailCol);
 
-	StrokeLine(crossRect.LeftTop(), crossRect.RightBottom());
-	StrokeLine(crossRect.LeftBottom(), crossRect.RightTop());
-	
+		StrokeRoundRect(closeRect, kSmallPadding, kSmallPadding);
+		
+		BRect closeCross = closeRect.InsetByCopy(kSmallPadding, kSmallPadding);
+		StrokeLine(closeCross.LeftTop(), closeCross.RightBottom());
+		StrokeLine(closeCross.LeftBottom(), closeCross.RightTop());
+	PopState();
+		
 	Sync();
 }
 
@@ -439,8 +443,8 @@ void InfoView::MouseDown(BPoint point) {
 	switch (buttons) {
 		case B_PRIMARY_MOUSE_BUTTON: {
 			BRect closeRect = Bounds().InsetByCopy(2,2);
-			closeRect.left = closeRect.right - kCloseWidth;
-			closeRect.bottom = closeRect.top + kCloseWidth;	
+			closeRect.left = closeRect.right - kCloseSize;
+			closeRect.bottom = closeRect.top + kCloseSize;	
 			
 			if (closeRect.Contains(point) == false) {		
 				entry_ref launchRef;
@@ -498,7 +502,6 @@ void InfoView::MouseDown(BPoint point) {
 				if (fDetails->FindString("onClickApp", &launchString) == B_OK) {
 					be_roster->Launch(launchString.String(), &messages);
 				} else {
-				printf("Launching %s\n", launchRef.name);
 					be_roster->Launch(&launchRef, &messages);
 				};
 			};
@@ -507,11 +510,43 @@ void InfoView::MouseDown(BPoint point) {
 			BMessage remove_msg(REMOVE_VIEW);
 			remove_msg.AddPointer("view", this);
 			
-			BMessenger msgr(Window());
+			BMessenger msgr(Parent());
 			msgr.SendMessage(&remove_msg);
 		} break;
 	};
 };
+
+void InfoView::FrameResized( float w, float /*h*/ ) {
+	// SetText again to re-wrap lines to new view width
+	BString app(fApp), title(fTitle), text(fText);
+	
+	SetText( 
+		app.Length() > 0 ? app.String() : NULL, 
+		title.Length() > 0 ? title.String() : NULL, 
+		text.Length() > 0 ? text.String() : NULL,
+		w
+	);
+}
+
+//#pragma mark Scripting Hooks
+
+BHandler * InfoView::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
+	BPropertyInfo prop_info(message_prop_list);
+	if (prop_info.FindMatch(msg, index, spec, form, prop) >= 0) {
+		msg->PopSpecifier();
+		return this;
+	}
+	return BView::ResolveSpecifier(msg, index, spec, form, prop);
+};
+
+status_t InfoView::GetSupportedSuites(BMessage *msg) {
+	msg->AddString("suites", "suite/x-vnd.beclan.InfoPopper-message");
+	BPropertyInfo prop_info(message_prop_list);
+	msg->AddFlat("messages", &prop_info);
+	return BView::GetSupportedSuites(msg); 		
+};
+
+//#pragma mark Public
 
 void InfoView::SetText(const char *app, const char *title, const char *text, float newMaxWidth) {
 	if ( newMaxWidth < 0 ) newMaxWidth = Bounds().Width();
@@ -532,9 +567,10 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	font_height fh;
 	float fontHeight = 0;
 	float iconRight = kEdgePadding + kEdgePadding;
-	float y = kEdgePadding;
+	float y = 0;
 	if (fBitmap) iconRight += fBitmap->Bounds().right;
 
+#if 0
 	lineinfo *appLine = new lineinfo;
 	be_bold_font->GetHeight(&fh);
 	fontHeight = fh.leading + fh.descent + fh.ascent;
@@ -559,6 +595,23 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	titleLine->location = BPoint(iconRight + kEdgePadding, y);
 	titleLine->font = be_plain_font;
 	titleLine->text = title;
+	fLines.push_front(titleLine);
+	y += fontHeight;
+#endif
+	be_bold_font->GetHeight(&fh);
+	fontHeight = fh.leading + fh.descent + fh.ascent;
+	y += fontHeight;
+
+	lineinfo *titleLine = new lineinfo;
+	titleLine->text = title;
+	titleLine->font = be_bold_font;
+
+	if (fParent->Layout() == AllTextRightOfIcon) {
+		titleLine->location = BPoint(iconRight, y);
+	} else {
+		titleLine->location = BPoint(kEdgePadding, y);
+	};
+
 	fLines.push_front(titleLine);
 	y += fontHeight;
 	
@@ -675,41 +728,16 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	msgr.SendMessage(InfoWindow::ResizeToFit);
 };
 
-bool
-InfoView::HasMessageID( const char * id )
-{
+bool InfoView::HasMessageID( const char * id ) {
 	return fMessageID == id;
-}
-
-BHandler * InfoView::ResolveSpecifier(BMessage *msg, int32 index, BMessage *spec, int32 form, const char *prop) {
-	BPropertyInfo prop_info(message_prop_list);
-	if (prop_info.FindMatch(msg, index, spec, form, prop) >= 0) {
-		msg->PopSpecifier();
-		return this;
-	}
-	return BView::ResolveSpecifier(msg, index, spec, form, prop);
 };
 
-status_t InfoView::GetSupportedSuites(BMessage *msg) {
-	msg->AddString("suites", "suite/x-vnd.beclan.InfoPopper-message");
-	BPropertyInfo prop_info(message_prop_list);
-	msg->AddFlat("messages", &prop_info);
-	return BView::GetSupportedSuites(msg); 		
+void InfoView::SetPosition(bool first, bool last) {
+	fIsFirst = first;
+	fIsLast = last;
 };
 
-void InfoView::FrameResized( float w, float /*h*/ ) {
-	// SetText again to re-wrap lines to new view width
-	BString app(fApp), title(fTitle), text(fText);
-	
-	SetText( 
-		app.Length() > 0 ? app.String() : NULL, 
-		title.Length() > 0 ? title.String() : NULL, 
-		text.Length() > 0 ? text.String() : NULL,
-		w
-	);
-}
-
-//#pragma mark -
+//#pragma mark Private
 
 BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
 	BBitmap *icon = NULL;
