@@ -153,7 +153,7 @@ void InfoView::MessageReceived(BMessage * msg) {
 			if (specifier.FindString("property", &property) != B_OK) msgOkay = false;
 
 			if (msgOkay) {
-			printf("Looking for %s\n", property);
+				printf("Looking for %s\n", property);
 				if (strcmp(property, "content") == 0) {
 					reply.AddString("result", fText);
 				};
@@ -318,7 +318,7 @@ void InfoView::GetPreferredSize(float *w, float *h) {
 		font_height fh;
 		be_plain_font->GetHeight(&fh);
 		float fontHeight = fh.ascent + fh.descent + fh.leading;
-		*h += (kEdgePadding * 2) + (kEdgePadding * 1) + fontHeight;
+		*h += (kSmallPadding * 2) + (kEdgePadding * 1) + fontHeight;
 	};
 };
 
@@ -337,14 +337,18 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 
 		progRect = bound;
 		progRect.InsetBy(kEdgePadding, kEdgePadding);
-		progRect.top = progRect.bottom - (kEdgePadding * 2) - fontHeight;
+		progRect.top = progRect.bottom - (kSmallPadding * 2) - fontHeight;
 		
 		StrokeRect(progRect);
 
 		BRect barRect = progRect;		
 		barRect.InsetBy(1.0, 1.0);
 		barRect.right *= fProgress;
+#ifdef B_BEOS_VERSION_DANO
+		SetHighColor(ui_color(B_UI_CONTROL_HIGHLIGHT_COLOR));
+#else
 		SetHighColor(0x88, 0xff, 0x88);
+#endif
 		FillRect(barRect);
 
 		SetHighColor(0, 0, 0);
@@ -357,7 +361,8 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 
 		SetLowColor(B_TRANSPARENT_COLOR);
 		SetDrawingMode(B_OP_ALPHA);
-		DrawString(label.String(), label.Length(), BPoint(labelX, progRect.top + fontHeight));
+		DrawString(label.String(), label.Length(),
+			BPoint(labelX, progRect.top + fh.ascent + fh.leading + kSmallPadding));
 
 		PopState();
 	};
@@ -549,7 +554,7 @@ status_t InfoView::GetSupportedSuites(BMessage *msg) {
 //#pragma mark Public
 
 void InfoView::SetText(const char *app, const char *title, const char *text, float newMaxWidth) {
-	if ( newMaxWidth < 0 ) newMaxWidth = Bounds().Width();
+ 	if ( newMaxWidth < 0 ) newMaxWidth = Bounds().Width() - (kEdgePadding * 2);
 	
 	// delete old lines
 	vline::iterator lIt;
@@ -570,34 +575,6 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	float y = 0;
 	if (fBitmap) iconRight += fBitmap->Bounds().right;
 
-#if 0
-	lineinfo *appLine = new lineinfo;
-	be_bold_font->GetHeight(&fh);
-	fontHeight = fh.leading + fh.descent + fh.ascent;
-	y += fontHeight;
-	
-	//printf("Right: %.2f\n", iconRight);
-	
-	if (fParent->Layout() == AllTextRightOfIcon) {
-		appLine->location = BPoint(iconRight, y);
-	} else {
-		appLine->location = BPoint(kEdgePadding, y);
-	};
-	appLine->text = app;
-	appLine->font = be_bold_font;
-	fLines.push_front(appLine);
-	y += fontHeight;
-	
-	be_plain_font->GetHeight(&fh);
-	fontHeight = fh.leading + fh.descent + fh.ascent;
-	
-	lineinfo *titleLine = new lineinfo;
-	titleLine->location = BPoint(iconRight + kEdgePadding, y);
-	titleLine->font = be_plain_font;
-	titleLine->text = title;
-	fLines.push_front(titleLine);
-	y += fontHeight;
-#endif
 	be_bold_font->GetHeight(&fh);
 	fontHeight = fh.leading + fh.descent + fh.ascent;
 	y += fontHeight;
@@ -728,8 +705,12 @@ void InfoView::SetText(const char *app, const char *title, const char *text, flo
 	msgr.SendMessage(InfoWindow::ResizeToFit);
 };
 
-bool InfoView::HasMessageID( const char * id ) {
+bool InfoView::HasMessageID(const char * id) {
 	return fMessageID == id;
+};
+
+const char *InfoView::MessageID(void) {
+	return fMessageID.String();
 };
 
 void InfoView::SetPosition(bool first, bool last) {

@@ -65,6 +65,7 @@ class InfoView : public BView {
 		void 				SetText(const char *app, const char *title,
 								const char *text, float newMaxWidth = -1);
 		bool				HasMessageID(const char *id);
+		const char			*MessageID(void);
 		void				SetPosition(bool first, bool last);
 
 		

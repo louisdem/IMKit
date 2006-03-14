@@ -212,7 +212,6 @@ void AppGroupView::GetPreferredSize(float *width, float *height) {
 void AppGroupView::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case REMOVE_VIEW: {
-			msg->PrintToStream();
 			InfoView *view = NULL;
 			if (msg->FindPointer("view", (void **)&view) != B_OK) return;
 			
@@ -237,21 +236,36 @@ void AppGroupView::MessageReceived(BMessage *msg) {
 //#pragma mark Public
 
 void AppGroupView::AddInfo(InfoView *view) {
-	printf("%s is %s\n", fLabel.String(), IsHidden() ? "hidden" : "shown");
-	fInfo.push_back(view);
-	
-	AddChild(view);
+	BString id = view->MessageID();
+	if (id.Length() > 0) {
+		int32 children = fInfo.size();
+		bool found = false;
 
+		for (int32 i = 0; i < children; i++) {
+			if (fInfo[i]->HasMessageID(id.String()) == true) {
+				fInfo[i]->RemoveSelf();
+				delete fInfo[i];
+				
+				fInfo[i] = view;
+				found = true;
+				
+				break;
+			};
+		};
+		
+		if (found == false) fInfo.push_back(view);
+	} else {
+		fInfo.push_back(view);
+	};
+	
+	if (fParent->IsHidden() == true) fParent->Show();
 	if (IsHidden() == true) Show();
 	if (view->IsHidden() == true) view->Show();
 
-	printf("\t%s\n", IsHidden() ? "hidden" : "shown");
-	
+	AddChild(view);
+
 	ResizeViews();
 	Invalidate();
-
-	printf("\t%s\n", IsHidden() ? "hidden" : "shown");
-
 };
 
 void AppGroupView::ResizeViews(void) {
@@ -259,8 +273,6 @@ void AppGroupView::ResizeViews(void) {
 	be_bold_font->GetHeight(&fh);
 	
 	float offset = fh.ascent + fh.leading + fh.descent;
-//	h += kEdgePadding * 3; // Padding between top of view, text and children
-//						   // and border and next view;
 	int32 children = fInfo.size();
 
 	if (fCollapsed == false) {
@@ -270,16 +282,13 @@ void AppGroupView::ResizeViews(void) {
 			fInfo[i]->ResizeToPreferred();
 			fInfo[i]->MoveTo(kEdgePadding + kPenSize, offset);
 			
-			offset += fInfo[i]->Bounds().Height();// + kEdgePadding;
-			fInfo[i]->Frame().PrintToStream();
+			offset += fInfo[i]->Bounds().Height();
 			if (fInfo[i]->IsHidden() == true) fInfo[i]->Show();
 			fInfo[i]->SetPosition(false, false);
 		};
 	} else {
-		for (int32 i = 0; i < children; i++) { //fInfo[i]->Hide();
-			printf("... %i: %s\n", i, fInfo[i]->IsHidden() ? "Hidden" : "Visible");
+		for (int32 i = 0; i < children; i++) {
 			if (fInfo[i]->IsHidden() == false) fInfo[i]->Hide();
-			printf("... \t %s\n", fInfo[i]->IsHidden() ? "Hidden" : "Visible");
 		};
 	};
 	

@@ -123,21 +123,6 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 			};
 			
 			if (msgOkay) {
-				const char *messageID = NULL;
-				if (msg->FindString("messageID",&messageID) == B_OK) {
-//					message ID present, remove current message if present
-					vector<InfoView*>::iterator i;
-				
-					for (i = fInfoViews.begin(); i!=fInfoViews.end(); i++) {
-						if ((*i)->HasMessageID(messageID)) {
-							(*i)->RemoveSelf();
-							delete *i;
-							fInfoViews.erase(i);
-							break;
-						};
-					};
-				};
-			
 				InfoView *view = new InfoView(this, (InfoPopper::info_type)type, app,
 					title, message, new BMessage(*msg));
 //				
@@ -153,7 +138,6 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 				} else {
 					group = aIt->second;
 				};
-				printf("%s\n", app);
 				group->AddInfo(view);
 				
 				ResizeAll();
@@ -276,7 +260,7 @@ void InfoWindow::ResizeAll(void) {
 	
 	for (aIt = fAppViews.begin(); aIt != fAppViews.end(); aIt++) {
 		AppGroupView *app = aIt->second;
-		if ((app->IsHidden() == false) && (app->HasChildren() == true)) {
+		if (app->HasChildren() == true) {
 			shouldHide = false;
 			break;
 		};
@@ -299,7 +283,7 @@ void InfoWindow::ResizeAll(void) {
 		float h = -1;
 
 		if (view->HasChildren() == false) {
-			view->Hide();
+			if (view->IsHidden() == false) view->Hide();
 		} else {
 			view->GetPreferredSize(&w, &h);
 			width = max_c(width, h);
@@ -307,43 +291,14 @@ void InfoWindow::ResizeAll(void) {
 			view->ResizeToPreferred();
 			view->MoveTo(0, height);
 
-			height += h;// + kEdgePadding;
+			height += h;
+			
+			if (view->IsHidden() == true) view->Show();
 		};
 	};
 	
 	ResizeTo(ViewWidth(), height);
 	PopupAnimation(Bounds().Width(), Bounds().Height());
-
-	// XXX
-//	if (fInfoViews.size() == 0) {
-//		if (!IsHidden()) Hide();
-//		return;
-//	};
-	
-//	float borderw, borderh;
-//	fBorder->GetPreferredSize(&borderw, &borderh);
-//	
-//	float curry = borderh - fBorder->BorderSize(), maxw = 250;
-//	
-//	for (vector<InfoView*>::reverse_iterator i = fInfoViews.rbegin(); i != fInfoViews.rend();
-//		i++) {
-//		float pw,ph;
-//		
-//		(*i)->MoveTo(fBorder->BorderSize(), curry);
-//		(*i)->GetPreferredSize(&pw,&ph);
-//		
-//		if (pw > maxw) maxw = pw;
-//		
-//		(*i)->ResizeTo(fBorder->Bounds().Width() - fBorder->BorderSize() * 2, ph);
-//		
-//		curry += (*i)->Bounds().Height()+1;
-//	};
-//	
-//	//ResizeTo(maxw + fBorder->BorderSize() * 2, curry - 1 + fBorder->BorderSize());
-//	
-//	ResizeTo( fWidth, curry - 1 + fBorder->BorderSize());
-//	
-//	PopupAnimation(Bounds().Width(), Bounds().Height());
 };
 
 void InfoWindow::PopupAnimation(float width, float height) {
