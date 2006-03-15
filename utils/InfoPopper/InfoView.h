@@ -70,7 +70,8 @@ class InfoView : public BView {
 
 		
 	private:
-		BBitmap			*ExtractIcon(const char *prefix, BMessage *msg, int16 size);
+		BBitmap			*ExtractIcon(const char *prefix, BMessage *msg, int16 size,
+							icon_type &type);
 		InfoWindow		*fParent;
 	
 		info_type		 fType;
@@ -81,6 +82,8 @@ class InfoView : public BView {
 		BMessage		*fDetails;
 		BBitmap			*fBitmap;
 		BBitmap			*fOverlayBitmap;
+		icon_type		fIconType;
+		icon_type		fOverlayType;
 		
 		vline			fLines;
 

@@ -1,6 +1,7 @@
 #ifndef APPGROUPVIEW_H
 #define APPGROUPVIEW_H
 
+#include <String.h>
 #include <View.h>
 
 #include <vector>

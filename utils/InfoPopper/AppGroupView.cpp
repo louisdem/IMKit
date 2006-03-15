@@ -25,7 +25,11 @@ AppGroupView::~AppGroupView(void) {
 void AppGroupView::AttachedToWindow(void) {
 	SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 	SetLowColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+#ifdef B_BEOS_VERSION_DANO
 	SetHighColor(ui_color(B_PANEL_TEXT_COLOR));
+#else
+	SetHighColor(0, 0, 0);
+#endif
 };
 
 void AppGroupView::Draw(BRect bounds) {
@@ -52,7 +56,11 @@ void AppGroupView::Draw(BRect bounds) {
 	BRect closeCross = fCloseRect;
 	closeCross.InsetBy(kSmallPadding, kSmallPadding);
 
+#ifdef B_BEOS_VERSION_DANO
 	rgb_color detailCol = ui_color(B_CONTROL_BORDER_COLOR);
+#else
+	rgb_color detailCol = {0, 0, 0};
+#endif
 	detailCol = tint_color(detailCol, B_LIGHTEN_2_TINT);
 //	detailCol = tint_color(detailCol, B_LIGHTEN_1_TINT);
 

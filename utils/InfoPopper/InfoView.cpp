@@ -10,6 +10,7 @@
 #include <PropertyInfo.h>
 #include <Font.h>
 #include <Region.h>
+#include <Picture.h>
 
 //#pragma mark Constants
 
@@ -44,8 +45,8 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 	
 	int16 iconSize = fParent->IconSize();
 	
-	fBitmap = ExtractIcon("icon", fDetails, iconSize);
-	fOverlayBitmap = ExtractIcon("overlayIcon", fDetails, iconSize / 4);
+	fBitmap = ExtractIcon("icon", fDetails, iconSize, fIconType);
+	fOverlayBitmap = ExtractIcon("overlayIcon", fDetails, iconSize / 4, fOverlayType);
 	
 	if (fBitmap == NULL) {
 		app_info info;
@@ -62,6 +63,7 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 		
 		fDetails->AddRef("iconRef", &info.ref);
 		fDetails->AddInt32("iconType", Attribute);
+		fIconType = Attribute;
 		
 		fBitmap = ReadNodeIcon(path.Path(), iconSize);
 	};
@@ -83,6 +85,7 @@ InfoView::InfoView(InfoWindow *win, info_type type,
 		fDetails->AddRef("overlayIconRef", &overlayRef);
 		fDetails->AddInt32("overlayIconType", Attribute);
 
+		fOverlayType = Attribute;
 		fOverlayBitmap = ReadNodeIcon(basepath.Path(), iconSize / 4);
 	};
 	
@@ -419,7 +422,11 @@ void InfoView::Draw(BRect /*drawBounds*/) {
 		DrawString(l->text.String(), l->text.Length(), l->location);
 	};
 	
+#ifdef B_BEOS_VERSION_DANO
 	rgb_color detailCol = ui_color(B_CONTROL_BORDER_COLOR);
+#else
+	rgb_color detailCol = { 0, 0, 0};
+#endif
 	detailCol = tint_color(detailCol, B_LIGHTEN_2_TINT);
 
 	// Draw the close widget
@@ -720,8 +727,10 @@ void InfoView::SetPosition(bool first, bool last) {
 
 //#pragma mark Private
 
-BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
+BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size,
+	icon_type &type) {
 	BBitmap *icon = NULL;
+	BPicture picture;
 	BMessage iconMsg;
 	BString refName = prefix;
 	BString refType = prefix;
@@ -731,12 +740,15 @@ BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
 	if (msg->FindMessage(prefix, &iconMsg) == B_OK) {
 		BBitmap temp(&iconMsg);
 		icon = rescale_bitmap(&temp, size);
-	} else {		
+		type = Bitmap;
+	} else {
 		int32 iconType;
 		if (msg->FindInt32(refType.String(), &iconType) != B_OK) iconType = Attribute;
 		
 		entry_ref ref;
-		
+
+		type = (icon_type)iconType;
+				
 		if (fDetails->FindRef(refName.String(), &ref) == B_OK) {
 			// It's a ref.
 			BPath path(&ref);
@@ -758,6 +770,19 @@ BBitmap *InfoView::ExtractIcon(const char *prefix, BMessage *msg, int16 size) {
 					// Eek! Invalid icon type!
 				}; break;
 			};
+		} else if (msg->FindFlat(prefix, (BFlattenable *)&picture) == B_OK) {
+			type = Picture;
+			
+			icon = new BBitmap(BRect(0, 0, size - 1, size - 1), B_RGBA32, true);
+			BView *view = new BView(icon->Bounds(), prefix, B_FOLLOW_ALL_SIDES,
+				B_WILL_DRAW);
+			icon->AddChild(view);
+			
+			view->DrawPicture(&picture);
+			
+			view->Sync();
+			view->RemoveSelf();
+			delete view;
 		};
 	};
 
