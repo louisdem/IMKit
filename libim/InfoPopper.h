@@ -18,8 +18,10 @@ namespace InfoPopper {
 	};
 	
 	enum icon_type {
-		Attribute,
-		Contents
+		Attribute,				// Loads the icon from the entry_ref's icon
+		Contents,				// Loads the icon from the content of the entry_ref
+		Picture,				// Creates the icon from a BPicture object
+		Bitmap					// The icon is a premade BBitmap
 	};
 	
 // AddMessage
