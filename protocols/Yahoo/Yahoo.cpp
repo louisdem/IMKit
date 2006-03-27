@@ -14,7 +14,7 @@ extern "C" IM::Protocol * load_protocol()
 extern "C" void register_callbacks();
 
 Yahoo::Yahoo()
-:	IM::Protocol( IM::Protocol::MESSAGES ),
+:	IM::Protocol( IM::Protocol::MESSAGES | IM::Protocol::OFFLINE_MESSAGES),
 	fYahooID(""),
 	fPassword(""),
 	fYahoo(NULL)
