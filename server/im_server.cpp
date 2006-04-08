@@ -24,6 +24,7 @@
 #include <Invoker.h>
 #include <algorithm>
 #include <Beep.h>
+#include <PropertyInfo.h>
 
 #include <be/kernel/fs_index.h>
 
@@ -75,7 +76,8 @@ _SEND_ERROR( const char * text, BMessage * msg )
 */
 Server::Server()
 :	BApplication(IM_SERVER_SIG),
-	fIsQuiting(false)
+	fIsQuiting(false),
+	fCurProtocol(NULL)
 {
 	LOG("im_server", liHigh, "Starting im_server");
 	
@@ -202,6 +204,86 @@ Server::~Server()
 	LOG("im_server", liDebug, "~Server end");
 }
 
+#define PROTOCOL_PROPERTY "Protocol"
+#define PROTOCOLS_PROPERTY "Protocols"
+#define STATUS_PROPERTY "Status"
+static property_info sPropList[] =
+{
+	{PROTOCOL_PROPERTY,
+		{0},
+		{B_NAME_SPECIFIER, 0},
+		"Gets the supported protocols",
+	},
+	{PROTOCOLS_PROPERTY,
+		{B_GET_PROPERTY, 0},
+		{B_DIRECT_SPECIFIER, 0},
+		"Gets the supported protocols",
+	},
+	{STATUS_PROPERTY,
+		{B_GET_PROPERTY, B_SET_PROPERTY, 0},
+		{B_DIRECT_SPECIFIER, 0},
+		"Get or set the status for a protocol",
+	},
+	0
+};
+
+status_t 
+Server::GetSupportedSuites(BMessage *msg) 
+{
+	msg->AddString("suites", "suite/x.vnd-beclan.im_server"); 
+	BPropertyInfo prop_info(sPropList);
+	msg->AddFlat("messages", &prop_info); 
+	return BApplication::GetSupportedSuites(msg);
+}
+
+/*
+ * Most basic beos scripting capabilities. Exemples using hey below.
+ *
+ * To get a list of supported protocols:
+ *    hey application/x-vnd.beclan.im_kit get Protocols
+ *
+ * To get the current status of a specific protocol:
+ *    hey application/x-vnd.beclan.im_kit get Status of Protocol icq
+ *
+ * To set the status of a specific protocol:
+ *    hey application/x-vnd.beclan.im_kit set Status of Protocol icq to Available    
+ */
+BHandler *
+Server::ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier, int32 what, const char *property)
+{
+	printf("  msg: "); msg->PrintToStream();
+	printf("  specifier: "); msg->PrintToStream();
+	//TODO: Error handling.
+	if(strcmp(property, PROTOCOLS_PROPERTY)==0) {
+		return this;
+	} else if(strcmp(property, PROTOCOL_PROPERTY)==0){
+		switch (what) {
+			case B_NAME_SPECIFIER:
+			{
+				const char *name = specifier->FindString("name");
+				fCurProtocol = fProtocols[name];
+				msg->PopSpecifier();
+				return this;
+			}
+			default:
+				break;
+		}
+	} else if(strcmp(property, STATUS_PROPERTY)==0){
+		switch (what) {
+			case B_GET_PROPERTY:
+			case B_SET_PROPERTY:
+				msg->PopSpecifier();
+				return this;
+			default:
+				break;
+		} 
+	}
+
+	return BApplication::ResolveSpecifier(msg, index, specifier, what, property);
+}
+
+
+
 /**
 */
 bool
@@ -220,10 +302,68 @@ Server::QuitRequested()
 /**
 */
 void
-Server::MessageReceived( BMessage * msg )
+Server::MessageReceived( BMessage *msg )
 {
 	switch ( msg->what )
 	{
+		case B_GET_PROPERTY:
+		{
+			int32 index;
+			BMessage specifier;
+			int32 what;
+			const char *property;
+			if(msg->GetCurrentSpecifier(&index, &specifier, &what, &property)!=B_OK) {
+				break;
+			}
+			
+			//TODO: Error handling.
+			if(strcmp(property, PROTOCOLS_PROPERTY)==0) {
+				BMessage reply(B_REPLY);
+				map<Protocol *,AddOnInfo>::iterator it = fAddOnInfo.begin();
+				for(;it!=fAddOnInfo.end(); it++) {
+					Protocol *protocol = it->first;
+					reply.AddString("result", protocol->GetSignature());
+				}
+				msg->SendReply(&reply);
+			} else if(strcmp(property, STATUS_PROPERTY)==0) {
+				BMessage reply(B_REPLY);
+				if(fCurProtocol) {
+					reply.AddString("result",fStatus[fCurProtocol->GetSignature()].c_str());
+				}
+				msg->SendReply(&reply);
+				fCurProtocol = NULL;
+			} else {
+				BApplication::MessageReceived(msg);
+			}
+			break;
+		}
+		case B_SET_PROPERTY:
+		{
+			int32 index;
+			BMessage specifier;
+			int32 what;
+			const char *property;
+			if(msg->GetCurrentSpecifier(&index, &specifier, &what, &property)!=B_OK) {
+				break;
+			}
+			const char *data = msg->FindString("data");
+			if(strcmp(property, STATUS_PROPERTY)==0) {
+				BMessage reply(B_REPLY);
+				BMessage statusMessage(IM::MESSAGE);
+				statusMessage.AddInt32("im_what", IM::SET_STATUS);
+				statusMessage.AddString("status", data);
+				if(fCurProtocol) {
+					statusMessage.AddString("protocol",fCurProtocol->GetSignature());
+				}
+				Process(&statusMessage);
+				msg->SendReply(&reply);
+				fCurProtocol = NULL;
+			} else {
+				BApplication::MessageReceived(msg);
+			}
+			break;
+    	}
+    	
 		// Contact messages. Both query and node monitor.
 		case B_QUERY_UPDATE:
 		{
@@ -2281,6 +2421,7 @@ Server::handle_STATUS_SET( BMessage * msg )
 	
 	if ( strcmp(ONLINE_TEXT,status) == 0 )
 	{ // we're online. register contacts. (should be: only do this if we were offline)
+		LOG("im_server", liMedium, "Status changed for %s to %s", protocol, status );
 		if ( fProtocols.find(protocol) == fProtocols.end() )
 		{
 			_ERROR("ERROR: STATUS_SET: Protocol not loaded",msg);

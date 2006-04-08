@@ -66,6 +66,9 @@ class Server : public BApplication
 		Server();
 		virtual ~Server();
 		
+		virtual status_t GetSupportedSuites(BMessage *);
+		virtual BHandler *ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier, int32 what, const char *property);
+		
 		virtual bool QuitRequested();
 		
 		virtual void MessageReceived( BMessage * );
@@ -144,6 +147,12 @@ class Server : public BApplication
 		map<string,Protocol*>		fProtocols;
 		map<Protocol*,AddOnInfo>	fAddOnInfo;
 		bool						fIsQuiting;
+		
+		/**
+		 * Remove when protocols deal with scripting. Currently all is done in the
+		 * application.
+		 */
+		Protocol                   *fCurProtocol;
 		
 		/**
 			entry_ref, list of connections.
