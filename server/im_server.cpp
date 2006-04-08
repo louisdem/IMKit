@@ -251,8 +251,6 @@ Server::GetSupportedSuites(BMessage *msg)
 BHandler *
 Server::ResolveSpecifier(BMessage *msg, int32 index, BMessage *specifier, int32 what, const char *property)
 {
-	printf("  msg: "); msg->PrintToStream();
-	printf("  specifier: "); msg->PrintToStream();
 	//TODO: Error handling.
 	if(strcmp(property, PROTOCOLS_PROPERTY)==0) {
 		return this;
