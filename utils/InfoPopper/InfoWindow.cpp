@@ -6,6 +6,8 @@
 #include <Debug.h>
 
 #include "AppGroupView.h"
+#include "AppUsage.h"
+#include "common/SettingsFile.h"
 
 //#pragma mark Constants
 
@@ -52,21 +54,31 @@ InfoWindow::InfoWindow()
 	AddChild( fBorder );	
 
 	Show();
-//	Hide();
-
-	fBorder->AddChild(new AppGroupView(this, "SoundPlay"));
-
-	
+	Hide();
 	
 	fDeskbarLocation = BDeskbar().Location();
 	
 	LoadSettings(true);
+	LoadAppFilters(true);
 };
 
 InfoWindow::~InfoWindow(void) {
+	appfilter_t::iterator aIt;
+	for (aIt = fAppFilters.begin(); aIt != fAppFilters.end(); aIt++) {
+		delete aIt->second;
+	};
 };
 
 bool InfoWindow::QuitRequested(void) {
+	SaveAppFilters();
+
+	appview_t::iterator aIt;
+	for (aIt = fAppViews.begin(); aIt != fAppViews.end(); aIt++) {
+		aIt->second->RemoveSelf();
+		delete aIt->second;
+	};
+	
+
 	BMessenger(be_app).SendMessage( B_QUIT_REQUESTED );
 	return BWindow::QuitRequested();
 }
@@ -80,6 +92,7 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case B_NODE_MONITOR: {
 			LoadSettings();
+			LoadAppFilters();
 		} break;
 		
 		case ResizeToFit: {
@@ -129,21 +142,45 @@ void InfoWindow::MessageReceived(BMessage *msg) {
 //				fInfoViews.push_back(view);			
 //				fBorder->AddChild(view);
 
-				appview_t::iterator aIt = fAppViews.find(app);
-				AppGroupView *group = NULL;
-				if (aIt == fAppViews.end()) {
-					group = new AppGroupView(this, app);
-					fAppViews[app] = group;
-					fBorder->AddChild(group);
-				} else {
-					group = aIt->second;
-				};
-				group->AddInfo(view);
-				
-				ResizeAll();
-				
-				reply.AddInt32("error", B_OK);
+				appfilter_t::iterator fIt = fAppFilters.find(app);
+				bool allow = false;
+				if (fIt == fAppFilters.end()) {
+					app_info info;
+					BMessenger msgr = msg->ReturnAddress();
+					if (msgr.IsValid() == true) {
+						be_roster->GetRunningAppInfo(msgr.Team(), &info);
+					} else {
+						be_roster->GetAppInfo("application/x-vnd.Be-SHEL", &info);
+					};
+					
+					AppUsage *appUsage = new AppUsage(info.ref, app, true);
+					fAppFilters[app] = appUsage;
+					
+					appUsage->Allowed(title, (info_type)type);
 
+					allow = true;
+				} else {
+					allow = fIt->second->Allowed(title, (info_type)type);
+				};
+				
+				if (allow == true) {
+					appview_t::iterator aIt = fAppViews.find(app);
+					AppGroupView *group = NULL;
+					if (aIt == fAppViews.end()) {
+						group = new AppGroupView(this, app);
+						fAppViews[app] = group;
+						fBorder->AddChild(group);
+					} else {
+						group = aIt->second;
+					};
+					group->AddInfo(view);
+						
+					ResizeAll();
+					
+					reply.AddInt32("error", B_OK);
+				} else {
+					reply.AddInt32("Error", B_ERROR);
+				};
 			} else {
 				reply.what = B_MESSAGE_NOT_UNDERSTOOD;
 				reply.AddInt32("error", B_ERROR);
@@ -461,3 +498,51 @@ void InfoWindow::LoadSettings(bool start_monitor) {
 		}
 	}
 }
+
+void InfoWindow::LoadAppFilters(bool startmonitor = false) {
+	SettingsFile settings("appsettings", "BeClan/InfoPopper", B_USER_SETTINGS_DIRECTORY);
+	status_t error = settings.InitCheck();
+	if (settings.InitCheck() != B_OK) {
+		printf("Error initialising App Filters: %s (%i)\n", strerror(error), error);
+		return;
+	};
+	
+	error = settings.Load();
+	printf("Error loading settings: %s (%i)\n", strerror(error), error);
+	
+	if (error != B_OK) return;
+	
+	settings.PrintToStream();
+
+	type_code type;
+	int32 count = 0;
+	
+	error = settings.GetInfo("app_usage", &type, &count);
+	if (error != B_OK) return;
+	
+	for (int32 i = 0; i < count; i++) {
+		AppUsage *app = new AppUsage();
+		settings.FindFlat("app_usage", i, app);
+		fAppFilters[app->Name()] = app;
+	};
+	
+	if (startmonitor) {
+		if (watch_node(settings.NodeRef(), B_WATCH_ALL, BMessenger(this)) != B_OK) {
+			BAlert *alert = new BAlert("InfoPopper", "Couldn't start filter "
+				" monitor. Live filter changes disabled.", "Darn.");
+			alert->Go();
+		};
+	};
+};
+
+void InfoWindow::SaveAppFilters(void) {
+	SettingsFile settings("appsettings", "BeClan/InfoPopper", B_USER_SETTINGS_DIRECTORY);
+	status_t error = settings.InitCheck();
+
+	appfilter_t::iterator fIt;
+	for (fIt = fAppFilters.begin(); fIt != fAppFilters.end(); fIt++) {
+		settings.AddFlat("app_usage", fIt->second);
+	};
+
+	settings.Save();
+};

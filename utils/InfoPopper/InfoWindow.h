@@ -21,8 +21,11 @@
 #include <PropertyInfo.h>
 
 class AppGroupView;
+class AppUsage;
+class SettingsFile;
 
 typedef map<BString, AppGroupView *> appview_t;
+typedef map<BString, AppUsage *> appfilter_t;
 
 extern const float kEdgePadding;
 extern const float kSmallPadding;
@@ -63,6 +66,8 @@ class InfoWindow : public BWindow {
 								bool writeWidth = true, bool writeIcon = true,
 								bool writeTimeout = true, bool writeLayout = true);
 		void				LoadSettings(bool start_monitor = false);
+		void				LoadAppFilters(bool startmonitor = false);
+		void				SaveAppFilters(void);
 		
 		vector<InfoView*>	fInfoViews;
 		deskbar_location	fDeskbarLocation;
@@ -79,6 +84,8 @@ class InfoWindow : public BWindow {
 		int16				fIconSize;
 		int32				fDisplayTime;
 		infoview_layout		fLayout;
+		
+		appfilter_t			fAppFilters;
 };
 
 extern property_info main_prop_list[];

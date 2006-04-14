@@ -47,6 +47,10 @@ class InfoApp : public BApplication {
 					msg->SendReply(&reply);
 				} break;
 				
+				case InfoPopper::ReloadSettings: {
+					BMessenger(fWin).SendMessage(msg);
+				} break;
+				
 				default:
 					BApplication::MessageReceived(msg);
 			};
@@ -200,6 +204,8 @@ class InfoApp : public BApplication {
 };
 
 //#pragma mark -
+
+#include "Filter/Notification.h"
 
 int main(int argc, char *argv[]) {
 	(void)argc;
