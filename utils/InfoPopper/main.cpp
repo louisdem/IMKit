@@ -47,10 +47,6 @@ class InfoApp : public BApplication {
 					msg->SendReply(&reply);
 				} break;
 				
-				case InfoPopper::ReloadSettings: {
-					BMessenger(fWin).SendMessage(msg);
-				} break;
-				
 				default:
 					BApplication::MessageReceived(msg);
 			};
