@@ -661,6 +661,7 @@ ChatWindow::MessageReceived( BMessage * msg )
 					if (message.Compare("/me ", 4) == 0) {
 						fText->Append("* ", C_ACTION, C_ACTION, F_ACTION);
 						fText->Append(fName.String(), C_ACTION, C_ACTION, F_ACTION);
+						fText->Append(" ", C_ACTION, C_ACTION, F_ACTION);
 						message.Remove(0, 4);
 						fText->Append(message.String(), C_ACTION, C_ACTION, F_ACTION);
 					} else {
