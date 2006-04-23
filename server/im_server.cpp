@@ -789,6 +789,8 @@ Server::Process( BMessage * msg )
 		case USER_STARTED_TYPING:
 		case USER_STOPPED_TYPING:
 		case SPECIAL_TO_PROTOCOL:
+		case SERVER_LIST_ADD_CONTACT:
+		case SERVER_LIST_REMOVED_CONTACT:
 		{
 			MessageToProtocols(msg);
 		}	break;
@@ -1187,12 +1189,8 @@ Server::selectConnection( BMessage * msg, Contact & contact )
 	const char * protocol = msg->FindString("protocol");
 	const char * id = msg->FindString("id");
 
-	printf("Select connection: "); msg->PrintToStream();
-	
 	// first of all, check if source of last message is still online
 	// if it is, we use it.
-	
-	printf("Length: %ld\n", fPreferredConnection[contact].length());
 	
 	if ((fPreferredConnection[contact].length() > 0) &&
 		(fPreferredConnection[contact].length() < 100)) {
@@ -1312,6 +1310,7 @@ Server::IsMessageOk( BMessage * msg )
 void
 Server::MessageToProtocols( BMessage * msg )
 {
+
 	if ( !IsMessageOk(msg) )
 	{
 		LOG("im_server", liHigh, "Bad message in MessageToProtocols()");
