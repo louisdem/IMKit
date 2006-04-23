@@ -55,6 +55,9 @@ enum im_what_code {
 	// Clients get this when a buddy icon is updated
 	BUDDY_ICON_UPDATED = 25,
 	
+	// Adding and removing contact from the server side list
+	SERVER_LIST_ADD_CONTACT = 26,
+	SERVER_LIST_REMOVED_CONTACT = 27,
 	
 	// these are forwarded to 
 	SPECIAL_TO_PROTOCOL = 1000,

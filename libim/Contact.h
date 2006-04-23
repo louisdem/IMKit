@@ -63,6 +63,9 @@ class Contact
 		status_t	GetEmail( char * buf, int size );
 		status_t	GetStatus( char * bug, int size );
 		
+		int32		CountGroups(void);
+		const char	*GroupAt(int32 index);
+		
 		status_t	SetBuddyIcon(const char *protocol, BBitmap *icon);
 		BBitmap		*GetBuddyIcon(const char *protocol, int16 size = 48);
 		
@@ -82,11 +85,13 @@ class Contact
 		status_t	SaveConnections();
 		status_t	ReadAttribute(const char * attr, char * buffer, int bufsize);
 		status_t	ReadAttribute(const char *attr, char **buffer, int32 *size);
+		status_t	LoadGroups(void);
 		
 		void		Clear();
 		
 		entry_ref	fEntry;
 		BList		fConnections;
+		BList		fGroups;
 		
 };
 

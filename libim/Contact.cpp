@@ -111,11 +111,16 @@ Contact::Update()
 void
 Contact::Clear()
 {
-	for ( int i=0; i<fConnections.CountItems(); i++ )
+	for (int32 i = 0; i < fConnections.CountItems(); i++) {
 		delete (char*)fConnections.ItemAt(i);
-	
+	};
 	fConnections.MakeEmpty();
-}
+
+	for (int32 i = 0; i < fGroups.CountItems(); i++) {
+		delete (char *)fGroups.ItemAt(i);
+	};
+	fGroups.MakeEmpty();	
+};
 
 status_t
 Contact::LoadConnections()
@@ -398,8 +403,8 @@ status_t Contact::ReadAttribute(const char *name, char **buffer, int32 *size) {
 			*buffer = (char *)calloc(info.size, sizeof(char));
 			ret = node.ReadAttr(name, info.type, 0, *buffer, info.size);
 			if (ret > B_OK) {
-				ret = B_OK;
 				*size = ret;
+				ret = B_OK;
 			} else {
 				free(*buffer);
 			};
@@ -485,4 +490,59 @@ BBitmap *Contact::GetBuddyIcon(const char *protocol, int16 /*size*/) {
 	};
 	
 	return NULL;
+};
+
+int32 Contact::CountGroups(void) {
+	if (fGroups.CountItems() == 0) LoadGroups();
+	
+	return fGroups.CountItems();
+};
+
+const char *Contact::GroupAt(int32 index) {
+	if (fGroups.CountItems() == 0) LoadGroups();
+	const char *result = NULL;
+	if (index <= fConnections.CountItems()) {
+		printf("Index okay!\n");
+		result = (const char *)fGroups.ItemAt(index);
+	};
+
+	printf("Result: %s (%p)\n", result, result);
+	
+	return result;
+};
+
+status_t Contact::LoadGroups(void) {
+	char *buffer = NULL;
+	int32 size = -1;
+	int32 count = 0;
+	status_t result = ReadAttribute("META:group", &buffer, &size);
+	if (result != B_OK) return result;
+	
+	BString groups;
+	groups.SetTo(buffer, size);
+	free(buffer);
+
+	while (groups.FindFirst(",") != B_ERROR) {
+		int offset = groups.FindFirst(",");
+		BString temp;
+		temp.SetTo(groups, offset);
+		
+		char *group = new char[offset + 1];
+		strncpy(group, temp.String(), offset);
+		group[offset] = '\0';
+		
+		fGroups.AddItem(group);
+		groups.Remove(0, offset + 1);
+		count++;
+	};
+	
+	if (groups.Length() > 0) {
+		char *group = new char[size + 1];
+		strncpy(group, groups.String(), size);
+		group[size] = '\0';
+		
+		fGroups.AddItem(group);
+	};
+	
+	return B_OK;
 };
