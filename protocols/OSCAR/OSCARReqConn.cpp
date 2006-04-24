@@ -5,6 +5,8 @@
 #include "TLV.h"
 #include "BufferReader.h"
 
+//#pragma mark Constructor
+
 OSCARReqConn::OSCARReqConn(const char *server, uint16 port,	OSCARManager *man)
 	: OSCARConnection(server, port, man, "OSCAR ReqConn", connReq) {
 	
@@ -15,9 +17,9 @@ OSCARReqConn::OSCARReqConn(const char *server, uint16 port,	OSCARManager *man)
 OSCARReqConn::~OSCARReqConn(void) {
 };
 
-//#pragma mark -
+//#pragma mark Public
 
-//#pragma mark -
+//#pragma mark Private
 						
 status_t OSCARReqConn::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 	status_t ret = B_OK;

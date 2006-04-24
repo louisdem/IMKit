@@ -33,7 +33,7 @@ ICQProtocol::ICQProtocol()
 	fPassword = "";
 	fUIN = "";
 	fEncoding = 0xffff; // No conversion == UTF-8
-	fManager = new OSCARManager(dynamic_cast<OSCARHandler *>(this));
+	fManager = new OSCARManager(dynamic_cast<OSCARHandler *>(this), "icq");
 };
 
 ICQProtocol::~ICQProtocol() {
@@ -43,7 +43,7 @@ ICQProtocol::~ICQProtocol() {
 
 status_t ICQProtocol::Init(BMessenger msgr) {
 	fMsgr = msgr;
-	LOG("icq", liMedium, "ICQProtocol::Init() start");
+	LOG(fManager->Protocol(), liMedium, "ICQProtocol::Init() start");
 	
 	fManager->Run();
 	
@@ -54,7 +54,7 @@ status_t ICQProtocol::Shutdown() {
 	fManager->LogOff();
 	if (fManager->Lock()) fManager->Quit();
 	
-	LOG("icq", liMedium, "ICQProtocol::Shutdown() done");
+	LOG(fManager->Protocol(), liMedium, "ICQProtocol::Shutdown() done");
 		
 	return B_OK;
 }
@@ -110,11 +110,11 @@ status_t ICQProtocol::Process(BMessage * msg) {
 				case IM::SET_STATUS: {
 					const char *status = NULL;
 					if (msg->FindString("status", &status) != B_OK) {
-						LOG("icq", liHigh, "Status set to NULL!");
+						LOG(fManager->Protocol(), liHigh, "Status set to NULL!");
 						return B_ERROR;
 					};
 
-					LOG("icq", liMedium, "Set status to %s", status);
+					LOG(fManager->Protocol(), liMedium, "Set status to %s", status);
 					
 					if (strcmp(status, OFFLINE_TEXT) == 0) {
 						fManager->LogOff();
@@ -123,7 +123,7 @@ status_t ICQProtocol::Process(BMessage * msg) {
 						if (fManager->ConnectionState() == (uchar)OSCAR_ONLINE) {
 							const char *away_msg;
 							if (msg->FindString("away_msg", &away_msg) == B_OK) {
-								LOG("icq", liMedium, "Setting away message: %s", away_msg);
+								LOG(fManager->Protocol(), liMedium, "Setting away message: %s", away_msg);
 								fManager->SetAway(away_msg);
 							};
 						};
@@ -132,23 +132,23 @@ status_t ICQProtocol::Process(BMessage * msg) {
 						if (fManager->IsConnected() == OSCAR_AWAY) {
 							fManager->SetAway(NULL);
 						} else {
-							LOG("icq", liDebug, "Calling fManager.Login()");
+							LOG(fManager->Protocol(), liDebug, "Calling fManager.Login()");
 							fManager->Login("login.icq.com", (uint)5190,
 								fUIN.String(), fPassword.String());
 						};
 					} else {
-						LOG("icq", liHigh, "Invalid status when setting status: '%s'", status);
+						LOG(fManager->Protocol(), liHigh, "Invalid status when setting status: '%s'", status);
 					}
 				} break;
 
 				case IM::GET_CONTACT_INFO:
 				{
-					LOG("icq", liLow, "Getting contact info", msg);
+					LOG(fManager->Protocol(), liLow, "Getting contact info", msg);
 					const char * id = NormalizeNick(msg->FindString("id")).String();
 					
 					BMessage *infoMsg = new BMessage(IM::MESSAGE);
 					infoMsg->AddInt32("im_what", IM::CONTACT_INFO);
-					infoMsg->AddString("protocol", "icq");
+					infoMsg->AddString("protocol", fManager->Protocol());
 					infoMsg->AddString("id", id);
 					infoMsg->AddString("nick", id);
 					infoMsg->AddString("first name", id);
@@ -166,8 +166,8 @@ status_t ICQProtocol::Process(BMessage * msg) {
 					
 					const char * id = screen.String();
 					
-					LOG("icq", liDebug, "SEND_MESSAGE (%s, %s)", msg->FindString("id"), msg->FindString("message"));
-					LOG("icq", liDebug, "  %s > %s > %s", srcid.String(), normal.String(), screen.String() );
+					LOG(fManager->Protocol(), liDebug, "SEND_MESSAGE (%s, %s)", msg->FindString("id"), msg->FindString("message"));
+					LOG(fManager->Protocol(), liDebug, "  %s > %s > %s", srcid.String(), normal.String(), screen.String() );
 					
 					if ( !id )
 						return B_ERROR;
@@ -217,7 +217,7 @@ status_t ICQProtocol::Process(BMessage * msg) {
 }
 
 const char * ICQProtocol::GetSignature() {
-	return "icq";
+	return fManager->Protocol();
 }
 
 const char * ICQProtocol::GetFriendlySignature() {
@@ -304,7 +304,7 @@ uint32 ICQProtocol::GetEncoding(void) {
 
 status_t ICQProtocol::Error(const char *error) {
 	BMessage msg(IM::ERROR);
-	msg.AddString("protocol", "icq");
+	msg.AddString("protocol", fManager->Protocol());
 	msg.AddString("error", error);
 	
 	fMsgr.SendMessage(&msg);
@@ -315,7 +315,7 @@ status_t ICQProtocol::Progress(const char *id, const char *message,
 
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::PROGRESS );
-	msg.AddString("protocol", "icq");
+	msg.AddString("protocol", fManager->Protocol());
 	msg.AddString("progressID", id);
 	msg.AddString("message", message);
 	msg.AddFloat("progress", progress);
@@ -330,7 +330,7 @@ status_t ICQProtocol::Progress(const char *id, const char *message,
 status_t ICQProtocol::StatusChanged(const char *nick, online_types status,
 	bool mobileUser = false) {
 	BMessage msg(IM::MESSAGE);
-	msg.AddString("protocol", "icq");
+	msg.AddString("protocol", fManager->Protocol());
 	msg.AddBool("mobileuser", mobileUser);
 
 	if (fUIN == nick) {
@@ -366,7 +366,7 @@ status_t ICQProtocol::MessageFromUser(const char *nick, const char *msg,
 	
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
-	im_msg.AddString("protocol", "icq");
+	im_msg.AddString("protocol", fManager->Protocol());
 	im_msg.AddString("id", NormalizeNick(nick));
 	
 	BString text = msg;
@@ -383,7 +383,7 @@ status_t ICQProtocol::MessageFromUser(const char *nick, const char *msg,
 
 status_t ICQProtocol::UserIsTyping(const char *nick, typing_notification type) {
 	BMessage im_msg(IM::MESSAGE);
-	im_msg.AddString("protocol", "icq");
+	im_msg.AddString("protocol", fManager->Protocol());
 	im_msg.AddString("id", NormalizeNick(nick));
 
 	switch (type) {
@@ -406,10 +406,10 @@ status_t ICQProtocol::SSIBuddies(list<BString> buddies) {
 	list <BString>::iterator i;
 
 	BMessage serverBased(IM::SERVER_BASED_CONTACT_LIST);
-	serverBased.AddString("protocol", "icq");
+	serverBased.AddString("protocol", fManager->Protocol());
 
 	for (i = buddies.begin(); i != buddies.end(); i++) {
-		LOG("icq", liLow, "Got server side buddy %s", NormalizeNick(i->String()).String());
+		LOG(fManager->Protocol(), liLow, "Got server side buddy %s", NormalizeNick(i->String()).String());
 		serverBased.AddString("id", NormalizeNick(i->String()));
 	};
 			
@@ -420,7 +420,7 @@ status_t ICQProtocol::BuddyIconFromUser(const char *nick, const uchar *icon,
 	uint32 length) {
 	
 	BMessage iconMsg(IM::MESSAGE);
-	iconMsg.AddString("protocol", "icq");
+	iconMsg.AddString("protocol", fManager->Protocol());
 	iconMsg.AddInt32("im_what", IM::SET_BUDDY_ICON);
 	iconMsg.AddString("id", NormalizeNick(nick));
 	iconMsg.AddData("icondata", B_RAW_TYPE, icon, length);
@@ -462,11 +462,11 @@ BString ICQProtocol::NormalizeNick(const char *nick) {
 	
 	if ( i == fNickMap.end() ) {
 		// add 'real' nick if it's not already there
-		LOG("icq", liDebug, "Adding normal (%s) vs screen (%s)", normal.String(), nick );
+		LOG(fManager->Protocol(), liDebug, "Adding normal (%s) vs screen (%s)", normal.String(), nick );
 		fNickMap[string(normal.String())] = BString(nick);
 	}
 	
-	LOG("icq", liDebug, "Screen (%s) to normal (%s)", nick, normal.String() );
+	LOG(fManager->Protocol(), liDebug, "Screen (%s) to normal (%s)", nick, normal.String() );
 	
 	return normal;
 };
@@ -476,11 +476,11 @@ BString ICQProtocol::GetScreenNick( const char *nick ) {
 	
 	if ( i != fNickMap.end() ) {
 		// found the nick
-		LOG("icq", liDebug, "Converted normal (%s) to screen (%s)", nick, (*i).second.String() );
+		LOG(fManager->Protocol(), liDebug, "Converted normal (%s) to screen (%s)", nick, (*i).second.String() );
 		return (*i).second;
 	}
 	
-	LOG("icq", liDebug, "Nick (%s) not found in fNickMap, not converting", nick );
+	LOG(fManager->Protocol(), liDebug, "Nick (%s) not found in fNickMap, not converting", nick );
 	
 	return BString(nick);
 };

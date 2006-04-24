@@ -39,7 +39,7 @@ AIMProtocol::AIMProtocol()
 	fPassword = NULL;
 	fScreenName = NULL;
 	fEncoding = 0xffff; // No conversion == UTF-8
-	fManager = new OSCARManager(dynamic_cast<OSCARHandler *>(this));
+	fManager = new OSCARManager(dynamic_cast<OSCARHandler *>(this), "aim");
 };
 
 AIMProtocol::~AIMProtocol() {
@@ -51,7 +51,7 @@ AIMProtocol::~AIMProtocol() {
 
 status_t AIMProtocol::Init(BMessenger msgr) {
 	fMsgr = msgr;
-	LOG(kProtocolName, liMedium, "AIMProtocol::Init() start");
+	LOG(fManager->Protocol(), liMedium, "AIMProtocol::Init() start");
 	
 	fManager->Run();
 	
@@ -62,7 +62,7 @@ status_t AIMProtocol::Shutdown() {
 	fManager->LogOff();
 	if (fManager->Lock()) fManager->Quit();
 	
-	LOG(kProtocolName, liMedium, "AIMProtocol::Shutdown() done");
+	LOG(fManager->Protocol(), liMedium, "AIMProtocol::Shutdown() done");
 		
 	return B_OK;
 }
@@ -118,11 +118,11 @@ status_t AIMProtocol::Process(BMessage * msg) {
 				case IM::SET_STATUS: {
 					const char *status = NULL;
 					if (msg->FindString("status", &status) != B_OK) {
-						LOG(kProtocolName, liHigh, "Status set to NULL!");
+						LOG(fManager->Protocol(), liHigh, "Status set to NULL!");
 						return B_ERROR;
 					};
 
-					LOG(kProtocolName, liMedium, "Set status to %s", status);
+					LOG(fManager->Protocol(), liMedium, "Set status to %s", status);
 					
 					if (strcmp(status, OFFLINE_TEXT) == 0) {
 						fManager->LogOff();
@@ -131,7 +131,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						if (fManager->ConnectionState() == (uchar)OSCAR_ONLINE) {
 							const char *away_msg;
 							if (msg->FindString("away_msg", &away_msg) == B_OK) {
-								LOG(kProtocolName, liMedium, "Setting away message: %s", away_msg);
+								LOG(fManager->Protocol(), liMedium, "Setting away message: %s", away_msg);
 								fManager->SetAway(away_msg);
 							};
 						};
@@ -140,26 +140,26 @@ status_t AIMProtocol::Process(BMessage * msg) {
 						if (fManager->IsConnected() == OSCAR_AWAY) {
 							fManager->SetAway(NULL);
 						} else {
-							LOG(kProtocolName, liDebug, "Calling fManager.Login()");
+							LOG(fManager->Protocol(), liDebug, "Calling fManager.Login()");
 							fManager->Login("login.oscar.aol.com", (uint16)5190,
 								fScreenName, fPassword);
 						};
 					} else
 					{
-						LOG(kProtocolName, liHigh, "Invalid status when setting status: '%s'", status);
+						LOG(fManager->Protocol(), liHigh, "Invalid status when setting status: '%s'", status);
 					}
 				} break;
 
 				case IM::GET_CONTACT_INFO:
 				{
-					LOG(kProtocolName, liLow, "Getting contact info", msg);
+					LOG(fManager->Protocol(), liLow, "Getting contact info", msg);
 					const char * id = NormalizeNick(msg->FindString("id")).String();
 					
 					BMessage *infoMsg = new BMessage(IM::MESSAGE);
 					Buddy *buddy = fManager->GetBuddy(id);
 					
 					infoMsg->AddInt32("im_what", IM::CONTACT_INFO);
-					infoMsg->AddString("protocol", kProtocolName);
+					infoMsg->AddString("protocol", fManager->Protocol());
 					infoMsg->AddString("id", id);
 					infoMsg->AddString("nick", id);
 					infoMsg->AddString("first name", id);
@@ -177,8 +177,8 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					
 					const char * id = screen.String();
 					
-					LOG(kProtocolName, liDebug, "SEND_MESSAGE (%s, %s)", msg->FindString("id"), msg->FindString("message"));
-					LOG(kProtocolName, liDebug, "  %s > %s > %s", srcid.String(), normal.String(), screen.String() );
+					LOG(fManager->Protocol(), liDebug, "SEND_MESSAGE (%s, %s)", msg->FindString("id"), msg->FindString("message"));
+					LOG(fManager->Protocol(), liDebug, "  %s > %s > %s", srcid.String(), normal.String(), screen.String() );
 					
 					if ( !id )
 						return B_ERROR;
@@ -228,7 +228,7 @@ status_t AIMProtocol::Process(BMessage * msg) {
 }
 
 const char * AIMProtocol::GetSignature() {
-	return kProtocolName;
+	return fManager->Protocol();
 }
 
 const char * AIMProtocol::GetFriendlySignature() {
@@ -317,7 +317,7 @@ uint32 AIMProtocol::GetEncoding(void) {
 
 status_t AIMProtocol::Error(const char *error) {
 	BMessage msg(IM::ERROR);
-	msg.AddString("protocol", kProtocolName);
+	msg.AddString("protocol", fManager->Protocol());
 	msg.AddString("error", error);
 	
 	fMsgr.SendMessage(&msg);
@@ -328,11 +328,11 @@ status_t AIMProtocol::Progress(const char *id, const char *message,
 
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::PROGRESS );
-	msg.AddString("protocol", kProtocolName);
+	msg.AddString("protocol", fManager->Protocol());
 	msg.AddString("progressID", id);
 	msg.AddString("message", message);
 	msg.AddFloat("progress", progress);
-	msg.AddInt32("state", IM::impsConnecting );
+	msg.AddInt32("state", IM::impsConnecting);
 	
 	fMsgr.SendMessage(&msg);
 	
@@ -344,7 +344,7 @@ status_t AIMProtocol::StatusChanged(const char *nick, online_types status,
 	bool mobileUser = false) {
 	
 	BMessage msg(IM::MESSAGE);
-	msg.AddString("protocol", kProtocolName);
+	msg.AddString("protocol", fManager->Protocol());
 
 	if (strcmp(nick, fScreenName) == 0) {
 		msg.AddInt32("im_what", IM::STATUS_SET);
@@ -381,7 +381,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg,
 	
 	BMessage im_msg(IM::MESSAGE);
 	im_msg.AddInt32("im_what", IM::MESSAGE_RECEIVED);
-	im_msg.AddString("protocol", kProtocolName);
+	im_msg.AddString("protocol", fManager->Protocol());
 	im_msg.AddString("id", NormalizeNick(nick));
 	
 	BString text = msg;
@@ -398,7 +398,7 @@ status_t AIMProtocol::MessageFromUser(const char *nick, const char *msg,
 
 status_t AIMProtocol::UserIsTyping(const char *nick, typing_notification type) {
 	BMessage im_msg(IM::MESSAGE);
-	im_msg.AddString("protocol", kProtocolName);
+	im_msg.AddString("protocol", fManager->Protocol());
 	im_msg.AddString("id", NormalizeNick(nick));
 
 	switch (type) {
@@ -421,10 +421,10 @@ status_t AIMProtocol::SSIBuddies(list<BString> buddies) {
 	list <BString>::iterator i;
 
 	BMessage serverBased(IM::SERVER_BASED_CONTACT_LIST);
-	serverBased.AddString("protocol", kProtocolName);
+	serverBased.AddString("protocol", fManager->Protocol());
 
 	for (i = buddies.begin(); i != buddies.end(); i++) {
-		LOG(kProtocolName, liLow, "Got server side buddy %s", NormalizeNick(i->String()).String());
+		LOG(fManager->Protocol(), liLow, "Got server side buddy %s", NormalizeNick(i->String()).String());
 		serverBased.AddString("id", NormalizeNick(i->String()));
 	};
 			
@@ -435,7 +435,7 @@ status_t AIMProtocol::BuddyIconFromUser(const char *nick, const uchar *icon,
 	uint32 length) {
 	
 	BMessage iconMsg(IM::MESSAGE);
-	iconMsg.AddString("protocol", kProtocolName);
+	iconMsg.AddString("protocol", fManager->Protocol());
 	iconMsg.AddInt32("im_what", IM::SET_BUDDY_ICON);
 	iconMsg.AddString("id", NormalizeNick(nick));
 	iconMsg.AddData("icondata", B_RAW_TYPE, icon, length);
@@ -478,11 +478,11 @@ BString AIMProtocol::NormalizeNick(const char *nick) {
 	
 	if ( i == fNickMap.end() ) {
 		// add 'real' nick if it's not already there
-		LOG(kProtocolName, liDebug, "Adding normal (%s) vs screen (%s)", normal.String(), nick );
+		LOG(fManager->Protocol(), liDebug, "Adding normal (%s) vs screen (%s)", normal.String(), nick );
 		fNickMap[string(normal.String())] = BString(nick);
 	}
 	
-	LOG(kProtocolName, liDebug, "Screen (%s) to normal (%s)", nick, normal.String() );
+	LOG(fManager->Protocol(), liDebug, "Screen (%s) to normal (%s)", nick, normal.String() );
 	
 	return normal;
 };
@@ -492,11 +492,11 @@ BString AIMProtocol::GetScreenNick( const char *nick ) {
 	
 	if ( i != fNickMap.end() ) {
 		// found the nick
-		LOG(kProtocolName, liDebug, "Converted normal (%s) to screen (%s)", nick, (*i).second.String() );
+		LOG(fManager->Protocol(), liDebug, "Converted normal (%s) to screen (%s)", nick, (*i).second.String() );
 		return (*i).second;
 	}
 	
-	LOG(kProtocolName, liDebug, "Nick (%s) not found in fNickMap, not converting", nick );
+	LOG(fManager->Protocol(), liDebug, "Nick (%s) not found in fNickMap, not converting", nick );
 	
 	return BString(nick);
 };

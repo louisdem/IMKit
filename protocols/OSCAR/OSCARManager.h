@@ -63,8 +63,10 @@ const char kEncoding[] = "text/aolrtf; charset=\"utf-8\"";
 
 class OSCARManager : public BLooper {
 	public:
-							OSCARManager(OSCARHandler *handler);
+							OSCARManager(OSCARHandler *handler, const char *protocol);
 							~OSCARManager(void);
+						
+		const char			*Protocol(void);
 						
 		status_t			Send(Flap *f);
 			
@@ -103,7 +105,6 @@ class OSCARManager : public BLooper {
 	private:
 		status_t			ClearConnections(void);
 		status_t			ClearWaitingSupport(void);
-		char				*ParseMessage(TLV *tlv);
 		uint16				GetNewItemId(void);
 		
 		virtual status_t	HandleServiceControl(SNAC *snac, BufferReader *reader);
@@ -125,7 +126,9 @@ class OSCARManager : public BLooper {
 		virtual status_t	HandleSSI(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleICQ(BMessage *msg);
 		virtual status_t	HandleAuthorisation(BMessage *msg);
-			
+		
+		BString				fProtocol;
+		
 		buddymap			fBuddy;
 		connlist			fConnections;
 		flap_stack			fWaitingSupport;

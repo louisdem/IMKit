@@ -9,9 +9,7 @@
 #include <sys/select.h>
 
 void remove_html(char *msg);
-void PrintHex(const unsigned char* buf, size_t size, bool override = false);
 const char *kThreadName = "IM Kit: OSCAR Connection";
-const char *kProtocolName = "aim";
 
 OSCARConnection::OSCARConnection(const char *server, uint16 port, OSCARManager *man,
 	const char *name = "OSCAR Connection", conn_type type = connBOS)
@@ -584,7 +582,6 @@ int32 OSCARConnection::Receiver(void *con) {
 			};
 		};
 		
-		PrintHex(flapHeader, kFLAPHeaderLen);
 		uint8 channel = 0;
 		uint16 seqNum = 0;
 		uint16 flapLen = 0;
@@ -675,7 +672,7 @@ int32 OSCARConnection::Receiver(void *con) {
 	}
 	
 //	delete msgr;
-	LOG(kProtocolName, liDebug, "Receiver thread exiting");
+	LOG(connection->fManager->Protocol(), liDebug, "Receiver thread exiting");
 	
 	return B_OK;
 };

@@ -143,9 +143,10 @@ void MD5(const char *data, int length, char *result) {
 
 //#pragma mark -
 
-OSCARManager::OSCARManager(OSCARHandler *handler) {	
+OSCARManager::OSCARManager(OSCARHandler *handler, const char *protocol) {	
 	fConnectionState = OSCAR_OFFLINE;
 	
+	fProtocol = protocol;
 	fHandler = handler;
 	fOurNick = NULL;
 	fProfile.SetTo("IMKit OSCAR");
@@ -163,8 +164,12 @@ OSCARManager::~OSCARManager(void) {
 
 //#pragma mark -
 
+const char *OSCARManager::Protocol(void) {
+	return fProtocol.String();
+};
+
 status_t OSCARManager::ClearConnections(void) {
-	LOG(kProtocolName, liLow, "%i pending connections to close",
+	LOG(Protocol(), liLow, "%i pending connections to close",
 		fPendingConnections.size());
 
 	pfc_map::iterator pIt;
@@ -176,7 +181,7 @@ status_t OSCARManager::ClearConnections(void) {
 	fPendingConnections.clear();
 
 
-	LOG(kProtocolName, liLow, "%i used connections to close", fConnections.size());
+	LOG(Protocol(), liLow, "%i used connections to close", fConnections.size());
 
 	connlist::iterator it;
 	for (it = fConnections.begin(); it != fConnections.end(); it++) {
@@ -247,7 +252,7 @@ status_t OSCARManager::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 							MD5((uchar *)fIcon, fIconSize, (uchar *)hash);
 							
 							if (memcmp(hash, currentHash, hashLen) != 0) {
-								LOG(kProtocolName, liLow, "Server stored buddy "
+								LOG(Protocol(), liLow, "Server stored buddy "
 									"icon is different to ours - uploading");
 								Flap *upload = new Flap(SNAC_DATA);
 								upload->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS,
@@ -273,7 +278,7 @@ status_t OSCARManager::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 		} break;
 		
 		case RATE_LIMIT_WARNING: {
-			LOG(kProtocolName, liHigh, "Rate limit warning!");
+			LOG(Protocol(), liHigh, "Rate limit warning!");
 		} break;
 		
 		default: {
@@ -294,7 +299,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 	
 	switch (subtype) {
 		case ERROR: {
-			LOG(kProtocolName, liHigh, "Server error 0x%04x", reader->ReadInt16());
+			LOG(Protocol(), liHigh, "Server error 0x%04x", reader->ReadInt16());
 		} break;
 		
 		case MESSAGE_FROM_SERVER: {
@@ -316,17 +321,13 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 				switch (tlv.Type()) {
 					case 0x0001: {	// Userclass
 						userClass = tlvReader->ReadInt16();
-						printf("USer class: 0x%04x\n", userClass);
-						
-						LOG(kProtocolName, liHigh, "Got user class: 0x%04x", userClass);
+						LOG(Protocol(), liHigh, "Got user class: 0x%04x", userClass);
 					} break;
 					case 0x0004: {	// Automated reply
 						autoReply = true;
 					} break;
 					case 0x0006: {	// User status
-						printf("User status-pre: 0x%04x\n", tlvReader->ReadInt16()); // Webaware status, etc
 						userStatus = tlvReader->ReadInt16();
-						printf("User status: 0x%04x\n");
 					} break;
 				};
 				
@@ -356,7 +357,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 								message = tlvReader->ReadString(messageLen);
 								
 								if (charSet == 0x0002){
-									LOG(kProtocolName, liLow, "Got a UTF-16 encoded message");
+									LOG(Protocol(), liLow, "Got a UTF-16 encoded message");
 									char *msg16 = (char *)calloc(messageLen,
 										sizeof(char));
 									int32 state = 0;
@@ -373,7 +374,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 				
 									free(msg16);
 					
-									LOG(kProtocolName, liLow, "Converted message: \"%s\"",
+									LOG(Protocol(), liLow, "Converted message: \"%s\"",
 										message);
 								};
 							} else {
@@ -385,7 +386,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 					delete tlvReader;
 				};
 			} else {
-				LOG(kProtocolName, liHigh, "Message on non-plain text channel!");
+				LOG(Protocol(), liHigh, "Message on non-plain text channel!");
 			};
 			
 			if (message) {
@@ -416,7 +417,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 			char *nick = reader->ReadString(nickLen);
 			uint16 type = reader->ReadInt16();
 			
-			LOG(kProtocolName, liDebug, "Got typing notification (0x%04x) for "
+			LOG(Protocol(), liDebug, "Got typing notification (0x%04x) for "
 				"\"%s\"", type, nick);
 			
 			fHandler->UserIsTyping(nick, (typing_notification)type);
@@ -424,7 +425,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 			
 		} break;
 		default: {
-			LOG(kProtocolName, liMedium, "Got unhandled SNAC of family 0x0004 "
+			LOG(Protocol(), liMedium, "Got unhandled SNAC of family 0x0004 "
 				"(ICBM) of subtype 0x%04x", subtype);
 			ret = kUnhandled;
 		};
@@ -476,7 +477,7 @@ status_t OSCARManager::HandleBuddyList(SNAC *snac, BufferReader *reader) {
 						} break;
 						
 						case 0x001d: {	// Icon / available message
-							LOG(kProtocolName, liLow, "User %s has an icon / available message",
+							LOG(Protocol(), liLow, "User %s has an icon / available message",
 								nick);
 							uint16 type = tlvReader->ReadInt16();
 							uint8 flags = tlvReader->ReadInt8();
@@ -534,13 +535,13 @@ status_t OSCARManager::HandleBuddyList(SNAC *snac, BufferReader *reader) {
 			buddymap::iterator bIt = fBuddy.find(nick);
 			if (bIt != fBuddy.end()) bIt->second->ClearCapabilities();
 								
-			LOG(kProtocolName, liLow, "OSCARManager: \"%s\" went offline", nick);
+			LOG(Protocol(), liLow, "OSCARManager: \"%s\" went offline", nick);
 			
 			fHandler->StatusChanged(nick, OSCAR_OFFLINE);
 			free(nick);
 		} break;
 		default: {
-			LOG(kProtocolName, liMedium, "Got an unhandled SNAC of family 0x0003 "
+			LOG(Protocol(), liMedium, "Got an unhandled SNAC of family 0x0003 "
 				"(Buddy List). Subtype 0x%04x", subtype);
 			ret = kUnhandled;
 		}
@@ -566,7 +567,7 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 				// SSI Params
 				for (int32 i = 0; i < kSSILimitCount; i++) {
 					fSSILimits[i] = tlvReader->ReadInt16();
-					LOG(kProtocolName, liHigh, "SSI Limit: %i: %i", i, fSSILimits[i]);
+					LOG(Protocol(), liHigh, "SSI Limit: %i: %i", i, fSSILimits[i]);
 				};
 			};
 			
@@ -578,13 +579,13 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 			uint8 ssiVersion = reader->ReadInt8();
 			uint16 itemCount = reader->ReadInt16();
 
-			LOG(kProtocolName, liDebug, "SSI Version 0x%x", ssiVersion);
-			LOG(kProtocolName, liLow, "%i SSI items", itemCount);
+			LOG(Protocol(), liDebug, "SSI Version 0x%x", ssiVersion);
+			LOG(Protocol(), liLow, "%i SSI items", itemCount);
 
 			fSSIItems = itemCount;
 
 			for (uint16 i = 0; i < itemCount; i++) {
-				LOG(kProtocolName, liHigh, "Item %i / %i", i, itemCount);
+				LOG(Protocol(), liDebug, "Item %i / %i", i, itemCount);
 				
 				uint16 nameLen = reader->ReadInt16();
 				char *name = reader->ReadString(nameLen);
@@ -596,31 +597,27 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 				
 				fItemIds[itemID] = true;
 				
-				LOG(kProtocolName, liLow, "SSI item %i is of type 0x%04x (%i bytes)",
+				LOG(Protocol(), liLow, "SSI item %i is of type 0x%04x (%i bytes)",
 					 i, type, len);
 				
 				switch (type) {
 					case GROUP_RECORD: {
 						int32 end = reader->Offset() + len;
 						
-						printf("Should end at %i\n", end);
-						
 						while (reader->Offset() < end) {
-							printf("Offset: %i\n", reader->Offset());
-							
 							TLV tlv(reader);
 							int16 size = tlv.Length();
 							BufferReader *tlvReader = tlv.Reader();
 						
 							Group *group = new Group(groupID, name);
 						
-							LOG(kProtocolName, liHigh, "Group %s (0x%04x)", name, groupID);
+							LOG(Protocol(), liLow, "Group %s (0x%04x)", name, groupID);
 	
 							// Bunch o' groups
 							if (tlv.Type() == 0x00c8) {
 								for (int32 i = 0; i < (size / 2); i++) {
 									int16 child = tlvReader->ReadInt16();
-									LOG(kProtocolName, liHigh, "\tChild 0x%04x", child);
+									LOG(Protocol(), liDebug, "\tChild 0x%04x", child);
 									group->AddItem(child);
 								};
 							};
@@ -645,7 +642,7 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 
 						reader->OffsetBy(len);
 						
-						LOG(kProtocolName, liHigh, "Got contact %s (0x%04x)", name, itemID);
+						LOG(Protocol(), liDebug, "Got contact %s (0x%04x)", name, itemID);
 					} break;
 					case BUDDY_ICON_INFO: {
 						reader->OffsetBy(len);
@@ -659,7 +656,7 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 			};
 						
 			uint32 checkOut = reader->ReadInt32();
-			LOG(kProtocolName, liLow, "Last checkout of SSI list 0x%08x", checkOut);
+			LOG(Protocol(), liLow, "Last checkout of SSI list 0x%08x", checkOut);
 
 			fHandler->SSIBuddies(contacts);
 		} break;
@@ -668,20 +665,14 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 			
 			while (reader->Offset() < reader->Length()) {
 				uint16 code = reader->ReadInt16();
-				LOG(kProtocolName, liHigh, "Upload for item %i is %s (0x%04x)",
+				LOG(Protocol(), liLow, "Upload for item %i is %s (0x%04x)",
 					count, kSSIResult[code], code);
 				count++;
 			};
 		} break;
-		
-		case 0x0011:
-		case 0x0009:
-		case 0x0012: {
-			reader->Debug();
-		};
-		
+				
 		default: {
-			LOG(kProtocolName, liLow, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
+			LOG(Protocol(), liLow, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
 				subtype);
 			ret = kUnhandled;
 		} break;
@@ -801,18 +792,18 @@ status_t OSCARManager::Send(Flap *f) {
 				OSCARConnection *con = (*i);
 				if (con == NULL) continue;
 				if (con->Supports(family) == true) {
-					LOG(kProtocolName, liLow, "Sending SNAC (0x%04x) via %s:%i", family,
+					LOG(Protocol(), liLow, "Sending SNAC (0x%04x) via %s:%i", family,
 						con->Server(), con->Port());
 					con->Send(f);
 					return B_OK;
 				};
 			}
 					
-			LOG(kProtocolName, liMedium, "No connections handle SNAC (0x%04x) requesting service",
+			LOG(Protocol(), liMedium, "No connections handle SNAC (0x%04x) requesting service",
 				family);
 			OSCARConnection *con = fConnections.front();
 			if (con == NULL) {
-				LOG(kProtocolName, liHigh, "No available connections to send SNAC");
+				LOG(Protocol(), liHigh, "No available connections to send SNAC");
 				return B_ERROR;
 			} else {
 				pfc_map::iterator pIt = fPendingConnections.find(family);
@@ -850,7 +841,7 @@ status_t OSCARManager::Login(const char *server, uint16 port, const char *userna
 	const char *password) {
 	
 	if ((username == NULL) || (password == NULL)) {
-		LOG(kProtocolName, liHigh, "OSCARManager::Login: username or password not set");
+		LOG(Protocol(), liHigh, "OSCARManager::Login: username or password not set");
 		return B_ERROR;
 	}
 	
@@ -893,7 +884,7 @@ status_t OSCARManager::Login(const char *server, uint16 port, const char *userna
 
 		return B_OK;
 	} else {
-		LOG(kProtocolName, liDebug, "OSCARManager::Login: Already online");
+		LOG(Protocol(), liDebug, "OSCARManager::Login: Already online");
 		return B_ERROR;
 	};
 };
@@ -910,7 +901,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
 		case AMAN_NEW_CAPABILITIES: {
 
-			LOG(kProtocolName, liLow, "Got a possible new capability %i connections"
+			LOG(Protocol(), liLow, "Got a possible new capability %i connections"
 				", %i pending", fConnections.size(), fPendingConnections.size());
 
 			int16 family = 0;
@@ -921,16 +912,16 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 					fPendingConnections.erase(pIt);
 					OSCARConnection *c = pIt->second;
 					if (c != NULL) {
-						LOG(kProtocolName, liLow, "%s:%i (%s) handles a new "
+						LOG(Protocol(), liLow, "%s:%i (%s) handles a new "
 							"capability 0x%04x", c->Server(), c->Port(),
 							c->ConnName(), family);
 						fConnections.push_back(c);
 					} else {
-						LOG(kProtocolName, liDebug, "Connection to support 0x%04x "
+						LOG(Protocol(), liDebug, "Connection to support 0x%04x "
 							"has gone null on our ass", family);
 					};
 				} else {
-					LOG(kProtocolName, liMedium, "An unexpected connection came in "
+					LOG(Protocol(), liMedium, "An unexpected connection came in "
 						"for family 0x%04x", family);
 				};
 			};
@@ -964,7 +955,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 			if (msg->FindString("host", (const char **)&host) != B_OK) return;
 			if (msg->FindInt16("port", &port) != B_OK) return;
 			if (msg->FindInt16("family", &family) == B_OK) {
-				LOG(kProtocolName, liMedium, "Connecting to %s:%i for 0x%04x\n",
+				LOG(Protocol(), liMedium, "Connecting to %s:%i for 0x%04x\n",
 					host, port, family);
 				con = new OSCARReqConn(host, port, this);
 				fPendingConnections[family] = con;
@@ -985,13 +976,13 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 			OSCARConnection *con = NULL;
 			msg->FindPointer("connection", (void **)&con);
 			if (con != NULL) {
-				LOG(kProtocolName, liLow, "Connection (%s:%i) closed", con->Server(),
+				LOG(Protocol(), liLow, "Connection (%s:%i) closed", con->Server(),
 					con->Port());
 					
 				fConnections.remove(con);
 				con->Lock();
 				con->Quit();
-				LOG(kProtocolName, liLow, "After close we have %i connections",
+				LOG(Protocol(), liLow, "After close we have %i connections",
 					fConnections.size());
 				
 				bool hasBOS = false;
@@ -1033,7 +1024,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 			uint16 family = snac.Family();
 			uint16 subtype = snac.SubType();
 
-			LOG(kProtocolName, liLow, "OSCARManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
+			LOG(Protocol(), liLow, "OSCARManager: Got SNAC (0x%04x, 0x%04x)", family, subtype);
 
 			if (subtype == ERROR) {
 				reader.OffsetTo(snac.DataOffset());
@@ -1103,7 +1094,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 			};
 			
 			if (result == kUnhandled) {
-				LOG(kProtocolName, liHigh, "Got totally unhandled SNAC (0x%04x"
+				LOG(Protocol(), liHigh, "Got totally unhandled SNAC (0x%04x"
 					", 0x%04x)", family, subtype);
 			};
 		} break;
@@ -1148,7 +1139,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 							strncpy(server, value, colon - value);
 							server[(colon - value)] = '\0';
 							
-							LOG(kProtocolName, liHigh, "Need to reconnect to: %s:%i", server, port);
+							LOG(Protocol(), liHigh, "Need to reconnect to: %s:%i", server, port);
 						} break;
 	
 						case 0x0006: {
@@ -1184,7 +1175,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 //#pragma mark Interface
 
 status_t OSCARManager::MessageUser(const char *screenname, const char *message) {
-	LOG(kProtocolName, liLow, "OSCARManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
+	LOG(Protocol(), liLow, "OSCARManager::MessageUser: Sending \"%s\" (%i) to %s (%i)",
 		message, strlen(message), screenname, strlen(screenname));
 		
 	Flap *msg = new Flap(SNAC_DATA);
@@ -1218,7 +1209,7 @@ status_t OSCARManager::MessageUser(const char *screenname, const char *message) 
 };
 
 status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
-	LOG(kProtocolName, liLow, "OSCARManager::AddSSIBuddy(%s) called", name);
+	LOG(Protocol(), liLow, "OSCARManager::AddSSIBuddy(%s) called", name);
 	int32 reqGroupCount = groups.size();
 	Group *master = NULL;
 	group_t::iterator gIt;
@@ -1228,7 +1219,7 @@ status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
 	// Get the master group
 	gIt = fGroups.find(0x0000);
 	if (gIt == fGroups.end()) {
-		LOG(kProtocolName, liHigh, "Could not obtain a reference to the master "
+		LOG(Protocol(), liHigh, "Could not obtain a reference to the master "
 			"group, bailing on add SSI buddy");
 		return B_ERROR;
 	};
@@ -1302,7 +1293,7 @@ status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
 			BufferWriter contentWriter;
 			for (int32 i = 0; i < group->ItemsInGroup(); i++) {
 				int16 value = group->ItemAt(i);
-				LOG(kProtocolName, liHigh, "%'s contains: 0x%04x\n",
+				LOG(Protocol(), liHigh, "%'s contains: 0x%04x\n",
 					group->Name(), value);
 			
 				contentWriter.WriteInt16(value);
@@ -1343,8 +1334,6 @@ status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
 		for (gIt = existingGroups.begin(); gIt != existingGroups.end(); gIt++) {
 			Group *group = gIt->second;
 			
-			printf("Adding existing group: %s\n", group->Name());
-
 			modifyGroups->AddInt16(strlen(group->Name()));
 			modifyGroups->AddRawData((uchar *)group->Name(), strlen(group->Name()));
 			modifyGroups->AddInt16(group->Id());	// Group ID
@@ -1354,7 +1343,7 @@ status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
 			BufferWriter contentWriter;
 			for (int32 i = 0; i < group->ItemsInGroup(); i++) {
 				int16 value = group->ItemAt(i);
-				LOG(kProtocolName, liHigh, "%'s contains: 0x%04x\n",
+				LOG(Protocol(), liHigh, "%'s contains: 0x%04x\n",
 					group->Name(), value);
 			
 				contentWriter.WriteInt16(value);
@@ -1375,7 +1364,7 @@ status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
 		BufferWriter masterWriter;
 		for (int32 i = 0; i < master->ItemsInGroup(); i++) {
 			int16 value = master->ItemAt(i);
-			LOG(kProtocolName, liHigh, "Master's %i group: 0x%04x\n",
+			LOG(Protocol(), liHigh, "Master's %i group: 0x%04x\n",
 				i, value);
 		
 			masterWriter.WriteInt16(value);
@@ -1396,161 +1385,16 @@ status_t OSCARManager::AddSSIBuddy(const char *name, grouplist_t groups) {
 	return B_OK;	
 };
 
-#if 0
-status_t OSCARManager::AddSSIBuddy(const char *name, const char *groupname) {
-	LOG(kProtocolName, liLow, "OSCARManager::AddSSIBuddy(%s, %s) called\n",
-		name, groupname);
-
-	if (name == NULL) return B_ERROR;
-	
-	buddymap::iterator bIt = fBuddy.find(name);
-	if (bIt != fBuddy.end()) {
-		LOG(kProtocolName, liLow, "OSCARManager::AddSSIBuddy(%s, %s) - Already exists",
-			name, groupname);
-		return B_ERROR;
-	};
-	
-	LOG(kProtocolName, liLow, "OSCARManager::AddSSIBuddy(%s, %s)", name, groupname);
-	Group *group = NULL;
-	int16 itemId = GetNewItemId();
-	int16 groupSubType = SSI_UPDATE_ITEM;
-	group_t::iterator gIt;
-	
-	Flap *startTran = new Flap(SNAC_DATA);
-	startTran->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_BEGIN, 0x00,
-		0x00, 0x00000000));
-	startTran->AddInt32(0x00010000); // Import, avoids authorisation requests
-	Send(startTran);
-
-	if (groupname != NULL) {
-		for (gIt = fGroups.begin(); gIt != fGroups.end(); gIt++) {
-			if (strcmp(gIt->second->Name(), groupname) == 0) {
-				group = gIt->second;
-				break;
-			};
-		};
-	} else {
-		gIt = fGroups.begin();
-		group = gIt->second;
-	};
-
-	if (group == NULL) {
-		LOG(kProtocolName, liLow, "OSCARManager::AddSSIBuddy(%s, %s) - Creating group",
-			name, groupname);
-			
-		Flap *modifyMasterGroup = new Flap(SNAC_DATA);
-		modifyMasterGroup->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_UPDATE_ITEM,
-			0x00, 0x00, 0x00000000));
-		modifyMasterGroup->AddInt16(0x0000);	// Name length
-		modifyMasterGroup->AddInt16(0x0000);	// Group Id
-		modifyMasterGroup->AddInt16(0x0000);	// Item Id
-		modifyMasterGroup->AddInt16(GROUP_RECORD);
-		
-		group_t::iterator mIt = fGroups.find(0x0000);
-		if (mIt == fGroups.end()) {
-			LOG(kProtocolName, liHigh, "Could not find master group! UT OH!");
-			delete modifyMasterGroup;
-			return B_ERROR;
-		};
-
-		Group *master = mIt->second;
-
-		// Ideally this shouldn't be added until it's all successful
-		group = new Group(GetNewItemId(), groupname);
-		fGroups[group->Id()] = group;
-		fItemIds[group->Id()] = true;
-		groupSubType = ADD_SSI_ITEM;
-		master->AddItem(group->Id());
-		
-		LOG(kProtocolName, liHigh, "%s will be group 0x%04x\n", groupname,
-			group->Id());
-		
-		BufferWriter masterWriter;
-		for (int32 i = 0; i < master->ItemsInGroup(); i++) {
-			int16 value = master->ItemAt(i);
-			LOG(kProtocolName, liHigh, "Master's %i group: 0x%04x\n",
-				i, value);
-		
-			masterWriter.WriteInt16(value);
-		};
-		
-		LOG(kProtocolName, liDebug, "Master Contents");
-		PrintHex((uchar *)masterWriter.Buffer(), masterWriter.Length(), true);
-		
-		TLV *items = new TLV(0x00c8, (char *)masterWriter.Buffer(), masterWriter.Length());
-		modifyMasterGroup->AddInt16(items->FlattenedSize());
-		modifyMasterGroup->AddTLV(items);
-		
-		Send(modifyMasterGroup);
-	};
-	
-	// Add the new item id to the child
-	group->AddItem(itemId);
-
-	Flap *modifyGroup = new Flap(SNAC_DATA);
-	modifyGroup->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, groupSubType, 0x00,
-		0x00, 0x00000000));
-	modifyGroup->AddInt16(strlen(group->Name()));
-	modifyGroup->AddRawData((uchar *)group->Name(), strlen(group->Name()));
-	modifyGroup->AddInt16(group->Id());		// Group Id
-	modifyGroup->AddInt16(0x0000);			// Item Id
-	modifyGroup->AddInt16(GROUP_RECORD);
-	
-	BufferWriter writer;
-
-	for (int32 i = 0; i < group->ItemsInGroup(); i++) {
-		int16 value = group->ItemAt(i);
-		writer.WriteInt16(value);
-	};
-	
-	LOG(kProtocolName, liDebug, "Group Contents");
-	PrintHex(writer.Buffer(), writer.Length(), true);
-	
-	TLV *items = new TLV(0x00c8, (char *)writer.Buffer(), writer.Length());
-	modifyGroup->AddInt16(items->FlattenedSize());
-	modifyGroup->AddTLV(items);
-	
-	Send(modifyGroup);
-	
-	Buddy *buddy = new Buddy(name, group->Id(), itemId);
-	fBuddy[name] = buddy;
-	fItemIds[itemId] = true;
-	
-	LOG(kProtocolName, liHigh, "Adding \"%s\" to %s (0x%04x) with id 0x%04x",
-		name, groupname, group->Id(), buddy->ItemID());
-		
-	Flap *addBuddy = new Flap(SNAC_DATA);
-	addBuddy->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, ADD_SSI_ITEM));
-	addBuddy->AddInt16(strlen(name));
-	addBuddy->AddRawData((uchar *)name, strlen(name));
-	addBuddy->AddInt16(group->Id());		// Group Id
-	addBuddy->AddInt16(buddy->ItemID());	// Item Id
-	addBuddy->AddInt16(BUDDY_RECORD);
-	addBuddy->AddInt16(0x0000);				// No additional inforty
-	
-	Send(addBuddy);
-	
-	Flap *endTran = new Flap(SNAC_DATA);
-	endTran->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_END, 0x00,
-		0x00, 0x00000000));
-	Send(endTran);
-
-	return B_OK;
-};
-#endif
-
 status_t OSCARManager::AddBuddy(const char *buddy) {
 	status_t ret = B_ERROR;
 	if (buddy != NULL) {
-		LOG(kProtocolName, liLow, "OSCARManager::AddBuddy: Adding \"%s\" to list", buddy);
-//		fBuddy[buddy] = NULL;
+		LOG(Protocol(), liLow, "OSCARManager::AddBuddy: Adding \"%s\" to list", buddy);
 		
 		Flap *addBuddy = new Flap(SNAC_DATA);
-		addBuddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, ADD_BUDDY_TO_LIST, 0x00,
-			0x00, 0x00000000));
+		addBuddy->AddSNAC(new SNAC(BUDDY_LIST_MANAGEMENT, ADD_BUDDY_TO_LIST));
 		
 		uint8 buddyLen = strlen(buddy);
-		addBuddy->AddRawData((uchar [])&buddyLen, sizeof(buddyLen));
+		addBuddy->AddInt8(buddyLen);
 		addBuddy->AddRawData((uchar *)buddy, buddyLen);
 		
 		ret = B_OK;
@@ -1672,7 +1516,7 @@ status_t OSCARManager::LogOff(void) {
 	if (fConnectionState != OSCAR_OFFLINE) {
 		fConnectionState = OSCAR_OFFLINE;
 		
-		LOG(kProtocolName, liLow, "%i connection(s) to kill", fConnections.size());
+		LOG(Protocol(), liLow, "%i connection(s) to kill", fConnections.size());
 		
 		ClearConnections();
 		ClearWaitingSupport();
@@ -1685,7 +1529,7 @@ status_t OSCARManager::LogOff(void) {
 };
 
 status_t OSCARManager::TypingNotification(const char *buddy, uint16 typing) {
-	LOG(kProtocolName, liLow, "Sending typing notification (0x%04x) to \"%s\"",
+	LOG(Protocol(), liLow, "Sending typing notification (0x%04x) to \"%s\"",
 		typing, buddy);
 	
 	Flap *notify = new Flap(SNAC_DATA);
@@ -1785,64 +1629,6 @@ status_t OSCARManager::SetIcon(const char *icon, int16 size) {
 	Send(add);
 	
 	return B_OK;
-};
-
-char *OSCARManager::ParseMessage(TLV *parent) {
-	int16 offset = 0;
-	char *buffer = (char *)parent->Value();
-	int16 bytes = parent->Length();
-	char *message = NULL;
-	int16 length = 0;
-	 
-	while (offset < bytes) {
-		TLV tlv((uchar *)buffer + offset, bytes - offset);
-
-		switch (tlv.Type()) {
-			case 0x0101: {	// Message length, encoding and contents
-				int16 subOffset = 0;
-				char *value = (char *)tlv.Value();
-				length = tlv.Length() - (sizeof(int16) * 2);
-				// The charset and subset are part of the TLV				
-				int16 charSet = (value[subOffset] << 8) + value[++subOffset];
-				int16 charSubSet = (value[++subOffset] << 8) + value[++subOffset];
-				subOffset += 1;
-
-				message = (char *)calloc(length + 1, sizeof(char));
-				memcpy(message, (char *)(value + subOffset), length);
-				message[length] = '\0';
-
-				// UTF-16 message
-				if (charSet == 0x0002) {
-					LOG(kProtocolName, liLow, "Got a UTF-16 encoded message");
-					PrintHex((uchar *)message, length);
-					char *msg16 = (char *)calloc(length, sizeof(char));
-					int32 state = 0;
-					int32 utf8Size = length * 2;
-					int32 ut16Size = length;
-					memcpy(msg16, message, length);
-					message = (char *)realloc(message, utf8Size * sizeof(char));
-					
-					convert_to_utf8(B_UNICODE_CONVERSION, msg16, &ut16Size, message,
-						&utf8Size, &state);
-					message[utf8Size] = '\0';
-					length = utf8Size;
-
-					free(msg16);
-					
-					LOG(kProtocolName, liLow, "Converted message: \"%s\"",
-						message);
-				};
-				
-				return message;
-			} break;
-		
-			default: {
-				offset += tlv.FlattenedSize();
-			};
-		};
-	};
-	
-	return message;
 };
 
 uint16 OSCARManager::GetNewItemId(void) {

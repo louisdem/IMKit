@@ -12,6 +12,7 @@ class OSCARReqConn : public OSCARConnection {
 							OSCARReqConn(const char *server, uint16 port,
 								OSCARManager *man);
 							~OSCARReqConn(void);
+							
 		virtual const char	*ConnName(void) const { return "OSCAR ReqConn"; };
 
 				

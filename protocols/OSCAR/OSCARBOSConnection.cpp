@@ -35,7 +35,6 @@ const char *kClientCapabilities[] = {
 //#pragma mark Functions
 
 void remove_html(char *msg);
-void PrintHex(const unsigned char* buf, size_t size, bool override = false);
 
 //#pragma mark Constructor
 
