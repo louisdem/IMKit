@@ -144,6 +144,8 @@ class ChatWindow : public BWindow {
 		
 		bool				fUserIsTyping;
 		IconView			*fTypingView;
+		IconView			*fMobileView;
+		
 };
 
 #endif

@@ -27,7 +27,7 @@ const float kPadding = 2.0;
 const float kDockPadding = 12.0;
 const int32 kTypingSendRate = 3 * 1000 * 1000;
 const int32 kTypingStoppedRate = 5 * 1000 * 1000;
-
+const char *kMobileDevice = "User is using a mobile device";
 
 /*
 #include <libbsvg/SVGView.h>
@@ -263,9 +263,16 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	fTypingView = new IconView(keyRef, fStatusBar->Frame().Height() - kPadding, true);
 	fTypingView->EnableDrawing(false);
 
+	entry_ref mobRef;
+	get_ref_for_path("/boot/home/config/settings/im_kit/icons/MobileUser", &mobRef);
+	fMobileView = new IconView(mobRef, fStatusBar->Frame().Height() - kPadding, true);
+	fMobileView->EnableDrawing(false);
+
 	fStatusBar->AddItem(fTypingView);
+	fStatusBar->AddItem(fMobileView);
 	fStatusBar->PositionViews();
 	fTypingView->MoveBy(0, kPadding);
+	fMobileView->MoveBy(0, kPadding);
 
 	BuildProtocolMenu();
 	BMenuItem *first = pop->ItemAt(0);
@@ -377,6 +384,23 @@ ChatWindow::ChatWindow(entry_ref & ref)
 	// this message runner needed to fix a BMenuField bug.
 	BMessage protoHack(PROTOCOL_SELECTED2);
 	fProtocolHack = new BMessageRunner( BMessenger(this), &protoHack, 1000, 1 );
+	
+	BMessage contactInfo;
+	BMessage getContactInfo(IM::MESSAGE);
+	getContactInfo.AddInt32("im_what", IM::GET_CONTACT_INFO);
+	getContactInfo.AddRef("contact", &fEntry);
+	fMan->SendMessage(&getContactInfo, &contactInfo);
+	
+	bool mobile;
+	if (contactInfo.FindBool("mobileuser", &mobile) == B_OK) {
+		fMobileView->EnableDrawing(mobile);
+		gBubbles.SetHelp(fMobileView, (char *)_T(kMobileDevice));
+	} else {
+		fMobileView->EnableDrawing(false);
+		gBubbles.SetHelp(fMobileView, NULL);
+	};
+	
+	contactInfo.PrintToStream();
 }
 
 ChatWindow::~ChatWindow()
@@ -542,6 +566,12 @@ ChatWindow::MessageReceived( BMessage * msg )
 			BWindow *window = chatWindows[next];
 			if (window) window->Activate(true);
 		};
+		
+		case IM::CONTACT_INFO: {
+			msg->PrintToStream();
+			bool mobile = false;
+//			if (msg->Find
+		} break;
 	
 		case IM::SETTINGS_UPDATED: {
 			if (msg->FindString("people_handler", &fPeopleHandler) != B_OK) {
@@ -687,6 +717,18 @@ ChatWindow::MessageReceived( BMessage * msg )
 					stopTypingTimer();
 				} break;
 				
+				case IM::CONTACT_INFO: {
+					bool mobile;
+					if (msg->FindBool("mobileuser", &mobile) == B_OK) {
+						fMobileView->EnableDrawing(mobile);
+					};
+					if (mobile) {
+						gBubbles.SetHelp(fMobileView, (char *)_T(kMobileDevice));
+					} else {
+						gBubbles.SetHelp(fMobileView, NULL);
+					};
+					fMobileView->Invalidate();
+				} break;
 			}
 			
 			fText->ScrollToSelection();
@@ -1039,6 +1081,7 @@ void ChatWindow::startTypingTimer(void) {
 
 	fTypingView->EnableDrawing(true);
 	fTypingView->Invalidate();
+	gBubbles.SetHelp(fTypingView, (char *)_T("User is typing"));
 };
 
 void
@@ -1048,7 +1091,8 @@ ChatWindow::stopTypingTimer(void)
 	fTypingTimer = NULL;
 
 	fTypingView->EnableDrawing(false);
-	fTypingView->Invalidate();	
+	fTypingView->Invalidate();
+	gBubbles.SetHelp(fTypingView, NULL);
 }
 
 void ChatWindow::startSelfTypingTimer(void) {

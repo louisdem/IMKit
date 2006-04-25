@@ -147,12 +147,17 @@ status_t ICQProtocol::Process(BMessage * msg) {
 					const char * id = NormalizeNick(msg->FindString("id")).String();
 					
 					BMessage *infoMsg = new BMessage(IM::MESSAGE);
+					Buddy *buddy = fManager->GetBuddy(id);
+					
 					infoMsg->AddInt32("im_what", IM::CONTACT_INFO);
 					infoMsg->AddString("protocol", fManager->Protocol());
 					infoMsg->AddString("id", id);
 					infoMsg->AddString("nick", id);
 					infoMsg->AddString("first name", id);
-					//msg->AddString("last name", id);
+					if (buddy) infoMsg->AddBool("mobileuser", buddy->IsMobileUser());
+
+					msg->SendReply(infoMsg);
+
 
 					fMsgr.SendMessage(infoMsg);
 				}	break;

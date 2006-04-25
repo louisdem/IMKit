@@ -165,7 +165,8 @@ status_t AIMProtocol::Process(BMessage * msg) {
 					infoMsg->AddString("first name", id);
 					if (buddy) infoMsg->AddBool("mobileuser", buddy->IsMobileUser());
 
-					fMsgr.SendMessage(infoMsg);
+					msg->SendReply(infoMsg);
+//					fMsgr.SendMessage(infoMsg);
 				}	break;
 		
 				case IM::SEND_MESSAGE:
