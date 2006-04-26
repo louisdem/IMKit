@@ -15,6 +15,8 @@
 #include <UTF8.h>
 #include <Entry.h>
 
+#include "Buddy.h"
+
 //#pragma mark Extern C
 
 extern "C" {
@@ -376,6 +378,7 @@ status_t ICQProtocol::MessageFromUser(const char *nick, const char *msg,
 	
 	BString text = msg;
 	if (autoReply) text.Prepend("(Auto-response): ");
+	text.ReplaceAll("\r", "");
 		
 	im_msg.AddString("message", text);
 	im_msg.AddBool("autoresponse", autoReply);

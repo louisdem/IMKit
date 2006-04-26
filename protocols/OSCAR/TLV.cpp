@@ -172,6 +172,6 @@ status_t TLV::AddTLV(TLV *data) {
 	return B_OK;
 };
 
-BufferReader *TLV::Reader(void) {
-	return new BufferReader((const uchar *)fValue, fLength);
+BufferReader *TLV::Reader(swap_action swap = B_SWAP_BENDIAN_TO_HOST) {
+	return new BufferReader((const uchar *)fValue, fLength, swap);
 };

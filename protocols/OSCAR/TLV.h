@@ -2,6 +2,7 @@
 #define TLV_H
 
 #include <be/support/SupportDefs.h>
+#include <be/support/ByteOrder.h>
 
 #include <list>
 
@@ -28,7 +29,7 @@ class TLV {
 		
 		status_t		AddTLV(TLV *data);
 		
-		BufferReader	*Reader(void);
+		BufferReader	*Reader(swap_action swap = B_SWAP_BENDIAN_TO_HOST);
 	
 	private:
 		uint16			fType;

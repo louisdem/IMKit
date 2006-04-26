@@ -124,7 +124,7 @@ class OSCARManager : public BLooper {
 		virtual status_t	HandleUserSearch(BMessage *msg);
 		virtual status_t	HandleBuddyIcon(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleSSI(SNAC *snac, BufferReader *reader);
-		virtual status_t	HandleICQ(BMessage *msg);
+		virtual status_t	HandleICQ(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleAuthorisation(BMessage *msg);
 		
 		BString				fProtocol;

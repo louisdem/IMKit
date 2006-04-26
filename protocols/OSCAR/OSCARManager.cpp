@@ -233,7 +233,10 @@ status_t OSCARManager::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 		} break;
 
 		case EXTENDED_STATUS: {
-			while (reader->Offset() < reader->Length()) {
+			LOG(Protocol(), liHigh, "Got extended status request");
+			reader->Debug();
+		
+			while (reader->HasMoreData()) {
 				int16 notice = reader->ReadInt16();
 
 				switch (notice) {
@@ -243,26 +246,31 @@ status_t OSCARManager::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 						reader->OffsetBy(length);
 					} break;
 					case 0x0001: {
+						LOG(Protocol(), liHigh, "Got icon type 0x0001 - sending");
+					
 						uint8 flags = reader->ReadInt8();
 						int8 hashLen = reader->ReadInt8();
 						uchar *currentHash = reader->ReadData(hashLen);
 						
-						if ((fIcon) && (fIconSize > 0)) {
-							uchar hash[hashLen];
-							MD5((uchar *)fIcon, fIconSize, (uchar *)hash);
+						if (flags == 0x41) {
+						
+//						if ((fIcon) && (fIconSize > 0)) {
+//							uchar hash[hashLen];
+//							MD5((uchar *)fIcon, fIconSize, (uchar *)hash);
 							
-							if (memcmp(hash, currentHash, hashLen) != 0) {
-								LOG(Protocol(), liLow, "Server stored buddy "
-									"icon is different to ours - uploading");
+//							if (memcmp(hash, currentHash, hashLen) != 0) {
+//								LOG(Protocol(), liHigh, "Server stored buddy "
+//									"icon is different to ours - uploading");
 								Flap *upload = new Flap(SNAC_DATA);
 								upload->AddSNAC(new SNAC(SERVER_STORED_BUDDY_ICONS,
 									 ICON_UPLOAD_REQ));
-								upload->AddInt16(fSSIItems++);	// Next SSI item
+//								upload->AddInt16(fSSIItems++);	// Next SSI item
+								upload->AddInt16(0x0001);
 								upload->AddInt16(fIconSize);
 								upload->AddRawData((uchar *)fIcon, fIconSize);
 								
 								Send(upload);
-							};
+//							};
 						};
 						
 						free(currentHash);
@@ -387,6 +395,7 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 				};
 			} else {
 				LOG(Protocol(), liHigh, "Message on non-plain text channel!");
+				reader->Debug();
 			};
 			
 			if (message) {
@@ -665,7 +674,7 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 			
 			while (reader->Offset() < reader->Length()) {
 				uint16 code = reader->ReadInt16();
-				LOG(Protocol(), liLow, "Upload for item %i is %s (0x%04x)",
+				LOG(Protocol(), liMedium, "Upload for item %i is %s (0x%04x)",
 					count, kSSIResult[code], code);
 				count++;
 			};
@@ -757,6 +766,8 @@ status_t OSCARManager::HandleBuddyIcon(SNAC *snac, BufferReader *reader) {
 		} break;
 		
 		case ICON_UPLOAD_ACK: {
+			LOG(Protocol(), liHigh, "Got ICON_UPLOAD_ACK");
+			reader->Debug();
 		} break;
 		
 		default: {
@@ -767,8 +778,85 @@ status_t OSCARManager::HandleBuddyIcon(SNAC *snac, BufferReader *reader) {
 	return ret;
 };
 
-status_t OSCARManager::HandleICQ(BMessage *msg) {
-	return kUnhandled;
+status_t OSCARManager::HandleICQ(SNAC *snac, BufferReader *reader) {
+	status_t ret = kUnhandled;
+	
+	uint16 subtype = snac->SubType();
+	uint32 request = snac->RequestID();
+	
+	reader->OffsetTo(snac->DataOffset());
+	
+	switch (subtype) {
+		case META_INFORMATION_RESPONSE: {
+			while (reader->HasMoreData()) {
+				TLV tlv(reader);
+				BufferReader *tlvReader = tlv.Reader(B_SWAP_LENDIAN_TO_HOST);
+			
+				switch (tlv.Type()) {
+					case 0x0001: {	// Encapsulated meta data
+						uint16 chunkSize = tlvReader->ReadInt16();
+						uint32 targetUIN = tlvReader->ReadInt32();
+						uint16 dataType = tlvReader->ReadInt16();
+						uint16 sequence = tlvReader->ReadInt16();
+
+						switch (dataType) {
+							case 0x0041: {				// Offline message
+								ret = B_OK;				// Handled!
+
+								uint32 uin = tlvReader->ReadInt32();
+															
+ 								uint16 year = tlvReader->ReadInt16();
+								uint8 month = tlvReader->ReadInt8();
+								uint8 day = tlvReader->ReadInt8();
+								uint8 hour = tlvReader->ReadInt8();
+								uint8 minute = tlvReader->ReadInt8();
+								uint8 type = tlvReader->ReadInt8();
+								uint8 flags = tlvReader->ReadInt8();
+								
+								uint16 length = tlvReader->ReadInt16();
+								char *message = tlvReader->ReadString(length);
+								
+								char id[256];
+								snprintf(id, sizeof(id), "%i", uin);
+								
+								fHandler->MessageFromUser(id, message,
+									(flags & 0x03) == 0x03);
+							} break;
+
+							case 0x0042: {				// End of Offline messages
+								ret = B_OK;
+								
+								// Tell the server to delete the messages
+								Flap *delMsgs = new Flap(SNAC_DATA);
+								delMsgs->AddSNAC(new SNAC(ICQ_SPECIFIC_EXTENSIONS,
+									META_INFORMATION_REQUEST));
+								
+								// ICQ TLVs are Lendian
+								BufferWriter writer(B_SWAP_HOST_TO_LENDIAN);
+								writer.WriteInt16(0x0008);	// Always 8 bytes long
+								
+								int32 uin = strtol(fOurNick, NULL, 10);
+								writer.WriteInt32(uin);
+								writer.WriteInt16(0x003e);	// Delete meta command
+								writer.WriteInt16(0x0000);
+								
+								TLV *tlv = new TLV(0x0001);	// Encapsulated meta
+								tlv->Value((const char *)writer.Buffer(),
+									writer.Length());
+								delMsgs->AddTLV(tlv);
+								
+								Send(delMsgs);
+							} break;
+						};
+					};
+				};
+				
+				delete tlvReader;	
+			};
+		} break;
+	};
+	
+	return ret;
 };
 
 status_t OSCARManager::HandleAuthorisation(BMessage *msg) {
@@ -941,6 +1029,28 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 			uint8 status = msg->FindInt8("status");
 			fHandler->StatusChanged(fOurNick, (online_types)status);
 			fConnectionState = status;
+			
+			if ((fProtocol== "icq") && (status == OSCAR_ONLINE) || (status == OSCAR_AWAY)) {
+				// Request offline messages
+				Flap *offline = new Flap(SNAC_DATA);
+				offline->AddSNAC(new SNAC(ICQ_SPECIFIC_EXTENSIONS, META_INFORMATION_REQUEST));
+			
+
+				// The content of the TLV are Lendian, for some reason
+				BufferWriter writer(B_SWAP_HOST_TO_LENDIAN);
+				writer.WriteInt16(0x0008);	// Length of internal data, always 8
+				int32 uin = strtol(fOurNick, NULL, 10);
+				writer.WriteInt32(uin);
+				writer.WriteInt16(0x003c);	// Offline request
+				writer.WriteInt16(0x0000);	// Request
+
+				TLV *tlv = new TLV(0x0001);	// Encapsulated meta data
+				tlv->Value((const char *)writer.Buffer(), writer.Length());
+				
+				offline->AddTLV(tlv);
+				
+				Send(offline);
+			};
 		} break;
 	
 		case AMAN_NEW_CONNECTION: {
@@ -1086,7 +1196,7 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 					result = HandleSSI(&snac, &reader);
 				} break;
 				case ICQ_SPECIFIC_EXTENSIONS: {
-					result = HandleICQ(msg);
+					result = HandleICQ(&snac, &reader);
 				} break;
 				case AUTHORISATION_REGISTRATION: {
 					result = HandleAuthorisation(msg);
@@ -1602,33 +1712,93 @@ status_t OSCARManager::SetProfile(const char *profile) {
 };
 
 status_t OSCARManager::SetIcon(const char *icon, int16 size) {
-	if ((icon == NULL) || (size < 0)) return B_ERROR;
+	LOG(Protocol(), liHigh, "OSCARManager::SetIcon(%p, %i) called", icon, size);
 
 	if (fIcon) free(fIcon);
 	fIcon = (char *)calloc(size, sizeof(char));
-	fIconSize = size;
 	memcpy(fIcon, icon, size);
+	fIconSize = size;
+	
+	LOG(Protocol(), liHigh, "fIcon: %p (%i)", fIcon, size);
 
+//	if ((icon == NULL) || (size < 0)) return B_ERROR;
+	
 	if (fConnectionState == OSCAR_OFFLINE) return B_ERROR;
+	
+	LOG(Protocol(), liHigh, "OSCARManager::SetIcon() - Passed tests, sending");
+	
+	Flap *start = new Flap(SNAC_DATA);
+	start->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_BEGIN));
+	Send(start);
 	
 	Flap *add = new Flap(SNAC_DATA);
 	add->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, ADD_SSI_ITEM));
-	add->AddInt16(0x0001);		// Size of name
-	add->AddInt8('3');			// Name
-	add->AddInt16(0x0000);		// Group ID
-	add->AddInt16(0x1813);		// Item ID
-	add->AddInt16(BUDDY_ICON_INFO);
-	add->AddInt16(0x0016);		// Length of additional data
+	add->AddInt16(strlen("1"));			// Length of name
+//	add->AddRawData((uchar *)"1", strlen("1"));
+	add->AddInt8('1');
+	add->AddInt16(0x0000);				// Group ID
+add->AddInt16(0x0001);
 	
-	char buffer[18];
-	buffer[0] = 0x01; // Icon flags
-	buffer[2] = 0x10; // MD5 Length
-	MD5(icon, size, buffer + 2);
-	add->AddTLV(new TLV(0x00d5, buffer, 18));
-	add->AddTLV(new TLV(0x0131, "", 0));
+//	fIconId = GetNewItemId();
+//	LOG(Protocol(), liHigh, "%i IDs, new ID: 0x%04x", fItemIds.size(), id);
+//	fItemIds[id] = true;
+//	
+//	add->AddInt16(fIconId);	// Icon ID
+	add->AddInt16(BUDDY_ICON_INFO);
+	
+	TLV *iconData = new TLV(0x00d5);
+	BufferWriter writer;
+	writer.WriteInt8(0x01);			// Icon Flag (Upload)
+	writer.WriteInt8(16);			// Length of the MD5 hash
+	
+	char md5Hash[16];
+	MD5(icon, size, md5Hash);
+	
+	writer.WriteData((uchar *)md5Hash, sizeof(md5Hash));
+	
+	iconData->Value((const char *)writer.Buffer(), writer.Length());
+
+//	TLV *name = new TLV(0x0131, "", strlen(""));
+	
+	add->AddInt16(iconData->FlattenedSize()); // + name->FlattenedSize());
+	add->AddTLV(iconData);
+//	add->AddTLV(name);
+
 	Send(add);
 	
+	Flap *end = new Flap(SNAC_DATA);
+	end->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, SSI_EDIT_END));
+	Send(end);
+	
 	return B_OK;
+
+//	if ((icon == NULL) || (size < 0)) return B_ERROR;
+//
+//	if (fIcon) free(fIcon);
+//	fIcon = (char *)calloc(size, sizeof(char));
+//	fIconSize = size;
+//	memcpy(fIcon, icon, size);
+//
+//	if (fConnectionState == OSCAR_OFFLINE) return B_ERROR;
+//	
+//	Flap *add = new Flap(SNAC_DATA);
+//	add->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, ADD_SSI_ITEM));
+//	add->AddInt16(0x0001);		// Size of name
+//	add->AddInt8('3');			// Name
+//	add->AddInt16(0x0000);		// Group ID
+//	add->AddInt16(0x1813);		// Item ID
+//	add->AddInt16(BUDDY_ICON_INFO);
+//	add->AddInt16(0x0016);		// Length of additional data
+//	
+//	char buffer[18];
+//	buffer[0] = 0x01; // Icon flags
+//	buffer[2] = 0x10; // MD5 Length
+//	MD5(icon, size, buffer + 2);
+//	add->AddTLV(new TLV(0x00d5, buffer, 18));
+//	add->AddTLV(new TLV(0x0131, "", 0));
+//	Send(add);
+//	
+//	return B_OK;
 };
 
 uint16 OSCARManager::GetNewItemId(void) {
