@@ -342,60 +342,77 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 				delete tlvReader;
 			};
 					
-			// We currently only handle plain text messages
-			if (channel == PLAIN_TEXT) {		
-				// There should only be one bit TLV here, but who knows
-				while (reader->Offset() < reader->Length()) {
-					TLV tlv(reader);
-					BufferReader *tlvReader = tlv.Reader();
-
-					if (tlv.Type() == 0x0002) {
-						while (tlvReader->Offset() < tlvReader->Length()) {
-							int8 id = tlvReader->ReadInt8();
-							int8 version = tlvReader->ReadInt8();
-							int16 length = tlvReader->ReadInt16();
-												
-							tlvReader->Debug();
-												
-							// If it's not the text fragment, just skip it
-							if (id == 0x01) {
-								uint16 charSet = tlvReader->ReadInt16();
-								uint16 charSubset = tlvReader->ReadInt16();
-								uint16 messageLen = length - (sizeof(int16) * 2);
-								message = tlvReader->ReadString(messageLen);
-								
-								if (charSet == 0x0002){
-									LOG(Protocol(), liLow, "Got a UTF-16 encoded message");
-									char *msg16 = (char *)calloc(messageLen,
-										sizeof(char));
-									int32 state = 0;
-									int32 utf8Size = length * 2;
-									int32 ut16Size = length;
-									memcpy(msg16, message, length);
-									message = (char *)realloc(message, utf8Size *
-										sizeof(char));
+			switch (channel) {
+				case PLAIN_TEXT: {
+					// There should only be one TLV here, but who knows
+					while (reader->HasMoreData()) {
+						TLV tlv(reader);
+						BufferReader *tlvReader = tlv.Reader();
+	
+						if (tlv.Type() == 0x0002) {
+							while (tlvReader->Offset() < tlvReader->Length()) {
+								int8 id = tlvReader->ReadInt8();
+								int8 version = tlvReader->ReadInt8();
+								int16 length = tlvReader->ReadInt16();
+													
+								// If it's not the text fragment, just skip it
+								if (id == 0x01) {
+									uint16 charSet = tlvReader->ReadInt16();
+									uint16 charSubset = tlvReader->ReadInt16();
+									uint16 messageLen = length - (sizeof(int16) * 2);
+									message = tlvReader->ReadString(messageLen);
 									
-									convert_to_utf8(B_UNICODE_CONVERSION, msg16,
-										&ut16Size, message, &utf8Size, &state);
-									message[utf8Size] = '\0';
-									length = utf8Size;
-				
-									free(msg16);
+									if (charSet == 0x0002){
+										LOG(Protocol(), liLow, "Got a UTF-16 encoded message");
+										char *msg16 = (char *)calloc(messageLen,
+											sizeof(char));
+										int32 state = 0;
+										int32 utf8Size = length * 2;
+										int32 ut16Size = length;
+										memcpy(msg16, message, length);
+										message = (char *)realloc(message, utf8Size *
+											sizeof(char));
+										
+										convert_to_utf8(B_UNICODE_CONVERSION, msg16,
+											&ut16Size, message, &utf8Size, &state);
+										message[utf8Size] = '\0';
+										length = utf8Size;
 					
-									LOG(Protocol(), liLow, "Converted message: \"%s\"",
-										message);
+										free(msg16);
+						
+										LOG(Protocol(), liLow, "Converted message: \"%s\"",
+											message);
+									};
+								} else {
+									tlvReader->OffsetBy(length);
 								};
-							} else {
-								tlvReader->OffsetBy(length);
 							};
 						};
+	
+						delete tlvReader;
 					};
-
-					delete tlvReader;
+				} break;
+				
+				case TYPED_OLD_STYLE: {
+					while (reader->HasMoreData()) {
+						TLV tlv(reader);
+						BufferReader *tlvReader = tlv.Reader(B_SWAP_LENDIAN_TO_HOST);
+						
+						if (tlv.Type() == 0x0005) {	// Message data
+							uint32 uin = tlvReader->ReadInt32();
+							uint8 type = tlvReader->ReadInt8();
+							uint8 flags = tlvReader->ReadInt8();
+							uint16 length = tlvReader->ReadInt16();
+							message = tlvReader->ReadString(length);
+						};
+					};
+				} break;
+				
+				default: {
+					LOG(Protocol(), liHigh, "Message on non-supported channel! "
+						"(0x%04x)!", channel);
+					reader->Debug();
 				};
-			} else {
-				LOG(Protocol(), liHigh, "Message on non-plain text channel!");
-				reader->Debug();
 			};
 			
 			if (message) {
