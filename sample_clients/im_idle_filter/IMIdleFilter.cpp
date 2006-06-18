@@ -7,6 +7,8 @@
 #include <libim/Constants.h>
 #include <libim/Helpers.h>
 
+#include <Roster.h>
+
 //#pragma mark Constants
 
 const int32 kMessageIdle = 'imf0';
@@ -112,7 +114,14 @@ status_t IMIdleFilter::InitCheck(void) {
 	Run();
 
 	fMan = new IM::Manager(BMessenger(this));
-	fMan->StartListening();
+	
+	if (fMan->InitCheck() != B_OK) {
+#ifdef DEBUG
+		syslog(LOG_INFO, "IMIdleFilter::InitCheck()\tIM::Manager could not init - "
+			" \"%s\" (%i)\n", strerror(fMan->InitCheck()), fMan->InitCheck());
+#endif
+		be_roster->StartWatching(BMessenger(this));
+	};
 	
 	SaveSettingsTemplate();
 
@@ -123,13 +132,45 @@ status_t IMIdleFilter::InitCheck(void) {
 
 void IMIdleFilter::MessageReceived(BMessage *msg) {
 	switch (msg->what) {
+		case B_SOME_APP_LAUNCHED: {
+			const char *signature = NULL;
+			if (msg->FindString("be:signature", &signature) != B_OK) return;
+
+#ifdef DEBUG
+			syslog(LOG_INFO, "IMIdleFilter\t%s started\n", signature);
+#endif
+			
+			if (strcmp(signature, IM_SERVER_SIG) == 0) {
+#ifdef DEBUG
+				syslog(LOG_INFO, "IMIdleFilter\tim_server started! Constructing "
+					"an IM::Manager...");
+#endif
+			
+				snooze(1000*1000);
+
+				fMan = new IM::Manager(BMessenger(this));
+				if (fMan->InitCheck() == B_OK) {
+					fMan->StartListening();
+				
+					// We've got a manager, we can stop watching
+					be_roster->StopWatching(BMessenger(this));
+#ifdef DEBUG
+					syslog(LOG_INFO, "IMIdleFilter\tIM::Manager constructed, "
+						"app watching stopped\n");
+				} else {
+					syslog(LOG_INFO, "IMIdleFilter\tIM::Manager failed InitCheck");
+#endif
+				};			
+			};
+				
+		} break;
 		case IM::SETTINGS_UPDATED: {
 			LoadSettings();
 
 			if (fRunner) fRunner->SetInterval(fDelay * kMinuteMulti);
 
 #ifdef DEBUG
-			syslog(LOG_INFO, "Settings updated, delay is now %i minutes\n", fDelay)
+			syslog(LOG_INFO, "Settings updated, delay is now %i minutes\n", fDelay);
 #endif
 		} break;
 	
