@@ -145,7 +145,28 @@ void MD5(const char *data, int length, char *result) {
 
 OSCARManager::OSCARManager(OSCARHandler *handler, const char *protocol) {	
 	fConnectionState = OSCAR_OFFLINE;
-	
+
+	// Setup the map between SNAC families and the handling function
+	fSNACHandler[SERVICE_CONTROL] = &OSCARManager::HandleServiceControl;
+	fSNACHandler[LOCATION] = &OSCARManager::HandleLocation;
+	fSNACHandler[BUDDY_LIST_MANAGEMENT] = &OSCARManager::HandleBuddyList;
+	fSNACHandler[ICBM] = &OSCARManager::HandleICBM;
+	fSNACHandler[ADVERTISEMENTS] = &OSCARManager::HandleAdvertisement;
+	fSNACHandler[INVITATION] = &OSCARManager::HandleInvitation;
+	fSNACHandler[ADMINISTRATIVE] = &OSCARManager::HandleAdministrative;
+	fSNACHandler[POPUP_NOTICES] = &OSCARManager::HandlePopupNotice;
+	fSNACHandler[PRIVACY_MANAGEMENT] = &OSCARManager::HandlePrivacy;
+	fSNACHandler[USER_LOOKUP] = &OSCARManager::HandleUserLookup;
+	fSNACHandler[USAGE_STATS] = &OSCARManager::HandleUsageStats;
+	fSNACHandler[TRANSLATION] = &OSCARManager::HandleTranslation;
+	fSNACHandler[CHAT_NAVIGATION] = &OSCARManager::HandleChatNavigation;
+	fSNACHandler[CHAT] = &OSCARManager::HandleChat;
+	fSNACHandler[DIRECTORY_USER_SEARCH] = &OSCARManager::HandleUserSearch;
+	fSNACHandler[SERVER_STORED_BUDDY_ICONS] = &OSCARManager::HandleBuddyIcon;
+	fSNACHandler[SERVER_SIDE_INFORMATION] = &OSCARManager::HandleSSI;
+	fSNACHandler[ICQ_SPECIFIC_EXTENSIONS] = &OSCARManager::HandleICQ;
+	fSNACHandler[AUTHORISATION_REGISTRATION] = &OSCARManager::HandleAuthorisation;
+
 	fProtocol = protocol;
 	fHandler = handler;
 	fOurNick = NULL;
@@ -403,12 +424,33 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 							uint8 type = tlvReader->ReadInt8();
 							uint8 flags = tlvReader->ReadInt8();
 							uint16 length = tlvReader->ReadInt16();
-							message = tlvReader->ReadString(length);
+							
+							autoReply = (flags & MESSAGE_FLAG_AUTO_RESPONSE);
+							
+							switch (type) {
+								case MESSAGE_TYPE_PLAIN: {
+									message = tlvReader->ReadString(length);
+								} break;
+
+								default: {
+									LOG(Protocol(), liHigh, "Got an unknown message "
+										"type: 0x%02x", type);
+									reader->Debug();
+								};
+							};
 						};
 					};
 				} break;
 				
 				default: {
+					BString error;
+					error << nick;
+					error << " sent you a message in an unsupported format (";
+					error << channel << ") Please tell them to stop being an "
+						"asshat. Additionally you may wish to seek out help on"
+						" irc.freenode.net #beosimkit";
+					fHandler->Error(error.String());
+					
 					LOG(Protocol(), liHigh, "Message on non-supported channel! "
 						"(0x%04x)!", channel);
 					reader->Debug();
@@ -500,6 +542,8 @@ status_t OSCARManager::HandleBuddyList(SNAC *snac, BufferReader *reader) {
 					switch (tlv.Type()) {
 						case 0x0001: {	// User class / status
 							userclass = tlvReader->ReadInt16();
+							
+							printf("User Mc Classian: 0x%04x\n", userclass);
 						} break;
 						
 						case 0x001d: {	// Icon / available message
@@ -531,6 +575,9 @@ status_t OSCARManager::HandleBuddyList(SNAC *snac, BufferReader *reader) {
 							while (tlvReader->HasMoreData()) {
 								int32 caplen = 16;
 								char *cap = (char *)tlvReader->ReadData(caplen);
+								
+								printf("We don't need no hats!\n");
+								PrintHex((uchar *)cap, caplen, true);
 								
 								if (buddy->HasCapability(cap, caplen) == false) {
 									buddy->AddCapability(cap, caplen);
@@ -686,6 +733,7 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 
 			fHandler->SSIBuddies(contacts);
 		} break;
+		
 		case SSI_MODIFY_ACK: {
 			int16 count = 0;
 			
@@ -696,10 +744,18 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 				count++;
 			};
 		} break;
-				
+
+		case AUTHORISATION_REQUEST: {
+			uint8 idLength = reader->ReadInt8();
+			char *id = reader->ReadString(idLength);
+			uint16 reasonLength = reader->ReadInt16();
+			char *reason = reader->ReadString(reasonLength);
+		} break;
+
 		default: {
-			LOG(Protocol(), liLow, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
+			LOG(Protocol(), liHigh, "Got an unhandled SSI SNAC (0x0013 / 0x%04x)",
 				subtype);
+			reader->Debug();
 			ret = kUnhandled;
 		} break;
 	};
@@ -707,51 +763,51 @@ status_t OSCARManager::HandleSSI(SNAC *snac, BufferReader *reader) {
 	return ret;
 };
 
-status_t OSCARManager::HandleLocation(BMessage *msg) {
+status_t OSCARManager::HandleLocation(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleAdvertisement(BMessage *msg) {
+status_t OSCARManager::HandleAdvertisement(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleInvitation(BMessage *msg) {
+status_t OSCARManager::HandleInvitation(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleAdministrative(BMessage *msg) {
+status_t OSCARManager::HandleAdministrative(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandlePopupNotice(BMessage *msg) {
+status_t OSCARManager::HandlePopupNotice(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandlePrivacy(BMessage *msg) {
+status_t OSCARManager::HandlePrivacy(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleUserLookup(BMessage *msg) {
+status_t OSCARManager::HandleUserLookup(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleUsageStats(BMessage *msg) {
+status_t OSCARManager::HandleUsageStats(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleTranslation(BMessage *msg) {
+status_t OSCARManager::HandleTranslation(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleChatNavigation(BMessage *msg) {
+status_t OSCARManager::HandleChatNavigation(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleChat(BMessage *msg) {
+status_t OSCARManager::HandleChat(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
-status_t OSCARManager::HandleUserSearch(BMessage *msg) {
+status_t OSCARManager::HandleUserSearch(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
@@ -876,7 +932,7 @@ status_t OSCARManager::HandleICQ(SNAC *snac, BufferReader *reader) {
 	return ret;
 };
 
-status_t OSCARManager::HandleAuthorisation(BMessage *msg) {
+status_t OSCARManager::HandleAuthorisation(SNAC *snac, BufferReader *reader) {
 	return kUnhandled;
 };
 
@@ -1160,69 +1216,17 @@ void OSCARManager::MessageReceived(BMessage *msg) {
 				return;
 			};
 			
-			switch (family) {
-				case SERVICE_CONTROL: {
-					result = HandleServiceControl(&snac, &reader);
-				} break;
-				case LOCATION: {
-					result = HandleLocation(msg);
-				} break;
-				case BUDDY_LIST_MANAGEMENT: {
-					result = HandleBuddyList(&snac, &reader);
-				} break;
-				case ICBM: {
-					result = HandleICBM(&snac, &reader);
-				} break;
-				case ADVERTISEMENTS: {
-					result = HandleAdvertisement(msg);
-				} break;
-				case INVITATION: {
-					result = HandleInvitation(msg);
-				} break;
-				case ADMINISTRATIVE: {
-					result = HandleAdministrative(msg);
-				} break;
-				case POPUP_NOTICES: {
-					result = HandlePopupNotice(msg);
-				} break;
-				case PRIVACY_MANAGEMENT: {
-					result = HandlePrivacy(msg);
-				} break;
-				case USER_LOOKUP: {
-					result = HandleUserLookup(msg);
-				} break;
-				case USAGE_STATS: {
-					result = HandleUsageStats(msg);
-				} break;
-				case TRANSLATION: {
-					result = HandleTranslation(msg);
-				} break;
-				case CHAT_NAVIGATION: {
-					result = HandleChatNavigation(msg);
-				} break;
-				case CHAT: {
-					result = HandleChat(msg);
-				} break;
-				case DIRECTORY_USER_SEARCH: {
-					result = HandleUserSearch(msg);
-				} break;
-				case SERVER_STORED_BUDDY_ICONS: {
-					result = HandleBuddyIcon(&snac, &reader);
-				} break;
-				case SERVER_SIDE_INFORMATION: {		
-					result = HandleSSI(&snac, &reader);
-				} break;
-				case ICQ_SPECIFIC_EXTENSIONS: {
-					result = HandleICQ(&snac, &reader);
-				} break;
-				case AUTHORISATION_REGISTRATION: {
-					result = HandleAuthorisation(msg);
-				} break;
+			manhandler_t::iterator hIt = fSNACHandler.find(family);
+			if (hIt != fSNACHandler.end()) {
+				FamilyManHandler handler = hIt->second;
+				result = (this->*handler)(&snac, &reader);
+			} else {
+				LOG(Protocol(), liHigh, "OSCARManager: Got a SNAC (0x%04x, 0x%04x) that "
+					"had no handler\n", family, subtype);
 			};
-			
 			if (result == kUnhandled) {
-				LOG(Protocol(), liHigh, "Got totally unhandled SNAC (0x%04x"
-					", 0x%04x)", family, subtype);
+				LOG(Protocol(), liHigh, "Got totally unhandled SNAC (0x%04x, 0x%04x)", family,
+					subtype);
 			};
 		} break;
 				
@@ -1327,9 +1331,9 @@ status_t OSCARManager::MessageUser(const char *screenname, const char *message) 
 	strncpy(msgFragment + 4, html.String(), html.Length());
 	
 	msgData->AddTLV(new TLV(0x0101, msgFragment, html.Length() + 4));
-	
 	free(msgFragment);
 	msg->AddTLV(msgData);
+	msg->AddTLV(new TLV(0x0006, "", strlen("")));
 	Send(msg);
 	
 	return B_OK;

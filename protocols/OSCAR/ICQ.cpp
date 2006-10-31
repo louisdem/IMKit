@@ -29,7 +29,7 @@ extern "C" {
 
 ICQProtocol::ICQProtocol()
 	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST
-	| Protocol::AWAY_MESSAGES | Protocol::BUDDY_ICON),
+	| Protocol::AWAY_MESSAGES | Protocol::BUDDY_ICON | Protocol::OFFLINE_MESSAGES),
 	  fThread(0) {
 	
 	fPassword = "";
@@ -64,9 +64,9 @@ status_t ICQProtocol::Shutdown() {
 status_t ICQProtocol::Process(BMessage * msg) {
 	switch (msg->what) {
 		case IM::MESSAGE: {
-			int32 im_what=0;
+			int32 im_what = 0;
 			
-			msg->FindInt32("im_what",&im_what);
+			msg->FindInt32("im_what", &im_what);
 		
 			switch (im_what) {
 				case IM::SERVER_LIST_ADD_CONTACT: {
@@ -87,10 +87,10 @@ status_t ICQProtocol::Process(BMessage * msg) {
 				case IM::UNREGISTER_CONTACTS: {
 					fManager->RemoveBuddy(msg->FindString("id"));
 				} break;
-				case IM::REGISTER_CONTACTS:
-				{
-					if ( !fManager->IsConnected() )
-						break;
+				
+				case IM::REGISTER_CONTACTS: {
+
+					if (fManager->IsConnected() == false) break;
 					
 					type_code garbage;
 					int32 count = 0;
@@ -98,8 +98,7 @@ status_t ICQProtocol::Process(BMessage * msg) {
 					
 					if (count > 0) {
 						list<char *> buddies;
-						for ( int i=0; msg->FindString("id",i); i++ )
-						{
+						for (int i = 0; msg->FindString("id", i); i++) {
 							const char * id = msg->FindString("id",i);
 							buddies.push_back(strdup(id));
 						};
@@ -107,7 +106,7 @@ status_t ICQProtocol::Process(BMessage * msg) {
 					} else {
 						fManager->AddBuddy(msg->FindString("id"));
 					};
-				}	break;
+				} break;
 				
 				case IM::SET_STATUS: {
 					const char *status = NULL;
@@ -143,8 +142,7 @@ status_t ICQProtocol::Process(BMessage * msg) {
 					}
 				} break;
 
-				case IM::GET_CONTACT_INFO:
-				{
+				case IM::GET_CONTACT_INFO: {
 					LOG(fManager->Protocol(), liLow, "Getting contact info", msg);
 					const char * id = NormalizeNick(msg->FindString("id")).String();
 					
@@ -162,66 +160,95 @@ status_t ICQProtocol::Process(BMessage * msg) {
 
 
 					fMsgr.SendMessage(infoMsg);
-				}	break;
+				} break;
 		
-				case IM::SEND_MESSAGE:
-				{
-					const char * message_text = msg->FindString("message");
+				case IM::SEND_MESSAGE: {
+					const char *message_text = msg->FindString("message");
 					BString srcid = msg->FindString("id");
 					BString normal = NormalizeNick(srcid.String());
 					BString screen = GetScreenNick(normal.String());
 					
-					const char * id = screen.String();
+					const char *id = screen.String();
 					
 					LOG(fManager->Protocol(), liDebug, "SEND_MESSAGE (%s, %s)", msg->FindString("id"), msg->FindString("message"));
 					LOG(fManager->Protocol(), liDebug, "  %s > %s > %s", srcid.String(), normal.String(), screen.String() );
 					
-					if ( !id )
-						return B_ERROR;
-					
-					if ( !message_text )
-						return B_ERROR;
+					if (id == NULL) return B_ERROR;
+					if (message_text == NULL) return B_ERROR;
 					
 					fManager->MessageUser(id, message_text);
 					
 					BMessage newMsg(*msg);
-					
 					newMsg.RemoveName("contact");
 					newMsg.ReplaceInt32("im_what", IM::MESSAGE_SENT);
 					
 					fMsgr.SendMessage(&newMsg);
 					
-				}	break;
+				} break;
+				
 				case IM::USER_STARTED_TYPING: {
 					const char *id = msg->FindString("id");
-					if (!id) return B_ERROR;
+					if (id == NULL) return B_ERROR;
 				
 					fManager->TypingNotification(id, STARTED_TYPING);
 				} break;
+				
 				case IM::USER_STOPPED_TYPING: {
 					const char *id = msg->FindString("id");
-					if (!id) return B_ERROR;
+					if (id == NULL) return B_ERROR;
 					
 					fManager->TypingNotification(id, FINISHED_TYPING);
 				} break;
 				
 				case IM::GET_AWAY_MESSAGE: {
 					const char *id = msg->FindString("id");
-					if (!id) return B_ERROR;
-					
-				};
+					if (id == NULL) return B_ERROR;
+				} break;
 				
-				default:
-					break;
-			}
-			
-		}	break;
-		default:
-			break;
-	}
+//				case IM::SEND_AUTH_ACK: {
+//					bool authreply = false;
+//					const char *id = msg->FindString("id");
+//					int32 button = msg->FindInt32("which");
+//					
+//					if (button == 0) {
+//						LOG("icq", liDebug, "Authorization granted to %s", id);
+//						authreply = true;												
+//					} else {
+//						LOG("icq", liDebug, "Authorization rejected to %s", id);
+//						authreply = false;					
+//					}
+//						
+//					ICQ2000::ContactRef c = new ICQ2000::Contact( atoi(id) );
+//					
+//					AuthAckEvent * ev = new AuthAckEvent(c, authreply);
+//
+//					fClient.icqclient.SendEvent( ev );									
+//					
+//					if (authreply) {
+//						// Create a new contact now that we authorized him/her/it.
+//						BMessage im_msg(IM::MESSAGE);
+//						im_msg.AddInt32("im_what", IM::CONTACT_AUTHORIZED);
+//						im_msg.AddString("protocol", "icq");
+//						im_msg.AddString("id", id);
+//						im_msg.AddString("message", "" );
+//						//im_msg.AddInt32("charset",fEncoding);
+//	
+//						fMsgr.SendMessage(&im_msg);
+//					}
+//
+//				} break;
+				
+				default: {
+				} break;
+			};
+		} break;
+		
+		default: {
+		} break;
+	};
 	
 	return B_OK;
-}
+};
 
 const char * ICQProtocol::GetSignature() {
 	return fManager->Protocol();
@@ -436,6 +463,17 @@ status_t ICQProtocol::BuddyIconFromUser(const char *nick, const uchar *icon,
 	fMsgr.SendMessage(&iconMsg);
 	return B_OK;
 };
+
+status_t ICQProtocol::AuthRequestFromUser(char *nick, char *reason) {
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", IM::AUTH_REQUEST);
+	msg.AddString("protocol", fManager->Protocol());
+	msg.AddString("id", NormalizeNick(nick));
+	msg.AddString("message", reason);
+	
+	return fMsgr.SendMessage(&msg);
+};
+
 
 char *ICQProtocol::RoastPassword(const char *pass) {
 	int32 passLen = strlen(pass);

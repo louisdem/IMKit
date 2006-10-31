@@ -190,11 +190,11 @@ status_t OSCARBOSConnection::HandleServiceControl(SNAC *snac, BufferReader *read
 			icbm->AddSNAC(new SNAC(ICBM, SET_ICBM_PARAMS));
 			icbm->AddInt16(0x0001);
 			icbm->AddInt32(0x00000009);
-			icbm->AddInt16(0x1f40);// Max SNAC
-			icbm->AddInt16(0x03e7);// Max Warn - send
-			icbm->AddInt16(0x03e7);// Max Warn - Recv
-			icbm->AddInt16(0x0000);// Min Message interval (sec);
-			icbm->AddInt16(0x0064);//??
+			icbm->AddInt16(0x1f40);		// Max SNAC
+			icbm->AddInt16(0x03e7);		// Max Warn - send
+			icbm->AddInt16(0x03e7);		// Max Warn - Recv
+			icbm->AddInt16(0x0000);		// Min Message interval (sec);
+			icbm->AddInt16(0x0064);		//??
 
 			Send(icbm);
 			

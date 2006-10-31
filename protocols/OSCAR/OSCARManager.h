@@ -25,6 +25,7 @@
 #include <vector>
 #include <map>
 
+class OSCARManager;
 class OSCARConnection;
 class AIMReqConn;
 class OSCARHandler;
@@ -42,6 +43,11 @@ typedef list<OSCARConnection *> connlist;
 typedef map<uint16, Group *> group_t;
 typedef map<uint16, bool> id_t;
 typedef vector<BString> grouplist_t;
+
+// The Member Function Pointer for a Family handler / parser
+typedef status_t (OSCARManager::*FamilyManHandler)(SNAC *, BufferReader *);
+// Maps a family to a handler
+typedef map<uint16, FamilyManHandler> manhandler_t;
 
 enum {
 	AMAN_PULSE = 'ampu',
@@ -109,23 +115,25 @@ class OSCARManager : public BLooper {
 		
 		virtual status_t	HandleServiceControl(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleICBM(SNAC *snac, BufferReader *reader);
-		virtual status_t	HandleLocation(BMessage *msg);
+		virtual status_t	HandleLocation(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleBuddyList(SNAC *snac, BufferReader *reader);
-		virtual status_t	HandleAdvertisement(BMessage *msg);
-		virtual status_t	HandleInvitation(BMessage *msg);
-		virtual status_t	HandleAdministrative(BMessage *msg);
-		virtual status_t	HandlePopupNotice(BMessage *msg);
-		virtual status_t	HandlePrivacy(BMessage *msg);
-		virtual status_t	HandleUserLookup(BMessage *msg);
-		virtual status_t	HandleUsageStats(BMessage *msg);
-		virtual status_t	HandleTranslation(BMessage *msg);
-		virtual status_t	HandleChatNavigation(BMessage *msg);
-		virtual status_t	HandleChat(BMessage *msg);
-		virtual status_t	HandleUserSearch(BMessage *msg);
+		virtual status_t	HandleAdvertisement(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleInvitation(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleAdministrative(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandlePopupNotice(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandlePrivacy(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleUserLookup(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleUsageStats(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleTranslation(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleChatNavigation(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleChat(SNAC *snac, BufferReader *reader);
+		virtual status_t	HandleUserSearch(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleBuddyIcon(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleSSI(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleICQ(SNAC *snac, BufferReader *reader);
-		virtual status_t	HandleAuthorisation(BMessage *msg);
+		virtual status_t	HandleAuthorisation(SNAC *snac, BufferReader *reader);
+		
+		manhandler_t		fSNACHandler;
 		
 		BString				fProtocol;
 		

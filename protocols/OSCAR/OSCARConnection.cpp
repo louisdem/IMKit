@@ -14,6 +14,28 @@ const char *kThreadName = "IM Kit: OSCAR Connection";
 OSCARConnection::OSCARConnection(const char *server, uint16 port, OSCARManager *man,
 	const char *name = "OSCAR Connection", conn_type type = connBOS)
 	: BLooper(name) {
+	
+	// Setup the map between SNAC families and the handling function
+	fHandler[SERVICE_CONTROL] = &OSCARConnection::HandleServiceControl;
+	fHandler[LOCATION] = &OSCARConnection::HandleLocation;
+	fHandler[BUDDY_LIST_MANAGEMENT] = &OSCARConnection::HandleBuddyList;
+	fHandler[ICBM] = &OSCARConnection::HandleICBM;
+	fHandler[ADVERTISEMENTS] = &OSCARConnection::HandleAdvertisement;
+	fHandler[INVITATION] = &OSCARConnection::HandleInvitation;
+	fHandler[ADMINISTRATIVE] = &OSCARConnection::HandleAdministrative;
+	fHandler[POPUP_NOTICES] = &OSCARConnection::HandlePopupNotice;
+	fHandler[PRIVACY_MANAGEMENT] = &OSCARConnection::HandlePrivacy;
+	fHandler[USER_LOOKUP] = &OSCARConnection::HandleUserLookup;
+	fHandler[USAGE_STATS] = &OSCARConnection::HandleUsageStats;
+	fHandler[TRANSLATION] = &OSCARConnection::HandleTranslation;
+	fHandler[CHAT_NAVIGATION] = &OSCARConnection::HandleChatNavigation;
+	fHandler[CHAT] = &OSCARConnection::HandleChat;
+	fHandler[DIRECTORY_USER_SEARCH] = &OSCARConnection::HandleUserSearch;
+	fHandler[SERVER_STORED_BUDDY_ICONS] = &OSCARConnection::HandleBuddyIcon;
+	fHandler[SERVER_SIDE_INFORMATION] = &OSCARConnection::HandleSSI;
+	fHandler[ICQ_SPECIFIC_EXTENSIONS] = &OSCARConnection::HandleICQ;
+	fHandler[AUTHORISATION_REGISTRATION] = &OSCARConnection::HandleAuthorisation;
+	
 	fSockMsgr = NULL;
 	fManager = man;
 	fManMsgr = BMessenger(fManager);
@@ -119,68 +141,16 @@ void OSCARConnection::MessageReceived(BMessage *msg) {
 
 			LOG(ConnName(), liLow, "OSCARConn(%s:%i): Got SNAC (0x%04x, 0x%04x)",
 				Server(), Port(), family, subtype);		
-			
-			switch (family) {
-				case SERVICE_CONTROL: {
-					result = HandleServiceControl(&snac, &reader);
-				} break;
-				case LOCATION: {
-					result = HandleLocation(&snac, &reader);
-				} break;
-				case BUDDY_LIST_MANAGEMENT: {
-					result = HandleBuddyList(&snac, &reader);
-				} break;
-				case ICBM: {
-					result = HandleICBM(&snac, &reader);
-				} break;
-				case ADVERTISEMENTS: {
-					result = HandleAdvertisement(&snac, &reader);
-				} break;
-				case INVITATION: {
-					result = HandleInvitation(&snac, &reader);
-				} break;
-				case ADMINISTRATIVE: {
-					result = HandleAdministrative(&snac, &reader);
-				} break;
-				case POPUP_NOTICES: {
-					result = HandlePopupNotice(&snac, &reader);
-				} break;
-				case PRIVACY_MANAGEMENT: {
-					result = HandlePrivacy(&snac, &reader);
-				} break;
-				case USER_LOOKUP: {
-					result = HandleUserLookup(&snac, &reader);
-				} break;
-				case USAGE_STATS: {
-					result = HandleUsageStats(&snac, &reader);
-				} break;
-				case TRANSLATION: {
-					result = HandleTranslation(&snac, &reader);
-				} break;
-				case CHAT_NAVIGATION: {
-					result = HandleChatNavigation(&snac, &reader);
-				} break;
-				case CHAT: {
-					result = HandleChat(&snac, &reader);
-				} break;
-				case DIRECTORY_USER_SEARCH: {
-					result = HandleUserSearch(&snac, &reader);
-				} break;
-				case SERVER_STORED_BUDDY_ICONS: {
-					result = HandleBuddyIcon(&snac, &reader);
-				} break;
-				case SERVER_SIDE_INFORMATION: {
-					result = HandleSSI(&snac, &reader);
-				} break;
-				case ICQ_SPECIFIC_EXTENSIONS: {
-					result = HandleICQ(&snac, &reader);
-				} break;
-				case AUTHORISATION_REGISTRATION: {
-					result = HandleAuthorisation(&snac, &reader);
-				} break;
-			};
 
-			if (result == kUnhandled) fManMsgr.SendMessage(msg);			
+			handler_t::iterator hIt = fHandler.find(family);
+			if (hIt != fHandler.end()) {
+				FamilyHandler handler = hIt->second;
+				result = (this->*handler)(&snac, &reader);
+			} else {
+				LOG(ConnName(), liHigh, "OSCARConn(%s:%i): Got a SNAC (0x%04x, 0x%04x) that "
+					"had no handler\n", Server(), Port(), family, subtype);
+			};
+			if (result == kUnhandled) fManMsgr.SendMessage(msg);	
 		} break;
 			
 		case AMAN_FLAP_ERROR: {

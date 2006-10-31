@@ -45,6 +45,8 @@ class AIMProtocol : public IM::Protocol, public OSCARHandler {
 		status_t		 	SSIBuddies(list<BString> buddies);
 		status_t			BuddyIconFromUser(const char *nick, const uchar *icon,
 								uint32 length);
+		status_t			AuthRequestFromUser(char *nick, char *reason);
+
 		char				*RoastPassword(const char *pass);
 		void				FormatMessageText(BString &message);
 

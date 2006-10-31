@@ -11,6 +11,7 @@
 
 #include <list>
 #include <vector>
+#include <map>
 
 #include <libim/Helpers.h>
 #include <libim/Protocol.h>
@@ -22,6 +23,12 @@ class SNAC;
 class BufferReader;
 
 typedef pair <char *, uint16> ServerAddress;
+
+// The Member Function Pointer for a Family handler / parser
+typedef status_t (OSCARConnection::*FamilyHandler)(SNAC *, BufferReader *);
+// Maps a family to a handler
+typedef map<uint16, FamilyHandler> handler_t;
+
 const status_t kUnhandled = -1;
 
 enum send_time {
@@ -87,7 +94,10 @@ class OSCARConnection : public BLooper {
 		virtual status_t	HandleSSI(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleICQ(SNAC *snac, BufferReader *reader);
 		virtual status_t	HandleAuthorisation(SNAC *snac, BufferReader *reader);
-				
+		
+		
+		handler_t			fHandler;
+		
 		BString				fServer;
 		uint16				fPort;
 		

@@ -22,6 +22,7 @@ class OSCARHandler {
 		virtual status_t 	SSIBuddies(list<BString> buddies) = 0;
 		virtual status_t	BuddyIconFromUser(const char *nick, const uchar *data,
 								uint32 length) = 0;
+		virtual status_t	AuthRequestFromUser(char *nick, char *reason) = 0;
 		virtual void		FormatMessageText(BString &message) = 0;
 };
 

@@ -445,6 +445,10 @@ status_t AIMProtocol::BuddyIconFromUser(const char *nick, const uchar *icon,
 	return B_OK;
 };
 
+status_t AIMProtocol::AuthRequestFromUser(char *nick, char *reason) {
+	return B_ERROR;
+};
+
 char *AIMProtocol::RoastPassword(const char *pass) {
 	int32 passLen = strlen(pass);
 	char *ret = (char *)calloc(passLen + 1, sizeof(char));
