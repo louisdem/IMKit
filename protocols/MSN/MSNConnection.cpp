@@ -987,8 +987,13 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		return B_ERROR;
 	};
 	
-	
-	BString passportURLs = recv->HeaderContents("PassportURLs");
+	BString passportURLs;
+	if (recv->HeaderContents("PassportURLs", passportURLs) != B_OK) {
+		delete recv;
+		delete send;
+		
+		return B_ERROR;
+	};
 	begin = passportURLs.FindFirst("DALogin=");
 
 	if (begin != B_ERROR) {
@@ -998,7 +1003,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 	} else {
 		delete recv;
 		delete send;
-		return B_OK;
+		return B_ERROR;
 	};
 
 	BString loginDocument = "";
@@ -1029,18 +1034,24 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		loginHost.String());
 	
 	// check status for 302, redirect
-	if ( recv->Status() != 200 ) {
+	if (recv->Status() != 200) {
 		LOG(kProtocolName, liDebug, "C %lX: Got non-200 status: %d", this, recv->Status() );
 		
 		int repeatCount = 5; // max 5 redirects
 		
 		while ((recv->Status() == 302) && (repeatCount-- > 0)) {
-			BString location = recv->HeaderContents("Location");
+			BString location;
+			if (recv->HeaderContents("Location", location) != B_OK) {
+				LOG(kProtocolName, liHigh, "C %lX: Couldn't find Location header!\n", this);
+				Error("Unable to find redirection header");
+				
+				return B_ERROR;
+			};
 			
 			location.ReplaceFirst("https://", "");
 			int first_slash = location.FindFirst("/");
-			location.CopyInto( loginHost, 0, first_slash );
-			location.CopyInto( loginDocument, first_slash, location.Length() - first_slash );
+			location.CopyInto(loginHost, 0, first_slash);
+			location.CopyInto(loginDocument, first_slash, location.Length() - first_slash);
 			
 			LOG(kProtocolName, liHigh, "C %lX: Redirected to (%s) (%s)", this, loginHost.String(), loginDocument.String() );
 			
@@ -1059,31 +1070,35 @@ status_t MSNConnection::handleUSR( Command * command ) {
 				this, SSLSend(loginHost.String(), send, &recv),
 				loginHost.String());
 			
-			if ( recv <= 0 )
-			{
-				LOG(kProtocolName, liHigh, "C %lX: Error getting data over SSL", this );
-
-				Error( "MSN Connect fail: SSL connection failed" );
+			if (recv <= 0) {
+				LOG(kProtocolName, liHigh, "C %lX: Error getting data over SSL", this);
+				Error("MSN Connect fail: SSL connection failed");
 		
 				return B_ERROR;
-			}
-		}
+			};
+		};
 		
-		if ( repeatCount == 0 ) {
+		if (repeatCount == 0) {
 			// error, too many redirects
 			LOG( kProtocolName, liHigh, "C %lX: got too many redirects when loggin in", this );
 			
-			Error( "MSN Connect fail: Too many redirects" );
+			Error("MSN Connect fail: Too many redirects");
 		
 			return B_ERROR;
-		}
-	}
+		};
+	};
 	
-//	We get the ticket!
+	// We get the ticket!
 	if (recv->Status() == 200) {
 		Progress("MSN Login", "MSN: Got ticket", 0.75);
 		
-		BString authInfo = recv->HeaderContents("Authentication-Info");
+		BString authInfo;
+		if (recv->HeaderContents("Authentication-Info", authInfo) != B_OK) {
+			Error("Unable to obtain authentication information");
+			LOG(kProtocolName, liHigh, "HTTP Response;", recv->Flatten());
+			return B_ERROR;
+		};
+		
 		begin = authInfo.FindFirst("from-PP='");
 		BString ticket = "";
 		if (begin != B_ERROR) {
@@ -1091,7 +1106,7 @@ status_t MSNConnection::handleUSR( Command * command ) {
 			authInfo.CopyInto(ticket, begin + strlen("from-PP='"),
 				end - (begin + strlen("from-PP='")));
 		} else {
-			Error( "MSN Connect fail: Malformed ticket" );
+			Error("MSN Connect fail: Malformed ticket");
 			
 			return B_ERROR;
 		};
@@ -1102,45 +1117,45 @@ status_t MSNConnection::handleUSR( Command * command ) {
 		reply->AddParam(ticket.String());
 		Send(reply);
 	} else {
-		Error( "MSN Connect fail: Error getting ticket" );
+		Error("MSN Connect fail: Error getting ticket");
 		
 		return B_ERROR;
-	}
+	};
 		
 	return B_OK;
 }
 
 status_t MSNConnection::handleMSG( Command * command ) {
 	LOG(kProtocolName, liDebug, "C %lX: Processing MSG", this);
-//command->Debug();
 	
 	HTTPFormatter http(command->Payload(0), strlen(command->Payload(0)));
 	
-	const char * type = http.HeaderContents("Content-Type");
-	
-	if ( type )
-	{ // we have a type, handle it.
-		if ( strcmp(type, "text/plain; charset=UTF-8") == 0 ) {
-			LOG(kProtocolName, liHigh, "C %lX: Got a private message [%s] from <%s>", this, http.Content(), command->Param(0) );
-			fManager->fHandler->MessageFromUser( command->Param(0), http.Content() );
+	BString type;
+	status_t result = http.HeaderContents("Content-Type", type);
+
+	if (result == B_OK) {
+		// Handle type
+		if (type == "text/plain; charset=UTF-8") {
+			LOG(kProtocolName, liHigh, "C %lX: Got a private message [%s] from <%s>", this, http.Content(), command->Param(0));
+			fManager->fHandler->MessageFromUser(command->Param(0), http.Content());
 		} else
-		if (strcmp(type, "text/x-msmsgscontrol") == 0) {
-			LOG(kProtocolName, liHigh, "C %lX: User typing from <%s>", this, command->Param(0) );
+		if (type == "text/x-msmsgscontrol")  {
+			LOG(kProtocolName, liHigh, "C %lX: User typing from <%s>", this, command->Param(0));
 			fManager->fHandler->UserIsTyping(http.HeaderContents("TypingUser"),	tnStartedTyping);
 		} else
-		if (strcmp(type, "text/x-msmsgsinitialemailnotification; charset=UTF-8") == 0) {
+		if (type == "text/x-msmsgsinitialemailnotification; charset=UTF-8") {
 			LOG(kProtocolName, liHigh, "C %lX: HotMail number of messages in Inbox", this );
 			// Ignore this. It just tells us how many emails are in the Hotmail inbox.
 		} else
-		if (strcmp(type, "text/x-msmsgsprofile; charset=UTF-8") == 0) {
+		if (type == "text/x-msmsgsprofile; charset=UTF-8") {
 			LOG(kProtocolName, liHigh, "C %lX: Profile message", this );
 			// Maybe we should process this, it's a profile message.
 		} else
-		if (strcmp(type, "text/x-msmsgsinvite; charset=UTF-8") == 0) {
+		if (type == "text/x-msmsgsinvite; charset=UTF-8") {
 			LOG(kProtocolName, liDebug, "C %lX: Got an invite, we're popular!", this);
 			PrintHex((uchar *)command->Payload(0), strlen(command->Payload(0)));
 		} else
-		if (strcmp(type, "application/x-msnmsgrp2p") == 0) {
+		if (type == "application/x-msnmsgrp2p") {
 			LOG(kProtocolName, liDebug, "C %lX: Got Peer To Peer message!", this);
 		} else {
 			LOG(kProtocolName, liDebug, "C %lX: Got message of unknown type <%s>", this, type );

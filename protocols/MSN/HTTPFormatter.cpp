@@ -1,5 +1,9 @@
 #include "HTTPFormatter.h"
 
+#include "MSNConstants.h"
+
+#include <libim/Helpers.h>
+
 #include <stdio.h>
 
 HTTPFormatter::HTTPFormatter(void) {
@@ -26,54 +30,59 @@ void HTTPFormatter::_init(void) {
 
 HTTPFormatter::HTTPFormatter(const char *response, int32 length) {
 	_init();
-	
-	BString buffer = response;
-	BString line = "";
-	int32 seperator = 0;
-	int32 position = 0;
-	vector <BString> tempVect;
-	const char *kSeperator = "\r\n";
-	const int32 kSeperatorLen = strlen("\r\n");
-	
-	while ((seperator = buffer.FindFirst(kSeperator, position)) >= 0) {
-		if ( seperator == position ) {
-			// end of headers, copy rest to content
-			buffer.CopyInto( fContent, position+2, buffer.Length()-position-2 );
-			break;
-		}
-		buffer.CopyInto(line, position, seperator - position);
-		position = seperator + kSeperatorLen;		
-		tempVect.push_back(line);
-	};
-	
-	vector<BString>::iterator i = tempVect.begin();
-	line = *i;
-	if ( line.Compare("HTTP/1.", strlen("HTTP/1.")) == 0 )
-	{ // Actual HTTP response. Not present in MSN messages
-		seperator = line.FindFirst("/");
-		position = line.FindFirst(" ");//, seperator);
 
-		line.CopyInto(fVersion, seperator + 1, position - seperator - 1);
-		seperator = line.FindFirst(" ", position + 1);//, seperator + 1);
-		if ( seperator < 0 )
-			seperator = line.Length();
-		line.CopyInto(buffer, position + 1, seperator - position - 1);
-		fStatus = atol(buffer.String());
-		i++;
+	if (length < 0) {
+		LOG(kProtocolName, liHigh, "HTTPFormatter(%p, %i) called with < 0 length!",
+			response, length);
 	} else {
-		// Let's suppose this is ok and set the status to 200
-		fStatus = 200;
-	}
+		BString buffer = response;
+		BString line = "";
+		int32 seperator = 0;
+		int32 position = 0;
+		vector <BString> tempVect;
+		const char *kSeperator = "\r\n";
+		const int32 kSeperatorLen = strlen("\r\n");
+		
+		while ((seperator = buffer.FindFirst(kSeperator, position)) >= 0) {
+			if ( seperator == position ) {
+				// end of headers, copy rest to content
+				buffer.CopyInto( fContent, position+2, buffer.Length()-position-2 );
+				break;
+			}
+			buffer.CopyInto(line, position, seperator - position);
+			position = seperator + kSeperatorLen;		
+			tempVect.push_back(line);
+		};
+		
+		vector<BString>::iterator i = tempVect.begin();
+		line = *i;
+		if ( line.Compare("HTTP/1.", strlen("HTTP/1.")) == 0 )
+		{ // Actual HTTP response. Not present in MSN messages
+			seperator = line.FindFirst("/");
+			position = line.FindFirst(" ");//, seperator);
 	
-	for (; i != tempVect.end(); i++) {
-		BString line = *i;
-		if ((seperator = line.FindFirst(": ")) >= 0) {
-			BString name;
-			BString value;
-			line.CopyInto(name, 0, seperator);
-			line.CopyInto(value, seperator + 2, line.Length() - (seperator + 2));
-			
-			fHeaders[name] = value;
+			line.CopyInto(fVersion, seperator + 1, position - seperator - 1);
+			seperator = line.FindFirst(" ", position + 1);//, seperator + 1);
+			if ( seperator < 0 )
+				seperator = line.Length();
+			line.CopyInto(buffer, position + 1, seperator - position - 1);
+			fStatus = atol(buffer.String());
+			i++;
+		} else {
+			// Let's suppose this is ok and set the status to 200
+			fStatus = 200;
+		}
+		
+		for (; i != tempVect.end(); i++) {
+			BString line = *i;
+			if ((seperator = line.FindFirst(": ")) >= 0) {
+				BString name;
+				BString value;
+				line.CopyInto(name, 0, seperator);
+				line.CopyInto(value, seperator + 2, line.Length() - (seperator + 2));
+				
+				fHeaders[name] = value;
+			};
 		};
 	};
 };
@@ -134,14 +143,30 @@ status_t HTTPFormatter::ClearHeaders(void) {
 	return B_OK;
 };
 
+
 const char *HTTPFormatter::HeaderContents(const char *name) {
+	LOG(kProtocolName, liHigh, "HeaderContents(%s) called - %i headers", name, fHeaders.size()); 
 	HeaderMap::iterator i = fHeaders.find(name);
-	
+
 	if (i != fHeaders.end()) {
+		LOG(kProtocolName, liHigh, "HeaderContents(%s) found \"%s\"", name, i->second.String());
 		return i->second.String();
 	} else {
+		LOG(kProtocolName, liHigh, "HeaderContents(%s) found no results! \"%s\"", name);
 		return NULL;
 	};
+};
+
+status_t HTTPFormatter::HeaderContents(const char *header, BString &value) {
+	status_t result = B_ERROR;
+	HeaderMap::iterator hIt = fHeaders.find(header);
+
+	if (hIt != fHeaders.end()) {
+		value = hIt->second;
+		result = B_OK;
+	};
+	
+	return result;
 };
 
 const char *HTTPFormatter::HeaderNameAt(int32 index) {

@@ -31,6 +31,7 @@ class HTTPFormatter {
 		status_t	ClearHeaders(void);
 
 		const char	*HeaderContents(const char *name);
+		status_t	HeaderContents(const char *header, BString &value);
 
 		int32		Headers(void) { return fHeaders.size(); };
 		const char	*HeaderNameAt(int32 index);
