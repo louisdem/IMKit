@@ -5,7 +5,7 @@
 #include "JabberSSLPlug.h"
 
 #include "States.h"
-#include "string.h"
+#include "string.h"	
 
 const char *  kProtocolName = "gtalk";
 
@@ -380,24 +380,32 @@ status_t
 GoogleTalk::UpdateSettings( BMessage & msg )
 {
 	const char *username = NULL;
-	//const char *server=NULL;
 	const char *password = NULL;
 	const char *res = NULL;
 	
 	msg.FindString("username", &username);
-	//msg.FindString("server",&server);
 	msg.FindString("password", &password);
 	msg.FindString("resource", &res);
 	
-	if ( (username == NULL) || (password == NULL) ){ //|| (server == NULL)) {
-//		invalid settings, fail
+	if ( (username == NULL) || (password == NULL) ){ 
 		LOG( kProtocolName, liHigh, "Invalid settings!");
 		return B_ERROR;
 	};
 	
 	fUsername = username;
-	fUsername.RemoveAll("@gmail.com"); //safety??
-	//fServer = server;
+	int32 atpos=fUsername.FindLast("@");
+	if(	 atpos> 0 ) {
+		BString server;
+		fUsername.CopyInto(server,atpos + 1,fUsername.Length()-atpos);
+		fUsername.Remove(atpos,fUsername.Length()-atpos);
+		LOG( kProtocolName, liHigh, "Server %s\n",server.String());
+		fServer = server;		
+	}
+	else
+		fServer.SetTo("gmail.com");
+		
+	//fUsername.RemoveAll("@gmail.com"); //safety??
+	
 	fPassword = password;
 	
 	SetUsername(fUsername);
