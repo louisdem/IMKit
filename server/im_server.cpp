@@ -602,7 +602,8 @@ Server::LoadAddonsFromDir( BDirectory* addonsDir, BDirectory* settingsDir )
 		image_id curr_image = load_add_on( path.Path() );
 		if( curr_image < 0 )
 		{
-			LOG("im_server", liHigh, "load_add_on() fail, file [%s]", path.Path());
+			LOG("im_server", liHigh, "load_add_on() fail, file [%s]: %s (%i)", path.Path(),
+				strerror(curr_image), curr_image);
 			continue;
 		}
 		
@@ -1643,6 +1644,10 @@ Server::MessageFromProtocols( BMessage * msg )
 		if (msg->FindData("icondata", B_RAW_TYPE, (const void **)&data, &bytes) !=  B_OK) {
 			LOG("im_server", liHigh, "No icondata in buddy message.");
 		} else {
+			// Fetch the protocol again... there's a weird memory corruption error happening
+			const char *protocol = NULL;
+			if (msg->FindString("protocol", &protocol) != B_OK) return;
+
 			Contact contact(ref);
 			
 			BMallocIO buffer;
@@ -1653,7 +1658,7 @@ Server::MessageFromProtocols( BMessage * msg )
 				LOG("im_server", liHigh, "Unable to decode buddy icon.");
 			} else {
 				LOG("im_server", liDebug, "Setting %s's icon to be %p\n", protocol, icon);
-				
+
 				status_t ret = contact.SetBuddyIcon(protocol, icon);
 				LOG("im_server", liDebug, "Gets: %s (%ld)\n", strerror(ret), ret);
 				
