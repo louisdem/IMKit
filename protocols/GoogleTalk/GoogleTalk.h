@@ -64,10 +64,11 @@ class GoogleTalk : public IM::Protocol, public JabberManager, public JabberHandl
 	private:
 		JabberSSLPlug*	fPlug;
 		BMessenger	fServerMsgr;
+		
 		BString		fUsername;
 		BString		fServer;
 		BString		fPassword;
-		
+				
 		typedef list<BString>	StrList; // new buddy added when off-line.
 		StrList*			fLaterBuddyList;
 		

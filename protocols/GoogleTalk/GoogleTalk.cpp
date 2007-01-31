@@ -404,7 +404,6 @@ GoogleTalk::UpdateSettings( BMessage & msg )
 	else
 		fServer.SetTo("gmail.com");
 		
-	//fUsername.RemoveAll("@gmail.com"); //safety??
 	
 	fPassword = password;
 	
@@ -542,6 +541,11 @@ void
 GoogleTalk::BuddyStatusChanged( JabberContact* who )
 {
 	LOG("GoogleTalk", liDebug, "GoogleTalk::BuddyStatusChanged()");
+	
+	//avoid a receiving self status changes
+	
+	if(who->GetJid().ICompare(GetJid())==0)
+		return;
 	
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::STATUS_CHANGED);
