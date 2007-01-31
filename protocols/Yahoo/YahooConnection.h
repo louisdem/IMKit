@@ -3,8 +3,8 @@
 
 #include <map>
 #include <OS.h>
-#include <yahoo2.h>
-#include <yahoo2_callbacks.h>
+#include <libyahoo2/yahoo2.h>
+#include <libyahoo2/yahoo2_callbacks.h>
 #include <List.h>
 #include <String.h>
 
@@ -32,15 +32,19 @@ class YahooConnection
 		// buddy list so we don't double-add contacts
 		void AddBuddy( const char * who );
 		void RemoveBuddy( const char * who );
+		void Typing( const char *, int );
+		void GetBuddyIcon( const char * who );
 		
 		// Stuff below this is for use by the yahoo lib interface only.
 		// I could make it protected and add all them functions as friends,
 		// but that'd be boring. Will do it 'later'.
-		void cbStatusChanged( char * who, int stat, char * msg, int away );
+		void cbStatusChanged( const char * who, int stat, const char * msg, int away );
 		void cbGotBuddies( YList * buds );
-		void cbGotIM(char *who, char *msg, long tm, int stat, int utf8);
-		void cbLoginResponse(int succ, char *url);
-		void cbYahooError(char *err, int fatal);
+		void cbGotIM(const char *who, const char *msg, long tm, int stat, int utf8);
+		void cbLoginResponse(int succ, const char *url);
+		void cbYahooError(const char *err, int fatal);
+		void cbTypeNotify(const char *who, int stat);
+		void cbGotBuddyIcon(const char *who, long size, const char *icon);
 		
 		void AddConnection( fd_conn * );
 		void RemoveConnection( fd_conn * );
@@ -70,6 +74,7 @@ class YahooConnection
 };
 
 extern map<int, YahooConnection*> gYahooConnections;
+extern void cb_yahoo_url_handle(int id, int fd, int error, const char *filename, unsigned long size, void *data);
 extern int32 yahoo_io_thread( void * _data );
 extern const char *  kProtocolName;
 

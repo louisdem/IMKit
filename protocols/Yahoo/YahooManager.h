@@ -3,6 +3,7 @@
 
 #include <list>
 #include <string>
+#include <libyahoo2/yahoo2_types.h>
 
 /**
 	
@@ -21,7 +22,11 @@ class YahooManager
 		virtual void SetAway(bool)=0;
 		virtual void LoggedOut()=0;
 		
+		virtual void TypeNotify(const char * who,int stat)=0;
+		
 		virtual void GotBuddyList( list<string> & )=0;
+		virtual void GotContactsInfo( list<struct yahoo_buddy> & )=0;
+		virtual void GotBuddyIcon(const char *who, long size, const char* icon)=0;
 		virtual void BuddyStatusChanged( const char * who, const char * status )=0;
 };
 

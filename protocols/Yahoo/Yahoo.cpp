@@ -138,6 +138,35 @@ Yahoo::Process( BMessage * msg )
 					} else
 						return B_ERROR;
 					break;
+					
+				case IM::USER_STARTED_TYPING: 
+				if ( fYahoo)
+				{
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
+				
+					fYahoo->Typing(id, 1);
+				} break;
+				
+				case IM::USER_STOPPED_TYPING: 
+				if ( fYahoo )
+				{
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
+					
+					fYahoo->Typing(id, 0);
+				} break;
+				
+#if 0
+				case IM::GET_BUDDY_ICON:
+				if ( fYahoo )
+				{
+					const char *id = msg->FindString("id");
+					if (!id) return B_ERROR;
+					
+					fYahoo->GetBuddyIcon(id);
+				} break;
+#endif			
 				default:
 					// we don't handle this im_what code
 					return B_ERROR;
@@ -309,10 +338,55 @@ Yahoo::LoggedOut()
 }
 
 void
-Yahoo::GotBuddyList( list<string> & /*buddies*/ )
+Yahoo::GotBuddyList( list<string> & buddies )
 {
 	LOG("Yahoo", liDebug, "Yahoo::GotBuddyList()");
+	list <string>::iterator i;
+
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", IM::CONTACT_LIST);
+	msg.AddString("protocol", kProtocolName);
+
+	for (i = buddies.begin(); i != buddies.end(); i++) {
+		LOG(kProtocolName, liLow, "Got server side buddy %s", i->c_str());
+		msg.AddString("id", i->c_str());
+	};
+			
+	fServerMsgr.SendMessage(&msg);
 }
+
+void
+Yahoo::GotContactsInfo( list<struct yahoo_buddy> & yabs )
+{
+	LOG("Yahoo", liDebug, "Yahoo::GotBuddyList()");
+	list <struct yahoo_buddy>::iterator i;
+
+	for (i = yabs.begin(); i != yabs.end(); i++) {
+		BMessage msg(IM::MESSAGE);
+		msg.AddInt32("im_what", IM::CONTACT_INFO);
+		msg.AddString("protocol", kProtocolName);
+		LOG(kProtocolName, liLow, "Got server side buddy %s", i->id);
+		msg.AddString("id", i->id);
+		msg.AddString("nick", i->real_name);
+		
+		fServerMsgr.SendMessage(&msg);
+	};
+}
+
+
+void
+Yahoo::GotBuddyIcon(const char *who, long length, const char *icon)
+{
+	
+	BMessage iconMsg(IM::MESSAGE);
+	iconMsg.AddInt32("im_what", IM::SET_BUDDY_ICON);
+	iconMsg.AddString("protocol", kProtocolName);
+	iconMsg.AddString("id", who);
+	iconMsg.AddData("icondata", B_RAW_TYPE, icon, length);
+
+	fServerMsgr.SendMessage(&iconMsg);
+}
+
 
 void
 Yahoo::BuddyStatusChanged( const char * who, const char * status )
@@ -340,4 +414,16 @@ Yahoo::Progress( const char * id, const char * message, float progress )
 	msg.AddInt32("state", IM::impsConnecting );
 	
 	fServerMsgr.SendMessage(&msg);
+}
+
+void
+Yahoo::TypeNotify(const char * who, int state)
+{
+	
+	BMessage msg(IM::MESSAGE);
+	msg.AddInt32("im_what", state ? IM::CONTACT_STARTED_TYPING : IM::CONTACT_STOPPED_TYPING);
+	msg.AddString("protocol", kProtocolName);
+	msg.AddString("id", who);
+	
+	fServerMsgr.SendMessage( &msg );
 }

@@ -49,7 +49,11 @@ class Yahoo : public IM::Protocol, public YahooManager
 		virtual void SetAway(bool);
 		virtual void LoggedOut();
 		
+		virtual void TypeNotify(const char * who,int stat);
+		
 		virtual void GotBuddyList( list<string> & );
+		virtual void GotContactsInfo( list<struct yahoo_buddy> & );
+		virtual void GotBuddyIcon(const char *who, long size, const char* icon);
 		virtual void BuddyStatusChanged( const char * who, const char * status );
 		// YahooManager part ends here
 		

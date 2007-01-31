@@ -28,9 +28,6 @@
 
 #include "YahooConnection.h"
 
-#if HAVE_CONFIG_H
-# include <config.h>
-#endif
 #include <netdb.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -56,9 +53,9 @@
 #include <libim/Helpers.h>
 
 /* Get these from http://libyahoo2.sourceforge.net/ */
-#include <yahoo2.h>
-#include <yahoo2_callbacks.h>
-#include "yahoo_util.h"
+#include <libyahoo2/yahoo2.h>
+#include <libyahoo2/yahoo2_callbacks.h>
+#include <libyahoo2/yahoo_util.h>
 
 int fileno(FILE * stream);
 
@@ -202,7 +199,7 @@ static int yahoo_ping_timeout_callback( int id, time_t & pingTimer )
 //	return yid;
 //}
 
-extern "C" int ext_yahoo_log(char *fmt,...)
+extern "C" int ext_yahoo_log(const char *fmt,...)
 {
 	va_list ap;
 
@@ -214,47 +211,47 @@ extern "C" int ext_yahoo_log(char *fmt,...)
 	return 0;
 }
 
-extern "C" void ext_yahoo_got_conf_invite(int /*id*/, char */*who*/, char */*room*/, char */*msg*/, YList */*members*/)
+extern "C" void ext_yahoo_got_conf_invite(int id, const char */*me*/, const char *who, const char *room, const char *msg, YList *members)
 {
 }
 
-extern "C" void ext_yahoo_conf_userdecline(int /*id*/, char */*who*/, char */*room*/, char */*msg*/)
+extern "C" void ext_yahoo_conf_userdecline(int /*id*/, const char */*me*/, const char */*who*/, const char */*room*/, const char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_userjoin(int /*id*/, char */*who*/, char */*room*/)
+extern "C" void ext_yahoo_conf_userjoin(int /*id*/, const char */*me*/, const char */*who*/, const char */*room*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_userleave(int /*id*/, char */*who*/, char */*room*/)
+extern "C" void ext_yahoo_conf_userleave(int /*id*/, const char */*me*/, const char */*who*/, const char */*room*/)
 {
 }
 
-extern "C" void ext_yahoo_conf_message(int /*id*/, char */*who*/, char */*room*/, char */*msg*/, int /*utf8*/)
+extern "C" void ext_yahoo_conf_message(int /*id*/, const char */*me*/, const char */*who*/, const char */*room*/, const char */*msg*/, int /*utf8*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_cat_xml(int /*id*/, char */*xml*/) 
+extern "C" void ext_yahoo_chat_cat_xml(int /*id*/, const char */*xml*/) 
 {
 }
 
-extern "C" void ext_yahoo_chat_join(int /*id*/, char */*room*/, char * /*topic*/, YList */*members*/, int /*fd*/)
+extern "C" void ext_yahoo_chat_join(int /*id*/, const char */*me*/, const char */*room*/, const char * /*topic*/, YList */*members*/, int /*fd*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_userjoin(int /*id*/, char */*room*/, struct yahoo_chat_member */*who*/)
+extern "C" void ext_yahoo_chat_userjoin(int /*id*/, const char */*me*/, const char */*room*/, struct yahoo_chat_member */*who*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_userleave(int /*id*/, char */*room*/, char */*who*/)
+extern "C" void ext_yahoo_chat_userleave(int /*id*/, const char */*me*/, const char */*room*/, const char */*who*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_message(int /*id*/, char */*who*/, char */*room*/, char */*msg*/, int /*msgtype*/, int /*utf8*/)
+extern "C" void ext_yahoo_chat_message(int /*id*/, const char */*me*/, const char */*who*/, const char */*room*/, const char */*msg*/, int /*msgtype*/, int /*utf8*/)
 {
 }
 
-extern "C" void ext_yahoo_status_changed(int id, char *who, int stat, char *msg, int away)
+extern "C" void ext_yahoo_status_changed(int id, const char *who, int stat, const char *msg, int away, int idle, int /*mobile*/)
 {
 	assert( gYahooConnections[id] != NULL );
 	gYahooConnections[id]->cbStatusChanged(who,stat,msg,away);
@@ -270,29 +267,49 @@ extern "C" void ext_yahoo_got_ignore(int /*id*/, YList * /*igns*/)
 {
 }
 
-extern "C" void ext_yahoo_got_im(int id, char *who, char *msg, long tm, int stat, int utf8)
+extern "C" void ext_yahoo_got_im(int id,const char* /*me*/, const char *who, const char *msg, long tm, int stat, int utf8)
 {
 	assert( gYahooConnections[id] != NULL );
 	gYahooConnections[id]->cbGotIM(who,msg,tm,stat,utf8);
 }
 
-extern "C" void ext_yahoo_rejected(int /*id*/, char */*who*/, char */*msg*/)
+extern "C" void ext_yahoo_rejected(int /*id*/, const char */*who*/, const char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_contact_added(int /*id*/, char */*myid*/, char */*who*/, char */*msg*/)
+extern "C" void ext_yahoo_contact_added(int id, const char */*myid*/, const char *who, const char *msg)
 {
 }
 
-extern "C" void ext_yahoo_typing_notify(int /*id*/, char */*who*/, int /*stat*/)
+extern "C" void ext_yahoo_typing_notify(int id, const char */*me*/, const char *who, int stat)
+{
+	assert( gYahooConnections[id] != NULL );
+	gYahooConnections[id]->cbTypeNotify(who,stat);
+}
+
+extern "C" void ext_yahoo_game_notify(int /*id*/, const char */*me*/, const char */*who*/, int /*stat*/)
 {
 }
 
-extern "C" void ext_yahoo_game_notify(int /*id*/, char */*who*/, int /*stat*/)
+extern "C" void ext_yahoo_mail_notify(int id, const char *from, const char *subj, int cnt)
 {
 }
 
-extern "C" void ext_yahoo_mail_notify(int /*id*/, char */*from*/, char */*subj*/, int /*cnt*/)
+extern "C" void ext_yahoo_got_buddyicon(int id, const char */*me*/, const char *who, const char *url, int checksum)
+{
+	yahoo_get_url_handle(id,url,cb_yahoo_url_handle,(void*)who);
+}
+
+extern "C" void ext_yahoo_got_buddyicon_checksum(int id, const char */*me*/,const char *who, int /*checksum*/)
+{
+	yahoo_buddyicon_request(id,who);
+}
+
+extern "C" void ext_yahoo_got_buddyicon_request(int id, const char */*me*/, const char *who)
+{
+}
+
+extern "C" void ext_yahoo_buddyicon_uploaded(int id, const char *url)
 {
 }
 
@@ -302,11 +319,11 @@ extern "C" void ext_yahoo_got_webcam_image(int /*id*/, const char */*who*/,
 {
 }
 
-extern "C" void ext_yahoo_webcam_viewer(int /*id*/, char */*who*/, int /*connect*/)
+extern "C" void ext_yahoo_webcam_viewer(int /*id*/, const char */*who*/, int /*connect*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_closed(int /*id*/, char */*who*/, int /*reason*/)
+extern "C" void ext_yahoo_webcam_closed(int /*id*/, const char */*who*/, int /*reason*/)
 {
 }
 
@@ -314,19 +331,19 @@ extern "C" void ext_yahoo_webcam_data_request(int /*id*/, int /*send*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_invite(int /*id*/, char */*from*/)
+extern "C" void ext_yahoo_webcam_invite(int /*id*/, const char */*me*/, const char */*from*/)
 {
 }
 
-extern "C" void ext_yahoo_webcam_invite_reply(int /*id*/, char */*from*/, int /*accept*/)
+extern "C" void ext_yahoo_webcam_invite_reply(int /*id*/, const char */*me*/, const char */*from*/, int /*accept*/)
 {
 }
 
-extern "C" void ext_yahoo_system_message(int /*id*/, char */*msg*/)
+extern "C" void ext_yahoo_system_message(int /*id*/, const char */*msg*/)
 {
 }
 
-extern "C" void ext_yahoo_got_file(int /*id*/, char */*who*/, char */*url*/, long /*expires*/, char */*msg*/, char */*fname*/, unsigned long /*fesize*/)
+extern "C" void ext_yahoo_got_file(int id, const char */*me*/, const char *who, const char *url, long /*expires*/, const char *msg, const char *fname, unsigned long fesize)
 {
 }
 
@@ -334,11 +351,11 @@ extern "C" void ext_yahoo_got_identities(int /*id*/, YList * /*ids*/)
 {
 }
 
-extern "C" void ext_yahoo_chat_yahoologout(int /*id*/)
+extern "C" void ext_yahoo_chat_yahoologout(int /*id*/, const char */*me*/)
 { 
 }
 
-extern "C" void ext_yahoo_chat_yahooerror(int /*id*/)
+extern "C" void ext_yahoo_chat_yahooerror(int /*id*/, const char */*me*/)
 { 
 }
 
@@ -346,11 +363,13 @@ extern "C" void ext_yahoo_got_search_result(int /*id*/, int /*found*/, int /*sta
 {
 }
 
-extern "C" void ext_yahoo_got_cookies(int /*id*/)
+extern "C" void ext_yahoo_got_cookies(int id)
 {
+	assert( gYahooConnections[id] != NULL );
+	yahoo_get_yab(id);
 }
 
-extern "C" void ext_yahoo_login_response(int id, int succ, char *url)
+extern "C" void ext_yahoo_login_response(int id, int succ, const char *url)
 {
 	LOG(kProtocolName, liDebug, "ext_yahoo_login_response");
 	
@@ -358,10 +377,14 @@ extern "C" void ext_yahoo_login_response(int id, int succ, char *url)
 	gYahooConnections[id]->cbLoginResponse(succ,url);
 }
 
-extern "C" void ext_yahoo_error(int id, char *err, int fatal)
+extern "C" void ext_yahoo_error(int id, const char *err, int fatal, int /*num*/)
 {
 	assert( gYahooConnections[id] != NULL );
 	gYahooConnections[id]->cbYahooError(err,fatal);
+}
+
+extern "C" void ext_yahoo_got_ping(int /*id*/, const char */*errormsg*/)
+{
 }
 
 fd_conn * gConnectConn=NULL;
@@ -425,7 +448,7 @@ extern "C" void ext_yahoo_remove_handler(int id, int tag)
 	}
 }
 
-extern "C" int ext_yahoo_connect(char *host, int port)
+extern "C" int ext_yahoo_connect(const char *host, int port)
 {
 	struct sockaddr_in serv_addr;
 	static struct hostent *server;
@@ -476,7 +499,7 @@ extern "C" int ext_yahoo_connect(char *host, int port)
 	return -1;
 }
 
-extern "C" int ext_yahoo_connect_async(int id, char *host, int port, 
+extern "C" int ext_yahoo_connect_async(int id, const char *host, int port, 
 		yahoo_connect_callback callback, void *data)
 {
 	struct sockaddr_in serv_addr;
@@ -528,6 +551,22 @@ extern "C" int ext_yahoo_connect_async(int id, char *host, int port,
 /*************************************
  * Callback handling code starts here
  */
+ 
+void cb_yahoo_url_handle(int id, int fd, int error, const char */*filename*/, unsigned long size, void *data) 
+{
+	const char *who = (const char*)data;
+	char byte;
+	BString buff;
+	unsigned long count = 0;
+	while (count <= size) 
+	{
+		read(fd,&byte,1);
+		count++;
+		buff << byte;
+	}
+	assert( gYahooConnections[id] != NULL );
+	gYahooConnections[id]->cbGotBuddyIcon(who,size,buff.String());
+}
 
 static void connect_complete(void *data, int source, yahoo_input_condition /*condition*/)
 {
@@ -714,6 +753,11 @@ extern "C" void register_callbacks()
 	yc.ext_yahoo_remove_handler = ext_yahoo_remove_handler;
 	yc.ext_yahoo_connect = ext_yahoo_connect;
 	yc.ext_yahoo_connect_async = ext_yahoo_connect_async;
+	yc.ext_yahoo_got_buddyicon = ext_yahoo_got_buddyicon;
+	yc.ext_yahoo_got_buddyicon_checksum = ext_yahoo_got_buddyicon_checksum;
+	yc.ext_yahoo_got_buddyicon_request = ext_yahoo_got_buddyicon_request;
+	yc.ext_yahoo_buddyicon_uploaded = ext_yahoo_buddyicon_uploaded;
+	yc.ext_yahoo_got_ping = ext_yahoo_got_ping;
 	
 	yahoo_register_callbacks(&yc);
 }

@@ -70,7 +70,7 @@ RSRCS= yahoo.rsrc
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= be im stdc++.r4 _APP_ yahoo2
+LIBS= be im stdc++.r4 _APP_ ./libyahoo2.so
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -83,7 +83,7 @@ LIBPATHS= /boot/home/config/lib ../../build
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = /boot/home/config/include /boot/home/config/include/libyahoo2 /boot/develop/headers/be/bone/sys ../..  
+SYSTEM_INCLUDE_PATHS = /boot/home/config/include /boot/develop/headers/be/bone/sys ../..  . libyahoo2
 
 
 #	additional paths to look for local headers
@@ -137,7 +137,8 @@ APP_VERSION =
 DRIVER_PATH = 
 
 ifeq ($(CHECK_MEM), true)
-	COMPILER_FLAGS += -fcheck-memory-usage -D_NO_INLINE_ASM=1 -D_KERNEL_MODE=1
+# 	COMPILER_FLAGS += -fcheck-memory-usage -D_NO_INLINE_ASM=1 -D_KERNEL_MODE=1
+	COMPILER_FLAGS += -fcheck-memory-usage -D_NO_INLINE_ASM=1
 	DEBUG_BUILD=true
 	LIBS += socket bind
 endif
@@ -169,10 +170,10 @@ INSTALL_DIR= /boot/home/config/add-ons/im_kit/protocols
 include $(TOPDIR)/makefile-engine.IMkit
 
 
-$(TARGET): _APP_
-
-_APP_: $(TOPDIR)/build/im_server
-	-ln -sf $< $@
+# $(TARGET): _APP_
+# 
+# _APP_: $(TOPDIR)/build/im_server
+# 	-ln -sf $< $@
 
 endif #bone sanity check.
 

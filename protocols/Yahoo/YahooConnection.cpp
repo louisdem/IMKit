@@ -2,13 +2,64 @@
 
 #include <stdio.h>
 #include <algorithm>
-#include "htmlparse.h"
+//#include "htmlparse.h"
 
 // We include this for the ONLINE_TEXT, AWAY_TEXT and OFFLINE_TEXT defines
 #include <libim/Constants.h>
 
+#include <libyahoo2/yahoo_util.h>
+
 map<int, YahooConnection*> gYahooConnections;
 
+char * y_utf8_to_str(const char *in)
+{
+	int i = 0;
+	unsigned int n;
+	char *result = NULL;
+
+	if(in == NULL || *in == '\0')
+		return "";
+	
+	result = y_new(char, strlen(in) + 1);
+
+	/* convert a string from UTF-8 Format */
+	for (n = 0; n < strlen(in); n++) {
+		unsigned char c = in[n];
+
+		if (c < 128) {
+			result[i++] = (char) c;
+		} else {
+			result[i++] = (c << 6) | (in[++n] & 63);
+		}
+	}
+	result[i] = '\0';
+	return result;
+}
+
+char * y_str_to_utf8(const char *in)
+{
+	unsigned int n, i = 0;
+	char *result = NULL;
+
+	if(in == NULL || *in == '\0')
+		return "";
+	
+	result = y_new(char, strlen(in) * 2 + 1);
+
+	/* convert a string to UTF-8 Format */
+	for (n = 0; n < strlen(in); n++) {
+		unsigned char c = (unsigned char)in[n];
+
+		if (c < 128) {
+			result[i++] = (char) c;
+		} else {
+			result[i++] = (char) ((c >> 6) | 192);
+			result[i++] = (char) ((c & 63) | 128);
+		}
+	}
+	result[i] = '\0';
+	return result;
+}
 
 YahooConnection::YahooConnection( YahooManager * mgr, const char * yahooID, const char * pass )
 :	fManager( mgr ),
@@ -93,8 +144,9 @@ YahooConnection::Message( const char * who, const char * msg )
 		fID, 
 		NULL /* default identity */,
 		who,
-		msg,
-		1 /* it's utf-8 */
+		y_str_to_utf8(msg),
+		1 /* it's utf-8 */,
+		0
 	);
 	
 	fManager->MessageSent( who, msg );
@@ -113,7 +165,7 @@ YahooConnection::AddBuddy( const char * who )
 	
 	if ( iter == fBuddies.end() )
 	{ // not in list, adding
-		yahoo_add_buddy( fID, who, "BeOS Yahoo", "Adding you from BeOS" );
+		yahoo_add_buddy( fID, who, "Communicator", "" );
 		fBuddies.push_back( who );
 		printf("Yahoo: Added buddy\n");
 	}
@@ -128,11 +180,24 @@ YahooConnection::RemoveBuddy( const char * who )
 		return;
 	}
 	
-	yahoo_remove_buddy( fID, who, "BeOS Yahoo" );
+	yahoo_remove_buddy( fID, who, "" );
 }
 
 void
-YahooConnection::cbStatusChanged( char * who, int stat, char * /*msg*/, int /*away*/ )
+YahooConnection::Typing(const char * who, int stat )
+{
+	yahoo_send_typing(fID,NULL,who,stat);
+}
+
+void
+YahooConnection::GetBuddyIcon(const char * who)
+{
+	yahoo_buddyicon_request(fID, who);
+}
+
+
+void
+YahooConnection::cbStatusChanged( const char * who, int stat, const char * msg, int /*away*/ )
 {
 	const char * status=NULL;
 	
@@ -144,13 +209,12 @@ YahooConnection::cbStatusChanged( char * who, int stat, char * /*msg*/, int /*aw
 			break;
 		
 		case YAHOO_STATUS_BRB:
-		case YAHOO_STATUS_BUSY:
-		case YAHOO_STATUS_NOTATHOME:
 		case YAHOO_STATUS_NOTATDESK:
 		case YAHOO_STATUS_NOTINOFFICE:
-		case YAHOO_STATUS_ONPHONE:
 		case YAHOO_STATUS_ONVACATION:
 		case YAHOO_STATUS_OUTTOLUNCH:
+		case YAHOO_STATUS_ONPHONE:
+		case YAHOO_STATUS_NOTATHOME:
 		case YAHOO_STATUS_STEPPEDOUT:
 		case YAHOO_STATUS_CUSTOM:
 			status = AWAY_TEXT;
@@ -174,11 +238,16 @@ YahooConnection::cbGotBuddies( YList * buds )
 {
 	fGotBuddyList = true;
 	
+	list<struct yahoo_buddy> yabs;
+	
 	// copy from buds to buddies...
 	for(; buds; buds = buds->next) {
 		struct yahoo_buddy *bud = (struct yahoo_buddy *)buds->data;
-		
+		if (bud->real_name)
+			yabs.push_back( *bud );
 		fBuddies.push_back( bud->id );
+		
+		yahoo_buddyicon_request(fID, bud->id);
 	}
 	
 	// add waiting buddies
@@ -190,17 +259,30 @@ YahooConnection::cbGotBuddies( YList * buds )
 	
 	// Tell the manager!
 	fManager->GotBuddyList( fBuddies );
+	fManager->GotContactsInfo( yabs );
 }
 
 void
-YahooConnection::cbGotIM(char *who, char *msg, long /*tm*/, int /*stat*/, int /*utf8*/)
+YahooConnection::cbGotIM(const char *who, const char *msg, long /*tm*/, int /*stat*/, int /*utf8*/)
 {
-	parse_html(msg);
+	//parse_html(msg);
 	fManager->GotMessage( who, msg );
 }
 
 void
-YahooConnection::cbLoginResponse(int succ, char */*url*/)
+YahooConnection::cbTypeNotify(const char *who, int stat)
+{
+	fManager->TypeNotify( who, stat );
+}
+
+void
+YahooConnection::cbGotBuddyIcon(const char *who, long size, const char *icon)
+{
+	fManager->GotBuddyIcon(who,size,icon);
+}
+
+void
+YahooConnection::cbLoginResponse(int succ, const char */*url*/)
 {
 	if(succ == YAHOO_LOGIN_OK) {
 		fStatus = yahoo_current_status(fID);
@@ -226,7 +308,7 @@ YahooConnection::cbLoginResponse(int succ, char */*url*/)
 }
 
 void
-YahooConnection::cbYahooError(char *err, int fatal)
+YahooConnection::cbYahooError( const char *err, int fatal)
 {
 	fManager->Error( err, NULL );
 	
