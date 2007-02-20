@@ -538,39 +538,24 @@ GoogleTalk::LoggedOut()
 }
 
 void
-GoogleTalk::BuddyStatusChanged( JabberContact* who )
-{
-	LOG("GoogleTalk", liDebug, "GoogleTalk::BuddyStatusChanged()");
-	
-	//avoid a receiving self status changes
-	
-	if(who->GetJid().ICompare(GetJid())==0)
-		return;
-	
-	BMessage msg(IM::MESSAGE);
-	msg.AddInt32("im_what", IM::STATUS_CHANGED);
-	msg.AddString("protocol", kProtocolName);
-	msg.AddString("id", who->GetJid());
-	
-	AddStatusString(who->GetPresence(),&msg);
-		
-	fServerMsgr.SendMessage( &msg );
+GoogleTalk::BuddyStatusChanged( JabberContact* who ){
+	BuddyStatusChanged(who->GetPresence());
 }
+
 void
-GoogleTalk::BuddyStatusChanged( JabberPresence* jp )
-{
-	LOG("GoogleTalk", liDebug, "GoogleTalk::BuddyStatusChanged()");
+GoogleTalk::BuddyStatusChanged( JabberPresence* jp ){
+	
+	LOG("GoogleTalk", liDebug, "GoogleTalk::BuddyStatusChanged(%s)",jp->GetJid().String());
+	
+	//avoid a receiving self status changes or empty status:
+	if(jp->GetJid() == "" || jp->GetJid().ICompare(GetJid())==0) return;
 	
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::STATUS_CHANGED);
 	msg.AddString("protocol", kProtocolName);
 	msg.AddString("id", jp->GetJid());
 	
-//	if(jp->GetShow().ICompare("unavailable"))
-		
-	
 	AddStatusString(jp,&msg);
-	
 	fServerMsgr.SendMessage( &msg );
 }
 

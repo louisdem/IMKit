@@ -62,6 +62,8 @@ class GoogleTalk : public IM::Protocol, public JabberManager, public JabberHandl
 
 				
 	private:
+		
+		
 		JabberSSLPlug*	fPlug;
 		BMessenger	fServerMsgr;
 		
