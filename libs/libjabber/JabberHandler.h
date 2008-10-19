@@ -14,9 +14,9 @@ using std::list;
 #include "ObjectList.h"
 #include "JabberPlug.h"
 
-#include "xmltok.h"
-#include "expat.h"
-#include "xmlrole.h"
+#include "libexpat/xmltok.h"
+#include "libexpat/expat.h"
+#include "libexpat/xmlrole.h"
 
 class JabberHandler 
 {
