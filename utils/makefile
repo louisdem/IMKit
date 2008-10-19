@@ -4,7 +4,6 @@ SUBDIRS = \
 	DeskbarIcon \
 	gimicq-import \
 	mimetype \
-	InfoPopper \
 	IconSetter
 
 default .DEFAULT :
