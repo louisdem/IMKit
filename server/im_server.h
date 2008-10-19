@@ -12,7 +12,7 @@
 #include <Node.h>
 #include <String.h>
 
-#include "IMKitUtilities.h"
+#include <common/IMKitUtilities.h>
 
 #include <libim/Contact.h>
 #include <libim/Protocol.h>

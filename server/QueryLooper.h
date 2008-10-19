@@ -10,8 +10,8 @@
 #include <String.h>
 #include <Volume.h>
 
-#include "IconMenuItem.h"
-#include "IMKitUtilities.h"
+#include <common/IconMenuItem.h>
+#include <common/IMKitUtilities.h>
 
 #include <map>
 #include <vector>

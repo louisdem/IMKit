@@ -3,7 +3,6 @@
 #include "JabberHandler.h"
 
 #define LOG(X) printf X;
-#define STDOUT
 
 #define msnmsgPing 'ping'
 

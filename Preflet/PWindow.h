@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#include "IconTextItem.h"
+#include <common/IconTextItem.h>
 
 #include <Box.h>
 #include <Button.h>
@@ -26,8 +26,8 @@
 #include <libim/Constants.h>
 #include <libim/Manager.h>
 
-#include "../common/IMKitUtilities.h"
-#include "../common/BubbleHelper.h"
+#include <common/IMKitUtilities.h>
+#include <common/BubbleHelper.h>
 
 #include <map>
 
