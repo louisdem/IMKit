@@ -2,7 +2,7 @@
 #define CHATWINDOW_H
 
 #include "main.h"
-#include "../../common/IMKitUtilities.h"
+#include <common/IMKitUtilities.h>
 
 #include <FindDirectory.h>
 
@@ -25,7 +25,7 @@
 #include <Bitmap.h>
 #include <MessageRunner.h>
 
-#include "IconMenuItem.h"
+#include <common/IconMenuItem.h>
 #include "StatusBar.h"
 #include "IconBar.h"
 #include "ImageButton.h"

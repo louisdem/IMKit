@@ -3,7 +3,7 @@
 
 #include <Application.h>
 #include <Alert.h>
-#include <TrackerAddon.h>
+#include <TrackerAddOn.h>
 
 #include "../../common/IMKitUtilities.h"
 #include "LogWin.h"

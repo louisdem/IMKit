@@ -6,9 +6,9 @@
 #include <Path.h>
 #include <Roster.h>
 
-#include "BubbleHelper.h"
+#include <common/BubbleHelper.h>
 #include "ImageButton.h"
-#include "IMKitUtilities.h"
+#include <common/IMKitUtilities.h>
 
 #include <stdio.h>
 

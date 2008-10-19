@@ -12,7 +12,7 @@
 #include <MessageRunner.h>
 #include <vector>
 
-#include "BubbleHelper.h"
+#include <common/BubbleHelper.h>
 
 #ifdef ZETA
 #include <locale/Locale.h>
