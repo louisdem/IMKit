@@ -1,9 +1,11 @@
 #include "Contact.h"
 
-#include <string.h>
-#include <TypeConstants.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <Node.h>
 #include <Path.h>
+#include <TypeConstants.h>
 
 #include "Helpers.h"
 
