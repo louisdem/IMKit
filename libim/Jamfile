@@ -1,0 +1,17 @@
+#
+# Copyright 2008, Pier Luigi Fiorini.
+# Distributed under the terms of the MIT License.
+#
+
+SubDir IMKIT_TOP libim ;
+
+SharedLibrary libim.so :
+	Contact.cpp
+	Manager.cpp
+	Helpers.cpp
+	: be stdc++.r4
+;
+
+AddResources libim.so : libim_version.rdef ;
+
+InstallLib /boot/common/lib : libim.so ;
