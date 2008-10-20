@@ -1,0 +1,27 @@
+#
+# Copyright 2008, IM Kit Team.
+# Distributed under the terms of the MIT License.
+#
+# Authors:
+#		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
+#
+
+SubDir IMKIT_TOP protocols Jabber ;
+
+SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
+SubDirHdrs [ FDirName $(IMKIT_TOP) libs ] ;
+SubDirHdrs [ FDirName $(IMKIT_TOP) server ] ;
+
+Addon jabber :
+	Jabber.cpp
+	: be stdc++.r4 im libexpat.a libjabber.a
+	: Jabber.rdef
+;
+
+Depends jabber : libim.so ;
+
+if $(IMKIT_IS_HAIKU)  = 1 {
+	LINKFLAGS on jabber += -lnetwork ;
+}
+
+LINKFLAGS on jabber += -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;

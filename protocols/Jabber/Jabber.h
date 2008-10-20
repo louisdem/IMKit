@@ -1,11 +1,11 @@
 #ifndef IMKIT_Jabber_H
 #define IMKIT_Jabber_H
 
-#include <Protocol.h>
+#include <libim/Protocol.h>
 #include <String.h>
 #include <Messenger.h>
 
-#include "JabberHandler.h"
+#include <libjabber/JabberHandler.h>
 #include "JabberManager.h"
 
 #include <list>

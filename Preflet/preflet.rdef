@@ -10,7 +10,7 @@ resource app_version {
 	internal = 0,
 
 	short_info = "IM Kit Preflet",
-	long_info = "IM Kit © 2008 Pier Luigi Fiorini"
+	long_info = "IM Kit © 2003-2008 IM Kit Team"
 };
 
 resource app_flags B_SINGLE_LAUNCH;

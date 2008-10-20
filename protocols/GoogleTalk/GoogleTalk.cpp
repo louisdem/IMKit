@@ -1,8 +1,8 @@
 #include "GoogleTalk.h"
 #include <stdio.h>
-#include <Constants.h>
-#include <Helpers.h>
-#include "JabberSSLPlug.h"
+#include <libim/Constants.h>
+#include <libim/Helpers.h>
+#include <libjabber/JabberSSLPlug.h>
 
 #include "States.h"
 #include "string.h"	

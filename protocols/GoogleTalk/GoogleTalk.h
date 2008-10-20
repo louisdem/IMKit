@@ -1,11 +1,11 @@
 #ifndef IMKIT_GoogleTalk_H
 #define IMKIT_GoogleTalk_H
 
-#include <Protocol.h>
+#include <libim/Protocol.h>
 #include <String.h>
 #include <Messenger.h>
 
-#include "JabberHandler.h"
+#include <libjabber/JabberHandler.h>
 #include "JabberManager.h"
 
 #include <list>

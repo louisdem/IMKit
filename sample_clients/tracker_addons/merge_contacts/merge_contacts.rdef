@@ -8,7 +8,7 @@ resource app_version {
 	internal = 0,
 
 	short_info = "IM Kit merge_contacts",
-	long_info = "IM Kit © 2008 Pier Luigi Fiorini"
+	long_info = "IM Kit © 2003-2008 IM Kit Team"
 };
 
 resource file_types message {

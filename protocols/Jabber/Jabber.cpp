@@ -1,10 +1,10 @@
 #include "Jabber.h"
 #include <stdio.h>
-#include <Constants.h>
-#include <Helpers.h>
-#include <JabberSocketPlug.h>
+#include <libim/Constants.h>
+#include <libim/Helpers.h>
+#include <libjabber/JabberSocketPlug.h>
 
-#include "States.h"
+#include <libjabber/States.h>
 #include "string.h"
 
 const char *  kProtocolName = "jabber";
