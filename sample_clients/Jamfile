@@ -10,7 +10,9 @@ SubDir IMKIT_TOP sample_clients ;
 
 SubInclude IMKIT_TOP sample_clients logger ;
 SubInclude IMKIT_TOP sample_clients tracker_addons ;
-SubInclude IMKIT_TOP sample_clients im_infopopper ;
+if $(IMKIT_HAVE_INFOPOPPER) = 1 {
+	SubInclude IMKIT_TOP sample_clients im_infopopper ;
+}
 SubInclude IMKIT_TOP sample_clients im_binlogger ;
 SubInclude IMKIT_TOP sample_clients im_binlog_viewer ;
 if $(IMKIT_IS_ZETA) = 1 {

@@ -12,8 +12,6 @@ current_dir=`pwd`
 debug=1
 checkmem=0
 is_haiku=0
-common_bindir=""
-common_libdir=""
 ssl_incdir=""
 ssl_libdir=""
 defines=""
@@ -35,6 +33,7 @@ while [ $# != 0 ]; do
 	shift
 done
 
+# Binaries
 jambin=`which jam`
 rcbin=`which rc`
 xresbin=`which xres`
@@ -42,6 +41,15 @@ settypebin=`which settype`
 mimesetbin=`which mimeset`
 setversionbin=`which setversion`
 copyattrbin=`which copyattr`
+
+# Libraries
+have_infopopper=0
+
+# Get common directories
+common_bindir=`finddir B_COMMON_BIN_DIRECTORY`
+common_libdir=`finddir B_COMMON_LIB_DIRECTORY`
+common_serversdir=`finddir B_COMMON_SERVERS_DIRECTORY`
+common_devdir=`finddir B_COMMON_DEVELOP_DIRECTORY`
 
 # Check whether jam exists
 echo -n "Checking whether jam exists... "
@@ -146,10 +154,16 @@ else
 	exit 1
 fi
 
-# Get common directories
-common_bindir=`finddir B_COMMON_BIN_DIRECTORY`
-common_libdir=`finddir B_COMMON_LIB_DIRECTORY`
-common_serversdir=`finddir B_COMMON_SERVERS_DIRECTORY`
+# Check for InfoPopper
+echo -n "Checking for InfoPopper..."
+if [ -f $common_libdir/libinfopopper.so -o \
+     -f $common_devdir/headers/libinfopopper/InfoPopper.h ]; then
+	echo "found"
+	have_infopopper=1
+else
+	echo "not found"
+	have_infopopper=0
+fi
 
 # Create the build configuration
 cat > $current_dir/BuildConfig << EOF
@@ -165,6 +179,7 @@ IMKIT_BUILD_DATE = `date +"%Y-%m-%d"` ;
 IMKIT_BUILD_REVISION = `svnversion` ;
 
 IMKIT_IS_HAIKU = 1 ;
+IMKIT_HAVE_INFOPOPPER = ${have_infopopper} ;
 
 RC = ${rcbin} ;
 XRES = ${xresbin} ;
