@@ -164,6 +164,8 @@ IMKIT_COMMON_SERVERS_DIRECTORY = ${common_serversdir} ;
 IMKIT_BUILD_DATE = `date +"%Y-%m-%d"` ;
 IMKIT_BUILD_REVISION = `svnversion` ;
 
+IMKIT_IS_HAIKU = 1 ;
+
 RC = ${rcbin} ;
 XRES = ${xresbin} ;
 SETTYPE = ${settypebin} ;
