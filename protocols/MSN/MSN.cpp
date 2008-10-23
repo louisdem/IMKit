@@ -23,7 +23,7 @@ extern "C" {
 MSNProtocol::MSNProtocol()
 	: IM::Protocol( Protocol::MESSAGES | Protocol::SERVER_BUDDY_LIST ),
 	  fThread(0) {
-	
+
 	srand(time(NULL));
 	
 	fPassword = "";
@@ -33,10 +33,9 @@ MSNProtocol::MSNProtocol()
 	
 	// OpenSSL random seed
 	int random_data[32];
-	for ( int i=0; i<32; i++ )
-	{
+	for (int i = 0; i < 32; i++) {
 		random_data[i] = rand();
-	}
+	};
 	RAND_seed(random_data, sizeof(random_data));
 };
 
@@ -79,9 +78,7 @@ status_t MSNProtocol::Process(BMessage * msg) {
 			msg->FindInt32("im_what",&im_what);
 		
 			switch (im_what) {
-				case IM::REGISTER_CONTACTS: {
-					//msg->PrintToStream();
-				
+				case IM::REGISTER_CONTACTS: {			
 					type_code garbage;
 					int32 count = 0;
 					msg->GetInfo("id", &garbage, &count);
@@ -140,7 +137,6 @@ status_t MSNProtocol::Process(BMessage * msg) {
 							fManager->SetAway(false);
 						} else {
 							LOG(kProtocolName, liDebug, "Calling fManager.Login()");
-//							fManager->Login("gateway.messenger.hotmail.com", kDefaultPort,
 							fManager->Login("messenger.hotmail.com", kDefaultPort,
 								fPassport.String(), fPassword.String(),
 								fDisplayName.String());
@@ -197,40 +193,7 @@ status_t MSNProtocol::Process(BMessage * msg) {
 					
 					fManager->TypingNotification(id, 1001 /* should be STARTED_TYPING*/);
 				} break;
-//				case IM::USER_STOPPED_TYPING: {
-////					const char *id = msg->FindString("id");
-////					if (!id) return B_ERROR;
-//					
-////					fManager->TypingNotification(id, FINISHED_TYPING);
-//				} break;
-///*				case IM::SEND_AUTH_ACK:
-//				{
-//					bool authreply;
-//					
-//					if ( !fClient.icqclient.isConnected() )
-//						return B_ERROR;
-//					
-//					const char * id = msg->FindString("id");
-//					int32 button = msg->FindInt32("which");
-//					
-//					if (button == 0) {
-//						LOG("icq", DEBUG, "Authorization granted to %s", id);
-//						authreply = true;
-//					} else {
-//						LOG("icq", DEBUG, "Authorization rejected to %s", id);
-//						authreply = false;					
-//					}
-//						
-//					ICQ2000::ContactRef c = new ICQ2000::Contact( atoi(id) );
-//					
-//					AuthAckEvent * ev = new AuthAckEvent(c, authreply);
-//
-//					fClient.icqclient.SendEvent( ev );									
-//				}
-//*/				default:
-//					break;
 			}
-//			
 		}	break;
 		default:
 			break;
@@ -452,6 +415,8 @@ status_t MSNProtocol::ContactList(list<BString> *contacts) {
 	for (int32 i = 0; reply.FindString("id", i, &id) == B_OK; i++) {
 		contacts->push_back(id);
 	}
+	
+	return B_OK;
 };
 
 status_t MSNProtocol::AuthRequest(list_types /*list*/,const char *passport, const char *displayname) {

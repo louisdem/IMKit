@@ -4,7 +4,7 @@ Buddy::Buddy(const char *passport) {
 	fPassport = passport;
 	fFriendly = "";
 	fStatus = otOffline;
-	fCaps = ccUnknown2;
+	fCaps = ccMultiPacketMessaging;
 	fLists = ltNone;
 	fDisplay = NULL;
 };

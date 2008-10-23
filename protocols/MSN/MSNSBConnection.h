@@ -2,44 +2,44 @@
 #define MSN_SB_CONNECTION_H
 
 #include "MSNConnection.h"
-#include "Buddy.h"
 
 #include <string>
 #include <list>
 
-typedef list<Buddy *> particilist;
+class Buddy;
 
-class MSNSBConnection : public MSNConnection
-{
+typedef list<Buddy *> participant_t;
+typedef list<Command *> pendingmsg_t;
+
+class MSNSBConnection : public MSNConnection {
 	public:
-		MSNSBConnection(const char *server, uint16 port, MSNManager *man );
+							MSNSBConnection(const char *server, uint16 port, MSNManager *man);
+							~MSNSBConnection(void);
 		
-		~MSNSBConnection();
+		// BLooper Hooks
+		virtual void		MessageReceived(BMessage *msg);
 		
-		virtual void MessageReceived( BMessage * );
-		
-		bool IsGroupChat() const;
-		
-		bool IsSingleChatWith( const char * );
-		
-		bool InChat( const char * );
+		// Public
+		bool 				IsGroupChat(void) const;
+		bool				IsSingleChatWith(const char *who);
+		bool				InChat(const char *who);
 		
 		/**
 			Send a message to someone. If no participants have joined
 			yet, store the message until they have and then send.
 		*/
-		void SendMessage( Command * );
+		void 				SendMessage(Command *cmd);
 		
 	protected:
-		particilist		fParticipants;
-		list<Command*>	fPendingMessages;
+		participant_t		fParticipants;
+		pendingmsg_t		fPendingMessages;
 		
-		virtual status_t handleCAL( Command * );
-		virtual status_t handleJOI( Command * );
-		virtual status_t handleIRO( Command * );
-		virtual status_t handleBYE( Command * );
-		virtual status_t handleUSR( Command * );
-		virtual status_t handleANS( Command * );
+		virtual status_t	HandleCAL(Command *cmd);
+		virtual status_t 	HandleJOI(Command *cmd);
+		virtual status_t 	HandleIRO(Command *cmd);
+		virtual status_t 	HandleBYE(Command *cmd);
+		virtual status_t 	HandleUSR(Command *cmd);
+		virtual status_t 	HandleANS(Command *cmd);
 
 };
 

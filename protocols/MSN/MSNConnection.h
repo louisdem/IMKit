@@ -8,6 +8,7 @@
 #include <MessageRunner.h>
 
 #include <list>
+#include <map>
 #include <vector>
 
 #include <libim/Helpers.h>
@@ -21,95 +22,100 @@
 #include "P2PHeader.h"
 #include "P2PContents.h"
 
+// Member Function Pointer for command handlers
+typedef status_t (MSNConnection::*CommandHandler)(Command *);
+typedef map<BString, CommandHandler> commandhandler_t;
 typedef pair <char *, int16> ServerAddress;
 typedef list<Command *> CommandQueue;
+typedef list<BString> contact_t;
+
 class MSNManager;
 
 class MSNConnection : public BLooper {
 	public:
-						MSNConnection();
-						MSNConnection(const char *server, uint16 port,
-							MSNManager *man);
-						~MSNConnection();
+							MSNConnection(void);
+							MSNConnection(const char *server, uint16 port, MSNManager *man);
+							~MSNConnection(void);
 						
-		void			MessageReceived(BMessage *msg);
-		
-		void			SetTo( const char * server, uint16 port, MSNManager * man );
-		
-		status_t		Send(Command *command, queuestyle queue = qsQueue);
-		status_t		ProcessCommand(Command *command);
+		// BLooper hooks
+		void				MessageReceived(BMessage *msg);
+		bool				QuitRequested(void);
 
-		inline const char
-						*Server(void) const { return fServer; };
-		inline uint16	Port(void) const { return fPort; };
+		// Accessors
+		const char 			*Server(void) const;
+		uint16				Port(void) const;
+		bool				IsConnected(void);
 
-		bool			QuitRequested();
-		
-		bool			IsConnected();
+		// Public Methods
+		void				SetTo(const char *server, uint16 port, MSNManager *man);
+		status_t			Send(Command *command, queuestyle queue = qsQueue);
+		status_t			ProcessCommand(Command *command);
+
 		
 	protected:
-		virtual status_t handleVER( Command * );
-		virtual status_t handleNLN( Command * );
-		virtual status_t handleCVR( Command * );
-		virtual status_t handleRNG( Command * );
-		virtual status_t handleXFR( Command * );
-		virtual status_t handleCHL( Command * );
-		virtual status_t handleUSR( Command * );
-		virtual status_t handleMSG( Command * );
-		virtual status_t handleADC( Command * );
-		virtual status_t handleLST( Command * );
-		virtual status_t handleQRY( Command * );
-		virtual status_t handleGTC( Command * );
-		virtual status_t handleBLP( Command * );
-		virtual status_t handlePRP( Command * );
-		virtual status_t handleCHG( Command * );
-		virtual status_t handleFLN( Command * );
-		virtual status_t handleSYN( Command * );
-		virtual status_t handleJOI( Command * );
-		virtual status_t handleCAL( Command * );
-		virtual status_t handleIRO( Command * );
-		virtual status_t handleANS( Command * );
-		virtual status_t handleBYE( Command * );
+		virtual status_t	HandleVER(Command *command);
+		virtual status_t	HandleNLN(Command *command);
+		virtual status_t	HandleCVR(Command *command);
+		virtual status_t	HandleRNG(Command *command);
+		virtual status_t 	HandleXFR(Command *command);
+		virtual status_t	HandleCHL(Command *command);
+		virtual status_t	HandleUSR(Command *command);
+		virtual status_t	HandleMSG(Command *command);
+		virtual status_t	HandleADC(Command *command);
+		virtual status_t	HandleLST(Command *command);
+		virtual status_t 	HandleQRY(Command *command);
+		virtual status_t 	HandleGTC(Command *command);
+		virtual status_t 	HandleBLP(Command *command);
+		virtual status_t 	HandlePRP(Command *command);
+		virtual status_t 	HandleCHG(Command *command);
+		virtual status_t 	HandleFLN(Command *command);
+		virtual status_t 	HandleSYN(Command *command);
+		virtual status_t 	HandleJOI(Command *command);
+		virtual status_t 	HandleCAL(Command *command);
+		virtual status_t 	HandleIRO(Command *command);
+		virtual status_t 	HandleANS(Command *command);
+		virtual status_t 	HandleBYE(Command *command);
+		virtual status_t	HandleSBS(Command *command);
+		virtual status_t	HandleILN(Command *command);
 		
-		void			StartReceiver(void);
-		void			StopReceiver(void);
-		void			GoOnline(void);
-		void			ClearQueues(void);
+		void				StartReceiver(void);
+		void				StopReceiver(void);
+		void				GoOnline(void);
+		void				ClearQueues(void);
 		
-		ServerAddress	ExtractServerDetails(char *details);
+		ServerAddress		ExtractServerDetails(char *details);
 		
-		MSNManager		*fManager;	
-		BMessenger		fManMsgr;
+		MSNManager			*fManager;	
+		BMessenger			fManMsgr;
 
 	private:
-		int32			NetworkSend(Command *command);
-		int32			ConnectTo(const char *hostname, uint16 port);
-		static int32	Receiver(void *con);
-		status_t		SSLSend(const char *host, HTTPFormatter *send,
-			HTTPFormatter **recv);
-		void			Error( const char *, bool disconnected=false );
-		void			Progress( const char * id, const char * msg, float );
-		
-		list<BString>	fContacts;
-		
-		char			*fServer;
-		uint16			fPort;
-		
-		CommandQueue	fOutgoing;
-		CommandQueue	fWaitingOnline;
-		uint32			fTrID;
-		
-		BMessenger		*fSockMsgr;
-		BMessageRunner	*fRunner;
-		BMessageRunner	*fKeepAliveRunner;
-		
-		int16			fSock;
-		
-		uint8			fState;
-		thread_id		fThread;
-		
+		void				SetupCommandHandlers(void);
+		int32				NetworkSend(Command *command);
+		int32				ConnectTo(const char *hostname, uint16 port);
+		static int32		Receiver(void *con);
+		status_t			SSLSend(const char *host, HTTPFormatter *send, HTTPFormatter **recv);
+		void				Error(const char *message, bool disconnected = false);
+		void				Progress(const char * id, const char * msg, float progress);
 
+		commandhandler_t	fCommandHandler;
 		
+		contact_t			fContacts;
+		
+		char				*fServer;
+		uint16				fPort;
+		
+		CommandQueue		fOutgoing;
+		CommandQueue		fWaitingOnline;
+		uint32				fTrID;
+		
+		BMessenger			*fSockMsgr;
+		BMessageRunner		*fRunner;
+		BMessageRunner		*fKeepAliveRunner;
+		
+		int16				fSock;
+
+		uint8				fState;
+		thread_id			fThread;
 };
 
 #endif

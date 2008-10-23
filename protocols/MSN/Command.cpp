@@ -13,6 +13,7 @@ Command::Command(const char *type)
 
 	gExpectsPayload["MSG"] = true;
 	gExpectsPayload["UBX"] = true;
+	gExpectsPayload["GCF"] = true;
 };
 
 Command::~Command(void) {

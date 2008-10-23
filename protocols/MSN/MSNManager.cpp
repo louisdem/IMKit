@@ -11,10 +11,10 @@
 #include "MSNHandler.h"
 
 void PrintHex(const unsigned char* buf, size_t size) {
-	if ( g_verbosity_level != liDebug ) {
-		// only print this stuff in debug mode
-		return;
-	}
+//	if ( g_verbosity_level != liDebug ) {
+//		// only print this stuff in debug mode
+//		return;
+//	}
 	
 	int i = 0;
 	int j = 0;
@@ -164,11 +164,6 @@ status_t MSNManager::Login(const char *server, uint16 port, const char *passport
 		LOG(kProtocolName, liDebug, "MSNManager::Login: Already online");
 		return B_ERROR;
 	};
-};
-
-status_t MSNManager::Send(Command *command) {
-//	MSNConnection *con = fConnections.front();
-//	if (con != NULL) con->Send(command);
 };
 
 void MSNManager::MessageReceived(BMessage *msg) {

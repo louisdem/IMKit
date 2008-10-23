@@ -208,6 +208,11 @@ status_t HTTPFormatter::AppendContent(const char *content, size_t length) {
 const char *HTTPFormatter::Content(void) {
 	return fContent.String();
 };
+
+int32 HTTPFormatter::ContentLength(void) {
+	return fContent.Length();
+};
+
 status_t HTTPFormatter::ClearContent(void) {
 	fContent = "";
 	return B_OK;
@@ -231,6 +236,12 @@ const char *HTTPFormatter::Flatten(void) {
 		fFlattened = fRequestType;
 		fFlattened << " " << fDocument << " HTTP/" << fVersion << "\r\n";
 		fFlattened << "Host: " << fHost << "\r\n";
+
+//		fFlattened = fRequestType;
+//		fFlattened << " " << "https://" << fHost;
+//		if ((fDocument.Length() > 0) && (fDocument[0] != '/')) fFlattened << "/";
+//		fFlattened << fDocument << " HTTP/" << fVersion << "\r\n";
+//		fFlattened << "Host: " << fHost << "\r\n";
 		
 		HeaderMap::iterator i;
 		
@@ -238,8 +249,14 @@ const char *HTTPFormatter::Flatten(void) {
 			fFlattened << i->first.String() << ": " << i->second.String() << "\r\n";
 		};
 		
-		fFlattened << "\r\n\r\n";
-
+		if (fContent.Length() > 0) {
+			fFlattened << "Content-Length: " << fContent.Length() << "\r\n";
+			fFlattened << "\r\n";
+			fFlattened << fContent;
+		} else {
+			fFlattened << "\r\n";
+		};
+		
 		fDirty = false;
 	};
 	

@@ -40,6 +40,7 @@ class HTTPFormatter {
 		status_t	SetContent(const char *content, size_t length);
 		status_t	AppendContent(const char *content, size_t length);
 		const char	*Content(void);
+		int32		ContentLength(void);
 		status_t	ClearContent(void);
 		
 		status_t	Clear(void);
