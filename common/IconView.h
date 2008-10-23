@@ -11,7 +11,7 @@ extern const int32 kSmallIcon;
 class IconView : public BView {
 	public:
 							IconView(BBitmap *icon);
-							IconView(entry_ref ref,int16 size = kSmallIcon,
+							IconView(entry_ref ref, int16 size = kSmallIcon,
 								bool followSymlink = true);
 							
 							~IconView(void);

@@ -14,8 +14,8 @@ void encode_html( BString &msg ) {
 	msg.ReplaceAll("[i]","<i>");
 	msg.ReplaceAll("[/i]","</i>");
 	
-	msg.Prepend("<html>");
-	msg.Append("</html>");
+	msg.Prepend("<html><body>");
+	msg.Append("</body></html>");
 }
 
 void parse_html( char * msg )
