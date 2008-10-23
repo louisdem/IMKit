@@ -1,7 +1,9 @@
 #ifndef OSCARCONSTANTS_H
 #define OSCARCONSTANTS_H
 
-#include <be_prim.h>
+#ifndef __HAIKU__
+#	include <be_prim.h>
+#endif
 
 extern const char *kProtocolName;
 extern const char *kThreadName;
