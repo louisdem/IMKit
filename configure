@@ -70,9 +70,11 @@ have_openssl=0
 common_bindir=`finddir B_COMMON_BIN_DIRECTORY`
 common_libdir=`finddir B_COMMON_LIB_DIRECTORY`
 common_serversdir=`finddir B_COMMON_SERVERS_DIRECTORY`
+common_addonsdir=`finddir B_COMMON_ADDONS_DIRECTORY`
 common_devdir=`finddir B_COMMON_DEVELOP_DIRECTORY`
 user_confdir=`finddir B_USER_CONFIG_DIRECTORY`
 beos_sysdir=`finddir B_BEOS_SYSTEM_DIRECTORY`
+beos_prefsdir=`finddir B_BEOS_PREFERENCES_DIRECTORY`
 
 # Check whether jam exists
 echo -n "Checking whether jam exists... "
@@ -216,9 +218,15 @@ IMKIT_DEBUG = ${debug} ;
 IMKIT_CHECKMEM = ${checkmem} ;
 IMKIT_OPENSSL_INCDIR = ${ssl_incdir} ;
 IMKIT_OPENSSL_LIBDIR = ${ssl_libdir} ;
+
 IMKIT_COMMON_BIN_DIRECTORY = ${common_bindir} ;
 IMKIT_COMMON_LIB_DIRECTORY = ${common_libdir} ;
 IMKIT_COMMON_SERVERS_DIRECTORY = ${common_serversdir} ;
+IMKIT_COMMON_ADDONS_DIRECTORY = ${common_addonsdir} ;
+IMKIT_COMMON_DEVELOP_DIRECTORY = ${common_devdir} ;
+IMKIT_USER_CONFIG_DIRECTORY = ${user_confdir} ;
+IMKIT_BEOS_SYSTEM_DIRECTORY = ${beos_sysdir} ;
+IMKIT_BEOS_PREFERENCES_DIRECTORY = ${beos_prefsdir} ;
 
 IMKIT_BUILD_DATE = `date +"%Y-%m-%d"` ;
 IMKIT_BUILD_REVISION = `svnversion .` ;

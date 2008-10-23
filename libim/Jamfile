@@ -1,6 +1,9 @@
 #
-# Copyright 2008, Pier Luigi Fiorini.
+# Copyright 2008, IM Kit.
 # Distributed under the terms of the MIT License.
+#
+# Authors:
+#		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 #
 
 SubDir IMKIT_TOP libim ;
@@ -18,4 +21,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 
 AddResources libim.so : libim_version.rdef ;
 
-InstallLib /boot/common/lib : libim.so ;
+InstallLib $(IMKIT_COMMON_LIB_DIRECTORY) : libim.so ;

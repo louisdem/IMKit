@@ -1,0 +1,18 @@
+#
+# Copyright 2008, IM Kit Team.
+# Distributed under the terms of the MIT License.
+#
+# Authors:
+#		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
+#
+
+SubDir IMKIT_TOP utils IconSetter ;
+
+SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
+
+Executable IconSetter :
+	main.cpp
+	: be translation im
+;
+
+LINKFLAGS on IconSetter += -L$(IMKIT_TOP)/libim ;

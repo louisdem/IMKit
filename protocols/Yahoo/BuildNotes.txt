@@ -19,6 +19,11 @@ Then edit src/Makefile:
 			LIBS =  $(GLIB_LIBS) -lbind -lsocket
 	* Zeta:
 		where it says -lsocket, also add -lbind on the same line, right after -lsocket.
+	* Haiku:
+		Change the line:
+			LIBS =  $(GLIB_LIBS)
+		to
+			LIBS =  $(GLIB_LIBS) -lnetwork
 	
 	* remove "-ansi -pedantic" from the CFLAGS line
 

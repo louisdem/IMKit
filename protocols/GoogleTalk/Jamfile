@@ -16,14 +16,23 @@ SubDirHdrs [ FDirName $(IMKIT_OPENSSL_INCDIR) ] ;
 
 Addon gtalk :
 	GoogleTalk.cpp
-	: be stdc++.r4 im ssl crypto libexpat.a libjabber.a
+	: be stdc++.r4 im libexpat.a libjabber.a ssl crypto
 	: GoogleTalk.rdef
 ;
-
-Depends gtalk : libim.so ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on gtalk += -lnetwork ;
 }
 
+if $(IMKIT_IS_BEOS) = 1 {
+	LINKFLAGS on gtalk += -lsocket ;
+}
+
+if $(IMKIT_IS_ZETA) = 1 {
+	LINKFLAGS on gtalk += -lsocket -lbind ;
+	SubDirHdrs /boot/develop/headers/be/bone ;
+}
+
 LINKFLAGS on gtalk += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+
+InstallFile $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : gtalk ;

@@ -25,11 +25,9 @@ Addon oscar :
 	Buddy.cpp
 	Group.cpp
 	BufferWriter.cpp
-	: be stdc++.r4 textencoding im ssl crypto $(IMKIT_TOP)/common/libcommon.a
+	: be stdc++.r4 textencoding im libcommon.a ssl crypto
 	: OSCAR.rdef
 ;
-
-Depends oscar : libim.so ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on oscar += -lnetwork ;
@@ -45,3 +43,5 @@ if $(IMKIT_IS_ZETA) = 1 {
 }
 
 LINKFLAGS on oscar += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+
+InstallFile $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : oscar ;

@@ -18,10 +18,19 @@ Addon jabber :
 	: Jabber.rdef
 ;
 
-Depends jabber : libim.so ;
-
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on jabber += -lnetwork ;
 }
 
+if $(IMKIT_IS_BEOS) = 1 {
+	LINKFLAGS on jabber += -lsocket ;
+}
+
+if $(IMKIT_IS_ZETA) = 1 {
+	LINKFLAGS on jabber += -lsocket -lbind ;
+	SubDirHdrs /boot/develop/headers/be/bone ;
+}
+
 LINKFLAGS on jabber += -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+
+InstallFile $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : jabber ;

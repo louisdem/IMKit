@@ -6,19 +6,15 @@
 #		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 #
 
-SubDir IMKIT_TOP Preflet ;
+SubDir IMKIT_TOP extendo_people ;
 
 SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
 
-Executable InstantMessaging :
-	# preflet
+Executable People :
 	main.cpp
-	PApplication.cpp
-	PWindow.cpp
-	: be stdc++.r4 translation textencoding im libcommon.a
-	: preflet.rdef
+	PeopleWindow.cpp
+	: be
+	: people.rsrc
 ;
-
-LINKFLAGS on InstantMessaging += -L$(IMKIT_TOP)/libim ;
 
 InstallFile $(IMKIT_BEOS_PREFERENCES_DIRECTORY) : InstantMessaging ;

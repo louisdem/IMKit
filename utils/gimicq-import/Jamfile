@@ -1,0 +1,13 @@
+#
+# Copyright 2008, IM Kit Team.
+# Distributed under the terms of the MIT License.
+#
+# Authors:
+#		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
+#
+
+SubDir IMKIT_TOP utils gimicq-import ;
+
+InstallFile /boot/apps/im_kit/gimicq-import : GimICQ2IM.py ;
+InstallFile /boot/apps/im_kit/gimicq-import : README ;
+InstallFile /boot/apps/im_kit/gimicq-import : gim2im.sh ;

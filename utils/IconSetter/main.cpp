@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#include "IMKitUtilities.h"
+#include <common/IMKitUtilities.h>
 #include <libim/Contact.h>
 
 //#pragma mark -

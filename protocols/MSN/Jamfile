@@ -24,11 +24,9 @@ Addon msn :
 	P2PHeader.cpp
 	Buddy.cpp
 	SSO.cpp 
-	: be stdc++.r4 im ssl crypto $(IMKIT_TOP)/common/libcommon.a
+	: be stdc++.r4 im libcommon.a ssl crypto
 	: MSN.rdef
 ;
-
-Depends msn : libim.so ;
 
 if $(IMKIT_IS_HAIKU) = 1 {
 	LINKFLAGS on msn += -lnetwork ;
@@ -44,3 +42,5 @@ if $(IMKIT_IS_ZETA) = 1 {
 }
 
 LINKFLAGS on msn += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+
+InstallFile $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : msn ;

@@ -20,9 +20,9 @@
 #include <map>
 #include <string>
 
-#include "IconMenuItem.h"
-#include "IMKitUtilities.h"
-#include "BubbleHelper.h"
+#include <common/IconMenuItem.h>
+#include <common/IMKitUtilities.h>
+#include <common/BubbleHelper.h>
 #include "AwayMessageWindow.h"
 #include "QueryLooper.h"
 

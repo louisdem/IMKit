@@ -7,7 +7,7 @@
 #include <MessageRunner.h>
 #include <String.h>
 
-#if defined(BONE_BUILD) || defined(__HAIKU__) 
+#ifdef BONE_BUILD
 	#include <arpa/inet.h>
 	#include <sys/socket.h>
 	#include <netdb.h>
