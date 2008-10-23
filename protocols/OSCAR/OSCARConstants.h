@@ -3,6 +3,8 @@
 
 #ifndef __HAIKU__
 #	include <be_prim.h>
+#else
+#	include <SupportDefs.h>
 #endif
 
 extern const char *kProtocolName;

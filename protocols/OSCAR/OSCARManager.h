@@ -7,7 +7,7 @@
 #include <MessageRunner.h>
 #include <String.h>
 
-#ifdef BONE_BUILD
+#if defined(BONE_BUILD) || defined(__HAIKU__) 
 	#include <arpa/inet.h>
 	#include <sys/socket.h>
 	#include <netdb.h>
@@ -41,7 +41,7 @@ typedef map<uint16, OSCARConnection *> pfc_map; // Pending family / connection m
 typedef list<Flap *> flap_stack;
 typedef list<OSCARConnection *> connlist;
 typedef map<uint16, Group *> group_t;
-typedef map<uint16, bool> id_t;
+typedef map<uint16, bool> identity_t;
 typedef vector<BString> grouplist_t;
 
 // The Member Function Pointer for a Family handler / parser
@@ -156,7 +156,7 @@ class OSCARManager : public BLooper {
 		int16				fIconSize;
 		int16				fSSIItems;
 		group_t				fGroups;
-		id_t				fItemIds;
+		identity_t			fItemIds;
 };
 
 #endif

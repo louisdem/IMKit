@@ -1831,7 +1831,7 @@ add->AddInt16(0x0001);
 
 uint16 OSCARManager::GetNewItemId(void) {
 	uint16 id = 0;
-	id_t::iterator iIt;
+	identity_t::iterator iIt;
 	for (iIt = fItemIds.begin(); iIt != fItemIds.end(); iIt++) {
 		id = max_c(iIt->first, id);
 	};
