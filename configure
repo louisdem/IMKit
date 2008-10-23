@@ -12,6 +12,8 @@ current_dir=`pwd`
 debug=1
 checkmem=0
 is_haiku=0
+is_zeta=0
+is_beos=0
 ssl_incdir=""
 ssl_libdir=""
 defines=""
@@ -85,8 +87,18 @@ release=`uname -r`
 echo -n "Checking operating system... "
 case "$system" in
 	BeOS)
-		is_haiku=0
-		echo "$system $release"
+		case "$release" in
+			5.*)
+				is_beos=1
+			;;
+			6.*)
+				is_zeta=1
+			;;
+			*)
+				echo "*** Unsupported $system operating system."
+				exit 1
+			;;
+		esac
 	;;
 	Haiku)
 		is_haiku=1
@@ -201,7 +213,9 @@ IMKIT_COMMON_SERVERS_DIRECTORY = ${common_serversdir} ;
 IMKIT_BUILD_DATE = `date +"%Y-%m-%d"` ;
 IMKIT_BUILD_REVISION = `svnversion .` ;
 
-IMKIT_IS_HAIKU = 1 ;
+IMKIT_IS_HAIKU = ${is_haiku} ;
+IMKIT_IS_BEOS = ${is_beos} ;
+IMKIT_IS_ZETA = ${is_zeta} ;
 IMKIT_HAVE_INFOPOPPER = ${have_infopopper} ;
 
 RC = ${rcbin} ;

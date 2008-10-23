@@ -20,4 +20,9 @@ Executable im_server :
 ;
 
 Depends im_server : libim.so ;
+
+if $(IMKIT_IS_ZETA) = 1 {
+	LINKFLAGS on im_server += -lzeta -ltracker ;
+}
+
 LINKFLAGS on im_server += -L$(IMKIT_TOP)/libim ;
