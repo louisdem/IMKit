@@ -10,6 +10,7 @@ SubDir IMKIT_TOP common ;
 StaticLibrary libcommon.a :
 	Base64.cpp
 	BufferWriter.cpp
+	BufferReader.cpp
 	BubbleHelper.cpp
 	IMKitUtilities.cpp
 	IconMenuItem.cpp
