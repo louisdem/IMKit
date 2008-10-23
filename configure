@@ -33,14 +33,32 @@ while [ $# != 0 ]; do
 	shift
 done
 
+# Replacement for which to make it work in Zeta
+function which_replacement()
+{
+ 	location=`which $1 2>/dev/null`
+ 
+ 	if [ -z "$location" ]; then
+ 		for p in `echo $PATH | awk '$1=$1' RS=: OFS="\n"`; do 
+ 			if [ -x $p/$1 ]; then 
+ 				location=$p/$1
+ 				break
+ 			fi 
+ 		done 
+ 	fi
+
+	echo $location
+ 	return
+}
+
 # Binaries
-jambin=`which jam`
-rcbin=`which rc`
-xresbin=`which xres`
-settypebin=`which settype`
-mimesetbin=`which mimeset`
-setversionbin=`which setversion`
-copyattrbin=`which copyattr`
+jambin=`which_replacement jam`
+rcbin=`which_replacement rc`
+xresbin=`which_replacement xres`
+settypebin=`which_replacement settype`
+mimesetbin=`which_replacement mimeset`
+setversionbin=`which_replacement setversion`
+copyattrbin=`which_replacement copyattr`
 
 # Libraries
 have_infopopper=0
@@ -67,9 +85,8 @@ release=`uname -r`
 echo -n "Checking operating system... "
 case "$system" in
 	BeOS)
-		echo "*** Neither BeOS nor Zeta are supported anymore!"
-		echo "*** The future is coming and it is Haiku!"
-		exit 1
+		is_haiku=0
+		echo "$system $release"
 	;;
 	Haiku)
 		is_haiku=1
@@ -149,9 +166,15 @@ if [ -f /boot/home/config/lib/libssl.so -a \
 	echo "found"
 	ssl_libdir=/boot/home/config/lib
 else
-	echo "not found"
-	echo "*** IM Kit requires OpenSSL, please read our INSTALL file."
-	exit 1
+	if [ -f /boot/beos/system/lib/libssl.so -a \
+         -f /boot/beos/system/lib/libcrypto.so ]; then
+         echo "found"
+         ssl_libdir=/boot/beos/system/lib
+	else
+		echo "not found"
+		echo "*** IM Kit requires OpenSSL, please read our INSTALL file."
+		exit 1
+	fi
 fi
 
 # Check for InfoPopper
@@ -176,7 +199,7 @@ IMKIT_COMMON_LIB_DIRECTORY = ${common_libdir} ;
 IMKIT_COMMON_SERVERS_DIRECTORY = ${common_serversdir} ;
 
 IMKIT_BUILD_DATE = `date +"%Y-%m-%d"` ;
-IMKIT_BUILD_REVISION = `svnversion` ;
+IMKIT_BUILD_REVISION = `svnversion .` ;
 
 IMKIT_IS_HAIKU = 1 ;
 IMKIT_HAVE_INFOPOPPER = ${have_infopopper} ;
