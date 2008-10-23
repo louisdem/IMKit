@@ -9,9 +9,11 @@
 SubDir IMKIT_TOP protocols ;
 
 #SubInclude IMKIT_TOP protocols AIM ;
-SubInclude IMKIT_TOP protocols GoogleTalk ;
 #SubInclude IMKIT_TOP protocols ICQ ;
 SubInclude IMKIT_TOP protocols Jabber ;
-SubInclude IMKIT_TOP protocols MSN ;
-#SubInclude IMKIT_TOP protocols OSCAR ;
+if $(IMKIT_HAVE_OPENSSL) = 1 {
+	SubInclude IMKIT_TOP protocols MSN ;
+	SubInclude IMKIT_TOP protocols GoogleTalk ;
+}
+SubInclude IMKIT_TOP protocols OSCAR ;
 #SubInclude IMKIT_TOP protocols Yahoo ;
