@@ -7,7 +7,6 @@
 #include "OSCARConnection.h"
 
 #include <UTF8.h>
-#include <sys/select.h>
 
 //#pragma mark Constants
 
@@ -259,8 +258,7 @@ status_t OSCARBOSConnection::HandleServiceControl(SNAC *snac, BufferReader *read
 			useSSI->AddSNAC(new SNAC(SERVER_SIDE_INFORMATION, ACTIVATE_SSI_LIST));
 			Send(useSSI);
 			
-			fManager->Progress("OSCAR Login", "OSCAR: Requested server side buddy list",
-				1.0);
+			fManager->Progress("OSCAR Login", "OSCAR: Requested server side buddy list", 1.0);
 			
 			BMessage status(AMAN_STATUS_CHANGED);
 			status.AddInt8("status", OSCAR_ONLINE);

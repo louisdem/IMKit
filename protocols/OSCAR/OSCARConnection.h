@@ -21,6 +21,7 @@ class Flap;
 class TLV;
 class SNAC;
 class BufferReader;
+class BLocker;
 
 typedef pair <char *, uint16> ServerAddress;
 
@@ -112,7 +113,7 @@ class OSCARConnection : public BLooper {
 		BMessageRunner		*fRunner;
 		BMessageRunner		*fKeepAliveRunner;
 		
-		int16				fSock;
+		int32				fSock;
 		
 		uint8				fState;
 		thread_id			fThread;
@@ -120,6 +121,10 @@ class OSCARConnection : public BLooper {
 		uint32				fRequestID;
 		OSCARManager		*fManager;
 		conn_type			fConnType;
+		
+#ifndef BONE
+		BLocker				*fSocketLock;
+#endif
 };
 
 #endif

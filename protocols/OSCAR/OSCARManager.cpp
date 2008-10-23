@@ -257,6 +257,7 @@ status_t OSCARManager::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 			LOG(Protocol(), liHigh, "Got extended status request");
 			reader->Debug();
 		
+#if 0
 			while (reader->HasMoreData()) {
 				int16 notice = reader->ReadInt16();
 
@@ -298,7 +299,7 @@ status_t OSCARManager::HandleServiceControl(SNAC *snac, BufferReader *reader) {
 					} break;
 				};
 			};
-			
+#endif			
 		} break;
 		
 		case MOTD: {
@@ -492,6 +493,12 @@ status_t OSCARManager::HandleICBM(SNAC *snac, BufferReader *reader) {
 			free(nick);
 			
 		} break;
+		
+		case SERVER_MISSED_MESSAGE: {
+			LOG(Protocol(), liHigh, "Got a server missed message!");
+			PrintHex(reader->Buffer(), reader->Length(), true);
+		} break;
+		
 		default: {
 			LOG(Protocol(), liMedium, "Got unhandled SNAC of family 0x0004 "
 				"(ICBM) of subtype 0x%04x", subtype);

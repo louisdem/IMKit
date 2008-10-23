@@ -344,13 +344,14 @@ status_t ICQProtocol::Error(const char *error) {
 	fMsgr.SendMessage(&msg);
 };
 
-status_t ICQProtocol::Progress(const char *id, const char *message,
-	float progress) {
+status_t ICQProtocol::Progress(const char *id, const char *message, float progress) {
+	BString progId = GetSignature();
+	progId << id;
 
 	BMessage msg(IM::MESSAGE);
 	msg.AddInt32("im_what", IM::PROGRESS );
 	msg.AddString("protocol", fManager->Protocol());
-	msg.AddString("progressID", id);
+	msg.AddString("progressID", progId);
 	msg.AddString("message", message);
 	msg.AddFloat("progress", progress);
 	msg.AddInt32("state", IM::impsConnecting );
@@ -451,8 +452,7 @@ status_t ICQProtocol::SSIBuddies(list<BString> buddies) {
 	fMsgr.SendMessage(&serverBased);
 };
 
-status_t ICQProtocol::BuddyIconFromUser(const char *nick, const uchar *icon,
-	uint32 length) {
+status_t ICQProtocol::BuddyIconFromUser(const char *nick, const uchar *icon, uint32 length) {
 	
 	BMessage iconMsg(IM::MESSAGE);
 	iconMsg.AddString("protocol", fManager->Protocol());

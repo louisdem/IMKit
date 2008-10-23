@@ -6,7 +6,14 @@
 #include "TLV.h"
 
 #include <UTF8.h>
-#include <sys/select.h>
+
+#ifdef BONE
+	#include <sys/select.h>
+#else
+	#include <netdb.h>
+	#include <support/Locker.h>
+	#include <support/Autolock.h>
+#endif
 
 void remove_html(char *msg);
 const char *kThreadName = "IM Kit: OSCAR Connection";
@@ -51,6 +58,10 @@ OSCARConnection::OSCARConnection(const char *server, uint16 port, OSCARManager *
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(AMAN_KEEP_ALIVE), 30000000, -1);
 	
+#ifndef BONE
+	fSocketLock = new BLocker();
+#endif
+	
 	SetState(OSCAR_CONNECTING);
 	fSock = B_ERROR;
 	fSock = ConnectTo(fServer.String(), fPort);
@@ -61,8 +72,11 @@ OSCARConnection::~OSCARConnection(void) {
 	snooze(1000);
 	
 	StopReceiver();
-	
 	ClearQueue();
+	
+#ifndef BONE
+	delete fSocketLock;
+#endif
 };
 
 //#pragma mark -
@@ -306,6 +320,10 @@ status_t OSCARConnection::LowLevelSend(Flap *flap) {
 	int sent_data = -1;
 
 	if (fSock > 0) {
+#ifndef BONE
+		BAutolock autolock(fSocketLock);
+		if (autolock.IsLocked() == false) return B_ERROR;
+#endif
 		if (flap->Channel() == SNAC_DATA) {
 			LOG(ConnName(), liLow, "%s:%i Sending 0x%04x / 0x%04x", Server(),
 				Port(), flap->SNACAt()->Family(), flap->SNACAt()->SubType());
@@ -385,7 +403,8 @@ int32 OSCARConnection::ConnectTo(const char *hostname, uint16 port) {
 		return B_ERROR;
 	};
 
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0) {
 		LOG(ConnName(), liMedium, "OSCARConn::ConnectTo(%s, %i): Couldn't create socket",
 			hostname, port);	
 		return B_ERROR;
@@ -395,6 +414,11 @@ int32 OSCARConnection::ConnectTo(const char *hostname, uint16 port) {
 	their_addr.sin_port = htons(port);
 	their_addr.sin_addr = *((struct in_addr *)he->h_addr);
 	memset(&(their_addr.sin_zero), 0, 8);
+
+#ifndef BONE
+	BAutolock autolock(fSocketLock);
+	if (autolock.IsLocked() == false) return B_ERROR;
+#endif
 
 	if (connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1) {
 		LOG(ConnName(), liMedium, "OSCARConn::ConnectTo: Couldn't connect to %s:%i", hostname, port);
@@ -424,40 +448,34 @@ void OSCARConnection::StartReceiver(void) {
 };
 
 void OSCARConnection::StopReceiver(void) {
-	if ( fSock > B_ERROR )
-	{
+	if (fSock > B_ERROR) {
+#ifndef BONE
+		closesocket(fSock);
+#else
 		shutdown(fSock, SHUTDOWN_BOTH);
-		#ifdef closesocket
-		closesocket( fSock );
-		#else
-		close( fSock );
-		#endif
-		
-//		fSock = B_ERROR;
-	}
+		close(fSock);
+#endif		
+	};
 	
 	BMessenger * old_msgr = NULL;
 	if (fSockMsgr) {
 		old_msgr = fSockMsgr;
 		fSockMsgr = new BMessenger((BHandler *)NULL);
 		// deleting the messenger will cause the thread to exit cleanly
-	}
+	};
 	
-	if ( fThread > B_ERROR )
-	{
+	if (fThread > B_ERROR) {
 		int32 res;
-		if ( wait_for_thread( fThread, &res) != B_OK )
-		{
+		if (wait_for_thread(fThread, &res) != B_OK) {
 			LOG(ConnName(), liHigh, "Error waiting for thread!");
-		}
+		};
 		fThread = B_ERROR;
-	}
+	};
 	
-	if ( old_msgr != NULL )
-	{
+	if (old_msgr != NULL) {
 		delete old_msgr;
-	}
-}
+	};
+};
 
 int32 OSCARConnection::Receiver(void *con) {
 	OSCARConnection *connection = reinterpret_cast<OSCARConnection *>(con);
@@ -509,6 +527,9 @@ int32 OSCARConnection::Receiver(void *con) {
 		processed = 0;
 						
 		while (processed < kFLAPHeaderLen) {
+#ifndef BONE
+			BAutolock autolock(connection->fSocketLock);
+#endif
 			FD_ZERO(&read);
 			FD_ZERO(&error);
 			
@@ -573,6 +594,9 @@ int32 OSCARConnection::Receiver(void *con) {
 		bytes = 0;
 		
 		while (processed < flapLen) {
+#ifndef BONE
+			BAutolock autolock(connection->fSocketLock);
+#endif
 			FD_ZERO(&read);
 			FD_ZERO(&error);
 			
@@ -625,8 +649,8 @@ int32 OSCARConnection::Receiver(void *con) {
 				dataReady.what = AMAN_FLAP_CLOSE_CON;
 			} break;
 			default: {
-				LOG(kConnName, liHigh, "%s:%i Got an unsupported FLAP channel",
-					kHost, kPort);
+				LOG(kConnName, liHigh, "%s:%i Got an unsupported FLAP channel (%i)",
+					kHost, kPort, channel);
 				continue;
 			};
 		}
