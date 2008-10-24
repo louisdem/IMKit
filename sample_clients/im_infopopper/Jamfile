@@ -17,4 +17,6 @@ Executable im_infopopper :
 	: im_infopopper.rsrc
 ;
 
-LINKFLAGS on im_infopopper += -L/boot/common/lib ;
+LINKFLAGS on im_infopopper += -L$(IMKIT_COMMON_LIB_DIRECTORY) ;
+
+InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_infopopper ;

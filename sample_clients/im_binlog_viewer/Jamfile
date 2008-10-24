@@ -22,3 +22,5 @@ Executable im_binlog_viewer :
 	: be stdc++.r4 tracker libim.so libcommon.a
 	: logger.rsrc
 ;
+
+InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_binlog_viewer ;

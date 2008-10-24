@@ -44,4 +44,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 
 LINKFLAGS on oscar += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
 
-InstallFile $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : oscar ;
+InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : oscar ;

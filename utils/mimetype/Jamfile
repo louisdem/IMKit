@@ -12,3 +12,5 @@ Executable mimetype_attribute :
 	mimetype_attribute.cpp
 	: be
 ;
+
+InstallBin $(IMKIT_APPS_DIRECTORY)/im_kit : mimetype_attribute ;

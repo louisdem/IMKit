@@ -25,4 +25,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 
 LINKFLAGS on im_server += -L$(IMKIT_TOP)/libim ;
 
-InstallFile $(IMKIT_COMMON_SERVERS_DIRECTORY) : im_server ;
+InstallBin $(IMKIT_COMMON_SERVERS_DIRECTORY) : im_server ;

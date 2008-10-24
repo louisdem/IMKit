@@ -33,4 +33,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 
 LINKFLAGS on jabber += -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
 
-InstallFile $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : jabber ;
+InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : jabber ;

@@ -15,3 +15,5 @@ Executable im_logger :
 	: be libim.so
 	: logger.rsrc
 ;
+
+InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_logger ;

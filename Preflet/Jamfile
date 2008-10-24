@@ -21,4 +21,4 @@ Executable InstantMessaging :
 
 LINKFLAGS on InstantMessaging += -L$(IMKIT_TOP)/libim ;
 
-InstallFile $(IMKIT_BEOS_PREFERENCES_DIRECTORY) : InstantMessaging ;
+InstallBin $(IMKIT_BEOS_PREFERENCES_DIRECTORY) : InstantMessaging ;

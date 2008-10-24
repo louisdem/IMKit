@@ -16,3 +16,5 @@ Executable IconSetter :
 ;
 
 LINKFLAGS on IconSetter += -L$(IMKIT_TOP)/libim ;
+
+InstallBin $(IMKIT_APPS_DIRECTORY)/im_kit : IconSetter ;

@@ -19,3 +19,5 @@ Addon IMDeskbarIcon :
 ;
 
 LINKFLAGS on IMDeskbarIcon += -L$(IMKIT_TOP)/libim ;
+
+InstallLib $(IMKIT_APPS_DIRECTORY)/imkit : IMDeskbarIcon ;

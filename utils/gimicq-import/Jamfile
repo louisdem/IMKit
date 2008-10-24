@@ -8,6 +8,7 @@
 
 SubDir IMKIT_TOP utils gimicq-import ;
 
-InstallFile /boot/apps/im_kit/gimicq-import : GimICQ2IM.py ;
-InstallFile /boot/apps/im_kit/gimicq-import : README ;
-InstallFile /boot/apps/im_kit/gimicq-import : gim2im.sh ;
+# FIXME: Install* rules remove files on jam -q uninstall
+#InstallBin $(IMKIT_APPS_DIRECTORY)/im_kit/gimicq-import : GimICQ2IM.py ;
+#InstallFile $(IMKIT_APPS_DIRECTORY)/im_kit/gimicq-import : README ;
+#InstallShell $(IMKIT_APPS_DIRECTORY)/im_kit/gimicq-import : gim2im.sh ;

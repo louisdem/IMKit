@@ -1,5 +1,12 @@
 # Overridden Jam rules
 
+# Override to change permissions.
+rule InstallLib
+{
+	InstallInto $(<) : $(>) ;
+	MODE on $(>:G=$(INSTALLGRIST)) = $(EXEMODE) ;
+}
+
 # Overridden to use copyattr instead of cp and
 # to allow spaces in file names.
 actions Install

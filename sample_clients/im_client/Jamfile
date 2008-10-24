@@ -26,3 +26,5 @@ Executable im_client :
 	: be stdc++.r4 libim.so libcommon.a
 	: im_client.rsrc
 ;
+
+InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_client ;
