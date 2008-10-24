@@ -75,7 +75,7 @@ common_devdir=`finddir B_COMMON_DEVELOP_DIRECTORY`
 user_confdir=`finddir B_USER_CONFIG_DIRECTORY`
 beos_sysdir=`finddir B_BEOS_SYSTEM_DIRECTORY`
 beos_prefsdir=`finddir B_BEOS_PREFERENCES_DIRECTORY`
-appsdir=`finddir B_APPS_DIRECTOR`
+appsdir=`finddir B_APPS_DIRECTORY`
 
 # Check whether jam exists
 echo -n "Checking whether jam exists... "
