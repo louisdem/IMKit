@@ -18,7 +18,8 @@ JabberSSLPlug::JabberSSLPlug(BString forceserver=NULL,int32 port=0){
 	
 	fKeepAliveRunner = new BMessageRunner(BMessenger(NULL, (BLooper *)this),
 		new BMessage(msnmsgPing), 60000000, -1);
-		
+
+	SSL_library_init();
 }
 
 
