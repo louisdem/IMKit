@@ -6,7 +6,7 @@
 #include "common/BufferWriter.h"
 #include "common/Base64.h"
 
-#if defined BONE || defined HAIKU
+#if defined BONE || defined HAIKU || defined ZETA
 	#include <arpa/inet.h>
 	#include <sys/socket.h>
 	#include <netdb.h>

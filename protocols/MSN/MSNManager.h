@@ -7,7 +7,7 @@
 #include <MessageRunner.h>
 #include <String.h>
 
-#if defined BONE || defined HAIKU
+#if defined BONE || defined HAIKU || defined ZETA
 	#include <arpa/inet.h>
 	#include <sys/socket.h>
 	#include <netdb.h>
