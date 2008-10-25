@@ -122,7 +122,7 @@ class OSCARConnection : public BLooper {
 		OSCARManager		*fManager;
 		conn_type			fConnType;
 		
-#ifndef BONE
+#ifndef BONE_BUILD
 		BLocker				*fSocketLock;
 #endif
 };

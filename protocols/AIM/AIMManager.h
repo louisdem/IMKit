@@ -7,7 +7,7 @@
 #include <MessageRunner.h>
 #include <String.h>
 
-#ifdef BONE
+#ifdef BONE_BUILD
 	#include <arpa/inet.h>
 	#include <sys/socket.h>
 	#include <netdb.h>
