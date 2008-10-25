@@ -16,4 +16,7 @@ Executable im_binlogger :
 	: logger.rsrc
 ;
 
+Depends im_binlogger : libcommon.a ;
+Depends im_binlogger : libim.so ;
+
 InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_binlogger ;

@@ -26,3 +26,5 @@ StaticLibrary libjabber.a :
 	SHA1.cpp
 	: libexpat.a
 ;
+
+Depends libjabber.a : libexpat.a ;

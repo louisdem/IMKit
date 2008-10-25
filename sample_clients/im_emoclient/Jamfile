@@ -38,4 +38,7 @@ Executable im_emoclient :
 	: im_emoclient.rsrc
 ;
 
+Depends im_emoclient : libcommon.a ;
+Depends im_emoclient : libexpat.a ;
+
 InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_emoclient ;

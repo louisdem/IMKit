@@ -23,4 +23,7 @@ Executable im_binlog_viewer :
 	: logger.rsrc
 ;
 
+Depends im_binlog_viewer : libcommon.a ;
+Depends im_binlog_viewer : libim.so ;
+
 InstallBin $(IMKIT_COMMON_BIN_DIRECTORY) : im_binlog_viewer ;

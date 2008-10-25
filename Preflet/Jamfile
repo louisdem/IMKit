@@ -15,11 +15,12 @@ Executable InstantMessaging :
 	main.cpp
 	PApplication.cpp
 	PWindow.cpp
-	: be stdc++.r4 translation textencoding im libcommon.a
+	: be stdc++.r4 translation textencoding libim.so libcommon.a
 	: preflet.rdef
 ;
 
-LINKFLAGS on InstantMessaging += -L$(IMKIT_TOP)/libim ;
+Depends InstantMessaging : libcommon.a ;
+Depends InstantMessaging : libim.so ;
 
 if $(IMKIT_IS_ZETA) = 1 {
 	LINKFLAGS on InstantMessaging += -lzeta -ltracker ;

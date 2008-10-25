@@ -14,9 +14,13 @@ SubDirHdrs [ FDirName $(IMKIT_TOP) server ] ;
 
 Addon jabber :
 	Jabber.cpp
-	: be stdc++.r4 im libexpat.a libjabber.a
+	: be stdc++.r4 libim.so libjabber.a
 	: Jabber.rdef
 ;
+
+Depends jabber : libjabber.a ;
+Depends jabber : libim.so ;
+Depends jabber : im_server ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on jabber += -lnetwork ;
@@ -31,6 +35,6 @@ if $(IMKIT_IS_ZETA) = 1 {
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
 
-LINKFLAGS on jabber += -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on jabber += $(IMKIT_TOP)/server/im_server ;
 
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : jabber ;

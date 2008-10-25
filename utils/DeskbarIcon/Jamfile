@@ -14,11 +14,12 @@ Addon IMDeskbarIcon :
 	DeskbarIcon.cpp
 	AwayMessageWindow.cpp
 	QueryLooper.cpp
-	: be stdc++.r4 im libcommon.a
+	: be stdc++.r4 libim.so libcommon.a
 	: IMDeskbarIcon.rsrc
 ;
 
-LINKFLAGS on IMDeskbarIcon += -L$(IMKIT_TOP)/libim ;
+Depends IMDeskbarIcon : libcommon.a ;
+Depends IMDeskbarIcon : libim.so ;
 
 if $(IMKIT_IS_ZETA) = 1 {
 	LINKFLAGS on IMDeskbarIcon += -lzeta -ltracker ;

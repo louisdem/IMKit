@@ -13,9 +13,12 @@ SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
 Executable im_infopopper :
 	main.cpp
 	IMInfoApp.cpp
-	: be stdc++.r4 infopopper libim.so libcommon.a
+	: be stdc++.r4 libim.so libcommon.a infopopper
 	: im_infopopper.rsrc
 ;
+
+Depends im_infopopper : libcommon.a ;
+Depends im_infopopper : libim.so ;
 
 LINKFLAGS on im_infopopper += -L$(IMKIT_COMMON_LIB_DIRECTORY) ;
 

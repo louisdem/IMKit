@@ -24,9 +24,13 @@ Addon aim :
 	OSCARReqConn.cpp
 	Buddy.cpp
 	Group.cpp
-	: be stdc++.r4 textencoding im libcommon.a crypto
+	: be stdc++.r4 textencoding libim.so libcommon.a crypto
 	: AIM.rdef
 ;
+
+Depends aim : libcommon.a ;
+Depends aim : libim.so ;
+Depends aim : im_server ;
 
 Addon icq :
 	ICQ.cpp
@@ -39,9 +43,13 @@ Addon icq :
 	OSCARReqConn.cpp
 	Buddy.cpp
 	Group.cpp
-	: be stdc++.r4 textencoding im libcommon.a crypto
+	: be stdc++.r4 textencoding libim.so libcommon.a crypto
 	: ICQ.rdef
 ;
+
+Depends icq : libcommon.a ;
+Depends icq : libim.so ;
+Depends icq : im_server ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on aim += -lnetwork ;
@@ -59,8 +67,8 @@ if $(IMKIT_IS_ZETA) = 1 {
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
 
-LINKFLAGS on aim += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
-LINKFLAGS on icq += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on aim += -L$(IMKIT_OPENSSL_LIBDIR) $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on icq += -L$(IMKIT_OPENSSL_LIBDIR) $(IMKIT_TOP)/server/im_server ;
 
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : aim ;
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : icq ;
