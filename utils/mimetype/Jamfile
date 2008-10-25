@@ -13,4 +13,4 @@ Executable mimetype_attribute :
 	: be
 ;
 
-InstallBin $(IMKIT_APPS_DIRECTORY)/im_kit : mimetype_attribute ;
+InstallBin $(IMKIT_APPS_DIRECTORY)/imkit : mimetype_attribute ;
