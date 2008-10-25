@@ -94,13 +94,13 @@ JabberSocketPlug::ReceiveData(void * pHandler){
 	while (true) 
 	{
 		#ifdef NETSERVER_BUILD 
-			fEndpointLock->Lock(); 
+			plug->fEndpointLock->Lock(); 
 		#endif
 		
 		if ((length = (int)recv(plug->fSocket, data, 1023, 0)) > 0) 
 		{
 			#ifdef NETSERVER_BUILD 
-				fEndpointLock->Unlock(); 
+				plug->fEndpointLock->Unlock(); 
 			#endif
 				data[length] = 0;
 			#ifdef STDOUT
@@ -110,7 +110,7 @@ JabberSocketPlug::ReceiveData(void * pHandler){
 		else 
 		{
 			#ifdef NETSERVER_BUILD 
-				fEndpointLock->Unlock(); 
+				plug->fEndpointLock->Unlock(); 
 			#endif
 			
 			plug->ReceivedData(NULL,0);
