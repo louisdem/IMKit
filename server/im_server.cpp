@@ -710,23 +710,26 @@ Server::UnloadAddons()
 	}
 
 	team_info info;
+	thread_info threadinfo;
 	int32 cookie = 0;
 	
 	int32 protoCount = fProtocols.size();
 
-	while (get_next_team_info(&cookie, &info) == B_OK)
-	{
-		if (strstr(info.args, "im_server"))
-			break;
-	}
+	memset(&info, 0, sizeof(info));
+
+	if (get_thread_info(find_thread(NULL), &threadinfo) < B_OK)
+		return;
+	if (get_team_info(threadinfo.team, &info) < B_OK)
+		return;
 	
 	// this kind of assumes each protocol always has
 	// at least one thread loaded, which may be incorrect
 	// in any case, we give the protocol add-ons some time
 	// to shut down all their ancilliary threads before
 	// unloading the add-ons themselves.
-	while (info.thread_count > (protoCount + 1))
+	while (info.thread_count > (protoCount + 1) /*XXX*/&& (cookie++ < 100))
 	{
+		printf("info.thread_count = %ld, protoCount + 1 = %ld\n", info.thread_count, (protoCount + 1));
 		get_team_info(info.team, &info);
 		snooze(20000);
 	}
