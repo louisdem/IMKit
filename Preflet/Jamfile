@@ -21,4 +21,8 @@ Executable InstantMessaging :
 
 LINKFLAGS on InstantMessaging += -L$(IMKIT_TOP)/libim ;
 
+if $(IMKIT_IS_ZETA) = 1 {
+	LINKFLAGS on InstantMessaging += -lzeta -ltracker ;
+}
+
 InstallBin $(IMKIT_BEOS_PREFERENCES_DIRECTORY) : InstantMessaging ;
