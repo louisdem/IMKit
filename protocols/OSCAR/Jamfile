@@ -13,7 +13,7 @@ HDRS += [ FDirName $(IMKIT_OPENSSL_INCDIR) ] ;
 
 SEARCH_SOURCE += [ FDirName $(IMKIT_TOP) common ] ;
 
-Addon oscar :
+Addon aim :
 	AIM.cpp
 	FLAP.cpp
 	TLV.cpp
@@ -24,24 +24,43 @@ Addon oscar :
 	OSCARReqConn.cpp
 	Buddy.cpp
 	Group.cpp
-	BufferWriter.cpp
-	: be stdc++.r4 textencoding im libcommon.a ssl crypto
-	: OSCAR.rdef
+	: be stdc++.r4 textencoding im libcommon.a crypto
+	: AIM.rdef
+;
+
+Addon icq :
+	ICQ.cpp
+	FLAP.cpp
+	TLV.cpp
+	OSCARManager.cpp
+	SNAC.cpp
+	OSCARConnection.cpp 
+	OSCARBOSConnection.cpp
+	OSCARReqConn.cpp
+	Buddy.cpp
+	Group.cpp
+	: be stdc++.r4 textencoding im libcommon.a crypto
+	: ICQ.rdef
 ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
-	LINKFLAGS on oscar += -lnetwork ;
+	LINKFLAGS on aim += -lnetwork ;
+	LINKFLAGS on icq += -lnetwork ;
 }
 
 if $(IMKIT_IS_BEOS) = 1 {
-	LINKFLAGS on oscar += -lsocket ;
+	LINKFLAGS on aim += -lsocket ;
+	LINKFLAGS on icq += -lsocket ;
 }
 
 if $(IMKIT_IS_ZETA) = 1 {
-	LINKFLAGS on oscar += -lsocket -lbind ;
+	LINKFLAGS on aim += -lsocket -lbind ;
+	LINKFLAGS on icq += -lsocket -lbind ;
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
 
-LINKFLAGS on oscar += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on aim += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on icq += -L$(IMKIT_OPENSSL_LIBDIR) -L$(IMKIT_TOP)/libim $(IMKIT_TOP)/server/im_server ;
 
-InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : oscar ;
+InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : aim ;
+InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : icq ;
