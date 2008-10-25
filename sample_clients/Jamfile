@@ -19,3 +19,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 	SubInclude IMKIT_TOP sample_clients im_emoclient ;
 }
 SubInclude IMKIT_TOP sample_clients im_client ;
+SubInclude IMKIT_TOP sample_clients im_setstatus ;
