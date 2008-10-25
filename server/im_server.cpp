@@ -551,7 +551,7 @@ Server::LoadAddons()
 	UnloadAddons(); // make sure we don't load any addons twice
 	
 	// STEP 2a: Check if we can access the system add-on directory for the protocols!
-	if ((rc_sys=find_directory(B_BEOS_ADDONS_DIRECTORY, &path, true)) != B_OK ||
+	if ((rc_sys=find_directory(B_COMMON_ADDONS_DIRECTORY, &path, true)) != B_OK ||
 		(rc_sys=path.Append("im_kit/protocols")) != B_OK ||
 		(rc_sys=addonsDir.SetTo(path.Path())) != B_OK)
 	{ // we couldn't access the addons directory for the protocols!

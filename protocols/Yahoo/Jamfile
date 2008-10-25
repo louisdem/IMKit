@@ -35,4 +35,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 
 LINKFLAGS on yahoo += -L$(IMKIT_YAHOO2_LIBDIR) $(IMKIT_TOP)/server/im_server ;
 
-InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : yahoo ;
+InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/im_kit/protocols : yahoo ;

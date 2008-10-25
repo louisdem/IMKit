@@ -16,7 +16,7 @@ SubDirHdrs [ FDirName $(IMKIT_OPENSSL_INCDIR) ] ;
 
 Addon gtalk :
 	GoogleTalk.cpp
-	: be stdc++.r4 libim.so libjabber.a ssl crypto
+	: be stdc++.r4 libim.so libexpat.a libjabber.a ssl crypto
 	: GoogleTalk.rdef
 ;
 
@@ -39,4 +39,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 
 LINKFLAGS on gtalk += -L$(IMKIT_OPENSSL_LIBDIR) $(IMKIT_TOP)/server/im_server ;
 
-InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : gtalk ;
+InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/im_kit/protocols : gtalk ;

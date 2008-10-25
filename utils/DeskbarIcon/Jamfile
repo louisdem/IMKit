@@ -25,4 +25,4 @@ if $(IMKIT_IS_ZETA) = 1 {
 	LINKFLAGS on IMDeskbarIcon += -lzeta -ltracker ;
 }
 
-InstallLib $(IMKIT_APPS_DIRECTORY)/imkit : IMDeskbarIcon ;
+InstallLib $(IMKIT_APPS_DIRECTORY)/im_kit : IMDeskbarIcon ;
