@@ -3,7 +3,7 @@
 
 #include <Bitmap.h>
 #include <Node.h>
-#include <be/kernel/fs_attr.h>
+#include <kernel/fs_attr.h>
 #include <Path.h>
 #include <Entry.h>
 

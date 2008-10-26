@@ -38,9 +38,9 @@
 // I N C L U D E S
 //------------------------------------------------------------------------------
 
-#include <be/interface/MenuItem.h>
-#include <be/interface/Rect.h>
-#include <be/interface/Bitmap.h>
+#include <interface/MenuItem.h>
+#include <interface/Rect.h>
+#include <interface/Bitmap.h>
 #include <String.h>
 
 //------------------------------------------------------------------------------

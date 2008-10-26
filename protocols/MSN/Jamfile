@@ -30,7 +30,6 @@ Addon msn :
 
 Depends msn : libcommon.a ;
 Depends msn : libim.so ;
-Depends msn : im_server ;
 
 if $(IMKIT_IS_HAIKU) = 1 {
 	LINKFLAGS on msn += -lnetwork ;
@@ -45,6 +44,6 @@ if $(IMKIT_IS_ZETA) = 1 {
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
 
-LINKFLAGS on msn += -L$(IMKIT_OPENSSL_LIBDIR) $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on msn += -L$(IMKIT_OPENSSL_LIBDIR) ;
 
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/im_kit/protocols : msn ;

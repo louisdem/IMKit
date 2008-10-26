@@ -1,7 +1,7 @@
 #ifndef FLAP_H
 #define FLAP_H
 
-#include <be/support/SupportDefs.h>
+#include <support/SupportDefs.h>
 #include <list>
 
 #include "OSCARConstants.h"

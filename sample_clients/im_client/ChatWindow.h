@@ -30,7 +30,7 @@
 #include "IconBar.h"
 #include "ImageButton.h"
 
-#include <be/kernel/fs_attr.h>
+#include <kernel/fs_attr.h>
 
 #include "ObjectList.h"
 

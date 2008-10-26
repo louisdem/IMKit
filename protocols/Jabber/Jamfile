@@ -10,17 +10,19 @@ SubDir IMKIT_TOP protocols Jabber ;
 
 SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
 SubDirHdrs [ FDirName $(IMKIT_TOP) libs ] ;
+SubDirHdrs [ FDirName $(IMKIT_TOP) libs libexpat ] ;
+SubDirHdrs [ FDirName $(IMKIT_TOP) libs libjabber ] ;
 SubDirHdrs [ FDirName $(IMKIT_TOP) server ] ;
 
 Addon jabber :
 	Jabber.cpp
-	: be stdc++.r4 libim.so libjabber.a
+	: be stdc++.r4 libim.so libexpat.a libjabber.a
 	: Jabber.rdef
 ;
 
+Depends jabber : libexpat.a ;
 Depends jabber : libjabber.a ;
 Depends jabber : libim.so ;
-Depends jabber : im_server ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on jabber += -lnetwork ;
@@ -34,7 +36,5 @@ if $(IMKIT_IS_ZETA) = 1 {
 	LINKFLAGS on jabber += -lsocket -lbind ;
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
-
-LINKFLAGS on jabber += $(IMKIT_TOP)/server/im_server ;
 
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/imkit : jabber ;

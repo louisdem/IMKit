@@ -8,7 +8,7 @@
 
 SubDir IMKIT_TOP protocols Yahoo ;
 
-HDRS += [ FDirName $(IMKIT_TOP) ] ;
+SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
 
 SEARCH_SOURCE += [ FDirName $(IMKIT_TOP) common ] ;
 
@@ -33,6 +33,6 @@ if $(IMKIT_IS_ZETA) = 1 {
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
 
-LINKFLAGS on yahoo += -L$(IMKIT_YAHOO2_LIBDIR) $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on yahoo += -L$(IMKIT_YAHOO2_LIBDIR) ;
 
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/im_kit/protocols : yahoo ;

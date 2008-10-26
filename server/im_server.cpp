@@ -18,7 +18,7 @@
 #include <libim/Helpers.h>
 #include <Deskbar.h>
 #include <Roster.h>
-#include <be/kernel/fs_attr.h>
+#include <kernel/fs_attr.h>
 #include <Alert.h>
 #include <String.h>
 #include <Invoker.h>
@@ -26,7 +26,7 @@
 #include <Beep.h>
 #include <PropertyInfo.h>
 
-#include <be/kernel/fs_index.h>
+#include <kernel/fs_index.h>
 
 #ifdef ZETA
 #include <locale/Locale.h>

@@ -1,8 +1,8 @@
 #ifndef TLV_H
 #define TLV_H
 
-#include <be/support/SupportDefs.h>
-#include <be/support/ByteOrder.h>
+#include <support/SupportDefs.h>
+#include <support/ByteOrder.h>
 
 #include <list>
 

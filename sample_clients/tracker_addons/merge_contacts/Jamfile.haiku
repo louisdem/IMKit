@@ -6,7 +6,7 @@
 #		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 #
 
-SubDir IMKIT_TOP sample_clients tracker_addons merge_contacts ;
+SubDir HAIKU_TOP 3rdparty IMKit sample_clients tracker_addons merge_contacts ;
 
 Addon IM_Merge_contacts :
 	merge_contacts.cpp
@@ -14,4 +14,9 @@ Addon IM_Merge_contacts :
 	: merge_contacts.rdef
 ;
 
-InstallBin $(IMKIT_COMMON_ADDONS_DIRECTORY)/Tracker : IM_Merge_contacts ;
+AddFilesToHaikuImage common add-ons Tracker : IM_Merge_contacts ;
+
+Package imkit-cvs :
+	IM_Merge_contacts :
+	boot common add-ons Tracker
+;

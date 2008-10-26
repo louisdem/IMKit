@@ -6,16 +6,18 @@
 #		Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 #
 
-SubDir IMKIT_TOP libs libjabber ;
+SubDir HAIKU_TOP 3rdparty IMKit libs libjabber ;
 
-SubDirHdrs [ FDirName $(IMKIT_TOP) libs ] ;
-SubDirHdrs [ FDirName $(IMKIT_OPENSSL_INCDIR) ] ;
+local sslDir = [ FDirName $(HAIKU_OUTPUT_DIR) cross-ssl config ] ;
+
+SubDirSysHdrs [ FDirName $(IMKIT_TOP) libs ] ;
+SubDirSysHdrs [ FDirName $(sslDir) include ] ;
 
 SubDirHdrs [ FDirName $(IMKIT_TOP) libs libexpat ] ;
 
 SubDirC++Flags -DSTDOUT=1 ;
 
-StaticLibrary libjabber.a :
+StaticLibrary <IMKit>libjabber.a :
 	JabberAgent.cpp
 	JabberContact.cpp
 	JabberElement.cpp
@@ -28,4 +30,4 @@ StaticLibrary libjabber.a :
 	SHA1.cpp
 ;
 
-Depends libjabber.a : libexpat.a ;
+Depends <IMKit>libjabber.a : <IMKit>libexpat.a ;

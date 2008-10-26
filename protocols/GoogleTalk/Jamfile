@@ -9,8 +9,8 @@
 SubDir IMKIT_TOP protocols GoogleTalk ;
 
 SubDirHdrs [ FDirName $(IMKIT_TOP) ] ;
-SubDirHdrs [ FDirName $(IMKIT_TOP) protocols Jabber ] ;
 SubDirHdrs [ FDirName $(IMKIT_TOP) libs ] ;
+SubDirHdrs [ FDirName $(IMKIT_TOP) libs libexpat ] ;
 SubDirHdrs [ FDirName $(IMKIT_TOP) libs libjabber ] ;
 SubDirHdrs [ FDirName $(IMKIT_OPENSSL_INCDIR) ] ;
 
@@ -20,9 +20,9 @@ Addon gtalk :
 	: GoogleTalk.rdef
 ;
 
+Depends gtalk : libexpat.a ;
 Depends gtalk : libjabber.a ;
 Depends gtalk : libim.so ;
-Depends gtalk : im_server ;
 
 if $(IMKIT_IS_HAIKU)  = 1 {
 	LINKFLAGS on gtalk += -lnetwork ;
@@ -37,6 +37,6 @@ if $(IMKIT_IS_ZETA) = 1 {
 	SubDirHdrs /boot/develop/headers/be/bone ;
 }
 
-LINKFLAGS on gtalk += -L$(IMKIT_OPENSSL_LIBDIR) $(IMKIT_TOP)/server/im_server ;
+LINKFLAGS on gtalk += -L$(IMKIT_OPENSSL_LIBDIR) ;
 
 InstallLib $(IMKIT_COMMON_ADDONS_DIRECTORY)/im_kit/protocols : gtalk ;

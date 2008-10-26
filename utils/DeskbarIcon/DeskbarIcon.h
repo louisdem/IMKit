@@ -28,8 +28,8 @@
 
 #include <libim/Manager.h>
 #include <libim/Contact.h>
-#include <be/kernel/fs_attr.h>
-#include <be/kernel/fs_info.h>
+#include <kernel/fs_attr.h>
+#include <kernel/fs_info.h>
 
 typedef struct {
 	entry_ref ref;
